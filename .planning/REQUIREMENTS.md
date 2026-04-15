@@ -83,31 +83,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| DASH-05 | — | Pending |
-| DASH-06 | — | Pending |
-| AI-01 | — | Pending |
-| AI-02 | — | Pending |
-| AI-03 | — | Pending |
-| AI-04 | — | Pending |
-| AI-05 | — | Pending |
-| AI-06 | — | Pending |
-| BOT-01 | — | Pending |
-| BOT-02 | — | Pending |
-| BOT-03 | — | Pending |
+| DATA-01 | Phase 1: Data Foundation | Pending |
+| DATA-02 | Phase 1: Data Foundation | Pending |
+| DATA-03 | Phase 1: Data Foundation | Pending |
+| DATA-04 | Phase 1: Data Foundation | Pending |
+| AI-01 | Phase 2: Technical & Fundamental Analysis | Pending |
+| AI-02 | Phase 2: Technical & Fundamental Analysis | Pending |
+| AI-03 | Phase 3: Sentiment & Combined Intelligence | Pending |
+| AI-04 | Phase 3: Sentiment & Combined Intelligence | Pending |
+| AI-05 | Phase 3: Sentiment & Combined Intelligence | Pending |
+| AI-06 | Phase 3: Sentiment & Combined Intelligence | Pending |
+| BOT-01 | Phase 4: Telegram Bot | Pending |
+| BOT-02 | Phase 4: Telegram Bot | Pending |
+| BOT-03 | Phase 4: Telegram Bot | Pending |
+| DASH-01 | Phase 5: Dashboard & Visualization | Pending |
+| DASH-02 | Phase 5: Dashboard & Visualization | Pending |
+| DASH-03 | Phase 5: Dashboard & Visualization | Pending |
+| DASH-04 | Phase 5: Dashboard & Visualization | Pending |
+| DASH-05 | Phase 5: Dashboard & Visualization | Pending |
+| DASH-06 | Phase 5: Dashboard & Visualization | Pending |
 
 **Coverage:**
 - v1 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-15*
-*Last updated: 2026-04-15 after initial definition*
+*Last updated: 2025-07-17 after roadmap creation*
