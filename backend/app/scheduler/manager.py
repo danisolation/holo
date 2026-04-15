@@ -33,6 +33,15 @@ def _on_job_executed(event: events.JobExecutionEvent):
             replace_existing=True,
             misfire_grace_time=3600,
         )
+        # Also trigger price alert check (parallel branch)
+        from app.scheduler.jobs import daily_price_alert_check
+        logger.info("Chaining: daily_price_crawl → daily_price_alert_check")
+        scheduler.add_job(
+            daily_price_alert_check,
+            id="daily_price_alert_check_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
     elif event.job_id in ("daily_indicator_compute_triggered", "daily_indicator_compute_manual"):
         from app.scheduler.jobs import daily_ai_analysis
         logger.info("Chaining: daily_indicator_compute → daily_ai_analysis")
@@ -66,6 +75,15 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_combined_analysis,
             id="daily_combined_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_combined_triggered", "daily_combined_manual"):
+        from app.scheduler.jobs import daily_signal_alert_check
+        logger.info("Chaining: daily_combined → daily_signal_alert_check")
+        scheduler.add_job(
+            daily_signal_alert_check,
+            id="daily_signal_alert_check_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -127,11 +145,34 @@ def configure_jobs():
         misfire_grace_time=7200,
     )
 
-    logger.info(
-        f"Scheduled jobs: daily_price_crawl (Mon-Fri {settings.daily_crawl_hour}:{settings.daily_crawl_minute:02d} {settings.timezone}), "
-        f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00)"
+    # Daily market summary at 16:00 UTC+7 (after full pipeline)
+    # Per CONTEXT.md D-2.3: 16:00 allows time for all analysis to complete
+    from app.scheduler.jobs import daily_summary_send
+
+    scheduler.add_job(
+        daily_summary_send,
+        trigger=CronTrigger(
+            hour=16,
+            minute=0,
+            day_of_week="mon-fri",
+            timezone=settings.timezone,
+        ),
+        id="daily_summary_send",
+        name="Daily Market Summary via Telegram",
+        replace_existing=True,
+        misfire_grace_time=3600,
     )
 
-    # Register job chaining listener (Phase 2)
+    logger.info(
+        f"Scheduled jobs: daily_price_crawl (Mon-Fri {settings.daily_crawl_hour}:{settings.daily_crawl_minute:02d} {settings.timezone}), "
+        f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00), "
+        f"daily_summary_send (Mon-Fri 16:00 {settings.timezone})"
+    )
+
+    # Register job chaining listener (Phase 2 + Phase 4)
     scheduler.add_listener(_on_job_executed, events.EVENT_JOB_EXECUTED)
-    logger.info("Job chaining registered: daily_price_crawl → indicators → AI analysis → news → sentiment → combined")
+    logger.info(
+        "Job chaining registered: "
+        "daily_price_crawl → [indicators → AI → news → sentiment → combined → signal_alerts] + [price_alerts], "
+        "daily_summary_send (cron 16:00)"
+    )

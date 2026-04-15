@@ -162,3 +162,57 @@ async def daily_combined_analysis():
     except Exception as e:
         logger.error(f"=== DAILY COMBINED ANALYSIS FAILED: {e} ===")
         raise
+
+
+async def daily_signal_alert_check():
+    """Check watched tickers for signal changes and send Telegram alerts.
+
+    Triggered automatically after daily_combined_analysis via job chaining.
+    Per CONTEXT.md D-2.1 and D-3.2.
+    """
+    logger.info("=== DAILY SIGNAL ALERT CHECK START ===")
+    try:
+        async with async_session() as session:
+            from app.telegram.services import AlertService
+            service = AlertService(session)
+            result = await service.check_signal_changes()
+            logger.info(f"=== DAILY SIGNAL ALERT CHECK COMPLETE: {result} alerts sent ===")
+    except Exception as e:
+        logger.error(f"=== DAILY SIGNAL ALERT CHECK FAILED: {e} ===")
+        # Never raise — alert failure must not break the pipeline (D-3.4)
+
+
+async def daily_price_alert_check():
+    """Check price alerts against latest close prices after daily crawl.
+
+    Triggered automatically after daily_price_crawl via job chaining.
+    Per CONTEXT.md D-2.2 and D-3.2.
+    """
+    logger.info("=== DAILY PRICE ALERT CHECK START ===")
+    try:
+        async with async_session() as session:
+            from app.telegram.services import AlertService
+            service = AlertService(session)
+            result = await service.check_price_alerts()
+            logger.info(f"=== DAILY PRICE ALERT CHECK COMPLETE: {result} alerts triggered ===")
+    except Exception as e:
+        logger.error(f"=== DAILY PRICE ALERT CHECK FAILED: {e} ===")
+        # Never raise — alert failure must not break the pipeline (D-3.4)
+
+
+async def daily_summary_send():
+    """Send daily market summary via Telegram.
+
+    Runs on cron schedule at 16:00 UTC+7 (after full pipeline completes).
+    Per CONTEXT.md D-2.3 and D-3.2.
+    """
+    logger.info("=== DAILY SUMMARY SEND START ===")
+    try:
+        async with async_session() as session:
+            from app.telegram.services import AlertService
+            service = AlertService(session)
+            result = await service.send_daily_summary()
+            logger.info(f"=== DAILY SUMMARY SEND COMPLETE: sent={result} ===")
+    except Exception as e:
+        logger.error(f"=== DAILY SUMMARY SEND FAILED: {e} ===")
+        # Never raise — summary failure is non-critical

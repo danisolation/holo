@@ -10,8 +10,8 @@ class TestSchedulerManager:
         from app.scheduler.manager import scheduler
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
-    def test_configure_jobs_registers_three_jobs(self):
-        """configure_jobs must register daily, weekly ticker, weekly financial jobs."""
+    def test_configure_jobs_registers_four_jobs(self):
+        """configure_jobs must register daily, weekly ticker, weekly financial, and summary jobs."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         # Remove any existing jobs first
@@ -23,7 +23,8 @@ class TestSchedulerManager:
         assert "daily_price_crawl" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
-        assert len(job_ids) == 3
+        assert "daily_summary_send" in job_ids
+        assert len(job_ids) == 4
 
         # Clean up
         scheduler.remove_all_jobs()
@@ -115,7 +116,7 @@ class TestJobChaining:
     """Tests for EVENT_JOB_EXECUTED job chaining (Phase 2)."""
 
     def test_on_job_executed_chains_indicators_after_price_crawl(self):
-        """Successful daily_price_crawl must trigger daily_indicator_compute."""
+        """Successful daily_price_crawl must trigger daily_indicator_compute and daily_price_alert_check."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
@@ -124,10 +125,10 @@ class TestJobChaining:
 
         with patch.object(scheduler, "add_job") as mock_add:
             _on_job_executed(mock_event)
-            mock_add.assert_called_once()
-            call_kwargs = mock_add.call_args
-            assert call_kwargs.kwargs.get("id") == "daily_indicator_compute_triggered" or \
-                   call_kwargs[1].get("id") == "daily_indicator_compute_triggered"
+            assert mock_add.call_count == 2
+            call_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in mock_add.call_args_list]
+            assert "daily_indicator_compute_triggered" in call_ids
+            assert "daily_price_alert_check_triggered" in call_ids
 
     def test_on_job_executed_chains_ai_after_indicators(self):
         """Successful daily_indicator_compute must trigger daily_ai_analysis."""
@@ -157,7 +158,7 @@ class TestJobChaining:
             mock_add.assert_not_called()
 
     def test_configure_jobs_still_registers_original_jobs(self):
-        """configure_jobs must still register the original 3 Phase 1 jobs plus listener."""
+        """configure_jobs must still register the original 3 Phase 1 jobs plus summary and listener."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         scheduler.remove_all_jobs()
@@ -170,6 +171,7 @@ class TestJobChaining:
         assert "daily_price_crawl" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
+        assert "daily_summary_send" in job_ids
 
         scheduler.remove_all_jobs()
         scheduler._listeners = []
