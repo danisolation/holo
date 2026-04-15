@@ -16,6 +16,7 @@ class TestSchedulerManager:
 
         # Remove any existing jobs first
         scheduler.remove_all_jobs()
+        scheduler._listeners = []
         configure_jobs()
 
         job_ids = [job.id for job in scheduler.get_jobs()]
@@ -26,6 +27,7 @@ class TestSchedulerManager:
 
         # Clean up
         scheduler.remove_all_jobs()
+        scheduler._listeners = []
 
     def test_daily_crawl_schedule(self):
         """Daily crawl must be Mon-Fri at configured hour:minute."""
@@ -33,6 +35,7 @@ class TestSchedulerManager:
         from app.config import settings
 
         scheduler.remove_all_jobs()
+        scheduler._listeners = []
         configure_jobs()
 
         job = scheduler.get_job("daily_price_crawl")
@@ -45,6 +48,7 @@ class TestSchedulerManager:
         assert str(settings.daily_crawl_minute) in str(trigger)
 
         scheduler.remove_all_jobs()
+        scheduler._listeners = []
 
 
 class TestJobFunctions:
@@ -105,3 +109,107 @@ class TestJobFunctions:
 
                 MockFinancialService.assert_called_once()
                 mock_service.crawl_financials.assert_called_once_with(period="quarter")
+
+
+class TestJobChaining:
+    """Tests for EVENT_JOB_EXECUTED job chaining (Phase 2)."""
+
+    def test_on_job_executed_chains_indicators_after_price_crawl(self):
+        """Successful daily_price_crawl must trigger daily_indicator_compute."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_price_crawl"
+        mock_event.exception = None
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_called_once()
+            call_kwargs = mock_add.call_args
+            assert call_kwargs.kwargs.get("id") == "daily_indicator_compute_triggered" or \
+                   call_kwargs[1].get("id") == "daily_indicator_compute_triggered"
+
+    def test_on_job_executed_chains_ai_after_indicators(self):
+        """Successful daily_indicator_compute must trigger daily_ai_analysis."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_indicator_compute_triggered"
+        mock_event.exception = None
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_called_once()
+            call_kwargs = mock_add.call_args
+            assert call_kwargs.kwargs.get("id") == "daily_ai_analysis_triggered" or \
+                   call_kwargs[1].get("id") == "daily_ai_analysis_triggered"
+
+    def test_on_job_executed_skips_on_failure(self):
+        """Failed jobs must NOT trigger the next job in the chain."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_price_crawl"
+        mock_event.exception = Exception("crawl failed")
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_not_called()
+
+    def test_configure_jobs_still_registers_original_jobs(self):
+        """configure_jobs must still register the original 3 Phase 1 jobs plus listener."""
+        from app.scheduler.manager import scheduler, configure_jobs
+
+        scheduler.remove_all_jobs()
+        # Remove any existing listeners
+        scheduler._listeners = []
+
+        configure_jobs()
+
+        job_ids = [job.id for job in scheduler.get_jobs()]
+        assert "daily_price_crawl" in job_ids
+        assert "weekly_ticker_refresh" in job_ids
+        assert "weekly_financial_crawl" in job_ids
+
+        scheduler.remove_all_jobs()
+        scheduler._listeners = []
+
+
+class TestNewJobFunctions:
+    """Tests for Phase 2 job functions."""
+
+    @pytest.mark.asyncio
+    async def test_daily_indicator_compute_calls_service(self):
+        """daily_indicator_compute must call IndicatorService.compute_all_tickers."""
+        with patch("app.scheduler.jobs.async_session") as mock_session_factory:
+            mock_session = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            with patch("app.services.indicator_service.IndicatorService") as MockService:
+                mock_svc = AsyncMock()
+                mock_svc.compute_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "skipped": 0, "failed_symbols": []})
+                MockService.return_value = mock_svc
+
+                from app.scheduler.jobs import daily_indicator_compute
+                await daily_indicator_compute()
+
+                mock_svc.compute_all_tickers.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_daily_ai_analysis_calls_service(self):
+        """daily_ai_analysis must call AIAnalysisService.analyze_all_tickers."""
+        with patch("app.scheduler.jobs.async_session") as mock_session_factory:
+            mock_session = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                mock_svc = AsyncMock()
+                mock_svc.analyze_all_tickers = AsyncMock(return_value={"technical": {"success": 400, "failed": 0}})
+                MockService.return_value = mock_svc
+
+                from app.scheduler.jobs import daily_ai_analysis
+                await daily_ai_analysis()
+
+                mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="both")

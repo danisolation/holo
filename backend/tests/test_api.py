@@ -121,3 +121,36 @@ class TestCrawlTriggerEndpoints:
                 response = client.post("/api/backfill")
                 assert response.status_code == 200
                 assert response.json()["triggered"] is True
+
+
+class TestAnalysisEndpoints:
+    """Tests for Phase 2 analysis trigger and result endpoints."""
+
+    def test_trigger_indicators_returns_200(self, client):
+        """POST /api/analysis/trigger/indicators must return triggered=true."""
+        with patch("app.api.analysis.async_session") as mock_sf:
+            mock_session = AsyncMock()
+            mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
+            with patch("app.services.indicator_service.IndicatorService") as MockIS:
+                MockIS.return_value = AsyncMock()
+                response = client.post("/api/analysis/trigger/indicators")
+                assert response.status_code == 200
+                assert response.json()["triggered"] is True
+
+    def test_trigger_ai_returns_200(self, client):
+        """POST /api/analysis/trigger/ai must return triggered=true."""
+        with patch("app.api.analysis.async_session") as mock_sf:
+            mock_session = AsyncMock()
+            mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
+            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockAI:
+                MockAI.return_value = AsyncMock()
+                response = client.post("/api/analysis/trigger/ai")
+                assert response.status_code == 200
+                assert response.json()["triggered"] is True
+
+    def test_trigger_ai_invalid_type_returns_400(self, client):
+        """POST /api/analysis/trigger/ai with invalid analysis_type must return 400."""
+        response = client.post("/api/analysis/trigger/ai?analysis_type=invalid")
+        assert response.status_code == 400
