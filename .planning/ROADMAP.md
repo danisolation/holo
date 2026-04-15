@@ -72,7 +72,11 @@ Plans:
   1. Telegram bot sends an alert when AI detects a notable trading signal for watched tickers
   2. User receives a notification when a ticker crosses a price threshold they configured
   3. User receives a daily market summary (top movers, signal changes, watchlist status) via Telegram
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 04-01-PLAN.md — Models (UserWatchlist, PriceAlert), migration 004, python-telegram-bot dep, Telegram config
+- [ ] 04-02-PLAN.md — Bot module: TelegramBot lifecycle, 7 command handlers, HTML message formatter
+- [ ] 04-03-PLAN.md — AlertService, scheduler jobs (signal/price/summary), FastAPI lifespan integration, tests
 
 ### Phase 5: Dashboard & Visualization
 **Goal**: User can visually explore market data, AI insights, and manage their watchlist through a responsive web dashboard
@@ -98,5 +102,5 @@ Note: Phase 4 and Phase 5 are independent after Phase 3 — could execute in eit
 | 1. Data Foundation | 3/3 | ✅ Complete | 2026-04-15 |
 | 2. Technical & Fundamental Analysis | 3/3 | ✅ Complete | 2026-04-15 |
 | 3. Sentiment & Combined Intelligence | 3/3 | ✅ Complete | 2026-04-15 |
-| 4. Telegram Bot | 0/? | Not started | - |
+| 4. Telegram Bot | 0/3 | Not started | - |
 | 5. Dashboard & Visualization | 0/? | Not started | - |
