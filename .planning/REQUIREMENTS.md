@@ -16,12 +16,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Dashboard & Visualization
 
-- [ ] **DASH-01**: Candlestick charts hiển thị dữ liệu giá OHLCV (lightweight-charts)
-- [ ] **DASH-02**: Technical indicator overlays trên charts (MA, RSI, MACD, Bollinger Bands)
-- [ ] **DASH-03**: Watchlist — đánh dấu mã yêu thích để theo dõi nhanh
-- [ ] **DASH-04**: Ticker detail page — chart + key metrics + AI verdict khi click vào mã
-- [ ] **DASH-05**: Responsive layout — dashboard dùng được trên mobile browser
-- [ ] **DASH-06**: Market overview / heatmap — cái nhìn tổng quan 400 mã theo sector
+- [x] **DASH-01**: Candlestick charts hiển thị dữ liệu giá OHLCV (lightweight-charts)
+- [x] **DASH-02**: Technical indicator overlays trên charts (MA, RSI, MACD, Bollinger Bands)
+- [x] **DASH-03**: Watchlist — đánh dấu mã yêu thích để theo dõi nhanh
+- [x] **DASH-04**: Ticker detail page — chart + key metrics + AI verdict khi click vào mã
+- [x] **DASH-05**: Responsive layout — dashboard dùng được trên mobile browser
+- [x] **DASH-06**: Market overview / heatmap — cái nhìn tổng quan 400 mã theo sector
 
 ### AI Analysis
 
@@ -96,12 +96,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BOT-01 | Phase 4: Telegram Bot | Complete |
 | BOT-02 | Phase 4: Telegram Bot | Complete |
 | BOT-03 | Phase 4: Telegram Bot | Complete |
-| DASH-01 | Phase 5: Dashboard & Visualization | Pending |
-| DASH-02 | Phase 5: Dashboard & Visualization | Pending |
-| DASH-03 | Phase 5: Dashboard & Visualization | Pending |
-| DASH-04 | Phase 5: Dashboard & Visualization | Pending |
-| DASH-05 | Phase 5: Dashboard & Visualization | Pending |
-| DASH-06 | Phase 5: Dashboard & Visualization | Pending |
+| DASH-01 | Phase 5: Dashboard & Visualization | Complete |
+| DASH-02 | Phase 5: Dashboard & Visualization | Complete |
+| DASH-03 | Phase 5: Dashboard & Visualization | Complete |
+| DASH-04 | Phase 5: Dashboard & Visualization | Complete |
+| DASH-05 | Phase 5: Dashboard & Visualization | Complete |
+| DASH-06 | Phase 5: Dashboard & Visualization | Complete |
 
 **Coverage:**
 - v1 requirements: 19 total
