@@ -1,0 +1,64 @@
+"""Scheduled job functions.
+
+Each job creates its own database session (jobs run outside of HTTP
+request context, so they can't use FastAPI's Depends(get_db)).
+"""
+from loguru import logger
+
+from app.database import async_session
+from app.crawlers.vnstock_crawler import VnstockCrawler
+from app.services.price_service import PriceService
+from app.services.ticker_service import TickerService
+from app.services.financial_service import FinancialService
+
+
+async def daily_price_crawl():
+    """Daily OHLCV crawl for all active tickers.
+
+    Runs Mon-Fri at 15:30 Asia/Ho_Chi_Minh.
+    Creates its own DB session since this runs from the scheduler, not HTTP.
+    """
+    logger.info("=== DAILY PRICE CRAWL START ===")
+    try:
+        async with async_session() as session:
+            crawler = VnstockCrawler()
+            service = PriceService(session, crawler)
+            result = await service.crawl_daily()
+            logger.info(f"=== DAILY PRICE CRAWL COMPLETE: {result} ===")
+    except Exception as e:
+        logger.error(f"=== DAILY PRICE CRAWL FAILED: {e} ===")
+        raise
+
+
+async def weekly_ticker_refresh():
+    """Weekly ticker list refresh — sync HOSE listing to database.
+
+    Runs Sunday 10:00. Catches IPOs, delistings, suspensions.
+    """
+    logger.info("=== WEEKLY TICKER REFRESH START ===")
+    try:
+        async with async_session() as session:
+            crawler = VnstockCrawler()
+            service = TickerService(session, crawler)
+            result = await service.fetch_and_sync_tickers()
+            logger.info(f"=== WEEKLY TICKER REFRESH COMPLETE: {result} ===")
+    except Exception as e:
+        logger.error(f"=== WEEKLY TICKER REFRESH FAILED: {e} ===")
+        raise
+
+
+async def weekly_financial_crawl():
+    """Weekly financial data crawl for all active tickers.
+
+    Runs Saturday 08:00. Fetches latest quarterly financial ratios.
+    """
+    logger.info("=== WEEKLY FINANCIAL CRAWL START ===")
+    try:
+        async with async_session() as session:
+            crawler = VnstockCrawler()
+            service = FinancialService(session, crawler)
+            result = await service.crawl_financials(period="quarter")
+            logger.info(f"=== WEEKLY FINANCIAL CRAWL COMPLETE: {result} ===")
+    except Exception as e:
+        logger.error(f"=== WEEKLY FINANCIAL CRAWL FAILED: {e} ===")
+        raise
