@@ -62,7 +62,7 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — NewsArticle model, migration 003, Pydantic schemas, deps & config
 - [x] 03-02-PLAN.md — CafeF crawler + AIAnalysisService sentiment & combined methods
-- [ ] 03-03-PLAN.md — Scheduler chain extension, API endpoints, unit tests
+- [x] 03-03-PLAN.md — Scheduler chain extension, API endpoints, unit tests
 
 ### Phase 4: Telegram Bot
 **Goal**: User receives timely trading intelligence and market summaries on their phone via Telegram without opening a browser
