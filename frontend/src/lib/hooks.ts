@@ -6,6 +6,7 @@ import {
   fetchPrices,
   fetchIndicators,
   fetchAnalysisSummary,
+  fetchMarketOverview,
 } from "@/lib/api";
 
 /**
@@ -56,5 +57,17 @@ export function useAnalysisSummary(symbol: string | undefined) {
     queryFn: () => fetchAnalysisSummary(symbol!),
     enabled: !!symbol,
     staleTime: 30 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch market overview: all active tickers with latest price + daily change %.
+ * staleTime: 5 minutes.
+ */
+export function useMarketOverview() {
+  return useQuery({
+    queryKey: ["market-overview"],
+    queryFn: () => fetchMarketOverview(),
+    staleTime: 5 * 60 * 1000,
   });
 }

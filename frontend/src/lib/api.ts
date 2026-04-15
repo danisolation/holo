@@ -117,3 +117,18 @@ export async function fetchAnalysisSummary(
     `/analysis/${encodeURIComponent(symbol)}/summary`,
   );
 }
+
+// --- Market Overview (heatmap data) ---
+
+export interface MarketTicker {
+  symbol: string;
+  name: string;
+  sector: string | null;
+  market_cap: number | null;
+  last_price: number | null;
+  change_pct: number | null;
+}
+
+export async function fetchMarketOverview(): Promise<MarketTicker[]> {
+  return apiFetch<MarketTicker[]>("/tickers/market-overview");
+}

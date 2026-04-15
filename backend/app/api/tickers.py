@@ -4,7 +4,8 @@ from decimal import Decimal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, func, literal_column, text
+from sqlalchemy.orm import aliased
 from loguru import logger
 
 from app.database import async_session
@@ -30,6 +31,15 @@ class PriceResponse(BaseModel):
     low: float
     close: float
     volume: int
+
+
+class MarketTickerResponse(BaseModel):
+    symbol: str
+    name: str
+    sector: str | None = None
+    market_cap: float | None = None
+    last_price: float | None = None
+    change_pct: float | None = None
 
 
 router = APIRouter(prefix="/tickers", tags=["tickers"])
@@ -95,3 +105,85 @@ async def get_ticker_prices(
         )
         for p in prices
     ]
+
+
+@router.get("/market-overview", response_model=list[MarketTickerResponse])
+async def market_overview():
+    """Return all active tickers with latest price and daily change %.
+
+    Uses a ROW_NUMBER() window function to grab the latest 2 daily prices
+    per ticker efficiently, then computes change_pct.
+    """
+    async with async_session() as session:
+        # Subquery: rank prices per ticker by date desc, keep top 2
+        ranked = (
+            select(
+                DailyPrice.ticker_id,
+                DailyPrice.close,
+                func.row_number()
+                .over(
+                    partition_by=DailyPrice.ticker_id,
+                    order_by=DailyPrice.date.desc(),
+                )
+                .label("rn"),
+            )
+            .subquery("ranked")
+        )
+
+        # Latest close (rn=1)
+        latest = (
+            select(
+                ranked.c.ticker_id,
+                ranked.c.close.label("last_close"),
+            )
+            .where(ranked.c.rn == 1)
+            .subquery("latest")
+        )
+
+        # Previous close (rn=2)
+        prev = (
+            select(
+                ranked.c.ticker_id,
+                ranked.c.close.label("prev_close"),
+            )
+            .where(ranked.c.rn == 2)
+            .subquery("prev")
+        )
+
+        # Join tickers with latest and previous prices
+        stmt = (
+            select(
+                Ticker.symbol,
+                Ticker.name,
+                Ticker.sector,
+                Ticker.market_cap,
+                latest.c.last_close,
+                prev.c.prev_close,
+            )
+            .outerjoin(latest, Ticker.id == latest.c.ticker_id)
+            .outerjoin(prev, Ticker.id == prev.c.ticker_id)
+            .where(Ticker.is_active.is_(True))
+            .order_by(Ticker.symbol)
+        )
+
+        result = await session.execute(stmt)
+        rows = result.all()
+
+    items: list[MarketTickerResponse] = []
+    for row in rows:
+        last_price = float(row.last_close) if row.last_close is not None else None
+        prev_close = float(row.prev_close) if row.prev_close is not None else None
+        change_pct: float | None = None
+        if last_price is not None and prev_close is not None and prev_close != 0:
+            change_pct = round((last_price - prev_close) / prev_close * 100, 2)
+        items.append(
+            MarketTickerResponse(
+                symbol=row.symbol,
+                name=row.name,
+                sector=row.sector,
+                market_cap=float(row.market_cap) if row.market_cap is not None else None,
+                last_price=last_price,
+                change_pct=change_pct,
+            )
+        )
+    return items
