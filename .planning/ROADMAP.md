@@ -60,7 +60,7 @@ Plans:
   4. Each recommendation includes a natural language explanation in Vietnamese
 **Plans:** 3 plans
 Plans:
-- [ ] 03-01-PLAN.md — NewsArticle model, migration 003, Pydantic schemas, deps & config
+- [x] 03-01-PLAN.md — NewsArticle model, migration 003, Pydantic schemas, deps & config
 - [ ] 03-02-PLAN.md — CafeF crawler + AIAnalysisService sentiment & combined methods
 - [ ] 03-03-PLAN.md — Scheduler chain extension, API endpoints, unit tests
 
