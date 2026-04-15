@@ -2,87 +2,83 @@
 
 ## What This Is
 
-Ứng dụng crawl dữ liệu chứng khoán sàn HOSE cho 400 mã nổi bật nhất, kết hợp AI (Google Gemini) để phân tích kỹ thuật, cơ bản và sentiment — đưa ra gợi ý trading qua web dashboard và Telegram bot. Dành cho sử dụng cá nhân.
+AI-powered stock intelligence platform for 400 HOSE tickers. Crawls daily OHLCV prices and financial data via vnstock, computes 12 technical indicators, then uses Google Gemini to produce multi-dimensional analysis (technical + fundamental + sentiment) with Vietnamese buy/sell/hold recommendations. Delivered via Telegram bot alerts and Next.js web dashboard with interactive candlestick charts. Personal use.
 
 ## Core Value
 
 AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu HOSE real-time để gợi ý trading chính xác và kịp thời qua Telegram.
 
+## Current State
+
+**Shipped:** v1.0 (2026-04-15)
+**Code:** ~9,400 LOC (Python 6,050 + TypeScript 3,350)
+**Tests:** 96 backend unit tests
+**Stack:** FastAPI + PostgreSQL + APScheduler + Google Gemini + python-telegram-bot + Next.js + lightweight-charts
+
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ DATA-01: Crawl OHLCV 400 mã HOSE via vnstock — v1.0
+- ✓ DATA-02: Scheduled automated crawling — v1.0
+- ✓ DATA-03: Historical backfill 1-2 năm — v1.0
+- ✓ DATA-04: Crawl báo cáo tài chính — v1.0
+- ✓ AI-01: Technical analysis scoring (RSI, MACD, MA, BB) — v1.0
+- ✓ AI-02: Fundamental analysis scoring — v1.0
+- ✓ AI-03: Sentiment analysis từ tin tức CafeF — v1.0
+- ✓ AI-04: Combined 3D recommendation (mua/bán/giữ) — v1.0
+- ✓ AI-05: Confidence level 1-10 — v1.0
+- ✓ AI-06: Vietnamese explanation — v1.0
+- ✓ BOT-01: Trading signal alerts via Telegram — v1.0
+- ✓ BOT-02: Price alert triggers — v1.0
+- ✓ BOT-03: Daily market summary — v1.0
+- ✓ DASH-01: Candlestick charts (lightweight-charts) — v1.0
+- ✓ DASH-02: Technical indicator overlays — v1.0
+- ✓ DASH-03: Watchlist management — v1.0
+- ✓ DASH-04: Ticker detail page — v1.0
+- ✓ DASH-05: Responsive mobile layout — v1.0
+- ✓ DASH-06: Market overview heatmap — v1.0
 
 ### Active
 
-- [ ] Crawl dữ liệu giá OHLCV 400 mã HOSE từ VNDirect/SSI API
-- [ ] Crawl báo cáo tài chính (doanh thu, lợi nhuận, P/E, P/B...) từ VNDirect/CafeF
-- [ ] Crawl tin tức & sự kiện liên quan đến các mã chứng khoán
-- [ ] Lưu trữ dữ liệu lịch sử trong PostgreSQL (Aiven)
-- [ ] Scheduled crawl tự động hàng ngày
-- [ ] Real-time price tracking trong phiên giao dịch
-- [ ] AI phân tích kỹ thuật (MA, RSI, MACD, Bollinger Bands...)
-- [ ] AI phân tích cơ bản (P/E, tăng trưởng, sức khỏe tài chính...)
-- [ ] AI phân tích sentiment từ tin tức
-- [ ] AI tổng hợp 3 chiều → gợi ý mua/bán/giữ
-- [ ] Web dashboard hiển thị data, biểu đồ, gợi ý AI
-- [ ] Telegram bot gửi alert khi có tín hiệu trading
-- [ ] Dashboard cá nhân: watchlist, portfolio tracking
+(None — planning next milestone)
 
 ### Out of Scope
 
 - Tự động giao dịch (auto-trade) — rủi ro pháp lý và tài chính, chỉ gợi ý
-- Mobile app — web-first, responsive là đủ cho cá nhân
-- Multi-user / authentication phức tạp — chỉ một người dùng
+- Mobile app — web responsive + Telegram bot đã cover
+- Multi-user / authentication — chỉ một người dùng
 - Dữ liệu sàn HNX/UPCOM — tập trung HOSE trước
-- Nguồn dữ liệu trả phí (FireAnt Pro, Entrade) — dùng nguồn miễn phí
-
-## Context
-
-- **Sàn HOSE:** Sàn giao dịch chứng khoán TP.HCM — sàn lớn nhất Việt Nam
-- **400 mã:** Bao gồm VN30, VN100 và các mã có thanh khoản cao nhất
-- **Nguồn dữ liệu miễn phí:** VNDirect API, SSI API, CafeF scraping
-- **Phiên giao dịch HOSE:** 9:00-11:30 sáng, 13:00-14:45 chiều (giờ VN, UTC+7)
-- **Người dùng đã có:** Gemini API key, PostgreSQL Aiven URL
-- **Mục đích:** Hỗ trợ quyết định đầu tư cá nhân, không phải sản phẩm thương mại
+- Nguồn dữ liệu trả phí — vnstock miễn phí là đủ
+- ML price prediction — tạo false confidence, dùng Gemini qualitative analysis
+- WebSocket real-time streaming — polling 5 phút đủ cho cá nhân
+- Backtesting engine — phức tạp, là sản phẩm riêng
 
 ## Constraints
 
-- **AI Model**: Google Gemini — người dùng đã có API key
-- **Database**: PostgreSQL trên Aiven — đã có connection URL
-- **Backend**: Python (FastAPI) — mạnh cho data processing & AI
-- **Frontend**: React / Next.js — dashboard interactivity
-- **Bot**: Telegram Bot API — kênh thông báo chính
-- **Data Sources**: Chỉ nguồn miễn phí (VNDirect API, SSI API, CafeF)
+- **AI Model**: Google Gemini (gemini-2.0-flash) — 15 RPM free tier, 4s delay between batches
+- **Database**: PostgreSQL trên Aiven — pool_size=5, max_overflow=3
+- **Backend**: Python 3.12 + FastAPI + APScheduler (in-process, no Celery)
+- **Frontend**: Next.js 16 + TypeScript + Tailwind CSS 4 + shadcn/ui
+- **Bot**: python-telegram-bot 22.7 — long polling mode
+- **Data Sources**: vnstock 3.5.1 (VCI source), CafeF AJAX scraping
 - **Scope**: Dùng cá nhân — không cần auth phức tạp hay multi-tenancy
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Gemini cho AI analysis | User đã có API key, chi phí hợp lý | — Pending |
-| PostgreSQL Aiven cho DB | User đã có sẵn, managed service không cần ops | — Pending |
-| Chỉ crawl nguồn miễn phí | Giảm chi phí, đủ dữ liệu cho phân tích cá nhân | — Pending |
-| FastAPI + Next.js | Python mạnh data/AI, Next.js mạnh dashboard UI | — Pending |
-| Telegram bot cho alerts | Nhận thông báo mọi lúc trên điện thoại | — Pending |
-
-## Evolution
-
-This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
+| vnstock 3.5.1 as data backbone | De-facto VN stock library, wraps VNDirect/SSI | ✓ Good |
+| Async-first monolith (FastAPI + APScheduler) | Single user, no need for Celery/Redis | ✓ Good |
+| asyncio.to_thread() for vnstock calls | vnstock is sync, avoids blocking event loop | ✓ Good |
+| `ta` library for indicators | Pure Python, no C deps, 12 indicators | ✓ Good |
+| `google-genai` new SDK | Async support, structured Pydantic output | ✓ Good |
+| PostgreSQL yearly partitioning | daily_prices scalability for 400 tickers × years | ✓ Good |
+| Job chaining via EVENT_JOB_EXECUTED | Not cron — dependent jobs chain sequentially | ✓ Good |
+| CafeF AJAX endpoint for news | Structured data, no JS rendering needed | ✓ Good |
+| HTML parse_mode for Telegram | Avoids MarkdownV2 escaping complexity | ✓ Good |
+| localStorage watchlist on frontend | Single user, no sync needed, faster UX | ⚠️ Revisit — dual watchlist with Telegram DB |
+| Bot before Dashboard in build order | Telegram has higher personal utility | ✓ Good |
 
 ---
-*Last updated: 2026-04-15 after initialization*
+*Last updated: 2026-04-15 after v1.0 milestone*
