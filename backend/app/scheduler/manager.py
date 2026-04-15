@@ -3,6 +3,7 @@
 Uses AsyncIOScheduler (APScheduler 3.11) embedded in FastAPI process.
 No external broker needed — jobs run in-process.
 """
+from apscheduler import events
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
@@ -11,6 +12,36 @@ from app.config import settings
 
 # Single scheduler instance — shared across the application
 scheduler = AsyncIOScheduler(timezone=settings.timezone)
+
+
+def _on_job_executed(event: events.JobExecutionEvent):
+    """Chain jobs: price crawl → indicators → AI analysis.
+
+    Triggered by APScheduler's EVENT_JOB_EXECUTED. Only chains on success
+    (event.exception is None). Uses add_job with run_date=None to run immediately.
+    """
+    if event.exception:
+        logger.warning(f"Job {event.job_id} failed with exception, not chaining next job")
+        return
+
+    if event.job_id == "daily_price_crawl":
+        from app.scheduler.jobs import daily_indicator_compute
+        logger.info("Chaining: daily_price_crawl → daily_indicator_compute")
+        scheduler.add_job(
+            daily_indicator_compute,
+            id="daily_indicator_compute_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_indicator_compute_triggered", "daily_indicator_compute_manual"):
+        from app.scheduler.jobs import daily_ai_analysis
+        logger.info("Chaining: daily_indicator_compute → daily_ai_analysis")
+        scheduler.add_job(
+            daily_ai_analysis,
+            id="daily_ai_analysis_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
 
 
 def configure_jobs():
@@ -73,3 +104,7 @@ def configure_jobs():
         f"Scheduled jobs: daily_price_crawl (Mon-Fri {settings.daily_crawl_hour}:{settings.daily_crawl_minute:02d} {settings.timezone}), "
         f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00)"
     )
+
+    # Register job chaining listener (Phase 2)
+    scheduler.add_listener(_on_job_executed, events.EVENT_JOB_EXECUTED)
+    logger.info("Job chaining registered: daily_price_crawl → indicators → AI analysis")

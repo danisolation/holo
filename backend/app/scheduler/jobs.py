@@ -62,3 +62,43 @@ async def weekly_financial_crawl():
     except Exception as e:
         logger.error(f"=== WEEKLY FINANCIAL CRAWL FAILED: {e} ===")
         raise
+
+
+async def daily_indicator_compute():
+    """Compute technical indicators for all active tickers.
+
+    Triggered automatically after daily_price_crawl via job chaining.
+    Can also be triggered manually via API endpoint.
+    """
+    logger.info("=== DAILY INDICATOR COMPUTE START ===")
+    try:
+        async with async_session() as session:
+            from app.services.indicator_service import IndicatorService
+            service = IndicatorService(session)
+            result = await service.compute_all_tickers()
+            logger.info(f"=== DAILY INDICATOR COMPUTE COMPLETE: {result} ===")
+    except Exception as e:
+        logger.error(f"=== DAILY INDICATOR COMPUTE FAILED: {e} ===")
+        raise
+
+
+async def daily_ai_analysis():
+    """Run Gemini AI analysis for all active tickers.
+
+    Triggered automatically after daily_indicator_compute via job chaining.
+    Can also be triggered manually via API endpoint.
+    Requires GEMINI_API_KEY to be set.
+    """
+    logger.info("=== DAILY AI ANALYSIS START ===")
+    try:
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            result = await service.analyze_all_tickers(analysis_type="both")
+            logger.info(f"=== DAILY AI ANALYSIS COMPLETE: {result} ===")
+    except ValueError as e:
+        logger.warning(f"=== DAILY AI ANALYSIS SKIPPED: {e} ===")
+        # ValueError from AIAnalysisService if GEMINI_API_KEY not set
+    except Exception as e:
+        logger.error(f"=== DAILY AI ANALYSIS FAILED: {e} ===")
+        raise
