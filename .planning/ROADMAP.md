@@ -76,7 +76,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Models (UserWatchlist, PriceAlert), migration 004, python-telegram-bot dep, Telegram config
 - [x] 04-02-PLAN.md — Bot module: TelegramBot lifecycle, 7 command handlers, HTML message formatter
-- [ ] 04-03-PLAN.md — AlertService, scheduler jobs (signal/price/summary), FastAPI lifespan integration, tests
+- [x] 04-03-PLAN.md — AlertService, scheduler jobs (signal/price/summary), FastAPI lifespan integration, tests
 
 ### Phase 5: Dashboard & Visualization
 **Goal**: User can visually explore market data, AI insights, and manage their watchlist through a responsive web dashboard
