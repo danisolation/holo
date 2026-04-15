@@ -21,6 +21,7 @@ class AnalysisType(str, enum.Enum):
     TECHNICAL = "technical"
     FUNDAMENTAL = "fundamental"
     SENTIMENT = "sentiment"  # Phase 3 — included now for forward compatibility
+    COMBINED = "combined"    # Phase 3 — holistic mua/bán/giữ recommendation
 
 
 class AIAnalysis(Base):

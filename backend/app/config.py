@@ -33,5 +33,9 @@ class Settings(BaseSettings):
     # Indicator computation (Phase 2)
     indicator_compute_days: int = 60  # Compute for most recent N days per run
 
+    # CafeF News Scraping (Phase 3)
+    cafef_delay_seconds: float = 1.0  # Delay between requests per CONTEXT.md
+    cafef_news_days: int = 7  # Scrape news from last N days per CONTEXT.md
+
 
 settings = Settings()
