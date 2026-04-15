@@ -46,7 +46,7 @@ Plans:
 **Plans:** 3 plans
 Plans:
 - [x] 02-01-PLAN.md — Models, migration, schemas, dependencies & config (TechnicalIndicator + AIAnalysis tables, Pydantic Gemini schemas)
-- [ ] 02-02-PLAN.md — IndicatorService (ta library computation) + AIAnalysisService (Gemini integration)
+- [x] 02-02-PLAN.md — IndicatorService (ta library computation) + AIAnalysisService (Gemini integration)
 - [ ] 02-03-PLAN.md — Scheduler job chaining, API endpoints, unit tests
 
 ### Phase 3: Sentiment & Combined Intelligence
