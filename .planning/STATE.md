@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu HOSE real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** Phase 4 — Telegram Bot
+**Current focus:** Phase 5 — Dashboard & Visualization
 
 ## Current Position
 
-Phase: 4 (Telegram Bot) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 5 (Dashboard & Visualization) — STARTING
+Plan: 0 of ?
+Status: Smart discuss needed
 Last activity: 2026-04-15
 
 Progress: [██████░░░░] 60%
