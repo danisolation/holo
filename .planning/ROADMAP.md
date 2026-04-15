@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Daily crawl runs automatically after market close (~15:15 UTC+7) without manual intervention
 **Plans:** 3 plans
 Plans:
-- [ ] 01-01-PLAN.md — Project bootstrap, database schema & Alembic migration with yearly partitioning
+- [x] 01-01-PLAN.md — Project bootstrap, database schema & Alembic migration with yearly partitioning
 - [ ] 01-02-PLAN.md — vnstock async crawler, ticker management, price & financial data services
 - [ ] 01-03-PLAN.md — APScheduler automation, API endpoints for health/status/triggers/backfill
 

@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Ingestion
 
-- [ ] **DATA-01**: Crawl dữ liệu giá OHLCV hàng ngày cho 400 mã HOSE nổi bật nhất via vnstock
-- [ ] **DATA-02**: Scheduled automated crawling — tự động chạy hàng ngày không cần can thiệp
-- [ ] **DATA-03**: Historical data backfill — tải 1-2 năm dữ liệu lịch sử khi khởi tạo
-- [ ] **DATA-04**: Crawl báo cáo tài chính (P/E, P/B, doanh thu, lợi nhuận) từ vnstock
+- [x] **DATA-01**: Crawl dữ liệu giá OHLCV hàng ngày cho 400 mã HOSE nổi bật nhất via vnstock
+- [x] **DATA-02**: Scheduled automated crawling — tự động chạy hàng ngày không cần can thiệp
+- [x] **DATA-03**: Historical data backfill — tải 1-2 năm dữ liệu lịch sử khi khởi tạo
+- [x] **DATA-04**: Crawl báo cáo tài chính (P/E, P/B, doanh thu, lợi nhuận) từ vnstock
 
 ### Dashboard & Visualization
 
@@ -83,10 +83,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1: Data Foundation | Pending |
-| DATA-02 | Phase 1: Data Foundation | Pending |
-| DATA-03 | Phase 1: Data Foundation | Pending |
-| DATA-04 | Phase 1: Data Foundation | Pending |
+| DATA-01 | Phase 1: Data Foundation | Complete |
+| DATA-02 | Phase 1: Data Foundation | Complete |
+| DATA-03 | Phase 1: Data Foundation | Complete |
+| DATA-04 | Phase 1: Data Foundation | Complete |
 | AI-01 | Phase 2: Technical & Fundamental Analysis | Pending |
 | AI-02 | Phase 2: Technical & Fundamental Analysis | Pending |
 | AI-03 | Phase 3: Sentiment & Combined Intelligence | Pending |
