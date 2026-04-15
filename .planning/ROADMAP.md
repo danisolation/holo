@@ -43,7 +43,11 @@ Plans:
   1. Each ticker has RSI, MACD, MA, and Bollinger Bands computed and stored after each daily crawl
   2. Gemini produces a bullish/bearish/neutral technical signal with reasoning for any ticker
   3. Gemini produces a fundamental health score based on actual financial metrics for any ticker
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Models, migration, schemas, dependencies & config (TechnicalIndicator + AIAnalysis tables, Pydantic Gemini schemas)
+- [ ] 02-02-PLAN.md — IndicatorService (ta library computation) + AIAnalysisService (Gemini integration)
+- [ ] 02-03-PLAN.md — Scheduler job chaining, API endpoints, unit tests
 
 ### Phase 3: Sentiment & Combined Intelligence
 **Goal**: AI delivers a unified buy/sell/hold recommendation combining technical, fundamental, and sentiment dimensions with confidence level and Vietnamese explanation
@@ -88,7 +92,7 @@ Note: Phase 4 and Phase 5 are independent after Phase 3 — could execute in eit
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 3/3 | ✅ Complete | 2026-04-15 |
-| 2. Technical & Fundamental Analysis | 0/? | Not started | - |
+| 2. Technical & Fundamental Analysis | 0/3 | Not started | - |
 | 3. Sentiment & Combined Intelligence | 0/? | Not started | - |
 | 4. Telegram Bot | 0/? | Not started | - |
 | 5. Dashboard & Visualization | 0/? | Not started | - |
