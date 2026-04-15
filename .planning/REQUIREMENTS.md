@@ -34,9 +34,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Alerts & Telegram Bot
 
-- [ ] **BOT-01**: Telegram bot gửi trading signal alerts khi AI phát hiện tín hiệu
-- [ ] **BOT-02**: Price alert triggers — thông báo khi mã vượt ngưỡng giá do user đặt
-- [ ] **BOT-03**: Daily market summary — tóm tắt thị trường sáng/tối qua Telegram
+- [x] **BOT-01**: Telegram bot gửi trading signal alerts khi AI phát hiện tín hiệu
+- [x] **BOT-02**: Price alert triggers — thông báo khi mã vượt ngưỡng giá do user đặt
+- [x] **BOT-03**: Daily market summary — tóm tắt thị trường sáng/tối qua Telegram
 
 ## v2 Requirements
 
@@ -93,9 +93,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-04 | Phase 3: Sentiment & Combined Intelligence | Complete |
 | AI-05 | Phase 3: Sentiment & Combined Intelligence | Complete |
 | AI-06 | Phase 3: Sentiment & Combined Intelligence | Complete |
-| BOT-01 | Phase 4: Telegram Bot | Pending |
-| BOT-02 | Phase 4: Telegram Bot | Pending |
-| BOT-03 | Phase 4: Telegram Bot | Pending |
+| BOT-01 | Phase 4: Telegram Bot | Complete |
+| BOT-02 | Phase 4: Telegram Bot | Complete |
+| BOT-03 | Phase 4: Telegram Bot | Complete |
 | DASH-01 | Phase 5: Dashboard & Visualization | Pending |
 | DASH-02 | Phase 5: Dashboard & Visualization | Pending |
 | DASH-03 | Phase 5: Dashboard & Visualization | Pending |

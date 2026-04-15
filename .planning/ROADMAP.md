@@ -74,7 +74,7 @@ Plans:
   3. User receives a daily market summary (top movers, signal changes, watchlist status) via Telegram
 **Plans:** 3 plans
 Plans:
-- [ ] 04-01-PLAN.md — Models (UserWatchlist, PriceAlert), migration 004, python-telegram-bot dep, Telegram config
+- [x] 04-01-PLAN.md — Models (UserWatchlist, PriceAlert), migration 004, python-telegram-bot dep, Telegram config
 - [ ] 04-02-PLAN.md — Bot module: TelegramBot lifecycle, 7 command handlers, HTML message formatter
 - [ ] 04-03-PLAN.md — AlertService, scheduler jobs (signal/price/summary), FastAPI lifespan integration, tests
 
