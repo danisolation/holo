@@ -25,8 +25,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### AI Analysis
 
-- [ ] **AI-01**: Technical analysis scoring — RSI, MACD, MA crossovers → tín hiệu bullish/bearish/neutral
-- [ ] **AI-02**: Fundamental analysis scoring — P/E, tăng trưởng, sức khỏe tài chính → health score
+- [x] **AI-01**: Technical analysis scoring — RSI, MACD, MA crossovers → tín hiệu bullish/bearish/neutral
+- [x] **AI-02**: Fundamental analysis scoring — P/E, tăng trưởng, sức khỏe tài chính → health score
 - [ ] **AI-03**: Sentiment analysis — Gemini phân tích tin tức tiếng Việt → sentiment score
 - [ ] **AI-04**: Combined 3-dimensional recommendation — kết hợp kỹ thuật + cơ bản + sentiment → mua/bán/giữ
 - [ ] **AI-05**: Confidence level — mức độ tin cậy 1-10 cho mỗi recommendation
@@ -87,8 +87,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-02 | Phase 1: Data Foundation | Complete |
 | DATA-03 | Phase 1: Data Foundation | Complete |
 | DATA-04 | Phase 1: Data Foundation | Complete |
-| AI-01 | Phase 2: Technical & Fundamental Analysis | Pending |
-| AI-02 | Phase 2: Technical & Fundamental Analysis | Pending |
+| AI-01 | Phase 2: Technical & Fundamental Analysis | Complete |
+| AI-02 | Phase 2: Technical & Fundamental Analysis | Complete |
 | AI-03 | Phase 3: Sentiment & Combined Intelligence | Pending |
 | AI-04 | Phase 3: Sentiment & Combined Intelligence | Pending |
 | AI-05 | Phase 3: Sentiment & Combined Intelligence | Pending |

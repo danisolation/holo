@@ -45,7 +45,7 @@ Plans:
   3. Gemini produces a fundamental health score based on actual financial metrics for any ticker
 **Plans:** 3 plans
 Plans:
-- [ ] 02-01-PLAN.md — Models, migration, schemas, dependencies & config (TechnicalIndicator + AIAnalysis tables, Pydantic Gemini schemas)
+- [x] 02-01-PLAN.md — Models, migration, schemas, dependencies & config (TechnicalIndicator + AIAnalysis tables, Pydantic Gemini schemas)
 - [ ] 02-02-PLAN.md — IndicatorService (ta library computation) + AIAnalysisService (Gemini integration)
 - [ ] 02-03-PLAN.md — Scheduler job chaining, API endpoints, unit tests
 
