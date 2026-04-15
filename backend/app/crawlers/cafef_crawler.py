@@ -1,0 +1,192 @@
+"""CafeF news scraper for Vietnamese stock news.
+
+Fetches article titles and metadata from CafeF's AJAX endpoint.
+Stores in news_articles table with deduplication via ON CONFLICT DO NOTHING.
+
+Key decisions (from CONTEXT.md):
+- CafeF AJAX endpoint for smaller payload (~21KB vs ~78KB full page)
+- Titles only — no full-text extraction needed for sentiment
+- 1-second delay between ticker requests
+- verify=False for SSL (CafeF cert chain issues)
+"""
+import asyncio
+from datetime import datetime, timedelta
+
+import httpx
+from bs4 import BeautifulSoup
+from loguru import logger
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.models.news_article import NewsArticle
+from app.services.ticker_service import TickerService
+
+
+class CafeFCrawler:
+    """Scrapes CafeF for Vietnamese stock news articles."""
+
+    BASE_URL = "https://cafef.vn"
+    AJAX_URL = f"{BASE_URL}/du-lieu/Ajax/Events_RelatedNews_New.aspx"
+
+    def __init__(self, session: AsyncSession, delay: float | None = None):
+        self.session = session
+        self.delay = delay if delay is not None else settings.cafef_delay_seconds
+        self.news_days = settings.cafef_news_days
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+        }
+
+    async def crawl_all_tickers(self) -> dict:
+        """Scrape news for all active tickers.
+
+        Returns: {success: int, failed: int, total_articles: int, failed_symbols: list[str]}
+        """
+        ticker_service = TickerService(self.session)
+        ticker_map = await ticker_service.get_ticker_id_map()
+        logger.info(f"Starting CafeF news crawl for {len(ticker_map)} tickers")
+
+        success = 0
+        failed = 0
+        total_articles = 0
+        failed_symbols: list[str] = []
+
+        async with httpx.AsyncClient(
+            headers=self.headers,
+            timeout=15,
+            follow_redirects=True,
+            verify=False,  # CafeF SSL cert chain issues (per RESEARCH.md pitfall 2)
+        ) as client:
+            for i, (symbol, ticker_id) in enumerate(ticker_map.items()):
+                try:
+                    articles = await self._fetch_news(client, symbol)
+                    stored = await self._store_articles(ticker_id, articles)
+                    total_articles += stored
+                    success += 1
+
+                    if articles:
+                        logger.debug(f"{symbol}: {len(articles)} articles fetched, {stored} new stored")
+                    # Don't log for tickers with 0 articles (common per RESEARCH.md)
+
+                except Exception as e:
+                    logger.warning(f"CafeF crawl failed for {symbol}: {type(e).__name__}: {e}")
+                    failed += 1
+                    failed_symbols.append(symbol)
+
+                # Rate limiting: delay between requests (except after last ticker)
+                if i < len(ticker_map) - 1:
+                    await asyncio.sleep(self.delay)
+
+            # Commit all stored articles
+            await self.session.commit()
+
+        result = {
+            "success": success,
+            "failed": failed,
+            "total_articles": total_articles,
+            "failed_symbols": failed_symbols,
+        }
+        logger.info(f"CafeF news crawl complete: {result}")
+        return result
+
+    async def _fetch_news(self, client: httpx.AsyncClient, symbol: str) -> list[dict]:
+        """Fetch recent news articles for a single ticker from CafeF AJAX endpoint.
+
+        Args:
+            client: Reused httpx client (connection pooling)
+            symbol: Ticker symbol (e.g., 'VNM', 'FPT')
+
+        Returns: list of dicts with title, url, published_at, source
+        """
+        params = {
+            "symbol": symbol.upper(),
+            "floorID": "0",
+            "configID": "0",
+            "PageIndex": "1",
+            "PageSize": "30",
+            "Type": "2",
+        }
+
+        resp = await client.get(self.AJAX_URL, params=params)
+        resp.raise_for_status()
+
+        return self._parse_articles(resp.text)
+
+    def _parse_articles(self, html: str) -> list[dict]:
+        """Parse CafeF HTML fragment for article titles, dates, URLs.
+
+        Per RESEARCH.md verified selectors:
+        - <span class="timeTitle"> — publication date (DD/MM/YYYY HH:MM)
+        - <a class="docnhanhTitle"> — article title + URL
+
+        Filters to articles within the configured news_days window.
+        """
+        cutoff = datetime.now() - timedelta(days=self.news_days)
+        soup = BeautifulSoup(html, "html.parser")
+        articles = []
+
+        for li in soup.find_all("li"):
+            time_span = li.find("span", class_="timeTitle")
+            link = li.find("a", class_="docnhanhTitle")
+            if not (time_span and link):
+                continue
+
+            try:
+                pub_date = datetime.strptime(
+                    time_span.get_text(strip=True), "%d/%m/%Y %H:%M"
+                )
+            except ValueError:
+                continue  # Skip articles with unparseable dates
+
+            if pub_date < cutoff:
+                continue  # Outside configured news window
+
+            title = link.get_text(strip=True)
+            if not title:
+                continue
+
+            url = link.get("href", "")
+            if not url:
+                continue
+            # Normalize relative URLs (per RESEARCH.md pitfall 5)
+            if not url.startswith("http"):
+                url = f"{self.BASE_URL}{url}"
+
+            articles.append({
+                "title": title,
+                "url": url,
+                "published_at": pub_date,
+                "source": "cafef",
+            })
+
+        return articles
+
+    async def _store_articles(self, ticker_id: int, articles: list[dict]) -> int:
+        """Store articles in news_articles table with deduplication.
+
+        Uses INSERT ... ON CONFLICT DO NOTHING on (ticker_id, url) unique constraint.
+        Per RESEARCH.md pitfall 4: 7-day rolling window produces duplicate articles
+        across daily runs — ON CONFLICT DO NOTHING handles this cleanly.
+
+        Returns: number of newly inserted articles.
+        """
+        if not articles:
+            return 0
+
+        stored = 0
+        for article in articles:
+            stmt = insert(NewsArticle).values(
+                ticker_id=ticker_id,
+                title=article["title"],
+                url=article["url"],
+                published_at=article["published_at"],
+                source=article["source"],
+            ).on_conflict_do_nothing(
+                constraint="uq_news_articles_ticker_url"
+            )
+            result = await self.session.execute(stmt)
+            # rowcount = 1 if inserted, 0 if conflict (duplicate)
+            stored += result.rowcount
+
+        return stored
