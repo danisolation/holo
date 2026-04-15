@@ -138,9 +138,9 @@ async def get_ticker_indicators(symbol: str, limit: int = 5):
 
     Args:
         symbol: Ticker symbol (e.g., 'VNM', 'FPT')
-        limit: Number of recent dates to return (default 5, max 60)
+        limit: Number of recent dates to return (default 5, max 500)
     """
-    limit = min(limit, 60)
+    limit = min(limit, 500)
     async with async_session() as session:
         # Resolve symbol to ticker_id
         ticker = await _get_ticker_by_symbol(session, symbol)

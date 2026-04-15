@@ -56,8 +56,8 @@ function TickerSummaryCard({ symbol }: { symbol: string }) {
   }
 
   const key = combined.signal.toLowerCase().replace(/\s+/g, "_");
-  const isBuy = ["buy", "strong_buy", "bullish"].includes(key);
-  const isSell = ["sell", "strong_sell", "bearish"].includes(key);
+  const isBuy = ["buy", "strong_buy", "bullish", "mua", "strong", "good", "very_positive", "positive"].includes(key);
+  const isSell = ["sell", "strong_sell", "bearish", "ban", "weak", "critical", "very_negative", "negative"].includes(key);
 
   return (
     <Card size="sm">
