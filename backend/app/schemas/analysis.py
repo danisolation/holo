@@ -60,6 +60,52 @@ class FundamentalBatchResponse(BaseModel):
     analyses: list[TickerFundamentalAnalysis]
 
 
+# --- Sentiment Analysis Schemas (Phase 3) ---
+
+class SentimentLevel(str, Enum):
+    """Sentiment assessment levels."""
+    VERY_POSITIVE = "very_positive"
+    POSITIVE = "positive"
+    NEUTRAL = "neutral"
+    NEGATIVE = "negative"
+    VERY_NEGATIVE = "very_negative"
+
+
+class TickerSentimentAnalysis(BaseModel):
+    """Single ticker sentiment analysis from Gemini."""
+    ticker: str
+    sentiment: SentimentLevel
+    score: int = Field(ge=1, le=10, description="Sentiment score 1-10 (1=very negative, 10=very positive)")
+    reasoning: str
+
+
+class SentimentBatchResponse(BaseModel):
+    """Batch response for sentiment analysis (multiple tickers per Gemini call)."""
+    analyses: list[TickerSentimentAnalysis]
+
+
+# --- Combined Recommendation Schemas (Phase 3) ---
+
+class Recommendation(str, Enum):
+    """Combined recommendation (Vietnamese)."""
+    MUA = "mua"   # buy
+    BAN = "ban"   # sell
+    GIU = "giu"   # hold
+
+
+class TickerCombinedAnalysis(BaseModel):
+    """Single ticker combined recommendation from Gemini."""
+    ticker: str
+    recommendation: Recommendation
+    confidence: int = Field(ge=1, le=10, description="Confidence level 1-10")
+    explanation: str = Field(description="Vietnamese explanation, max ~200 words")
+
+
+class CombinedBatchResponse(BaseModel):
+    """Batch response for combined recommendation (multiple tickers per Gemini call)."""
+    analyses: list[TickerCombinedAnalysis]
+
+
 # --- API Response Schemas ---
 
 class AnalysisResultResponse(BaseModel):
@@ -95,3 +141,12 @@ class IndicatorResponse(BaseModel):
     bb_upper: float | None = None
     bb_middle: float | None = None
     bb_lower: float | None = None
+
+
+class SummaryResponse(BaseModel):
+    """API response for full analysis summary (all dimensions)."""
+    ticker_symbol: str
+    technical: AnalysisResultResponse | None = None
+    fundamental: AnalysisResultResponse | None = None
+    sentiment: AnalysisResultResponse | None = None
+    combined: AnalysisResultResponse | None = None
