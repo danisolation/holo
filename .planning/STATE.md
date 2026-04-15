@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-15)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu HOSE real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** Phase 2 — Technical & Fundamental Analysis
+**Current focus:** Phase 3 — Sentiment & Combined Intelligence
 
 ## Current Position
 
-Phase: 2 (Technical & Fundamental Analysis) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 3 (Sentiment & Combined Intelligence) — STARTING
+Plan: 0 of ?
+Status: Starting discuss → plan → execute
 Last activity: 2026-04-15
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 

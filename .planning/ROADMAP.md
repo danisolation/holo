@@ -13,7 +13,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for 400 HOSE tickers t
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Data Foundation** - PostgreSQL schema, vnstock integration, OHLCV + financial crawling with automated scheduling
-- [ ] **Phase 2: Technical & Fundamental Analysis** - Indicator computation with `ta` library + Gemini scoring for technical signals and fundamental health
+- [x] **Phase 2: Technical & Fundamental Analysis** - Indicator computation with `ta` library + Gemini scoring for technical signals and fundamental health
 - [ ] **Phase 3: Sentiment & Combined Intelligence** - News sentiment analysis + unified 3-dimensional buy/sell/hold recommendations with confidence and explanation
 - [ ] **Phase 4: Telegram Bot** - Trading signal alerts, price triggers, and daily market summaries delivered to phone
 - [ ] **Phase 5: Dashboard & Visualization** - Next.js web dashboard with candlestick charts, indicator overlays, watchlist, ticker details, and market heatmap
@@ -92,7 +92,7 @@ Note: Phase 4 and Phase 5 are independent after Phase 3 — could execute in eit
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 3/3 | ✅ Complete | 2026-04-15 |
-| 2. Technical & Fundamental Analysis | 0/3 | Not started | - |
+| 2. Technical & Fundamental Analysis | 3/3 | ✅ Complete | 2026-04-15 |
 | 3. Sentiment & Combined Intelligence | 0/? | Not started | - |
 | 4. Telegram Bot | 0/? | Not started | - |
 | 5. Dashboard & Visualization | 0/? | Not started | - |
