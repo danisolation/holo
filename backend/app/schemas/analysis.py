@@ -1,0 +1,97 @@
+"""Pydantic schemas for AI analysis.
+
+These serve dual purpose:
+1. Gemini response_schema — constrains LLM output to valid JSON
+2. API response schemas — typed responses for analysis endpoints
+
+Per RESEARCH.md: Gemini accepts Pydantic BaseModel classes directly
+in GenerateContentConfig(response_schema=...) and returns validated
+models via response.parsed.
+"""
+from enum import Enum
+from pydantic import BaseModel, Field
+
+
+# --- Technical Analysis Schemas ---
+
+class TechnicalSignal(str, Enum):
+    """Technical analysis signal levels."""
+    STRONG_BUY = "strong_buy"
+    BUY = "buy"
+    NEUTRAL = "neutral"
+    SELL = "sell"
+    STRONG_SELL = "strong_sell"
+
+
+class TickerTechnicalAnalysis(BaseModel):
+    """Single ticker technical analysis from Gemini."""
+    ticker: str
+    signal: TechnicalSignal
+    strength: int = Field(ge=1, le=10, description="Signal strength 1-10")
+    reasoning: str
+
+
+class TechnicalBatchResponse(BaseModel):
+    """Batch response for technical analysis (multiple tickers per Gemini call)."""
+    analyses: list[TickerTechnicalAnalysis]
+
+
+# --- Fundamental Analysis Schemas ---
+
+class FundamentalHealth(str, Enum):
+    """Fundamental health assessment levels."""
+    STRONG = "strong"
+    GOOD = "good"
+    NEUTRAL = "neutral"
+    WEAK = "weak"
+    CRITICAL = "critical"
+
+
+class TickerFundamentalAnalysis(BaseModel):
+    """Single ticker fundamental analysis from Gemini."""
+    ticker: str
+    health: FundamentalHealth
+    score: int = Field(ge=1, le=10, description="Health score 1-10")
+    reasoning: str
+
+
+class FundamentalBatchResponse(BaseModel):
+    """Batch response for fundamental analysis (multiple tickers per Gemini call)."""
+    analyses: list[TickerFundamentalAnalysis]
+
+
+# --- API Response Schemas ---
+
+class AnalysisResultResponse(BaseModel):
+    """API response for a single analysis result."""
+    ticker_symbol: str
+    analysis_type: str
+    analysis_date: str
+    signal: str
+    score: int
+    reasoning: str
+    model_version: str
+
+
+class AnalysisTriggerResponse(BaseModel):
+    """API response for analysis trigger endpoints."""
+    message: str
+    triggered: bool
+
+
+class IndicatorResponse(BaseModel):
+    """API response for indicator data."""
+    ticker_symbol: str
+    date: str
+    rsi_14: float | None = None
+    macd_line: float | None = None
+    macd_signal: float | None = None
+    macd_histogram: float | None = None
+    sma_20: float | None = None
+    sma_50: float | None = None
+    sma_200: float | None = None
+    ema_12: float | None = None
+    ema_26: float | None = None
+    bb_upper: float | None = None
+    bb_middle: float | None = None
+    bb_lower: float | None = None
