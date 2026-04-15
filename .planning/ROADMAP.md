@@ -47,7 +47,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Models, migration, schemas, dependencies & config (TechnicalIndicator + AIAnalysis tables, Pydantic Gemini schemas)
 - [x] 02-02-PLAN.md — IndicatorService (ta library computation) + AIAnalysisService (Gemini integration)
-- [ ] 02-03-PLAN.md — Scheduler job chaining, API endpoints, unit tests
+- [x] 02-03-PLAN.md — Scheduler job chaining, API endpoints, unit tests
 
 ### Phase 3: Sentiment & Combined Intelligence
 **Goal**: AI delivers a unified buy/sell/hold recommendation combining technical, fundamental, and sentiment dimensions with confidence level and Vietnamese explanation
