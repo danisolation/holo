@@ -213,3 +213,135 @@ class TestNewJobFunctions:
                 await daily_ai_analysis()
 
                 mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="both")
+
+
+class TestPhase3Chaining:
+    """Tests for Phase 3 job chaining: AI → news → sentiment → combined."""
+
+    def test_on_job_executed_chains_news_after_ai(self):
+        """Successful daily_ai_analysis must trigger daily_news_crawl."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_ai_analysis_triggered"
+        mock_event.exception = None
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_called_once()
+            call_kwargs = mock_add.call_args
+            assert call_kwargs.kwargs.get("id") == "daily_news_crawl_triggered" or \
+                   call_kwargs[1].get("id") == "daily_news_crawl_triggered"
+
+    def test_on_job_executed_chains_sentiment_after_news(self):
+        """Successful daily_news_crawl must trigger daily_sentiment_analysis."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_news_crawl_triggered"
+        mock_event.exception = None
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_called_once()
+            call_kwargs = mock_add.call_args
+            assert call_kwargs.kwargs.get("id") == "daily_sentiment_triggered" or \
+                   call_kwargs[1].get("id") == "daily_sentiment_triggered"
+
+    def test_on_job_executed_chains_combined_after_sentiment(self):
+        """Successful daily_sentiment must trigger daily_combined_analysis."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_sentiment_triggered"
+        mock_event.exception = None
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_called_once()
+            call_kwargs = mock_add.call_args
+            assert call_kwargs.kwargs.get("id") == "daily_combined_triggered" or \
+                   call_kwargs[1].get("id") == "daily_combined_triggered"
+
+    def test_on_job_executed_manual_ai_also_chains_news(self):
+        """Manual daily_ai_analysis must also chain to news crawl."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_ai_analysis_manual"
+        mock_event.exception = None
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_called_once()
+
+    def test_on_job_executed_failed_news_does_not_chain(self):
+        """Failed news crawl must NOT trigger sentiment analysis."""
+        from app.scheduler.manager import _on_job_executed, scheduler
+
+        mock_event = MagicMock()
+        mock_event.job_id = "daily_news_crawl_triggered"
+        mock_event.exception = Exception("CafeF down")
+
+        with patch.object(scheduler, "add_job") as mock_add:
+            _on_job_executed(mock_event)
+            mock_add.assert_not_called()
+
+
+class TestPhase3JobFunctions:
+    """Tests for Phase 3 job functions."""
+
+    @pytest.mark.asyncio
+    async def test_daily_news_crawl_calls_service(self):
+        """daily_news_crawl must call CafeFCrawler.crawl_all_tickers."""
+        with patch("app.scheduler.jobs.async_session") as mock_session_factory:
+            mock_session = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            with patch("app.crawlers.cafef_crawler.CafeFCrawler") as MockCrawler:
+                mock_crawler = AsyncMock()
+                mock_crawler.crawl_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "total_articles": 100, "failed_symbols": []})
+                MockCrawler.return_value = mock_crawler
+
+                from app.scheduler.jobs import daily_news_crawl
+                await daily_news_crawl()
+
+                MockCrawler.assert_called_once()
+                mock_crawler.crawl_all_tickers.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_daily_sentiment_calls_service(self):
+        """daily_sentiment_analysis must call AIAnalysisService.analyze_all_tickers('sentiment')."""
+        with patch("app.scheduler.jobs.async_session") as mock_session_factory:
+            mock_session = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                mock_svc = AsyncMock()
+                mock_svc.analyze_all_tickers = AsyncMock(return_value={"sentiment": {"success": 400, "failed": 0}})
+                MockService.return_value = mock_svc
+
+                from app.scheduler.jobs import daily_sentiment_analysis
+                await daily_sentiment_analysis()
+
+                mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="sentiment")
+
+    @pytest.mark.asyncio
+    async def test_daily_combined_calls_service(self):
+        """daily_combined_analysis must call AIAnalysisService.analyze_all_tickers('combined')."""
+        with patch("app.scheduler.jobs.async_session") as mock_session_factory:
+            mock_session = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                mock_svc = AsyncMock()
+                mock_svc.analyze_all_tickers = AsyncMock(return_value={"combined": {"success": 400, "failed": 0}})
+                MockService.return_value = mock_svc
+
+                from app.scheduler.jobs import daily_combined_analysis
+                await daily_combined_analysis()
+
+                mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="combined")

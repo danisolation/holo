@@ -154,3 +154,43 @@ class TestAnalysisEndpoints:
         """POST /api/analysis/trigger/ai with invalid analysis_type must return 400."""
         response = client.post("/api/analysis/trigger/ai?analysis_type=invalid")
         assert response.status_code == 400
+
+
+class TestPhase3Endpoints:
+    """Tests for Phase 3 analysis endpoints."""
+
+    def test_trigger_news_returns_200(self, client):
+        """POST /api/analysis/trigger/news must return triggered=true."""
+        with patch("app.api.analysis.async_session") as mock_sf:
+            mock_session = AsyncMock()
+            mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
+            with patch("app.crawlers.cafef_crawler.CafeFCrawler") as MockCrawler:
+                MockCrawler.return_value = AsyncMock()
+                response = client.post("/api/analysis/trigger/news")
+                assert response.status_code == 200
+                assert response.json()["triggered"] is True
+
+    def test_trigger_sentiment_returns_200(self, client):
+        """POST /api/analysis/trigger/sentiment must return triggered=true."""
+        with patch("app.api.analysis.async_session") as mock_sf:
+            mock_session = AsyncMock()
+            mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
+            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockAI:
+                MockAI.return_value = AsyncMock()
+                response = client.post("/api/analysis/trigger/sentiment")
+                assert response.status_code == 200
+                assert response.json()["triggered"] is True
+
+    def test_trigger_combined_returns_200(self, client):
+        """POST /api/analysis/trigger/combined must return triggered=true."""
+        with patch("app.api.analysis.async_session") as mock_sf:
+            mock_session = AsyncMock()
+            mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
+            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockAI:
+                MockAI.return_value = AsyncMock()
+                response = client.post("/api/analysis/trigger/combined")
+                assert response.status_code == 200
+                assert response.json()["triggered"] is True

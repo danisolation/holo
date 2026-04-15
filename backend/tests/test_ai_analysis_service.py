@@ -78,3 +78,166 @@ class TestPromptBuilding:
                 assert "VNM" in prompt
                 # Should mention financial concepts
                 assert any(term in prompt.lower() for term in ["p/e", "pe", "financial", "fundamental"])
+
+
+class TestSentimentPrompt:
+    """Test sentiment prompt generation."""
+
+    def test_sentiment_prompt_includes_ticker_and_titles(self):
+        """Sentiment prompt must contain ticker symbols and news titles."""
+        with patch("app.services.ai_analysis_service.settings") as mock_settings:
+            mock_settings.gemini_api_key = "test-key"
+            mock_settings.gemini_model = "gemini-2.0-flash"
+            mock_settings.gemini_batch_size = 10
+            mock_settings.gemini_delay_seconds = 4.0
+            mock_settings.gemini_max_retries = 3
+            mock_settings.cafef_delay_seconds = 1.0
+            mock_settings.cafef_news_days = 7
+            with patch("app.services.ai_analysis_service.genai"):
+                from app.services.ai_analysis_service import AIAnalysisService
+                mock_session = AsyncMock()
+                svc = AIAnalysisService(mock_session, api_key="test-key")
+                prompt = svc._build_sentiment_prompt({
+                    "VNM": {
+                        "news_titles": ["Vinamilk lên kế hoạch mở rộng", "VNM báo lãi quý 2"],
+                        "news_count": 2,
+                    },
+                    "FPT": {
+                        "news_titles": [],
+                        "news_count": 0,
+                    },
+                })
+                assert "VNM" in prompt
+                assert "FPT" in prompt
+                assert "Vinamilk" in prompt
+                assert "Không có tin tức" in prompt  # FPT has no news
+
+    def test_sentiment_prompt_handles_empty_news(self):
+        """Sentiment prompt must handle ticker with zero news gracefully."""
+        with patch("app.services.ai_analysis_service.settings") as mock_settings:
+            mock_settings.gemini_api_key = "test-key"
+            mock_settings.gemini_model = "gemini-2.0-flash"
+            mock_settings.gemini_batch_size = 10
+            mock_settings.gemini_delay_seconds = 4.0
+            mock_settings.gemini_max_retries = 3
+            mock_settings.cafef_delay_seconds = 1.0
+            mock_settings.cafef_news_days = 7
+            with patch("app.services.ai_analysis_service.genai"):
+                from app.services.ai_analysis_service import AIAnalysisService
+                mock_session = AsyncMock()
+                svc = AIAnalysisService(mock_session, api_key="test-key")
+                prompt = svc._build_sentiment_prompt({
+                    "ABC": {"news_titles": [], "news_count": 0},
+                })
+                assert "ABC" in prompt
+                assert "0 tin tức" in prompt
+
+
+class TestCombinedPrompt:
+    """Test combined recommendation prompt generation."""
+
+    def test_combined_prompt_includes_all_dimensions(self):
+        """Combined prompt must contain tech, fund, and sentiment data."""
+        with patch("app.services.ai_analysis_service.settings") as mock_settings:
+            mock_settings.gemini_api_key = "test-key"
+            mock_settings.gemini_model = "gemini-2.0-flash"
+            mock_settings.gemini_batch_size = 10
+            mock_settings.gemini_delay_seconds = 4.0
+            mock_settings.gemini_max_retries = 3
+            mock_settings.cafef_delay_seconds = 1.0
+            mock_settings.cafef_news_days = 7
+            with patch("app.services.ai_analysis_service.genai"):
+                from app.services.ai_analysis_service import AIAnalysisService
+                mock_session = AsyncMock()
+                svc = AIAnalysisService(mock_session, api_key="test-key")
+                prompt = svc._build_combined_prompt({
+                    "VNM": {
+                        "tech_signal": "buy",
+                        "tech_score": 7,
+                        "fund_signal": "good",
+                        "fund_score": 8,
+                        "sent_signal": "positive",
+                        "sent_score": 7,
+                    },
+                })
+                assert "VNM" in prompt
+                assert "buy" in prompt
+                assert "good" in prompt
+                assert "positive" in prompt
+                # Should mention mua/ban/giu (recommendation options)
+                assert "mua" in prompt.lower()
+
+    def test_combined_prompt_handles_missing_sentiment(self):
+        """Combined prompt must show neutral sentiment when missing."""
+        with patch("app.services.ai_analysis_service.settings") as mock_settings:
+            mock_settings.gemini_api_key = "test-key"
+            mock_settings.gemini_model = "gemini-2.0-flash"
+            mock_settings.gemini_batch_size = 10
+            mock_settings.gemini_delay_seconds = 4.0
+            mock_settings.gemini_max_retries = 3
+            mock_settings.cafef_delay_seconds = 1.0
+            mock_settings.cafef_news_days = 7
+            with patch("app.services.ai_analysis_service.genai"):
+                from app.services.ai_analysis_service import AIAnalysisService
+                mock_session = AsyncMock()
+                svc = AIAnalysisService(mock_session, api_key="test-key")
+                prompt = svc._build_combined_prompt({
+                    "VNM": {
+                        "tech_signal": "buy",
+                        "tech_score": 7,
+                        "fund_signal": "good",
+                        "fund_score": 8,
+                        "sent_signal": "neutral",  # Default when missing
+                        "sent_score": 5,
+                    },
+                })
+                assert "neutral" in prompt
+
+
+class TestSentimentSchema:
+    """Test sentiment and combined Pydantic schemas."""
+
+    def test_sentiment_batch_response_validates(self):
+        """SentimentBatchResponse must validate with correct data."""
+        from app.schemas.analysis import SentimentBatchResponse
+        data = {
+            "analyses": [
+                {"ticker": "VNM", "sentiment": "positive", "score": 7, "reasoning": "Tin tốt"},
+                {"ticker": "FPT", "sentiment": "neutral", "score": 5, "reasoning": "Không có tin"},
+            ]
+        }
+        resp = SentimentBatchResponse(**data)
+        assert len(resp.analyses) == 2
+        assert resp.analyses[0].sentiment.value == "positive"
+
+    def test_combined_batch_response_validates(self):
+        """CombinedBatchResponse must validate with correct data."""
+        from app.schemas.analysis import CombinedBatchResponse
+        data = {
+            "analyses": [
+                {"ticker": "VNM", "recommendation": "mua", "confidence": 8,
+                 "explanation": "Tất cả tín hiệu đồng thuận tích cực."},
+            ]
+        }
+        resp = CombinedBatchResponse(**data)
+        assert resp.analyses[0].recommendation.value == "mua"
+        assert resp.analyses[0].confidence == 8
+
+    def test_confidence_range_validation(self):
+        """Confidence must be between 1 and 10."""
+        from app.schemas.analysis import CombinedBatchResponse
+        import pydantic
+        with pytest.raises(pydantic.ValidationError):
+            CombinedBatchResponse(**{
+                "analyses": [
+                    {"ticker": "VNM", "recommendation": "mua", "confidence": 11,
+                     "explanation": "Test"},
+                ]
+            })
+
+    def test_recommendation_enum_values(self):
+        """Recommendation enum must have mua, ban, giu values."""
+        from app.schemas.analysis import Recommendation
+        assert Recommendation.MUA.value == "mua"
+        assert Recommendation.BAN.value == "ban"
+        assert Recommendation.GIU.value == "giu"
