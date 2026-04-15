@@ -29,7 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. 1-2 years of historical price data is backfilled and queryable by ticker + date range
   3. Financial reports (P/E, P/B, revenue, profit) are stored for all tickers
   4. Daily crawl runs automatically after market close (~15:15 UTC+7) without manual intervention
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Project bootstrap, database schema & Alembic migration with yearly partitioning
+- [ ] 01-02-PLAN.md — vnstock async crawler, ticker management, price & financial data services
+- [ ] 01-03-PLAN.md — APScheduler automation, API endpoints for health/status/triggers/backfill
 
 ### Phase 2: Technical & Fundamental Analysis
 **Goal**: Every ticker has computed technical indicators and AI-powered scoring for technical signals and fundamental health
@@ -83,7 +87,7 @@ Note: Phase 4 and Phase 5 are independent after Phase 3 — could execute in eit
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 0/? | Not started | - |
+| 1. Data Foundation | 0/3 | Not started | - |
 | 2. Technical & Fundamental Analysis | 0/? | Not started | - |
 | 3. Sentiment & Combined Intelligence | 0/? | Not started | - |
 | 4. Telegram Bot | 0/? | Not started | - |
