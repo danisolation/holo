@@ -102,3 +102,63 @@ async def daily_ai_analysis():
     except Exception as e:
         logger.error(f"=== DAILY AI ANALYSIS FAILED: {e} ===")
         raise
+
+
+async def daily_news_crawl():
+    """Crawl CafeF news for all active tickers.
+
+    Triggered automatically after daily_ai_analysis via job chaining.
+    Can also be triggered manually via API endpoint.
+    """
+    logger.info("=== DAILY NEWS CRAWL START ===")
+    try:
+        async with async_session() as session:
+            from app.crawlers.cafef_crawler import CafeFCrawler
+            crawler = CafeFCrawler(session)
+            result = await crawler.crawl_all_tickers()
+            logger.info(f"=== DAILY NEWS CRAWL COMPLETE: {result} ===")
+    except Exception as e:
+        logger.error(f"=== DAILY NEWS CRAWL FAILED: {e} ===")
+        raise
+
+
+async def daily_sentiment_analysis():
+    """Run Gemini sentiment analysis for all active tickers.
+
+    Triggered automatically after daily_news_crawl via job chaining.
+    Can also be triggered manually via API endpoint.
+    Requires GEMINI_API_KEY to be set.
+    """
+    logger.info("=== DAILY SENTIMENT ANALYSIS START ===")
+    try:
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            result = await service.analyze_all_tickers(analysis_type="sentiment")
+            logger.info(f"=== DAILY SENTIMENT ANALYSIS COMPLETE: {result} ===")
+    except ValueError as e:
+        logger.warning(f"=== DAILY SENTIMENT ANALYSIS SKIPPED: {e} ===")
+    except Exception as e:
+        logger.error(f"=== DAILY SENTIMENT ANALYSIS FAILED: {e} ===")
+        raise
+
+
+async def daily_combined_analysis():
+    """Run Gemini combined recommendation for all active tickers.
+
+    Triggered automatically after daily_sentiment_analysis via job chaining.
+    Can also be triggered manually via API endpoint.
+    Requires GEMINI_API_KEY to be set.
+    """
+    logger.info("=== DAILY COMBINED ANALYSIS START ===")
+    try:
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            result = await service.analyze_all_tickers(analysis_type="combined")
+            logger.info(f"=== DAILY COMBINED ANALYSIS COMPLETE: {result} ===")
+    except ValueError as e:
+        logger.warning(f"=== DAILY COMBINED ANALYSIS SKIPPED: {e} ===")
+    except Exception as e:
+        logger.error(f"=== DAILY COMBINED ANALYSIS FAILED: {e} ===")
+        raise

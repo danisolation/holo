@@ -18,6 +18,7 @@ from app.schemas.analysis import (
     AnalysisTriggerResponse,
     AnalysisResultResponse,
     IndicatorResponse,
+    SummaryResponse,
 )
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -68,6 +69,63 @@ async def trigger_ai_analysis(
     background_tasks.add_task(_run)
     return AnalysisTriggerResponse(
         message=f"AI analysis ({analysis_type}) triggered in background",
+        triggered=True,
+    )
+
+
+@router.post("/trigger/news", response_model=AnalysisTriggerResponse)
+async def trigger_news_crawl(background_tasks: BackgroundTasks):
+    """Manually trigger CafeF news crawl for all tickers (runs in background)."""
+    async def _run():
+        async with async_session() as session:
+            from app.crawlers.cafef_crawler import CafeFCrawler
+            crawler = CafeFCrawler(session)
+            result = await crawler.crawl_all_tickers()
+            logger.info(f"Manual news crawl complete: {result}")
+
+    background_tasks.add_task(_run)
+    return AnalysisTriggerResponse(
+        message="CafeF news crawl triggered in background",
+        triggered=True,
+    )
+
+
+@router.post("/trigger/sentiment", response_model=AnalysisTriggerResponse)
+async def trigger_sentiment_analysis(background_tasks: BackgroundTasks):
+    """Manually trigger sentiment analysis for all tickers (runs in background)."""
+    async def _run():
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            try:
+                service = AIAnalysisService(session)
+                result = await service.analyze_all_tickers(analysis_type="sentiment")
+                logger.info(f"Manual sentiment analysis complete: {result}")
+            except ValueError as e:
+                logger.error(f"Sentiment analysis failed: {e}")
+
+    background_tasks.add_task(_run)
+    return AnalysisTriggerResponse(
+        message="Sentiment analysis triggered in background",
+        triggered=True,
+    )
+
+
+@router.post("/trigger/combined", response_model=AnalysisTriggerResponse)
+async def trigger_combined_analysis(background_tasks: BackgroundTasks):
+    """Manually trigger combined recommendation for all tickers (runs in background)."""
+    async def _run():
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            try:
+                service = AIAnalysisService(session)
+                result = await service.analyze_all_tickers(analysis_type="combined")
+                logger.info(f"Manual combined analysis complete: {result}")
+            except ValueError as e:
+                logger.error(f"Combined analysis failed: {e}")
+
+    background_tasks.add_task(_run)
+    return AnalysisTriggerResponse(
+        message="Combined analysis triggered in background",
         triggered=True,
     )
 
@@ -151,6 +209,78 @@ async def get_fundamental_analysis(symbol: str):
             reasoning=analysis.reasoning,
             model_version=analysis.model_version,
         )
+
+
+@router.get("/{symbol}/sentiment", response_model=AnalysisResultResponse)
+async def get_sentiment_analysis(symbol: str):
+    """Get latest AI sentiment analysis for a ticker."""
+    async with async_session() as session:
+        ticker = await _get_ticker_by_symbol(session, symbol)
+        analysis = await _get_latest_analysis(session, ticker.id, AnalysisType.SENTIMENT)
+        return AnalysisResultResponse(
+            ticker_symbol=symbol.upper(),
+            analysis_type="sentiment",
+            analysis_date=analysis.analysis_date.isoformat(),
+            signal=analysis.signal,
+            score=analysis.score,
+            reasoning=analysis.reasoning,
+            model_version=analysis.model_version,
+        )
+
+
+@router.get("/{symbol}/combined", response_model=AnalysisResultResponse)
+async def get_combined_analysis(symbol: str):
+    """Get latest AI combined recommendation for a ticker."""
+    async with async_session() as session:
+        ticker = await _get_ticker_by_symbol(session, symbol)
+        analysis = await _get_latest_analysis(session, ticker.id, AnalysisType.COMBINED)
+        return AnalysisResultResponse(
+            ticker_symbol=symbol.upper(),
+            analysis_type="combined",
+            analysis_date=analysis.analysis_date.isoformat(),
+            signal=analysis.signal,
+            score=analysis.score,
+            reasoning=analysis.reasoning,
+            model_version=analysis.model_version,
+        )
+
+
+@router.get("/{symbol}/summary", response_model=SummaryResponse)
+async def get_analysis_summary(symbol: str):
+    """Get full analysis summary for a ticker (all 4 dimensions).
+
+    Returns available analyses — does not 404 if some dimensions are missing.
+    Per CONTEXT.md: GET /api/analysis/{symbol}/summary.
+    """
+    async with async_session() as session:
+        ticker = await _get_ticker_by_symbol(session, symbol)
+
+        summary_data: dict = {"ticker_symbol": symbol.upper()}
+
+        for analysis_type in [AnalysisType.TECHNICAL, AnalysisType.FUNDAMENTAL,
+                              AnalysisType.SENTIMENT, AnalysisType.COMBINED]:
+            result = await session.execute(
+                select(AIAnalysis)
+                .where(
+                    AIAnalysis.ticker_id == ticker.id,
+                    AIAnalysis.analysis_type == analysis_type,
+                )
+                .order_by(AIAnalysis.analysis_date.desc())
+                .limit(1)
+            )
+            analysis = result.scalar_one_or_none()
+            if analysis:
+                summary_data[analysis_type.value] = AnalysisResultResponse(
+                    ticker_symbol=symbol.upper(),
+                    analysis_type=analysis_type.value,
+                    analysis_date=analysis.analysis_date.isoformat(),
+                    signal=analysis.signal,
+                    score=analysis.score,
+                    reasoning=analysis.reasoning,
+                    model_version=analysis.model_version,
+                )
+
+        return SummaryResponse(**summary_data)
 
 
 # --- Helpers ---

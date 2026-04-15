@@ -42,6 +42,33 @@ def _on_job_executed(event: events.JobExecutionEvent):
             replace_existing=True,
             misfire_grace_time=3600,
         )
+    elif event.job_id in ("daily_ai_analysis_triggered", "daily_ai_analysis_manual"):
+        from app.scheduler.jobs import daily_news_crawl
+        logger.info("Chaining: daily_ai_analysis → daily_news_crawl")
+        scheduler.add_job(
+            daily_news_crawl,
+            id="daily_news_crawl_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_news_crawl_triggered", "daily_news_crawl_manual"):
+        from app.scheduler.jobs import daily_sentiment_analysis
+        logger.info("Chaining: daily_news_crawl → daily_sentiment_analysis")
+        scheduler.add_job(
+            daily_sentiment_analysis,
+            id="daily_sentiment_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_sentiment_triggered", "daily_sentiment_manual"):
+        from app.scheduler.jobs import daily_combined_analysis
+        logger.info("Chaining: daily_sentiment → daily_combined_analysis")
+        scheduler.add_job(
+            daily_combined_analysis,
+            id="daily_combined_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
 
 
 def configure_jobs():
@@ -107,4 +134,4 @@ def configure_jobs():
 
     # Register job chaining listener (Phase 2)
     scheduler.add_listener(_on_job_executed, events.EVENT_JOB_EXECUTED)
-    logger.info("Job chaining registered: daily_price_crawl → indicators → AI analysis")
+    logger.info("Job chaining registered: daily_price_crawl → indicators → AI analysis → news → sentiment → combined")
