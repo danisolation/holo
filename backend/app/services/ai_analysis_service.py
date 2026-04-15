@@ -1,7 +1,7 @@
 """AI-powered analysis service using Google Gemini.
 
-Sends batched ticker data to Gemini for technical and fundamental scoring.
-Uses structured output (response_schema) for type-safe responses.
+Sends batched ticker data to Gemini for technical, fundamental, sentiment,
+and combined scoring. Uses structured output (response_schema) for type-safe responses.
 
 Key decisions (from CONTEXT.md):
 - gemini-2.0-flash model, 15 RPM free tier
@@ -10,10 +10,12 @@ Key decisions (from CONTEXT.md):
 - Failed batches logged and skipped — partial analysis > none
 - Technical input: 5-day indicator values, price vs MAs, MACD crossover state, RSI zone
 - Fundamental input: P/E, P/B, ROE, ROA, revenue/profit growth, D/E, current ratio
+- Sentiment input: Vietnamese news titles from CafeF (no translation per CONTEXT.md)
+- Combined: Gemini reasons across all 3 dimensions (NOT a weighted formula)
 """
 import asyncio
 import json
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import google.genai as genai
@@ -28,13 +30,19 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from app.config import settings
 from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.models.financial import Financial
+from app.models.news_article import NewsArticle
 from app.models.technical_indicator import TechnicalIndicator
-from app.schemas.analysis import TechnicalBatchResponse, FundamentalBatchResponse
+from app.schemas.analysis import (
+    TechnicalBatchResponse,
+    FundamentalBatchResponse,
+    SentimentBatchResponse,
+    CombinedBatchResponse,
+)
 from app.services.ticker_service import TickerService
 
 
 class AIAnalysisService:
-    """Gemini-powered analysis for technical and fundamental scoring."""
+    """Gemini-powered analysis for technical, fundamental, sentiment, and combined scoring."""
 
     def __init__(self, session: AsyncSession, api_key: str | None = None):
         self.session = session
@@ -56,18 +64,24 @@ class AIAnalysisService:
         """Run AI analysis for all active tickers.
 
         Args:
-            analysis_type: 'technical', 'fundamental', or 'both'
+            analysis_type: 'technical', 'fundamental', 'sentiment', 'combined',
+                           'both' (tech+fund only for backward compat), or 'all' (all 4 types)
 
-        Returns: {technical: {success, failed, failed_symbols},
-                  fundamental: {success, failed, failed_symbols}}
+        Returns: dict with results per analysis type run
         """
         results: dict = {}
 
-        if analysis_type in ("technical", "both"):
+        if analysis_type in ("technical", "both", "all"):
             results["technical"] = await self.run_technical_analysis()
 
-        if analysis_type in ("fundamental", "both"):
+        if analysis_type in ("fundamental", "both", "all"):
             results["fundamental"] = await self.run_fundamental_analysis()
+
+        if analysis_type in ("sentiment", "all"):
+            results["sentiment"] = await self.run_sentiment_analysis()
+
+        if analysis_type in ("combined", "all"):
+            results["combined"] = await self.run_combined_analysis()
 
         return results
 
@@ -139,6 +153,85 @@ class AIAnalysisService:
             batch_analyzer=self._analyze_fundamental_batch,
         )
 
+    async def run_sentiment_analysis(self) -> dict:
+        """Sentiment analysis for all tickers based on recent news.
+
+        Feeds Vietnamese news titles to Gemini (no translation per CONTEXT.md).
+        Tickers with 0 news articles are included with empty list — Gemini
+        will score them as neutral per the prompt instruction.
+
+        Returns: {success: int, failed: int, failed_symbols: list[str]}
+        """
+        ticker_service = TickerService(self.session)
+        ticker_map = await ticker_service.get_ticker_id_map()
+        logger.info(f"Starting sentiment analysis for {len(ticker_map)} tickers")
+
+        ticker_data: dict[str, dict] = {}
+        ticker_ids: dict[str, int] = {}
+
+        for symbol, ticker_id in ticker_map.items():
+            context = await self._get_sentiment_context(ticker_id, symbol)
+            ticker_data[symbol] = context
+            ticker_ids[symbol] = ticker_id
+
+        logger.info(
+            f"Sentiment context gathered: {len(ticker_data)} tickers "
+            f"({sum(1 for d in ticker_data.values() if d['news_titles'])} with news)"
+        )
+
+        if not ticker_data:
+            return {"success": 0, "failed": 0, "failed_symbols": []}
+
+        return await self._run_batched_analysis(
+            ticker_data=ticker_data,
+            ticker_ids=ticker_ids,
+            analysis_type=AnalysisType.SENTIMENT,
+            batch_analyzer=self._analyze_sentiment_batch,
+        )
+
+    async def run_combined_analysis(self) -> dict:
+        """Combined 3-dimensional recommendation for all tickers.
+
+        Reads latest technical, fundamental, and sentiment analyses from ai_analyses table.
+        Produces holistic mua/bán/giữ recommendation with confidence and Vietnamese explanation.
+        Per CONTEXT.md: Gemini reasons across all dimensions (NOT a weighted formula).
+
+        Graceful degradation per CONTEXT.md: if sentiment is missing, combine with tech+fund only.
+        Skips tickers that have neither technical nor fundamental analysis.
+
+        Returns: {success: int, failed: int, failed_symbols: list[str]}
+        """
+        ticker_service = TickerService(self.session)
+        ticker_map = await ticker_service.get_ticker_id_map()
+        logger.info(f"Starting combined analysis for {len(ticker_map)} tickers")
+
+        ticker_data: dict[str, dict] = {}
+        ticker_ids: dict[str, int] = {}
+        skipped = 0
+
+        for symbol, ticker_id in ticker_map.items():
+            context = await self._get_combined_context(ticker_id, symbol)
+            if context is not None:
+                ticker_data[symbol] = context
+                ticker_ids[symbol] = ticker_id
+            else:
+                skipped += 1
+
+        logger.info(
+            f"Combined context gathered: {len(ticker_data)} tickers with data, {skipped} skipped (no prior analysis)"
+        )
+
+        if not ticker_data:
+            logger.warning("No tickers with prior analysis data — skipping combined analysis")
+            return {"success": 0, "failed": 0, "failed_symbols": []}
+
+        return await self._run_batched_analysis(
+            ticker_data=ticker_data,
+            ticker_ids=ticker_ids,
+            analysis_type=AnalysisType.COMBINED,
+            batch_analyzer=self._analyze_combined_batch,
+        )
+
     # ------------------------------------------------------------------
     # Batching & Orchestration
     # ------------------------------------------------------------------
@@ -194,9 +287,25 @@ class AIAnalysisService:
                     if analysis_type == AnalysisType.TECHNICAL:
                         signal = analysis.signal.value
                         score = analysis.strength
-                    else:
+                    elif analysis_type == AnalysisType.FUNDAMENTAL:
                         signal = analysis.health.value
                         score = analysis.score
+                    elif analysis_type == AnalysisType.SENTIMENT:
+                        signal = analysis.sentiment.value
+                        score = analysis.score
+                    elif analysis_type == AnalysisType.COMBINED:
+                        signal = analysis.recommendation.value
+                        score = analysis.confidence
+                    else:
+                        signal = "unknown"
+                        score = 5
+
+                    # Combined uses explanation field; others use reasoning
+                    reasoning = (
+                        analysis.explanation
+                        if analysis_type == AnalysisType.COMBINED
+                        else analysis.reasoning
+                    )
 
                     await self._store_analysis(
                         ticker_id=tid,
@@ -204,7 +313,7 @@ class AIAnalysisService:
                         analysis_date=today,
                         signal=signal,
                         score=score,
-                        reasoning=analysis.reasoning,
+                        reasoning=reasoning,
                         raw_response=analysis.model_dump(),
                     )
                     success += 1
@@ -278,6 +387,28 @@ class AIAnalysisService:
         response = await self._call_gemini(prompt, FundamentalBatchResponse)
         logger.debug(
             f"Gemini fundamental tokens: {response.usage_metadata.total_token_count}"
+        )
+        return response.parsed
+
+    async def _analyze_sentiment_batch(
+        self, ticker_data: dict[str, dict]
+    ) -> SentimentBatchResponse | None:
+        """Analyze a batch of tickers for sentiment from news titles."""
+        prompt = self._build_sentiment_prompt(ticker_data)
+        response = await self._call_gemini(prompt, SentimentBatchResponse)
+        logger.debug(
+            f"Gemini sentiment tokens: {response.usage_metadata.total_token_count}"
+        )
+        return response.parsed
+
+    async def _analyze_combined_batch(
+        self, ticker_data: dict[str, dict]
+    ) -> CombinedBatchResponse | None:
+        """Analyze a batch of tickers for combined recommendation."""
+        prompt = self._build_combined_prompt(ticker_data)
+        response = await self._call_gemini(prompt, CombinedBatchResponse)
+        logger.debug(
+            f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
         )
         return response.parsed
 
@@ -389,6 +520,97 @@ class AIAnalysisService:
             "debt_to_equity": _to_float(row.debt_to_equity),
         }
 
+    async def _get_sentiment_context(
+        self, ticker_id: int, symbol: str
+    ) -> dict:
+        """Get recent news titles for a ticker.
+
+        Returns dict with news_titles list and news_count.
+        Always returns a dict (never None) — tickers with 0 news get empty list.
+        Per CONTEXT.md: Gemini handles empty news by scoring neutral.
+        """
+        cutoff = datetime.now() - timedelta(days=settings.cafef_news_days)
+
+        result = await self.session.execute(
+            select(NewsArticle.title)
+            .where(
+                NewsArticle.ticker_id == ticker_id,
+                NewsArticle.published_at >= cutoff,
+            )
+            .order_by(NewsArticle.published_at.desc())
+        )
+        titles = [row[0] for row in result.all()]
+
+        return {
+            "news_titles": titles,
+            "news_count": len(titles),
+        }
+
+    async def _get_combined_context(
+        self, ticker_id: int, symbol: str
+    ) -> dict | None:
+        """Get latest technical, fundamental, and sentiment analyses for a ticker.
+
+        Returns dict with tech_signal, tech_score, fund_signal, fund_score,
+        sent_signal, sent_score. Returns None if ticker has neither technical
+        nor fundamental analysis (nothing to combine).
+
+        Per CONTEXT.md: if sentiment is missing, set sent_signal=neutral, sent_score=5.
+        """
+        # Fetch latest analysis per type (up to 3 rows)
+        result = await self.session.execute(
+            select(AIAnalysis)
+            .where(AIAnalysis.ticker_id == ticker_id)
+            .where(AIAnalysis.analysis_type.in_([
+                AnalysisType.TECHNICAL,
+                AnalysisType.FUNDAMENTAL,
+                AnalysisType.SENTIMENT,
+            ]))
+            .order_by(AIAnalysis.analysis_date.desc())
+        )
+        rows = result.scalars().all()
+
+        # Group by type — take the most recent of each
+        by_type: dict[str, AIAnalysis] = {}
+        for row in rows:
+            type_val = row.analysis_type.value if isinstance(row.analysis_type, AnalysisType) else row.analysis_type
+            if type_val not in by_type:
+                by_type[type_val] = row
+
+        tech = by_type.get("technical")
+        fund = by_type.get("fundamental")
+        sent = by_type.get("sentiment")
+
+        # Skip tickers with NO tech AND NO fund (per RESEARCH.md pitfall 6)
+        if tech is None and fund is None:
+            return None
+
+        context = {}
+
+        if tech:
+            context["tech_signal"] = tech.signal
+            context["tech_score"] = tech.score
+        else:
+            context["tech_signal"] = "N/A"
+            context["tech_score"] = "N/A"
+
+        if fund:
+            context["fund_signal"] = fund.signal
+            context["fund_score"] = fund.score
+        else:
+            context["fund_signal"] = "N/A"
+            context["fund_score"] = "N/A"
+
+        if sent:
+            context["sent_signal"] = sent.signal
+            context["sent_score"] = sent.score
+        else:
+            # Graceful degradation: sentiment defaults to neutral (per CONTEXT.md)
+            context["sent_signal"] = "neutral"
+            context["sent_score"] = 5
+
+        return context
+
     # ------------------------------------------------------------------
     # Prompt Builders
     # ------------------------------------------------------------------
@@ -451,6 +673,71 @@ class AIAnalysisService:
             lines.append(f"ROE: {data['roe']}, ROA: {data['roa']}")
             lines.append(f"Revenue Growth: {data['revenue_growth']}, Profit Growth: {data['profit_growth']}")
             lines.append(f"Current Ratio: {data['current_ratio']}, Debt/Equity: {data['debt_to_equity']}")
+
+        return "\n".join(lines)
+
+    def _build_sentiment_prompt(self, ticker_data: dict[str, dict]) -> str:
+        """Build Vietnamese prompt for sentiment analysis batch.
+
+        Per CONTEXT.md: Feed Vietnamese titles directly to Gemini (no translation).
+        Per CONTEXT.md: Batch 10 tickers per call.
+        """
+        lines = [
+            "Bạn là chuyên gia phân tích tâm lý thị trường chứng khoán Việt Nam (HOSE). "
+            "Phân tích tiêu đề tin tức gần đây cho các mã cổ phiếu sau.",
+            "",
+            "Cho mỗi mã, đánh giá:",
+            "- sentiment: very_positive, positive, neutral, negative, very_negative",
+            "- score: 1-10 (1 = rất tiêu cực, 10 = rất tích cực)",
+            "- reasoning: giải thích ngắn gọn bằng tiếng Việt (2-3 câu)",
+            "",
+            "Lưu ý: Nếu không có tin tức, sentiment = neutral, score = 5.",
+            "",
+            "Các mã cổ phiếu:",
+        ]
+
+        for symbol, data in ticker_data.items():
+            news_titles = data.get("news_titles", [])
+            lines.append(f"\n--- {symbol} ({len(news_titles)} tin tức) ---")
+            if news_titles:
+                for i, title in enumerate(news_titles, 1):
+                    lines.append(f"{i}. {title}")
+            else:
+                lines.append("Không có tin tức gần đây.")
+
+        return "\n".join(lines)
+
+    def _build_combined_prompt(self, ticker_data: dict[str, dict]) -> str:
+        """Build Vietnamese prompt for combined recommendation batch.
+
+        Per CONTEXT.md: Single Gemini call combining tech + fund + sentiment.
+        Per CONTEXT.md: Gemini reasons across all dimensions (NOT a weighted formula).
+        Per CONTEXT.md: Confidence based on signal alignment, data freshness, news volume.
+        Per CONTEXT.md: Vietnamese explanation, max ~200 words, natural language.
+        """
+        lines = [
+            "Bạn là chuyên gia tư vấn đầu tư chứng khoán Việt Nam (HOSE). "
+            "Dựa trên 3 chiều phân tích (kỹ thuật, cơ bản, tâm lý thị trường), "
+            "đưa ra khuyến nghị tổng hợp cho các mã sau.",
+            "",
+            "Cho mỗi mã, cung cấp:",
+            "- recommendation: mua, ban, giu",
+            "- confidence: 1-10 (dựa trên sự đồng thuận giữa 3 chiều, độ tươi dữ liệu, lượng tin)",
+            "- explanation: giải thích bằng tiếng Việt, tối đa 200 từ, ngôn ngữ tự nhiên",
+            "",
+            "Quy tắc confidence:",
+            "- 8-10: Cả 3 chiều đồng thuận, dữ liệu đầy đủ và mới",
+            "- 5-7: 2/3 chiều đồng thuận, hoặc dữ liệu không đầy đủ",
+            "- 1-4: Tín hiệu mâu thuẫn, hoặc thiếu dữ liệu nghiêm trọng",
+            "",
+            "Các mã cổ phiếu:",
+        ]
+
+        for symbol, data in ticker_data.items():
+            lines.append(f"\n--- {symbol} ---")
+            lines.append(f"Kỹ thuật: signal={data.get('tech_signal', 'N/A')}, strength={data.get('tech_score', 'N/A')}")
+            lines.append(f"Cơ bản: health={data.get('fund_signal', 'N/A')}, score={data.get('fund_score', 'N/A')}")
+            lines.append(f"Tâm lý: sentiment={data.get('sent_signal', 'neutral')}, score={data.get('sent_score', 5)}")
 
         return "\n".join(lines)
 
