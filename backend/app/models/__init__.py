@@ -12,5 +12,7 @@ from app.models.financial import Financial  # noqa: E402
 from app.models.technical_indicator import TechnicalIndicator  # noqa: E402
 from app.models.ai_analysis import AIAnalysis, AnalysisType  # noqa: E402
 from app.models.news_article import NewsArticle  # noqa: E402
+from app.models.user_watchlist import UserWatchlist  # noqa: E402
+from app.models.price_alert import PriceAlert  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert"]
