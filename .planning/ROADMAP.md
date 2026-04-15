@@ -92,7 +92,7 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — Backend CORS + ticker/price endpoints, Next.js project setup, API client, React Query hooks, zustand store
 - [x] 05-02-PLAN.md — Market overview heatmap page, ticker detail page with candlestick charts + indicator overlays + AI verdict
-- [ ] 05-03-PLAN.md — Watchlist page, dashboard summary, responsive navbar, mobile polish
+- [x] 05-03-PLAN.md — Watchlist page, dashboard summary, responsive navbar, mobile polish
 **UI hint**: yes
 
 ## Progress
