@@ -66,7 +66,47 @@ export function Heatmap({ data }: HeatmapProps) {
             {sector}{" "}
             <span className="text-xs">({tickers.length})</span>
           </h3>
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-1">
+
+          {/* Mobile: scrollable list view */}
+          <div className="md:hidden overflow-y-auto max-h-[60vh] space-y-0.5">
+            {tickers.map((ticker) => (
+              <button
+                key={ticker.symbol}
+                onClick={() => router.push(`/ticker/${ticker.symbol}`)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                style={{
+                  borderLeft: `3px solid ${getChangeColor(ticker.change_pct)}`,
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-sm w-14 text-left">
+                    {ticker.symbol}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+                    {ticker.name}
+                  </span>
+                </div>
+                <span
+                  className={`font-mono text-sm ${
+                    ticker.change_pct != null && ticker.change_pct > 0
+                      ? "text-[#26a69a]"
+                      : ticker.change_pct != null && ticker.change_pct < 0
+                        ? "text-[#ef5350]"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  {ticker.change_pct != null
+                    ? (ticker.change_pct >= 0 ? "+" : "") +
+                      ticker.change_pct.toFixed(2) +
+                      "%"
+                    : "—"}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop: dense grid heatmap */}
+          <div className="hidden md:grid grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-1">
             {tickers.map((ticker) => (
               <button
                 key={ticker.symbol}
