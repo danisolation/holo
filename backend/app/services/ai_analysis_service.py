@@ -247,6 +247,7 @@ class AIAnalysisService:
 
         Batches tickers into groups of self.batch_size, calls Gemini per batch,
         stores results, and sleeps self.delay seconds between batches.
+        Handles 429 quota errors by waiting the specified retry delay.
         """
         symbols = list(ticker_data.keys())
         success = 0
@@ -266,67 +267,93 @@ class AIAnalysisService:
                 f"({len(batch_symbols)} tickers): {batch_symbols}"
             )
 
-            try:
-                result = await batch_analyzer(batch_data)
+            # Retry loop for 429 rate limit errors
+            max_retries = 5
+            for attempt in range(max_retries + 1):
+                try:
+                    result = await batch_analyzer(batch_data)
 
-                if result is None:
-                    logger.error(f"Batch {batch_num}: Gemini returned None — skipping")
+                    if result is None:
+                        logger.error(f"Batch {batch_num}: Gemini returned None — skipping")
+                        failed += len(batch_symbols)
+                        failed_symbols.extend(batch_symbols)
+                        break
+
+                    # Store each ticker's analysis
+                    for analysis in result.analyses:
+                        symbol = analysis.ticker
+                        tid = ticker_ids.get(symbol)
+                        if tid is None:
+                            logger.warning(f"Gemini returned unknown ticker: {symbol}")
+                            continue
+
+                        # Extract signal and score based on analysis type
+                        if analysis_type == AnalysisType.TECHNICAL:
+                            signal = analysis.signal.value
+                            score = analysis.strength
+                        elif analysis_type == AnalysisType.FUNDAMENTAL:
+                            signal = analysis.health.value
+                            score = analysis.score
+                        elif analysis_type == AnalysisType.SENTIMENT:
+                            signal = analysis.sentiment.value
+                            score = analysis.score
+                        elif analysis_type == AnalysisType.COMBINED:
+                            signal = analysis.recommendation.value
+                            score = analysis.confidence
+                        else:
+                            signal = "unknown"
+                            score = 5
+
+                        # Combined uses explanation field; others use reasoning
+                        reasoning = (
+                            analysis.explanation
+                            if analysis_type == AnalysisType.COMBINED
+                            else analysis.reasoning
+                        )
+
+                        await self._store_analysis(
+                            ticker_id=tid,
+                            analysis_type=analysis_type,
+                            analysis_date=today,
+                            signal=signal,
+                            score=score,
+                            reasoning=reasoning,
+                            raw_response=analysis.model_dump(),
+                        )
+                        success += 1
+
+                    await self.session.commit()
+                    break  # Success — exit retry loop
+
+                except ClientError as e:
+                    error_str = str(e)
+                    if "429" in error_str and attempt < max_retries:
+                        # Parse retry delay from error message
+                        import re
+                        match = re.search(r'retry in ([\d.]+)s', error_str)
+                        wait_time = float(match.group(1)) + 5 if match else 60
+                        logger.warning(
+                            f"Batch {batch_num} hit 429 rate limit (attempt {attempt+1}/{max_retries}). "
+                            f"Waiting {wait_time:.0f}s..."
+                        )
+                        await asyncio.sleep(wait_time)
+                        continue
+                    logger.error(
+                        f"Batch {batch_num} failed — {type(e).__name__}: {e}"
+                    )
+                    await self.session.rollback()
                     failed += len(batch_symbols)
                     failed_symbols.extend(batch_symbols)
-                    continue
+                    break
 
-                # Store each ticker's analysis
-                for analysis in result.analyses:
-                    symbol = analysis.ticker
-                    tid = ticker_ids.get(symbol)
-                    if tid is None:
-                        logger.warning(f"Gemini returned unknown ticker: {symbol}")
-                        continue
-
-                    # Extract signal and score based on analysis type
-                    if analysis_type == AnalysisType.TECHNICAL:
-                        signal = analysis.signal.value
-                        score = analysis.strength
-                    elif analysis_type == AnalysisType.FUNDAMENTAL:
-                        signal = analysis.health.value
-                        score = analysis.score
-                    elif analysis_type == AnalysisType.SENTIMENT:
-                        signal = analysis.sentiment.value
-                        score = analysis.score
-                    elif analysis_type == AnalysisType.COMBINED:
-                        signal = analysis.recommendation.value
-                        score = analysis.confidence
-                    else:
-                        signal = "unknown"
-                        score = 5
-
-                    # Combined uses explanation field; others use reasoning
-                    reasoning = (
-                        analysis.explanation
-                        if analysis_type == AnalysisType.COMBINED
-                        else analysis.reasoning
+                except Exception as e:
+                    logger.error(
+                        f"Batch {batch_num} failed — {type(e).__name__}: {e}"
                     )
-
-                    await self._store_analysis(
-                        ticker_id=tid,
-                        analysis_type=analysis_type,
-                        analysis_date=today,
-                        signal=signal,
-                        score=score,
-                        reasoning=reasoning,
-                        raw_response=analysis.model_dump(),
-                    )
-                    success += 1
-
-                await self.session.commit()
-
-            except Exception as e:
-                logger.error(
-                    f"Batch {batch_num} failed after retries — "
-                    f"{type(e).__name__}: {e}"
-                )
-                failed += len(batch_symbols)
-                failed_symbols.extend(batch_symbols)
+                    await self.session.rollback()
+                    failed += len(batch_symbols)
+                    failed_symbols.extend(batch_symbols)
+                    break
 
             # Rate limiting: delay between batches (except after last batch)
             if batch_idx + self.batch_size < len(symbols):
@@ -345,17 +372,22 @@ class AIAnalysisService:
     # ------------------------------------------------------------------
 
     @retry(
-        stop=stop_after_attempt(settings.gemini_max_retries),
-        wait=wait_exponential(multiplier=2, min=4, max=30),
-        retry=retry_if_exception_type((ClientError, ServerError)),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=2, min=4, max=15),
+        retry=retry_if_exception_type(ServerError),
         reraise=True,
     )
     async def _call_gemini(self, prompt: str, response_schema):
-        """Call Gemini with retry on rate limit / server errors.
+        """Call Gemini with retry on server errors only.
 
-        CRITICAL: Uses client.aio.models (async), NOT client.models (sync).
-        Sync blocks FastAPI's event loop.
+        429 rate limits are handled at the batch level, not here.
         """
+        # For thinking models (2.5-flash), set thinking budget to prevent
+        # internal reasoning from consuming the entire output token budget
+        thinking_config = None
+        if "2.5" in self.model:
+            thinking_config = types.ThinkingConfig(thinking_budget=1024)
+
         response = await self.client.aio.models.generate_content(
             model=self.model,
             contents=prompt,
@@ -363,7 +395,8 @@ class AIAnalysisService:
                 response_mime_type="application/json",
                 response_schema=response_schema,
                 temperature=0.2,  # Low for consistent analysis
-                max_output_tokens=4096,
+                max_output_tokens=16384,
+                thinking_config=thinking_config,
             ),
         )
         return response
@@ -377,7 +410,16 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini technical tokens: {response.usage_metadata.total_token_count}"
         )
-        return response.parsed
+        result = response.parsed
+        if result is None and response.text:
+            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            try:
+                data = json.loads(response.text)
+                result = TechnicalBatchResponse.model_validate(data)
+            except Exception as e:
+                logger.error(f"Manual parse also failed: {e}")
+                logger.debug(f"Raw response text: {response.text[:500]}")
+        return result
 
     async def _analyze_fundamental_batch(
         self, ticker_data: dict[str, dict]
@@ -388,7 +430,15 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini fundamental tokens: {response.usage_metadata.total_token_count}"
         )
-        return response.parsed
+        result = response.parsed
+        if result is None and response.text:
+            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            try:
+                data = json.loads(response.text)
+                result = FundamentalBatchResponse.model_validate(data)
+            except Exception as e:
+                logger.error(f"Manual parse also failed: {e}")
+        return result
 
     async def _analyze_sentiment_batch(
         self, ticker_data: dict[str, dict]
@@ -399,7 +449,15 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini sentiment tokens: {response.usage_metadata.total_token_count}"
         )
-        return response.parsed
+        result = response.parsed
+        if result is None and response.text:
+            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            try:
+                data = json.loads(response.text)
+                result = SentimentBatchResponse.model_validate(data)
+            except Exception as e:
+                logger.error(f"Manual parse also failed: {e}")
+        return result
 
     async def _analyze_combined_batch(
         self, ticker_data: dict[str, dict]
@@ -410,7 +468,15 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
         )
-        return response.parsed
+        result = response.parsed
+        if result is None and response.text:
+            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            try:
+                data = json.loads(response.text)
+                result = CombinedBatchResponse.model_validate(data)
+            except Exception as e:
+                logger.error(f"Manual parse also failed: {e}")
+        return result
 
     # ------------------------------------------------------------------
     # Context Gathering
@@ -755,24 +821,28 @@ class AIAnalysisService:
         reasoning: str,
         raw_response: dict | None,
     ) -> None:
-        """Store analysis result with upsert (INSERT ... ON CONFLICT DO UPDATE)."""
-        stmt = insert(AIAnalysis).values(
-            ticker_id=ticker_id,
-            analysis_type=analysis_type,
-            analysis_date=analysis_date,
-            signal=signal,
-            score=score,
-            reasoning=reasoning,
-            model_version=self.model,
-            raw_response=raw_response,
-        ).on_conflict_do_update(
-            constraint="uq_ai_analyses_ticker_type_date",
-            set_={
+        """Store analysis result with upsert (INSERT ... ON CONFLICT DO UPDATE).
+
+        Uses raw SQL to avoid SQLAlchemy Enum serialization issues with asyncpg.
+        """
+        from sqlalchemy import text
+        raw_json = json.dumps(raw_response) if raw_response else None
+        await self.session.execute(
+            text("""
+                INSERT INTO ai_analyses (ticker_id, analysis_type, analysis_date, signal, score, reasoning, model_version, raw_response)
+                VALUES (:tid, CAST(:atype AS analysis_type), :adate, :signal, :score, :reasoning, :model, CAST(:raw AS jsonb))
+                ON CONFLICT ON CONSTRAINT uq_ai_analyses_ticker_type_date
+                DO UPDATE SET signal = :signal, score = :score, reasoning = :reasoning,
+                              model_version = :model, raw_response = CAST(:raw AS jsonb)
+            """),
+            {
+                "tid": ticker_id,
+                "atype": analysis_type.value,
+                "adate": analysis_date,
                 "signal": signal,
                 "score": score,
                 "reasoning": reasoning,
-                "model_version": self.model,
-                "raw_response": raw_response,
+                "model": self.model,
+                "raw": raw_json,
             },
         )
-        await self.session.execute(stmt)

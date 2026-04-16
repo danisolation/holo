@@ -53,9 +53,9 @@ class Settings(BaseSettings):
 
     # Gemini AI (Phase 2)
     gemini_api_key: str = ""  # Required — get from https://aistudio.google.com/apikey
-    gemini_model: str = "gemini-2.0-flash"
-    gemini_batch_size: int = 10  # Tickers per Gemini prompt (per CONTEXT.md: 5-10)
-    gemini_delay_seconds: float = 4.0  # Min 4s for 15 RPM free tier (per RESEARCH.md pitfall 2)
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_batch_size: int = 25  # Free tier: 20 RPD — 25/batch = 16 batches for 400 tickers
+    gemini_delay_seconds: float = 60.0  # Free tier: 20 RPD — need ~60s between requests
     gemini_max_retries: int = 3
 
     # Indicator computation (Phase 2)

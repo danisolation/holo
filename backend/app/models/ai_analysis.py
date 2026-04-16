@@ -33,7 +33,7 @@ class AIAnalysis(Base):
         Integer, ForeignKey("tickers.id"), nullable=False
     )
     analysis_type: Mapped[AnalysisType] = mapped_column(
-        SAEnum(AnalysisType, name="analysis_type", create_constraint=False, native_enum=False),
+        SAEnum(AnalysisType, name="analysis_type", create_constraint=False, native_enum=True),
         nullable=False,
     )
     analysis_date: Mapped[date] = mapped_column(Date, nullable=False)
