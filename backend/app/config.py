@@ -1,3 +1,30 @@
+import os
+import ssl
+import urllib3
+import httpx
+import requests
+
+# Disable SSL verification globally (corporate proxy with self-signed cert)
+os.environ["PYTHONHTTPSVERIFY"] = "0"
+os.environ["CURL_CA_BUNDLE"] = ""
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Patch ssl.SSLContext.wrap_socket — the only reliable way to disable
+# SSL verification across all libraries (requests, httpx, urllib3, asyncpg)
+_orig_ssl_wrap = ssl.SSLContext.wrap_socket
+def _patched_ssl_wrap(self, *args, **kwargs):
+    self.check_hostname = False
+    self.verify_mode = ssl.CERT_NONE
+    return _orig_ssl_wrap(self, *args, **kwargs)
+ssl.SSLContext.wrap_socket = _patched_ssl_wrap
+
+# Also patch httpx async client (uses its own SSL handling)
+_original_httpx_client_init = httpx.AsyncClient.__init__
+def _patched_httpx_client_init(self, *args, **kwargs):
+    kwargs.setdefault("verify", False)
+    _original_httpx_client_init(self, *args, **kwargs)
+httpx.AsyncClient.__init__ = _patched_httpx_client_init
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,6 +33,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # Database

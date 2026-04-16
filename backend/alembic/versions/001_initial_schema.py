@@ -29,9 +29,9 @@ def upgrade() -> None:
             is_active BOOLEAN NOT NULL DEFAULT true,
             last_updated TIMESTAMPTZ DEFAULT NOW(),
             created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-        CREATE INDEX ix_tickers_symbol ON tickers (symbol);
+        )
     """)
+    op.execute("CREATE INDEX ix_tickers_symbol ON tickers (symbol)")
 
     # --- Daily prices table (partitioned by year) ---
     # 400 tickers × 250 trading days = ~100K rows/year
@@ -50,19 +50,17 @@ def upgrade() -> None:
             PRIMARY KEY (date, id),
             CONSTRAINT uq_daily_prices_ticker_date UNIQUE (ticker_id, date),
             CONSTRAINT fk_daily_prices_ticker FOREIGN KEY (ticker_id) REFERENCES tickers(id)
-        ) PARTITION BY RANGE (date);
+        ) PARTITION BY RANGE (date)
     """)
 
     # Create yearly partitions: 2023 (backfill start) through 2026 (next year)
     for year in [2023, 2024, 2025, 2026]:
         op.execute(f"""
             CREATE TABLE daily_prices_{year} PARTITION OF daily_prices
-                FOR VALUES FROM ('{year}-01-01') TO ('{year + 1}-01-01');
+                FOR VALUES FROM ('{year}-01-01') TO ('{year + 1}-01-01')
         """)
 
-    op.execute("""
-        CREATE INDEX idx_daily_prices_ticker_date ON daily_prices (ticker_id, date DESC);
-    """)
+    op.execute("CREATE INDEX idx_daily_prices_ticker_date ON daily_prices (ticker_id, date DESC)")
 
     # --- Financials table (standard, not partitioned) ---
     op.execute("""
@@ -85,9 +83,9 @@ def upgrade() -> None:
             debt_to_equity NUMERIC(8,4),
             created_at TIMESTAMPTZ DEFAULT NOW(),
             CONSTRAINT uq_financials_ticker_period UNIQUE (ticker_id, period)
-        );
-        CREATE INDEX idx_financials_ticker ON financials (ticker_id);
+        )
     """)
+    op.execute("CREATE INDEX idx_financials_ticker ON financials (ticker_id)")
 
 
 def downgrade() -> None:

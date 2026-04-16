@@ -22,9 +22,9 @@ def upgrade() -> None:
             ticker_id INTEGER NOT NULL REFERENCES tickers(id),
             created_at TIMESTAMPTZ DEFAULT NOW(),
             CONSTRAINT uq_user_watchlist_chat_ticker UNIQUE (chat_id, ticker_id)
-        );
-        CREATE INDEX idx_user_watchlist_chat_id ON user_watchlist (chat_id);
+        )
     """)
+    op.execute("CREATE INDEX idx_user_watchlist_chat_id ON user_watchlist (chat_id)")
 
     # Create price_alerts table
     op.execute("""
@@ -38,9 +38,11 @@ def upgrade() -> None:
             created_at TIMESTAMPTZ DEFAULT NOW(),
             triggered_at TIMESTAMPTZ,
             CONSTRAINT chk_price_alerts_direction CHECK (direction IN ('up', 'down'))
-        );
+        )
+    """)
+    op.execute("""
         CREATE INDEX idx_price_alerts_active ON price_alerts (chat_id, is_triggered)
-            WHERE is_triggered = FALSE;
+            WHERE is_triggered = FALSE
     """)
 
 

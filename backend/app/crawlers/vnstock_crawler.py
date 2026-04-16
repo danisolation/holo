@@ -3,14 +3,23 @@
 vnstock uses `requests` (synchronous HTTP). All calls MUST go through
 asyncio.to_thread() to avoid blocking FastAPI's event loop.
 A 13-minute crawl loop would freeze all API endpoints if run synchronously.
+
+NOTE: We use vnstock sub-modules directly (Quote, Listing, Finance) instead
+of the Vnstock().stock() factory because VCI's Company API changed and
+the factory's Company init now fails with KeyError: 'data'.
 """
 import asyncio
 import pandas as pd
-from vnstock import Vnstock
+from vnstock.explorer.vci.listing import Listing
+from vnstock.explorer.vci.quote import Quote
+from vnstock.explorer.vci.financial import Finance
 from tenacity import retry, stop_after_attempt, wait_exponential
 from loguru import logger
 
 from app.config import settings
+
+# VCI API uses 'HSX' for HOSE exchange
+_EXCHANGE_MAP = {"HOSE": "HSX", "HNX": "HNX", "UPCOM": "UPCOM"}
 
 
 class VnstockCrawler:
@@ -18,10 +27,6 @@ class VnstockCrawler:
 
     def __init__(self, source: str | None = None):
         self.source = source or settings.vnstock_source
-
-    def _create_stock(self, symbol: str):
-        """Create a vnstock stock object (sync — called inside to_thread)."""
-        return Vnstock(show_log=False).stock(symbol=symbol, source=self.source)
 
     @retry(
         stop=stop_after_attempt(settings.crawl_max_retries),
@@ -36,9 +41,10 @@ class VnstockCrawler:
         Filters to stocks only (excludes ETFs, bonds).
         """
         def _fetch():
-            stock = self._create_stock("ACB")  # symbol required but arbitrary
-            df = stock.listing.symbols_by_exchange()
-            return df.query(f'exchange == "{exchange}" and type == "STOCK"')
+            listing = Listing()
+            df = listing.symbols_by_exchange()
+            vci_exchange = _EXCHANGE_MAP.get(exchange, exchange)
+            return df.query(f'exchange == "{vci_exchange}" and type == "STOCK"')
 
         logger.debug(f"Fetching listing for {exchange}")
         return await asyncio.to_thread(_fetch)
@@ -55,8 +61,8 @@ class VnstockCrawler:
         NOTE: No adjusted_close — vnstock returns UNADJUSTED prices only.
         """
         def _fetch():
-            stock = self._create_stock(symbol)
-            return stock.quote.history(start=start, end=end, interval='1D')
+            quote = Quote(symbol)
+            return quote.history(start=start, end=end, interval='1D')
 
         logger.debug(f"Fetching OHLCV for {symbol} from {start} to {end}")
         return await asyncio.to_thread(_fetch)
@@ -69,14 +75,11 @@ class VnstockCrawler:
     async def fetch_financial_ratios(self, symbol: str, period: str = "quarter") -> pd.DataFrame:
         """Fetch financial ratios (P/E, P/B, revenue, etc.).
 
-        WARNING: Finance.__init__() triggers an extra API call per ticker
-        to determine com_type_code. Factor this into rate limiting.
-
         Returns MultiIndex DataFrame with financial metrics across periods.
         """
         def _fetch():
-            stock = self._create_stock(symbol)
-            return stock.finance.ratio(period=period, lang='en', dropna=True)
+            finance = Finance(symbol)
+            return finance.ratio(period=period, lang='en', dropna=True)
 
         logger.debug(f"Fetching financial ratios for {symbol} ({period})")
         return await asyncio.to_thread(_fetch)
@@ -93,8 +96,8 @@ class VnstockCrawler:
         icb_name3, icb_name4, com_type_code.
         """
         def _fetch():
-            stock = self._create_stock("ACB")
-            return stock.listing.symbols_by_industries()
+            listing = Listing()
+            return listing.symbols_by_industries()
 
         logger.debug("Fetching industry classifications")
         return await asyncio.to_thread(_fetch)

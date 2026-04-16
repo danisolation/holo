@@ -21,7 +21,6 @@ def upgrade() -> None:
     """)
 
     # Technical indicators — one row per ticker per date
-    # All indicator columns nullable (NaN warm-up periods → NULL)
     op.execute("""
         CREATE TABLE technical_indicators (
             id BIGSERIAL PRIMARY KEY,
@@ -41,13 +40,14 @@ def upgrade() -> None:
             bb_lower NUMERIC(12,4),
             created_at TIMESTAMPTZ DEFAULT NOW(),
             CONSTRAINT uq_technical_indicators_ticker_date UNIQUE (ticker_id, date)
-        );
+        )
+    """)
+    op.execute("""
         CREATE INDEX idx_technical_indicators_ticker_date
-            ON technical_indicators (ticker_id, date DESC);
+            ON technical_indicators (ticker_id, date DESC)
     """)
 
     # AI analyses — one row per ticker per analysis_type per date
-    # Stores Gemini output: signal, score, reasoning, raw JSONB
     op.execute("""
         CREATE TABLE ai_analyses (
             id BIGSERIAL PRIMARY KEY,
@@ -62,9 +62,11 @@ def upgrade() -> None:
             created_at TIMESTAMPTZ DEFAULT NOW(),
             CONSTRAINT uq_ai_analyses_ticker_type_date
                 UNIQUE (ticker_id, analysis_type, analysis_date)
-        );
+        )
+    """)
+    op.execute("""
         CREATE INDEX idx_ai_analyses_ticker_type
-            ON ai_analyses (ticker_id, analysis_type, analysis_date DESC);
+            ON ai_analyses (ticker_id, analysis_type, analysis_date DESC)
     """)
 
 

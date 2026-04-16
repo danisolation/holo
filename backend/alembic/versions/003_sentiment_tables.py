@@ -30,9 +30,11 @@ def upgrade() -> None:
             source VARCHAR(20) NOT NULL DEFAULT 'cafef',
             created_at TIMESTAMPTZ DEFAULT NOW(),
             CONSTRAINT uq_news_articles_ticker_url UNIQUE (ticker_id, url)
-        );
+        )
+    """)
+    op.execute("""
         CREATE INDEX idx_news_articles_ticker_published
-            ON news_articles (ticker_id, published_at DESC);
+            ON news_articles (ticker_id, published_at DESC)
     """)
 
 

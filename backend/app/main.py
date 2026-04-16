@@ -22,10 +22,16 @@ async def lifespan(app: FastAPI):
     configure_jobs()
     scheduler.start()
     logger.info("Scheduler started with configured jobs")
-    await telegram_bot.start()
+    try:
+        await telegram_bot.start()
+    except Exception as e:
+        logger.warning(f"Telegram bot failed to start (continuing without it): {e}")
     yield
     # Shutdown
-    await telegram_bot.stop()
+    try:
+        await telegram_bot.stop()
+    except Exception:
+        pass
     scheduler.shutdown(wait=False)
     logger.info("Scheduler shut down")
     await engine.dispose()
