@@ -34,13 +34,15 @@ export function CandlestickChart({
   const chartRef = useRef<IChartApi | null>(null);
   const [selectedRange, setSelectedRange] = useState(365);
 
-  // Filter data by selected time range
+  // Filter data by selected time range and ensure ascending sort by date
   const filteredPrices = useMemo(() => {
     if (priceData.length === 0) return [];
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - selectedRange);
     const cutoffStr = cutoff.toISOString().split("T")[0];
-    return priceData.filter((d) => d.date >= cutoffStr);
+    return priceData
+      .filter((d) => d.date >= cutoffStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [priceData, selectedRange]);
 
   const filteredIndicators = useMemo(() => {
@@ -48,7 +50,9 @@ export function CandlestickChart({
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - selectedRange);
     const cutoffStr = cutoff.toISOString().split("T")[0];
-    return indicatorData.filter((d) => d.date >= cutoffStr);
+    return indicatorData
+      .filter((d) => d.date >= cutoffStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [indicatorData, selectedRange]);
 
   useEffect(() => {

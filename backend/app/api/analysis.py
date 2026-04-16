@@ -156,6 +156,10 @@ async def get_ticker_indicators(symbol: str, limit: int = 5):
         if not rows:
             raise HTTPException(status_code=404, detail=f"No indicators found for {symbol}")
 
+        # Reverse to ascending date order (query uses DESC to get latest N,
+        # but lightweight-charts requires data sorted ASC by time)
+        rows = list(reversed(rows))
+
         return [
             IndicatorResponse(
                 ticker_symbol=symbol.upper(),

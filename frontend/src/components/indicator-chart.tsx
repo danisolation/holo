@@ -25,7 +25,8 @@ function RSIChart({ indicatorData }: { indicatorData: IndicatorData[] }) {
 
     const rsiData = indicatorData
       .filter((d) => d.rsi_14 != null)
-      .map((d) => ({ time: d.date as string, value: d.rsi_14! }));
+      .map((d) => ({ time: d.date as string, value: d.rsi_14! }))
+      .sort((a, b) => (a.time as string).localeCompare(b.time as string));
 
     if (rsiData.length === 0) return;
 
@@ -124,9 +125,9 @@ function MACDChart({ indicatorData }: { indicatorData: IndicatorData[] }) {
     const container = containerRef.current;
     if (!container) return;
 
-    const macdData = indicatorData.filter(
-      (d) => d.macd_line != null && d.macd_signal != null
-    );
+    const macdData = [...indicatorData]
+      .filter((d) => d.macd_line != null && d.macd_signal != null)
+      .sort((a, b) => a.date.localeCompare(b.date));
     if (macdData.length === 0) return;
 
     const chart = createChart(container, {
