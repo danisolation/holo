@@ -86,9 +86,6 @@ class IndicatorService:
             logger.warning(f"{symbol}: Only {len(rows)} price rows, need ≥20 for indicators — skipping")
             return 0
 
-        if len(rows) < 200:
-            logger.info(f"{symbol}: {len(rows)} price rows — SMA(200) will be NULL, other indicators OK")
-
         df = pd.DataFrame(rows, columns=["date", "close"])
         df["close"] = df["close"].astype(float)
 
@@ -102,14 +99,12 @@ class IndicatorService:
         compute_days = settings.indicator_compute_days
         start_idx = max(0, len(df) - compute_days)
 
-        stored = 0
+        bulk_rows = []
         for i in range(start_idx, len(df)):
             row_date = df["date"].iloc[i]
-            # Handle both date and Timestamp types from pandas
             if isinstance(row_date, pd.Timestamp):
                 row_date = row_date.date()
 
-            # Skip already-computed dates (incremental)
             if last_computed and row_date <= last_computed:
                 continue
 
@@ -119,15 +114,18 @@ class IndicatorService:
             }
             for col_name, series in indicators.items():
                 values[col_name] = self._safe_decimal(series.iloc[i])
+            bulk_rows.append(values)
 
-            stmt = insert(TechnicalIndicator).values(**values).on_conflict_do_update(
-                constraint="uq_technical_indicators_ticker_date",
-                set_={k: v for k, v in values.items() if k not in ("ticker_id", "date")},
-            )
-            await self.session.execute(stmt)
-            stored += 1
+        if not bulk_rows:
+            return 0
 
-        return stored
+        stmt = insert(TechnicalIndicator).values(bulk_rows)
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_technical_indicators_ticker_date",
+            set_={k: stmt.excluded[k] for k in bulk_rows[0] if k not in ("ticker_id", "date")},
+        )
+        await self.session.execute(stmt)
+        return len(bulk_rows)
 
     def _compute_indicators(self, close: pd.Series) -> dict[str, pd.Series]:
         """Pure computation — all 12 indicators from close prices.
