@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # Crawling
     vnstock_source: str = "VCI"
     crawl_batch_size: int = 50
-    crawl_delay_seconds: float = 2.0
+    crawl_delay_seconds: float = 3.5  # vnstock free tier: 20 req/min
     crawl_max_retries: int = 3
     backfill_start_date: str = "2023-07-01"
 

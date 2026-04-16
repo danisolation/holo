@@ -71,7 +71,7 @@ class PriceService:
         """Crawl OHLCV for a list of tickers in batches with rate limiting.
 
         Processes in batches of settings.crawl_batch_size (50).
-        2-second delay between individual tickers.
+        Commits after each batch to avoid losing progress on crash.
         Failed tickers are logged and skipped — batch continues.
         """
         success = 0
@@ -101,13 +101,32 @@ class PriceService:
                     logger.debug(f"{symbol}: {rows_inserted} rows upserted")
 
                 except Exception as e:
-                    logger.error(f"{symbol}: Failed after retries — {type(e).__name__}: {e}")
-                    failed += 1
-                    failed_symbols.append(symbol)
+                    err_msg = str(e)
+                    if "Rate limit" in err_msg or "rate limit" in err_msg.lower():
+                        logger.warning(f"{symbol}: Rate limited — waiting 60s then retrying")
+                        await asyncio.sleep(60)
+                        try:
+                            df = await self.crawler.fetch_ohlcv(symbol, start, end)
+                            if df is not None and not df.empty:
+                                rows_inserted = await self._store_ohlcv(symbol, ticker_map[symbol], df)
+                                success += 1
+                                logger.debug(f"{symbol}: {rows_inserted} rows upserted (after rate limit wait)")
+                            else:
+                                skipped += 1
+                        except Exception as e2:
+                            logger.error(f"{symbol}: Failed after rate limit retry — {type(e2).__name__}: {e2}")
+                            failed += 1
+                            failed_symbols.append(symbol)
+                    else:
+                        logger.error(f"{symbol}: Failed after retries — {type(e).__name__}: {e}")
+                        failed += 1
+                        failed_symbols.append(symbol)
 
                 await asyncio.sleep(settings.crawl_delay_seconds)
 
-        await self.session.commit()
+            # Commit after each batch to preserve progress
+            await self.session.commit()
+            logger.info(f"Batch {batch_num} committed. Progress: {success} success, {failed} failed, {skipped} skipped")
 
         result = {
             "success": success,
@@ -121,41 +140,39 @@ class PriceService:
     async def _store_ohlcv(self, symbol: str, ticker_id: int, df: pd.DataFrame) -> int:
         """Store OHLCV DataFrame into daily_prices table.
 
-        Uses INSERT ... ON CONFLICT (ticker_id, date) DO UPDATE to handle
-        re-crawls and backfill overlap gracefully.
-
-        vnstock returns columns: time, open, high, low, close, volume
-        NOTE: No adjusted_close — stored as NULL.
+        Uses bulk INSERT ... ON CONFLICT (ticker_id, date) DO UPDATE to minimize
+        network round trips to remote DB.
         """
-        rows_inserted = 0
+        if df.empty:
+            return 0
 
+        rows = []
         for _, row in df.iterrows():
-            # vnstock 'time' column is datetime64 — extract date
             price_date = pd.Timestamp(row["time"]).date()
+            rows.append({
+                "ticker_id": ticker_id,
+                "date": price_date,
+                "open": Decimal(str(row["open"])),
+                "high": Decimal(str(row["high"])),
+                "low": Decimal(str(row["low"])),
+                "close": Decimal(str(row["close"])),
+                "volume": int(row["volume"]),
+                "adjusted_close": None,
+            })
 
-            stmt = insert(DailyPrice).values(
-                ticker_id=ticker_id,
-                date=price_date,
-                open=Decimal(str(row["open"])),
-                high=Decimal(str(row["high"])),
-                low=Decimal(str(row["low"])),
-                close=Decimal(str(row["close"])),
-                volume=int(row["volume"]),
-                adjusted_close=None,  # Unadjusted — Phase 2 handles corporate actions
-            ).on_conflict_do_update(
-                constraint="uq_daily_prices_ticker_date",
-                set_={
-                    "open": Decimal(str(row["open"])),
-                    "high": Decimal(str(row["high"])),
-                    "low": Decimal(str(row["low"])),
-                    "close": Decimal(str(row["close"])),
-                    "volume": int(row["volume"]),
-                },
-            )
-            await self.session.execute(stmt)
-            rows_inserted += 1
-
-        return rows_inserted
+        stmt = insert(DailyPrice).values(rows)
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_daily_prices_ticker_date",
+            set_={
+                "open": stmt.excluded.open,
+                "high": stmt.excluded.high,
+                "low": stmt.excluded.low,
+                "close": stmt.excluded.close,
+                "volume": stmt.excluded.volume,
+            },
+        )
+        await self.session.execute(stmt)
+        return len(rows)
 
     async def get_latest_date(self, ticker_id: int) -> date | None:
         """Get the most recent price date for a ticker."""
