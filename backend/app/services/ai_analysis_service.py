@@ -40,6 +40,11 @@ from app.schemas.analysis import (
 )
 from app.services.ticker_service import TickerService
 
+# Module-level lock: serializes all Gemini API access across concurrent
+# background tasks.  When multiple analysis types are triggered via separate
+# POST endpoints they queue instead of competing for the rate limit.
+_gemini_lock = asyncio.Lock()
+
 
 class AIAnalysisService:
     """Gemini-powered analysis for technical, fundamental, sentiment, and combined scoring."""
@@ -63,27 +68,37 @@ class AIAnalysisService:
     async def analyze_all_tickers(self, analysis_type: str = "both") -> dict:
         """Run AI analysis for all active tickers.
 
+        Acquires a module-level lock so that concurrent triggers (from separate
+        POST endpoints) queue up instead of competing for the Gemini rate limit.
+
         Args:
             analysis_type: 'technical', 'fundamental', 'sentiment', 'combined',
                            'both' (tech+fund only for backward compat), or 'all' (all 4 types)
 
         Returns: dict with results per analysis type run
         """
-        results: dict = {}
+        logger.info(
+            f"analyze_all_tickers({analysis_type}) — waiting for Gemini lock…"
+        )
+        async with _gemini_lock:
+            logger.info(
+                f"analyze_all_tickers({analysis_type}) — lock acquired, starting"
+            )
+            results: dict = {}
 
-        if analysis_type in ("technical", "both", "all"):
-            results["technical"] = await self.run_technical_analysis()
+            if analysis_type in ("technical", "both", "all"):
+                results["technical"] = await self.run_technical_analysis()
 
-        if analysis_type in ("fundamental", "both", "all"):
-            results["fundamental"] = await self.run_fundamental_analysis()
+            if analysis_type in ("fundamental", "both", "all"):
+                results["fundamental"] = await self.run_fundamental_analysis()
 
-        if analysis_type in ("sentiment", "all"):
-            results["sentiment"] = await self.run_sentiment_analysis()
+            if analysis_type in ("sentiment", "all"):
+                results["sentiment"] = await self.run_sentiment_analysis()
 
-        if analysis_type in ("combined", "all"):
-            results["combined"] = await self.run_combined_analysis()
+            if analysis_type in ("combined", "all"):
+                results["combined"] = await self.run_combined_analysis()
 
-        return results
+            return results
 
     async def run_technical_analysis(self) -> dict:
         """Technical analysis for all tickers.
@@ -340,6 +355,24 @@ class AIAnalysisService:
                         continue
                     logger.error(
                         f"Batch {batch_num} failed — {type(e).__name__}: {e}"
+                    )
+                    await self.session.rollback()
+                    failed += len(batch_symbols)
+                    failed_symbols.extend(batch_symbols)
+                    break
+
+                except ServerError as e:
+                    # 503 UNAVAILABLE = Gemini model overloaded — retryable
+                    if attempt < max_retries:
+                        wait_time = 30 * (attempt + 1)  # Progressive: 30s, 60s, 90s…
+                        logger.warning(
+                            f"Batch {batch_num} hit server error (attempt {attempt+1}/{max_retries}): {e}. "
+                            f"Waiting {wait_time}s..."
+                        )
+                        await asyncio.sleep(wait_time)
+                        continue
+                    logger.error(
+                        f"Batch {batch_num} failed after {max_retries} server-error retries — {type(e).__name__}: {e}"
                     )
                     await self.session.rollback()
                     failed += len(batch_symbols)

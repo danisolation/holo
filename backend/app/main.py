@@ -2,10 +2,12 @@
 
 FastAPI application with APScheduler for automated stock data crawling.
 """
+import traceback
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from loguru import logger
 
 from app.database import engine
@@ -56,6 +58,26 @@ app.add_middleware(
 
 # Mount API routes
 app.include_router(api_router, prefix="/api")
+
+
+# Global exception handler — log tracebacks and return JSON instead of bare 500
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catch unhandled exceptions so they return JSON (not plain text 500).
+
+    Logs full traceback for debugging. Without this, FastAPI/uvicorn returns
+    bare 'Internal Server Error' text with no traceback in the response.
+    """
+    tb = traceback.format_exc()
+    logger.error(f"Unhandled exception on {request.method} {request.url}:\n{tb}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "error": str(exc),
+            "path": str(request.url.path),
+        },
+    )
 
 
 @app.get("/")
