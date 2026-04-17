@@ -31,6 +31,8 @@ import {
   useTriggerAnalysis,
 } from "@/lib/hooks";
 import { useWatchlistStore } from "@/lib/store";
+import { useRealtimePrices } from "@/lib/use-realtime-prices";
+import { PriceFlashCell } from "@/components/price-flash-cell";
 
 /** AnalyzeNow button — shows for non-watchlisted HNX/UPCOM tickers without recent analysis */
 function AnalyzeNowButton({ symbol, exchange, isWatchlisted, hasRecentAnalysis }: {
@@ -139,6 +141,10 @@ export default function TickerDetailPage({
   // Check if recent analysis exists
   const hasRecentAnalysis = !!analysisSummary?.combined;
 
+  // Real-time price
+  const { prices: realtimePrices } = useRealtimePrices([upperSymbol]);
+  const rtPrice = realtimePrices[upperSymbol];
+
   return (
     <div className="space-y-6">
       {/* Ticker header */}
@@ -152,7 +158,7 @@ export default function TickerDetailPage({
         </Button>
         <div className="flex items-center gap-2">
           <BarChart3 className="size-5 text-primary" />
-          <h1 className="text-lg font-bold tracking-tight font-mono">
+          <h1 className="text-lg font-semibold tracking-tight font-mono">
             {upperSymbol}
           </h1>
           {ticker?.exchange && (
@@ -162,6 +168,26 @@ export default function TickerDetailPage({
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {ticker.name}
             </span>
+          )}
+          {/* Live price display */}
+          {rtPrice && (
+            <PriceFlashCell value={rtPrice.price}>
+              <span className="font-mono text-sm font-semibold">
+                {rtPrice.price.toLocaleString("vi-VN")}
+              </span>
+              <span
+                className={`font-mono text-xs ml-1 ${
+                  rtPrice.change_pct > 0
+                    ? "text-[#26a69a]"
+                    : rtPrice.change_pct < 0
+                      ? "text-[#ef5350]"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {rtPrice.change_pct >= 0 ? "+" : ""}
+                {rtPrice.change_pct.toFixed(2)}%
+              </span>
+            </PriceFlashCell>
           )}
         </div>
         <div className="ml-auto">

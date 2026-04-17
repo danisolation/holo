@@ -29,7 +29,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExchangeBadge } from "@/components/exchange-badge";
+import { PriceFlashCell } from "@/components/price-flash-cell";
 import { useMarketOverview, useAnalysisSummary } from "@/lib/hooks";
+import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { useWatchlistStore, useExchangeStore } from "@/lib/store";
 import type { MarketTicker } from "@/lib/api";
 
@@ -76,6 +78,7 @@ export function WatchlistTable() {
   const { exchange: selectedExchange } = useExchangeStore();
   const { data: marketData, isLoading } = useMarketOverview();
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { prices: realtimePrices } = useRealtimePrices(watchlist);
 
   // Filter market data to only watchlist symbols
   const rows = useMemo(() => {
@@ -165,11 +168,19 @@ export function WatchlistTable() {
           </Button>
         ),
         cell: ({ row }) => {
-          const price = row.getValue("last_price") as number | null;
+          const symbol = row.original.symbol;
+          const rtPrice = realtimePrices[symbol];
+          const price = rtPrice?.price ?? (row.getValue("last_price") as number | null);
+          const prevPrice = rtPrice ? (row.getValue("last_price") as number | null) : null;
+          if (price == null) {
+            return <span className="font-mono text-sm">—</span>;
+          }
           return (
-            <span className="font-mono text-sm">
-              {price != null ? price.toLocaleString("vi-VN") : "—"}
-            </span>
+            <PriceFlashCell value={price} previousValue={prevPrice ?? undefined}>
+              <span className="font-mono text-sm">
+                {price.toLocaleString("vi-VN")}
+              </span>
+            </PriceFlashCell>
           );
         },
       },
@@ -187,7 +198,9 @@ export function WatchlistTable() {
           </Button>
         ),
         cell: ({ row }) => {
-          const pct = row.getValue("change_pct") as number | null;
+          const symbol = row.original.symbol;
+          const rtPrice = realtimePrices[symbol];
+          const pct = rtPrice?.change_pct ?? (row.getValue("change_pct") as number | null);
           if (pct == null)
             return <span className="text-muted-foreground">—</span>;
           const color =
@@ -197,10 +210,12 @@ export function WatchlistTable() {
                 ? "text-[#ef5350]"
                 : "text-muted-foreground";
           return (
-            <span className={`font-mono text-sm ${color}`}>
-              {pct >= 0 ? "+" : ""}
-              {pct.toFixed(2)}%
-            </span>
+            <PriceFlashCell value={pct} previousValue={rtPrice ? (row.getValue("change_pct") as number | null) ?? undefined : undefined}>
+              <span className={`font-mono text-sm ${color}`}>
+                {pct >= 0 ? "+" : ""}
+                {pct.toFixed(2)}%
+              </span>
+            </PriceFlashCell>
           );
         },
       },
@@ -229,7 +244,7 @@ export function WatchlistTable() {
         enableSorting: false,
       },
     ],
-    [removeFromWatchlist],
+    [removeFromWatchlist, realtimePrices],
   );
 
   const table = useReactTable({

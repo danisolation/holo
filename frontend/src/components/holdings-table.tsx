@@ -22,8 +22,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHoldings, useCorporateEvents } from "@/lib/hooks";
+import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import type { HoldingResponse, CorporateEventResponse } from "@/lib/api";
 import { DilutionBadge } from "@/components/dilution-badge";
+import { PriceFlashCell } from "@/components/price-flash-cell";
 
 function formatVND(value: number): string {
   return new Intl.NumberFormat("vi-VN").format(Math.round(value));
@@ -33,6 +35,13 @@ export function HoldingsTable() {
   const { data: holdings, isLoading } = useHoldings();
   const { data: rightsEvents } = useCorporateEvents({ type: "RIGHTS_ISSUE" });
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Subscribe to real-time prices for held symbols
+  const heldSymbols = useMemo(
+    () => (holdings ?? []).map((h) => h.symbol),
+    [holdings],
+  );
+  const { prices: realtimePrices } = useRealtimePrices(heldSymbols);
 
   // Build a map of symbol → upcoming RIGHTS_ISSUE events
   const dilutionMap = useMemo(() => {
@@ -111,13 +120,19 @@ export function HoldingsTable() {
       {
         accessorKey: "market_price",
         header: "Giá TT",
-        cell: ({ row }) => (
-          <span className="font-mono">
-            {row.original.market_price != null
-              ? formatVND(row.original.market_price)
-              : "—"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const symbol = row.original.symbol;
+          const rtPrice = realtimePrices[symbol];
+          const price = rtPrice?.price ?? row.original.market_price;
+          if (price == null) {
+            return <span className="font-mono">—</span>;
+          }
+          return (
+            <PriceFlashCell value={price} previousValue={row.original.market_price ?? undefined}>
+              <span className="font-mono">{formatVND(price)}</span>
+            </PriceFlashCell>
+          );
+        },
       },
       {
         accessorKey: "market_value",
@@ -174,7 +189,7 @@ export function HoldingsTable() {
         },
       },
     ],
-    [dilutionMap],
+    [dilutionMap, realtimePrices],
   );
 
   const table = useReactTable({
