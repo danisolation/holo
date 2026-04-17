@@ -27,7 +27,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 ### v1.1 Reliability & Portfolio
 
 - [ ] **Phase 6: Resilience Foundation** — Circuit breakers, job tracking, dead-letter queue, auto-retry (4 plans)
-- [ ] **Phase 7: Corporate Actions** — Crawl VCI events, adjust historical prices, cascade indicator recompute
+- [x] **Phase 7: Corporate Actions** — Crawl VNDirect events, adjust historical prices, cascade indicator recompute (3 plans)
 - [ ] **Phase 8: Portfolio Core** — Trade entry, FIFO lots, realized/unrealized P&L, portfolio summary
 - [ ] **Phase 9: AI Prompt Improvements** — System instruction, few-shot, scoring rubric, temperature tuning
 - [ ] **Phase 10: System Health Dashboard** — Health API + frontend page with job status, error rates, manual triggers
@@ -65,9 +65,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Foundation: CorporateEvent model, migration 006, vndirect_breaker, config
-- [ ] 07-02-PLAN.md — Crawler + Service: VNDirect event crawler, adjustment factor computation
-- [ ] 07-03-PLAN.md — Integration: daily job + scheduler chaining + PriceResponse + test suite
+- [x] 07-01-PLAN.md — Foundation: CorporateEvent model, migration 006, vndirect_breaker, config
+- [x] 07-02-PLAN.md — Crawler + Service: VNDirect event crawler, adjustment factor computation
+- [x] 07-03-PLAN.md — Integration: daily job + scheduler chaining + PriceResponse + test suite
 
 ### Phase 8: Portfolio Core
 **Goal**: User can track personal trades and see accurate FIFO-based P&L on all positions
@@ -124,7 +124,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 6. Resilience Foundation | 0/4 | Planning complete | - |
-| 7. Corporate Actions | 0/3 | Planning complete | - |
+| 7. Corporate Actions | 3/3 | Complete | - |
 | 8. Portfolio Core | 0/? | Not started | - |
 | 9. AI Prompt Improvements | 0/? | Not started | - |
 | 10. System Health Dashboard | 0/? | Not started | - |
