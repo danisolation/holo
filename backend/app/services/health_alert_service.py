@@ -103,15 +103,19 @@ class HealthAlertService:
         hs = HealthService(self.session)
         freshness = await hs.get_data_freshness()
 
+        now_utc = datetime.now(timezone.utc)
         stale_sources = []
         for item in freshness:
             if item["is_stale"] and item["latest"] is not None:
-                # Already stale — check if beyond 2× threshold
-                # For simplicity, any stale item triggers the alert
-                # (is_stale means > threshold_hours, so definitely > 1×)
-                stale_sources.append(
-                    f"{item['data_type']} (>{item['threshold_hours'] * 2}h)"
-                )
+                # Compute actual age and only alert if beyond 2× threshold (D-15-05)
+                latest = datetime.fromisoformat(item["latest"])
+                if latest.tzinfo is None:
+                    latest = latest.replace(tzinfo=timezone.utc)
+                age_hours = (now_utc - latest).total_seconds() / 3600
+                if age_hours > item["threshold_hours"] * 2:
+                    stale_sources.append(
+                        f"{item['data_type']} (>{item['threshold_hours'] * 2}h)"
+                    )
         return stale_sources
 
     def _check_pool_exhaustion(self) -> list[str]:
