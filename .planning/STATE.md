@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
-status: verifying
-last_updated: "2026-04-17T11:26:16.685Z"
-last_activity: 2026-04-17
+status: executing
+last_updated: "2026-04-17T11:58:55.793Z"
+last_activity: 2026-04-17 -- Phase 13 plan 01 completed
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_plans: 9
+  completed_plans: 5
+  percent: 56
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu HOSE real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** Phase 12 — Multi-Market Foundation
+**Current focus:** Phase 13 — Portfolio Enhancements
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-17
+Phase: 13-portfolio-enhancements — EXECUTING
+Plan: 2 of 5
+Status: Executing Phase 13
+Last activity: 2026-04-17 -- Phase 13 plan 01 completed
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 56%
 
 ## Shipped Milestones
 
@@ -71,6 +71,7 @@ v2.0 decisions (from research):
 - [Phase 12]: triggerOnDemandAnalysis uses immediate + 5s delayed query invalidation for background task
 - [Phase 12-multi-market-foundation]: AnalyzeNowButton defined inline in ticker detail page — single-use component, tightly coupled to page context
 - [Phase 12-multi-market-foundation]: 60-second cooldown for AnalyzeNow on both success and error to prevent Gemini API spam (T-12-09 mitigation)
+- [Phase 13]: [Phase 13]: Dividend income via CASH_DIVIDEND x lots join on record_date; performance via trade-replay chronological; allocation by ticker/sector with Khac default
 
 ### Pending Todos
 

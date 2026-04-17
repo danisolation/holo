@@ -22,9 +22,9 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Portfolio Enhancements
 
-- [ ] **PORT-08**: User can see dividend income on held positions when corporate events have matching record dates
-- [ ] **PORT-09**: User can view portfolio total value over time as a line chart
-- [ ] **PORT-10**: User can view portfolio allocation as a pie chart by ticker or by sector
+- [x] **PORT-08**: User can see dividend income on held positions when corporate events have matching record dates
+- [x] **PORT-09**: User can view portfolio total value over time as a line chart
+- [x] **PORT-10**: User can view portfolio allocation as a pie chart by ticker or by sector
 - [ ] **PORT-11**: User can edit or delete existing trades with automatic FIFO lot recalculation
 - [ ] **PORT-12**: User can import trades from broker CSV files (with format auto-detection and dry-run preview)
 
@@ -84,9 +84,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MKT-02 | Phase 12: Multi-Market Foundation | Complete |
 | MKT-03 | Phase 12: Multi-Market Foundation | Complete |
 | MKT-04 | Phase 12: Multi-Market Foundation | Complete |
-| PORT-08 | Phase 13: Portfolio Enhancements | Pending |
-| PORT-09 | Phase 13: Portfolio Enhancements | Pending |
-| PORT-10 | Phase 13: Portfolio Enhancements | Pending |
+| PORT-08 | Phase 13: Portfolio Enhancements | Complete |
+| PORT-09 | Phase 13: Portfolio Enhancements | Complete |
+| PORT-10 | Phase 13: Portfolio Enhancements | Complete |
 | PORT-11 | Phase 13: Portfolio Enhancements | Pending |
 | PORT-12 | Phase 13: Portfolio Enhancements | Pending |
 | CORP-06 | Phase 14: Corporate Actions Enhancements | Pending |
