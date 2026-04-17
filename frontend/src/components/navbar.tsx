@@ -15,6 +15,8 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { TickerSearch } from "@/components/ticker-search";
+import { ConnectionStatusIndicator } from "@/components/connection-status";
+import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
@@ -30,6 +32,7 @@ export function Navbar() {
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
+  const { status, subscribedCount } = useRealtimePrices([]);
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,6 +66,12 @@ export function Navbar() {
           <div className="hidden sm:block">
             <TickerSearch />
           </div>
+
+          {/* Real-time connection status */}
+          <ConnectionStatusIndicator
+            status={status}
+            subscribedCount={subscribedCount}
+          />
 
           {/* Dark mode toggle */}
           <Button
