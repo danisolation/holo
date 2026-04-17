@@ -30,7 +30,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 7: Corporate Actions** — Crawl VNDirect events, adjust historical prices, cascade indicator recompute (3 plans)
 - [x] **Phase 8: Portfolio Core** — Trade entry, FIFO lots, realized/unrealized P&L, portfolio summary (4 plans)
 - [x] **Phase 9: AI Prompt Improvements** — System instruction, few-shot, scoring rubric, temperature tuning (3 plans)
-- [ ] **Phase 10: System Health Dashboard** — Health API + frontend page with job status, error rates, manual triggers
+- [x] **Phase 10: System Health Dashboard** — Health API + frontend page with job status, error rates, manual triggers
 - [ ] **Phase 11: Telegram Portfolio** — /buy, /sell, /portfolio, /pnl, daily P&L notification
 
 ## Phase Details
@@ -119,9 +119,9 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 10-01-PLAN.md — Backend health API: Pydantic schemas, HealthService, 6 endpoints (jobs, freshness, errors, pool, trigger, summary)
-- [ ] 10-02-PLAN.md — Backend health API test suite (all 6 endpoints)
-- [ ] 10-03-PLAN.md — Frontend health dashboard page with status cards, freshness table, error sparklines, pool status, trigger buttons
+- [x] 10-01-PLAN.md — Backend health API: Pydantic schemas, HealthService, 6 endpoints (jobs, freshness, errors, pool, trigger, summary)
+- [x] 10-02-PLAN.md — Backend health API test suite (all 6 endpoints)
+- [x] 10-03-PLAN.md — Frontend health dashboard page with status cards, freshness table, error sparklines, pool status, trigger buttons
 
 ### Phase 11: Telegram Portfolio
 **Goal**: User can manage portfolio and receive P&L updates directly through Telegram commands
