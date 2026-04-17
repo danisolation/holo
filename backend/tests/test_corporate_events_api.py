@@ -197,3 +197,154 @@ class TestRouterRegistration:
         routes = [route.path for route in api_router.routes]
         assert any("/corporate-events" in r for r in routes), \
             f"corporate-events not found in routes: {routes}"
+
+
+def _make_mock_ticker(symbol="VNM", ticker_id=1, name="Vinamilk"):
+    """Create a mock Ticker object."""
+    ticker = MagicMock()
+    ticker.id = ticker_id
+    ticker.symbol = symbol
+    ticker.name = name
+    return ticker
+
+
+def _make_mock_price(
+    price_date=None,
+    open_val=50000,
+    high_val=52000,
+    low_val=49000,
+    close_val=51000,
+    volume=1000000,
+    adjusted_close=53000,
+):
+    """Create a mock DailyPrice object with distinct close and adjusted_close."""
+    if price_date is None:
+        price_date = date.today()
+    price = MagicMock()
+    price.date = price_date
+    price.open = Decimal(str(open_val))
+    price.high = Decimal(str(high_val))
+    price.low = Decimal(str(low_val))
+    price.close = Decimal(str(close_val))
+    price.volume = volume
+    price.adjusted_close = Decimal(str(adjusted_close)) if adjusted_close is not None else None
+    return price
+
+
+class TestAdjustedPriceToggle:
+    """Tests for GET /{symbol}/prices adjusted parameter (CORP-09)."""
+
+    def test_adjusted_true_returns_adjusted_close(self, client):
+        """adjusted=true should use adjusted_close as close value."""
+        ticker = _make_mock_ticker()
+        prices = [_make_mock_price(close_val=50000, adjusted_close=53000)]
+
+        mock_session = AsyncMock()
+        # First call: ticker lookup
+        ticker_result = MagicMock()
+        ticker_result.scalar_one_or_none.return_value = ticker
+        # Second call: price query
+        price_result = MagicMock()
+        price_result.scalars.return_value.all.return_value = prices
+
+        mock_session.execute = AsyncMock(side_effect=[ticker_result, price_result])
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("app.api.tickers.async_session", return_value=mock_ctx):
+            response = client.get("/api/tickers/VNM/prices?adjusted=true")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 1
+            # close field should be adjusted_close value (53000)
+            assert data[0]["close"] == 53000.0
+            # adjusted_close should still be populated
+            assert data[0]["adjusted_close"] == 53000.0
+
+    def test_adjusted_false_returns_raw_close(self, client):
+        """adjusted=false should use raw close value."""
+        ticker = _make_mock_ticker()
+        prices = [_make_mock_price(close_val=50000, adjusted_close=53000)]
+
+        mock_session = AsyncMock()
+        ticker_result = MagicMock()
+        ticker_result.scalar_one_or_none.return_value = ticker
+        price_result = MagicMock()
+        price_result.scalars.return_value.all.return_value = prices
+
+        mock_session.execute = AsyncMock(side_effect=[ticker_result, price_result])
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("app.api.tickers.async_session", return_value=mock_ctx):
+            response = client.get("/api/tickers/VNM/prices?adjusted=false")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 1
+            # close field should be raw close value (50000)
+            assert data[0]["close"] == 50000.0
+            # adjusted_close should still be populated
+            assert data[0]["adjusted_close"] == 53000.0
+
+    def test_default_no_adjusted_param_returns_adjusted(self, client):
+        """No adjusted param should default to adjusted=true (backward compatible)."""
+        ticker = _make_mock_ticker()
+        prices = [_make_mock_price(close_val=50000, adjusted_close=53000)]
+
+        mock_session = AsyncMock()
+        ticker_result = MagicMock()
+        ticker_result.scalar_one_or_none.return_value = ticker
+        price_result = MagicMock()
+        price_result.scalars.return_value.all.return_value = prices
+
+        mock_session.execute = AsyncMock(side_effect=[ticker_result, price_result])
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("app.api.tickers.async_session", return_value=mock_ctx):
+            response = client.get("/api/tickers/VNM/prices")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 1
+            # Default should use adjusted close (53000)
+            assert data[0]["close"] == 53000.0
+
+    def test_adjusted_true_no_adjusted_close_falls_back_to_close(self, client):
+        """When adjusted=true but adjusted_close is None, should fall back to raw close."""
+        ticker = _make_mock_ticker()
+        prices = [_make_mock_price(close_val=50000, adjusted_close=None)]
+
+        mock_session = AsyncMock()
+        ticker_result = MagicMock()
+        ticker_result.scalar_one_or_none.return_value = ticker
+        price_result = MagicMock()
+        price_result.scalars.return_value.all.return_value = prices
+
+        mock_session.execute = AsyncMock(side_effect=[ticker_result, price_result])
+        mock_ctx = AsyncMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_ctx.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("app.api.tickers.async_session", return_value=mock_ctx):
+            response = client.get("/api/tickers/VNM/prices?adjusted=true")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data) == 1
+            # Should fall back to raw close (50000) when adjusted_close is None
+            assert data[0]["close"] == 50000.0
+            assert data[0]["adjusted_close"] is None
+
+    def test_response_schema_unchanged(self, client):
+        """PriceResponse schema should still have all original fields."""
+        from app.api.tickers import PriceResponse
+        fields = PriceResponse.model_fields
+        assert "date" in fields
+        assert "open" in fields
+        assert "high" in fields
+        assert "low" in fields
+        assert "close" in fields
+        assert "volume" in fields
+        assert "adjusted_close" in fields
