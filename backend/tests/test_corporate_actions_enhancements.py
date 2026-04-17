@@ -37,8 +37,10 @@ class TestAlertSentField:
         assert str(col.type) == "BOOLEAN", f"Expected BOOLEAN, got {col.type}"
         assert col.nullable is False, "alert_sent should be NOT NULL"
         assert col.server_default is not None, "alert_sent should have server_default"
-        assert col.server_default.arg.text == "false", (
-            f"Expected server_default='false', got '{col.server_default.arg.text}'"
+        # server_default.arg can be a text clause or string depending on SQLAlchemy version
+        default_val = getattr(col.server_default.arg, "text", col.server_default.arg)
+        assert default_val == "false", (
+            f"Expected server_default='false', got '{default_val}'"
         )
 
     def test_event_type_comment_includes_rights_issue(self):
@@ -61,9 +63,15 @@ class TestMigration008:
     """Test migration 008 exists and has correct structure."""
 
     def _load_migration(self):
-        """Load migration module (can't use normal import — starts with digit)."""
-        import importlib
-        return importlib.import_module("alembic.versions.008_corporate_actions_enhancements")
+        """Load migration module by file path (alembic/versions not a package)."""
+        import importlib.util
+        from pathlib import Path
+
+        migration_path = Path(__file__).parent.parent / "alembic" / "versions" / "008_corporate_actions_enhancements.py"
+        spec = importlib.util.spec_from_file_location("migration_008", migration_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
 
     def test_migration_file_importable(self):
         """Migration 008 can be imported."""

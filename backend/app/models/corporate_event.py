@@ -1,15 +1,16 @@
-"""Corporate events (dividends, stock dividends, bonus shares).
+"""Corporate events (dividends, stock dividends, bonus shares, rights issues).
 
 Stores events crawled from VNDirect REST API.
-Three event types per RESEARCH.md (VN market has no traditional SPLIT):
+Four event types per RESEARCH.md (VN market has no traditional SPLIT):
 - CASH_DIVIDEND: Cash dividend in VND per share
 - STOCK_DIVIDEND: Stock dividend (ratio per 100 existing shares)
 - BONUS_SHARES: Bonus shares (ratio per 100 existing shares)
+- RIGHTS_ISSUE: Rights issue (ratio per 100 existing shares, no price adjustment)
 """
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Integer, BigInteger, String, Numeric, Date, ForeignKey, UniqueConstraint
+from sqlalchemy import Integer, BigInteger, String, Numeric, Date, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from sqlalchemy.types import TIMESTAMP
@@ -31,7 +32,7 @@ class CorporateEvent(Base):
     )  # VNDirect event "id" field (e.g., "119432.VN") — for deduplication
     event_type: Mapped[str] = mapped_column(
         String(20), nullable=False
-    )  # CASH_DIVIDEND, STOCK_DIVIDEND, BONUS_SHARES
+    )  # CASH_DIVIDEND, STOCK_DIVIDEND, BONUS_SHARES, RIGHTS_ISSUE
     ex_date: Mapped[date] = mapped_column(
         Date, nullable=False
     )  # effectiveDate from VNDirect API — the key date for price adjustment
@@ -58,6 +59,12 @@ class CorporateEvent(Base):
     )
 
     note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # For ex-date alert deduplication (CORP-07)
+    alert_sent: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
