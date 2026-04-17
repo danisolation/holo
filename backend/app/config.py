@@ -77,5 +77,9 @@ class Settings(BaseSettings):
     vnstock_timeout: float = 30.0
     gemini_timeout: float = 60.0
 
+    # VNDirect Corporate Events (Phase 7)
+    vndirect_delay_seconds: float = 1.0  # Delay between ticker requests
+    vndirect_timeout: float = 15.0
+
 
 settings = Settings()

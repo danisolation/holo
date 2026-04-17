@@ -96,3 +96,8 @@ gemini_breaker = AsyncCircuitBreaker(
     fail_max=settings.circuit_breaker_fail_max,
     reset_timeout=settings.circuit_breaker_reset_timeout,
 )
+vndirect_breaker = AsyncCircuitBreaker(
+    "vndirect",
+    fail_max=settings.circuit_breaker_fail_max,
+    reset_timeout=settings.circuit_breaker_reset_timeout,
+)
