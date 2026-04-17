@@ -12,7 +12,6 @@ Resilience pattern per CONTEXT.md decisions:
 - Pitfall 2: Partial failure returns normally (chain continues);
   complete failure raises (chain breaks)
 """
-import functools
 from datetime import date
 
 from loguru import logger
