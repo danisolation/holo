@@ -118,13 +118,51 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| ERR-01 | Phase 6: Resilience Foundation | Pending |
+| ERR-02 | Phase 6: Resilience Foundation | Pending |
+| ERR-03 | Phase 6: Resilience Foundation | Pending |
+| ERR-04 | Phase 6: Resilience Foundation | Pending |
+| ERR-05 | Phase 6: Resilience Foundation | Pending |
+| ERR-06 | Phase 6: Resilience Foundation | Pending |
+| ERR-07 | Phase 6: Resilience Foundation | Pending |
+| CORP-01 | Phase 7: Corporate Actions | Pending |
+| CORP-02 | Phase 7: Corporate Actions | Pending |
+| CORP-03 | Phase 7: Corporate Actions | Pending |
+| CORP-04 | Phase 7: Corporate Actions | Pending |
+| CORP-05 | Phase 7: Corporate Actions | Pending |
+| PORT-01 | Phase 8: Portfolio Core | Pending |
+| PORT-02 | Phase 8: Portfolio Core | Pending |
+| PORT-03 | Phase 8: Portfolio Core | Pending |
+| PORT-04 | Phase 8: Portfolio Core | Pending |
+| PORT-05 | Phase 8: Portfolio Core | Pending |
+| PORT-06 | Phase 8: Portfolio Core | Pending |
+| PORT-07 | Phase 8: Portfolio Core | Pending |
+| AI-07 | Phase 9: AI Prompt Improvements | Pending |
+| AI-08 | Phase 9: AI Prompt Improvements | Pending |
+| AI-09 | Phase 9: AI Prompt Improvements | Pending |
+| AI-10 | Phase 9: AI Prompt Improvements | Pending |
+| AI-11 | Phase 9: AI Prompt Improvements | Pending |
+| AI-12 | Phase 9: AI Prompt Improvements | Pending |
+| AI-13 | Phase 9: AI Prompt Improvements | Pending |
+| HEALTH-01 | Phase 10: System Health Dashboard | Pending |
+| HEALTH-02 | Phase 10: System Health Dashboard | Pending |
+| HEALTH-03 | Phase 10: System Health Dashboard | Pending |
+| HEALTH-04 | Phase 10: System Health Dashboard | Pending |
+| HEALTH-05 | Phase 10: System Health Dashboard | Pending |
+| HEALTH-06 | Phase 10: System Health Dashboard | Pending |
+| HEALTH-07 | Phase 10: System Health Dashboard | Pending |
+| TBOT-01 | Phase 11: Telegram Portfolio | Pending |
+| TBOT-02 | Phase 11: Telegram Portfolio | Pending |
+| TBOT-03 | Phase 11: Telegram Portfolio | Pending |
+| TBOT-04 | Phase 11: Telegram Portfolio | Pending |
+| TBOT-05 | Phase 11: Telegram Portfolio | Pending |
+| TBOT-06 | Phase 11: Telegram Portfolio | Pending |
 
 **Coverage:**
-- v1.1 requirements: 35 total
-- Mapped to phases: 0
-- Unmapped: 35 ⚠️
+- v1.1 requirements: 39 total
+- Mapped to phases: 39
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-16 after initial definition*
+*Last updated: 2026-04-16 after roadmap creation*
