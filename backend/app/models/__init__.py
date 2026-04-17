@@ -14,5 +14,7 @@ from app.models.ai_analysis import AIAnalysis, AnalysisType  # noqa: E402
 from app.models.news_article import NewsArticle  # noqa: E402
 from app.models.user_watchlist import UserWatchlist  # noqa: E402
 from app.models.price_alert import PriceAlert  # noqa: E402
+from app.models.job_execution import JobExecution  # noqa: E402
+from app.models.failed_job import FailedJob  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert", "JobExecution", "FailedJob"]

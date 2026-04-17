@@ -69,5 +69,13 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""  # Required for bot — get from @BotFather on Telegram
     telegram_chat_id: str = ""  # Your personal chat ID — get from @userinfobot
 
+    # Circuit Breaker (Phase 6)
+    circuit_breaker_fail_max: int = 3
+    circuit_breaker_reset_timeout: float = 120.0  # 2 minutes cooldown
+
+    # External API Timeouts (Phase 6)
+    vnstock_timeout: float = 30.0
+    gemini_timeout: float = 60.0
+
 
 settings = Settings()
