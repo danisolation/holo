@@ -15,6 +15,16 @@ class TradeRequest(BaseModel):
     fees: float = Field(default=0, ge=0, description="Total fees in VND (default 0)")
 
 
+class TradeUpdateRequest(BaseModel):
+    """PUT /api/portfolio/trades/{id} request body."""
+
+    side: str = Field(..., pattern="^(BUY|SELL)$")
+    quantity: int = Field(..., gt=0)
+    price: float = Field(..., gt=0)
+    trade_date: date
+    fees: float = Field(default=0, ge=0)
+
+
 class TradeResponse(BaseModel):
     """Trade record returned from API."""
 

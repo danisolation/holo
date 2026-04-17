@@ -568,6 +568,126 @@ class PortfolioService:
 
     # --- Private helpers ---
 
+    async def recalculate_lots(self, ticker_id: int) -> None:
+        """Delete all lots for ticker and replay trades to rebuild FIFO state.
+
+        Per PORT-11: ensures lot consistency after trade edit/delete.
+        T-13-03 mitigation: if sell qty exceeds available during replay, raises ValueError.
+        """
+        from sqlalchemy import delete as sa_delete
+
+        # Delete all existing lots for this ticker
+        await self.session.execute(
+            sa_delete(Lot).where(Lot.ticker_id == ticker_id)
+        )
+
+        # Query all trades for this ticker ordered chronologically
+        result = await self.session.execute(
+            select(Trade)
+            .where(Trade.ticker_id == ticker_id)
+            .order_by(Trade.trade_date.asc(), Trade.id.asc())
+        )
+        trades = result.scalars().all()
+
+        # Replay: create lots from BUY trades, consume from SELL trades
+        open_lots: list[Lot] = []
+
+        for trade in trades:
+            if trade.side == "BUY":
+                lot = Lot(
+                    trade_id=trade.id,
+                    ticker_id=ticker_id,
+                    buy_price=trade.price,
+                    quantity=trade.quantity,
+                    remaining_quantity=trade.quantity,
+                    buy_date=trade.trade_date,
+                )
+                self.session.add(lot)
+                open_lots.append(lot)
+            else:
+                # SELL: consume lots FIFO
+                remaining_sell = trade.quantity
+                available = sum(l.remaining_quantity for l in open_lots)
+                if remaining_sell > available:
+                    raise ValueError(
+                        f"Cannot sell {remaining_sell} shares — only {available} available during FIFO replay"
+                    )
+                for lot in open_lots:
+                    if remaining_sell <= 0:
+                        break
+                    consumed = min(lot.remaining_quantity, remaining_sell)
+                    lot.remaining_quantity -= consumed
+                    remaining_sell -= consumed
+
+        await self.session.flush()
+
+    async def update_trade(
+        self,
+        trade_id: int,
+        side: str,
+        quantity: int,
+        price: float,
+        trade_date: date,
+        fees: float = 0,
+    ) -> dict:
+        """Update an existing trade and recalculate FIFO lots. Per PORT-11."""
+        # Query trade by id
+        result = await self.session.execute(
+            select(Trade).where(Trade.id == trade_id)
+        )
+        trade = result.scalar_one_or_none()
+        if trade is None:
+            raise ValueError(f"Trade {trade_id} not found")
+
+        # Update fields
+        trade.side = side.upper()
+        trade.quantity = quantity
+        trade.price = Decimal(str(price))
+        trade.fees = Decimal(str(fees))
+        trade.trade_date = trade_date
+
+        # Recalculate lots for this ticker
+        await self.recalculate_lots(trade.ticker_id)
+        await self.session.commit()
+
+        # Get ticker symbol for response
+        ticker_result = await self.session.execute(
+            select(Ticker).where(Ticker.id == trade.ticker_id)
+        )
+        ticker = ticker_result.scalar_one_or_none()
+
+        return {
+            "id": trade.id,
+            "symbol": ticker.symbol if ticker else "",
+            "side": trade.side,
+            "quantity": trade.quantity,
+            "price": float(trade.price),
+            "fees": float(trade.fees),
+            "trade_date": trade.trade_date.isoformat(),
+            "created_at": trade.created_at.isoformat() if trade.created_at else "",
+            "realized_pnl": None,
+        }
+
+    async def delete_trade(self, trade_id: int) -> dict:
+        """Delete a trade and recalculate FIFO lots. Per PORT-11."""
+        # Query trade by id
+        result = await self.session.execute(
+            select(Trade).where(Trade.id == trade_id)
+        )
+        trade = result.scalar_one_or_none()
+        if trade is None:
+            raise ValueError(f"Trade {trade_id} not found")
+
+        ticker_id = trade.ticker_id
+        await self.session.delete(trade)
+        await self.session.flush()
+
+        # Recalculate lots for this ticker
+        await self.recalculate_lots(ticker_id)
+        await self.session.commit()
+
+        return {"deleted": True, "trade_id": trade_id}
+
     async def _resolve_ticker(self, symbol: str) -> Ticker:
         """Resolve symbol to Ticker object. Raises ValueError if not found."""
         result = await self.session.execute(
