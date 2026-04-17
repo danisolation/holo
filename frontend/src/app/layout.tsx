@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
+import { RealtimePriceProvider } from "@/lib/use-realtime-prices";
 import { Navbar } from "@/components/navbar";
 import "./globals.css";
 
@@ -33,10 +34,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Providers>
-          <Navbar />
-          <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-            {children}
-          </main>
+          <RealtimePriceProvider>
+            <Navbar />
+            <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
+              {children}
+            </main>
+          </RealtimePriceProvider>
         </Providers>
       </body>
     </html>
