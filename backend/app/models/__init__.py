@@ -17,5 +17,7 @@ from app.models.price_alert import PriceAlert  # noqa: E402
 from app.models.job_execution import JobExecution  # noqa: E402
 from app.models.failed_job import FailedJob  # noqa: E402
 from app.models.corporate_event import CorporateEvent  # noqa: E402
+from app.models.trade import Trade  # noqa: E402
+from app.models.lot import Lot  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert", "JobExecution", "FailedJob", "CorporateEvent"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot"]
