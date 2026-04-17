@@ -86,7 +86,7 @@ class CSVImportService:
                 col_map["side"] = i
             elif "khối lượng" in h or h == "kl":
                 col_map["quantity"] = i
-            elif "giá" == h or "giá" in h:
+            elif h in ("giá", "giá khớp", "giá khớp lệnh"):
                 col_map["price"] = i
             elif "ngày gd" in h:
                 col_map["trade_date"] = i
