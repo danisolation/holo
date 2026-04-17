@@ -3,7 +3,7 @@
 Manual triggers run in background (same pattern as system.py crawl triggers).
 Result endpoints return latest analysis for a ticker.
 """
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlalchemy import select
@@ -42,6 +42,21 @@ async def trigger_on_demand_analysis(
         ticker = await _get_ticker_by_symbol(session, symbol.upper())
         ticker_id = ticker.id
         ticker_symbol = ticker.symbol
+
+        # Server-side cooldown: reject if analysis exists within last 5 minutes
+        recent = await session.execute(
+            select(AIAnalysis)
+            .where(
+                AIAnalysis.ticker_id == ticker_id,
+                AIAnalysis.created_at >= datetime.now(timezone.utc) - timedelta(minutes=5),
+            )
+            .limit(1)
+        )
+        if recent.scalar_one_or_none():
+            raise HTTPException(
+                status_code=429,
+                detail="Analysis recently completed. Try again in a few minutes.",
+            )
 
     async def _run():
         async with async_session() as session:
