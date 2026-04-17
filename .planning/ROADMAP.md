@@ -7,7 +7,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for 400 HOSE tickers t
 ## Milestones
 
 - ✅ **v1.0 Holo Stock Intelligence Platform** — Phases 1-5 (shipped 2026-04-15)
-- 🔄 **v1.1 Reliability & Portfolio** — Phases 6-11
+- ✅ **v1.1 Reliability & Portfolio** — Phases 6-11 (shipped)
 
 ## Phases
 
@@ -31,7 +31,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 8: Portfolio Core** — Trade entry, FIFO lots, realized/unrealized P&L, portfolio summary (4 plans)
 - [x] **Phase 9: AI Prompt Improvements** — System instruction, few-shot, scoring rubric, temperature tuning (3 plans)
 - [x] **Phase 10: System Health Dashboard** — Health API + frontend page with job status, error rates, manual triggers
-- [ ] **Phase 11: Telegram Portfolio** — /buy, /sell, /portfolio, /pnl, daily P&L notification (3 plans)
+- [x] **Phase 11: Telegram Portfolio** — /buy, /sell, /portfolio, /pnl, daily P&L notification (3 plans)
 
 ## Phase Details
 
@@ -136,9 +136,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Portfolio commands: get_ticker_pnl service method + formatters + /buy, /sell, /portfolio, /pnl handlers
-- [ ] 11-02-PLAN.md — Daily summary integration: portfolio P&L section + owned-ticker sorting in recommendations
-- [ ] 11-03-PLAN.md — Test suite: formatter tests, command handler tests, daily summary integration tests
+- [x] 11-01-PLAN.md — Portfolio commands: get_ticker_pnl service method + formatters + /buy, /sell, /portfolio, /pnl handlers
+- [x] 11-02-PLAN.md — Daily summary integration: portfolio P&L section + owned-ticker sorting in recommendations
+- [x] 11-03-PLAN.md — Test suite: formatter tests, command handler tests, daily summary integration tests
 
 ## Progress
 
