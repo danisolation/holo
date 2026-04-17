@@ -148,7 +148,15 @@ class CorporateActionService:
         - CASH_DIVIDEND: (close_before - dividend) / close_before
         - STOCK_DIVIDEND: 100 / (100 + ratio)  [ratio is per 100 shares]
         - BONUS_SHARES:   100 / (100 + ratio)  [ratio is per 100 shares]
+        - RIGHTS_ISSUE:   1.0 (no price adjustment — rights are voluntary,
+          user may or may not subscribe; dilution shown separately in UI)
         """
+        if event.event_type == "RIGHTS_ISSUE":
+            # Per CONTEXT.md: rights are optional, user may or may not subscribe
+            # → NO price adjustment for rights issues. Dilution impact is
+            # displayed separately in the UI as an info badge.
+            return Decimal("1.0")
+
         if event.event_type == "CASH_DIVIDEND":
             if not event.dividend_amount or event.dividend_amount <= 0:
                 return Decimal("1.0")

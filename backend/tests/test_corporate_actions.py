@@ -242,7 +242,7 @@ class TestCrawlerTypeMapping:
         assert TYPE_MAP["DIVIDEND"] == "CASH_DIVIDEND"
         assert TYPE_MAP["STOCKDIV"] == "STOCK_DIVIDEND"
         assert TYPE_MAP["KINDDIV"] == "BONUS_SHARES"
-        assert len(TYPE_MAP) == 3  # No SPLIT — doesn't exist in VN market
+        assert len(TYPE_MAP) == 4  # CASH_DIVIDEND, STOCK_DIVIDEND, BONUS_SHARES, RIGHTS_ISSUE
 
     def test_parse_date_valid(self):
         """Valid date string parses correctly."""

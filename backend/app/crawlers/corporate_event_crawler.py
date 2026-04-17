@@ -20,13 +20,14 @@ from app.resilience import vndirect_breaker
 from app.services.ticker_service import TickerService
 
 VNDIRECT_EVENTS_URL = "https://api-finfo.vndirect.com.vn/v4/events"
-RELEVANT_TYPES = "DIVIDEND,STOCKDIV,KINDDIV"
+RELEVANT_TYPES = "DIVIDEND,STOCKDIV,KINDDIV,RIGHT"
 
 # Map VNDirect API type codes to our internal event types
 TYPE_MAP = {
     "DIVIDEND": "CASH_DIVIDEND",
     "STOCKDIV": "STOCK_DIVIDEND",
     "KINDDIV": "BONUS_SHARES",
+    "RIGHT": "RIGHTS_ISSUE",
 }
 
 
@@ -148,7 +149,7 @@ class CorporateEventCrawler:
             announcement_date = self._parse_date(event.get("disclosureDate"))
 
             # CRITICAL: For CASH_DIVIDEND, use `dividend` field (VND/share), NOT `ratio`
-            # For STOCK_DIVIDEND/BONUS_SHARES, use `ratio` (shares per 100 existing)
+            # For STOCK_DIVIDEND/BONUS_SHARES/RIGHTS_ISSUE, use `ratio` (shares per 100 existing)
             dividend_amount = None
             ratio = None
             if event_type == "CASH_DIVIDEND":
