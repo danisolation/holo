@@ -21,6 +21,7 @@ const NAV_LINKS = [
   { href: "/", label: "Tổng quan" },
   { href: "/watchlist", label: "Danh mục" },
   { href: "/dashboard", label: "Bảng điều khiển" },
+  { href: "/dashboard/portfolio", label: "Đầu tư" },
 ];
 
 export function Navbar() {

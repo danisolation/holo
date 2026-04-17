@@ -1,12 +1,17 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchTickers,
   fetchPrices,
   fetchIndicators,
   fetchAnalysisSummary,
   fetchMarketOverview,
+  fetchHoldings,
+  fetchPortfolioSummary,
+  fetchTradeHistory,
+  createTrade,
+  type TradeRequest,
 } from "@/lib/api";
 
 /**
@@ -69,5 +74,48 @@ export function useMarketOverview() {
     queryKey: ["market-overview"],
     queryFn: () => fetchMarketOverview(),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// --- Portfolio Hooks ---
+
+export function useHoldings() {
+  return useQuery({
+    queryKey: ["portfolio-holdings"],
+    queryFn: fetchHoldings,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function usePortfolioSummary() {
+  return useQuery({
+    queryKey: ["portfolio-summary"],
+    queryFn: fetchPortfolioSummary,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useTradeHistory(params?: {
+  ticker?: string;
+  side?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return useQuery({
+    queryKey: ["portfolio-trades", params],
+    queryFn: () => fetchTradeHistory(params),
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useCreateTrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (trade: TradeRequest) => createTrade(trade),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-trades"] });
+    },
   });
 }

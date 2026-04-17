@@ -132,3 +132,84 @@ export interface MarketTicker {
 export async function fetchMarketOverview(): Promise<MarketTicker[]> {
   return apiFetch<MarketTicker[]>("/tickers/market-overview");
 }
+
+// --- Portfolio Types ---
+
+export interface TradeRequest {
+  symbol: string;
+  side: "BUY" | "SELL";
+  quantity: number;
+  price: number;
+  trade_date: string;
+  fees?: number;
+}
+
+export interface TradeResponse {
+  id: number;
+  symbol: string;
+  side: string;
+  quantity: number;
+  price: number;
+  fees: number;
+  trade_date: string;
+  created_at: string;
+  realized_pnl: number | null;
+}
+
+export interface HoldingResponse {
+  symbol: string;
+  name: string;
+  quantity: number;
+  avg_cost: number;
+  market_price: number | null;
+  market_value: number | null;
+  total_cost: number;
+  unrealized_pnl: number | null;
+  unrealized_pnl_pct: number | null;
+}
+
+export interface PortfolioSummaryResponse {
+  total_invested: number;
+  total_market_value: number | null;
+  total_realized_pnl: number;
+  total_unrealized_pnl: number | null;
+  total_return_pct: number | null;
+  holdings_count: number;
+}
+
+export interface TradeHistoryResponse {
+  trades: TradeResponse[];
+  total: number;
+}
+
+// --- Portfolio Fetch Functions ---
+
+export async function fetchHoldings(): Promise<HoldingResponse[]> {
+  return apiFetch<HoldingResponse[]>("/portfolio/holdings");
+}
+
+export async function fetchPortfolioSummary(): Promise<PortfolioSummaryResponse> {
+  return apiFetch<PortfolioSummaryResponse>("/portfolio/summary");
+}
+
+export async function fetchTradeHistory(params?: {
+  ticker?: string;
+  side?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<TradeHistoryResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.ticker) searchParams.set("ticker", params.ticker);
+  if (params?.side) searchParams.set("side", params.side);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  return apiFetch<TradeHistoryResponse>(`/portfolio/trades${qs ? `?${qs}` : ""}`);
+}
+
+export async function createTrade(trade: TradeRequest): Promise<TradeResponse> {
+  return apiFetch<TradeResponse>("/portfolio/trades", {
+    method: "POST",
+    body: JSON.stringify(trade),
+  });
+}
