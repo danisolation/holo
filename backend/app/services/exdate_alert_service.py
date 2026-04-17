@@ -6,7 +6,8 @@ alert_sent=True to prevent re-alerting.
 
 Never raises — follows the same non-critical alert pattern as AlertService.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 from sqlalchemy import select, func as sa_func, case
@@ -56,7 +57,7 @@ class ExDateAlertService:
 
             # Date range: today → today + 5 calendar days covers 3 business days
             # (worst case: Friday → covers Mon/Tue/Wed of next week)
-            today = date.today()
+            today = datetime.now(ZoneInfo(settings.timezone)).date()
             end_date = today + timedelta(days=5)
 
             # Query unsent events within date range
