@@ -26,6 +26,7 @@ import {
   fetchDbPool,
   fetchHealthSummary,
   triggerJob,
+  fetchCorporateEvents,
 } from "@/lib/api";
 
 /**
@@ -44,10 +45,10 @@ export function useTickers(sector?: string, exchange?: string) {
  * Fetch OHLCV price data for a single ticker.
  * staleTime: 5 minutes — prices update at most once per trading session.
  */
-export function usePrices(symbol: string | undefined, days: number = 365) {
+export function usePrices(symbol: string | undefined, days: number = 365, adjusted: boolean = true) {
   return useQuery({
-    queryKey: ["prices", symbol, days],
-    queryFn: () => fetchPrices(symbol!, days),
+    queryKey: ["prices", symbol, days, adjusted],
+    queryFn: () => fetchPrices(symbol!, days, adjusted),
     enabled: !!symbol,
     staleTime: 5 * 60 * 1000,
   });
@@ -271,5 +272,15 @@ export function useTriggerJob() {
       queryClient.invalidateQueries({ queryKey: ["health-jobs"] });
       queryClient.invalidateQueries({ queryKey: ["health-summary"] });
     },
+  });
+}
+
+// --- Corporate Events Hooks (Phase 14) ---
+
+export function useCorporateEvents(params?: { month?: string; type?: string; symbol?: string }) {
+  return useQuery({
+    queryKey: ["corporate-events", params?.month ?? "default", params?.type ?? "all", params?.symbol ?? "all"],
+    queryFn: () => fetchCorporateEvents(params),
+    staleTime: 10 * 60 * 1000, // 10 min — events change rarely
   });
 }

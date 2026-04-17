@@ -46,6 +46,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-event-cash-dividend: var(--event-cash-dividend);
+  --color-event-stock-dividend: var(--event-stock-dividend);
+  --color-event-bonus-shares: var(--event-bonus-shares);
+  --color-event-rights-issue: var(--event-rights-issue);
 }
 
 :root {
@@ -87,6 +91,10 @@
   --exchange-hnx-fg: #16a34a;
   --exchange-upcom: #f97316;
   --exchange-upcom-fg: #ea580c;
+  --event-cash-dividend: #16a34a;
+  --event-stock-dividend: #2563eb;
+  --event-bonus-shares: #9333ea;
+  --event-rights-issue: #d97706;
 }
 
 .dark {
@@ -124,6 +132,10 @@
   --exchange-hose-fg: #60a5fa;
   --exchange-hnx-fg: #4ade80;
   --exchange-upcom-fg: #fb923c;
+  --event-cash-dividend: #4ade80;
+  --event-stock-dividend: #60a5fa;
+  --event-bonus-shares: #c084fc;
+  --event-rights-issue: #fbbf24;
 }
 
 @layer base {
