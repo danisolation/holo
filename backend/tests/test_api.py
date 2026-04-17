@@ -194,3 +194,19 @@ class TestPhase3Endpoints:
                 response = client.post("/api/analysis/trigger/combined")
                 assert response.status_code == 200
                 assert response.json()["triggered"] is True
+
+
+class TestExchangeFilter:
+    """Tests for exchange query parameter validation (Phase 12)."""
+
+    def test_list_tickers_invalid_exchange_returns_400(self, client):
+        """Invalid exchange param must return 400."""
+        response = client.get("/api/tickers/?exchange=INVALID")
+        assert response.status_code == 400
+        assert "Invalid exchange" in response.json()["detail"]
+
+    def test_market_overview_invalid_exchange_returns_400(self, client):
+        """Invalid exchange param on market overview must return 400."""
+        response = client.get("/api/tickers/market-overview?exchange=INVALID")
+        assert response.status_code == 400
+        assert "Invalid exchange" in response.json()["detail"]

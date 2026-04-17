@@ -21,8 +21,8 @@ class TestSchedulerManager:
         from app.scheduler.manager import scheduler
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
-    def test_configure_jobs_registers_four_jobs(self):
-        """configure_jobs must register daily, weekly ticker, weekly financial, and summary jobs."""
+    def test_configure_jobs_registers_six_jobs(self):
+        """configure_jobs must register 3 exchange crawls + weekly ticker + weekly financial + summary."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         # Remove any existing jobs first
@@ -31,33 +31,56 @@ class TestSchedulerManager:
         configure_jobs()
 
         job_ids = [job.id for job in scheduler.get_jobs()]
-        assert "daily_price_crawl" in job_ids
+        assert "daily_price_crawl_hose" in job_ids
+        assert "daily_price_crawl_hnx" in job_ids
+        assert "daily_price_crawl_upcom" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
         assert "daily_summary_send" in job_ids
-        assert len(job_ids) == 4
+        assert len(job_ids) == 6
 
         # Clean up
         scheduler.remove_all_jobs()
         scheduler._listeners = []
 
-    def test_daily_crawl_schedule(self):
-        """Daily crawl must be Mon-Fri at configured hour:minute."""
+    def test_exchange_crawl_stagger_timing(self):
+        """Exchange crawls must be staggered: HOSE 15:30, HNX 16:00, UPCOM 16:30."""
         from app.scheduler.manager import scheduler, configure_jobs
-        from app.config import settings
 
         scheduler.remove_all_jobs()
         scheduler._listeners = []
         configure_jobs()
 
-        job = scheduler.get_job("daily_price_crawl")
+        hose_job = scheduler.get_job("daily_price_crawl_hose")
+        hnx_job = scheduler.get_job("daily_price_crawl_hnx")
+        upcom_job = scheduler.get_job("daily_price_crawl_upcom")
+
+        # Verify triggers have correct hour:minute
+        assert hose_job.trigger.fields[5].expressions[0].first == 15  # hour
+        assert hose_job.trigger.fields[6].expressions[0].first == 30  # minute
+        assert hnx_job.trigger.fields[5].expressions[0].first == 16
+        assert hnx_job.trigger.fields[6].expressions[0].first == 0
+        assert upcom_job.trigger.fields[5].expressions[0].first == 16
+        assert upcom_job.trigger.fields[6].expressions[0].first == 30
+
+        scheduler.remove_all_jobs()
+        scheduler._listeners = []
+
+    def test_daily_crawl_schedule(self):
+        """Daily HOSE crawl must be Mon-Fri at 15:30."""
+        from app.scheduler.manager import scheduler, configure_jobs
+
+        scheduler.remove_all_jobs()
+        scheduler._listeners = []
+        configure_jobs()
+
+        job = scheduler.get_job("daily_price_crawl_hose")
         assert job is not None
         trigger = job.trigger
 
-        # CronTrigger fields contain the schedule
-        # Verify it has the expected time (from config: 15:30)
-        assert str(settings.daily_crawl_hour) in str(trigger)
-        assert str(settings.daily_crawl_minute) in str(trigger)
+        # Verify HOSE crawl at 15:30
+        assert "15" in str(trigger)
+        assert "30" in str(trigger)
 
         scheduler.remove_all_jobs()
         scheduler._listeners = []
@@ -89,7 +112,7 @@ class TestJobFunctions:
 
     @pytest.mark.asyncio
     async def test_weekly_ticker_refresh_calls_service(self):
-        """weekly_ticker_refresh job must call TickerService.fetch_and_sync_tickers."""
+        """weekly_ticker_refresh job must call TickerService.fetch_and_sync_tickers for all exchanges."""
         with patch("app.scheduler.jobs.async_session") as mock_session_factory:
             mock_session = AsyncMock()
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
@@ -107,7 +130,8 @@ class TestJobFunctions:
                     await weekly_ticker_refresh()
 
                     MockTickerService.assert_called_once()
-                    mock_service.fetch_and_sync_tickers.assert_called_once()
+                    # Now syncs all 3 exchanges
+                    assert mock_service.fetch_and_sync_tickers.call_count == 3
 
     @pytest.mark.asyncio
     async def test_weekly_financial_crawl_calls_service(self):
@@ -136,11 +160,11 @@ class TestJobChaining:
     """Tests for EVENT_JOB_EXECUTED job chaining (Phase 2)."""
 
     def test_on_job_executed_chains_indicators_after_price_crawl(self):
-        """Successful daily_price_crawl must trigger daily_indicator_compute and daily_price_alert_check."""
+        """Successful daily_price_crawl_upcom must trigger daily_indicator_compute and daily_price_alert_check."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
-        mock_event.job_id = "daily_price_crawl"
+        mock_event.job_id = "daily_price_crawl_upcom"
         mock_event.exception = None
 
         with patch.object(scheduler, "add_job") as mock_add:
@@ -171,7 +195,7 @@ class TestJobChaining:
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
-        mock_event.job_id = "daily_price_crawl"
+        mock_event.job_id = "daily_price_crawl_upcom"
         mock_event.exception = Exception("crawl failed")
 
         with patch.object(scheduler, "add_job") as mock_add:
@@ -179,7 +203,7 @@ class TestJobChaining:
             mock_add.assert_not_called()
 
     def test_configure_jobs_still_registers_original_jobs(self):
-        """configure_jobs must still register the original 3 Phase 1 jobs plus summary and listener."""
+        """configure_jobs must register the staggered exchange crawls plus weekly and summary jobs."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         scheduler.remove_all_jobs()
@@ -189,7 +213,9 @@ class TestJobChaining:
         configure_jobs()
 
         job_ids = [job.id for job in scheduler.get_jobs()]
-        assert "daily_price_crawl" in job_ids
+        assert "daily_price_crawl_hose" in job_ids
+        assert "daily_price_crawl_hnx" in job_ids
+        assert "daily_price_crawl_upcom" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
         assert "daily_summary_send" in job_ids

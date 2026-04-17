@@ -12,6 +12,7 @@ Resilience pattern per CONTEXT.md decisions:
 - Pitfall 2: Partial failure returns normally (chain continues);
   complete failure raises (chain breaks)
 """
+import functools
 from datetime import date
 
 from loguru import logger
@@ -24,6 +25,8 @@ from app.services.financial_service import FinancialService
 from app.services.job_execution_service import JobExecutionService
 from app.services.dead_letter_service import DeadLetterService
 from app.resilience import CircuitOpenError
+
+VALID_EXCHANGES = ("HOSE", "HNX", "UPCOM")
 
 
 def _determine_status(result: dict) -> str:
@@ -112,10 +115,62 @@ async def daily_price_crawl():
             raise
 
 
-async def weekly_ticker_refresh():
-    """Weekly ticker list refresh — sync HOSE listing to database.
+async def daily_price_crawl_for_exchange(exchange: str):
+    """Exchange-parameterized daily OHLCV crawl.
 
-    Runs Sunday 10:00. All-or-nothing (no per-ticker retry).
+    Called by staggered cron triggers: HOSE at 15:30, HNX at 16:00, UPCOM at 16:30.
+    Reuses the same resilience pattern as daily_price_crawl but scoped to one exchange.
+    """
+    if exchange not in VALID_EXCHANGES:
+        raise ValueError(f"Invalid exchange: {exchange}. Must be one of {VALID_EXCHANGES}")
+    logger.info(f"=== DAILY PRICE CRAWL ({exchange}) START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start(f"daily_price_crawl_{exchange.lower()}")
+        try:
+            crawler = VnstockCrawler()
+            service = PriceService(session, crawler)
+            result = await service.crawl_daily(exchange=exchange)
+
+            # D-06: Retry failed tickers only
+            failed_symbols = result.get("failed_symbols", [])
+            retried = len(failed_symbols)
+            if failed_symbols:
+                logger.info(f"Retrying {retried} failed {exchange} tickers...")
+                ticker_map = await service.ticker_service.get_ticker_id_map(exchange=exchange)
+                today = date.today().isoformat()
+                start = date.today().replace(day=max(1, date.today().day - 5)).isoformat()
+                retry_map = {s: ticker_map[s] for s in failed_symbols if s in ticker_map}
+                retry_result = await service._crawl_batch(
+                    list(retry_map.keys()), retry_map, start, today
+                )
+                result["success"] += retry_result.get("success", 0)
+                result["failed"] = retry_result.get("failed", 0)
+                result["failed_symbols"] = retry_result.get("failed_symbols", [])
+
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, f"daily_price_crawl_{exchange.lower()}", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, retried, len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY PRICE CRAWL ({exchange}) COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError(f"Complete {exchange} crawl failure: all tickers failed")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY PRICE CRAWL ({exchange}) FAILED: {e} ===")
+            raise
+
+
+async def weekly_ticker_refresh():
+    """Weekly ticker list refresh — sync listing for all exchanges.
+
+    Runs Sunday 10:00. Syncs HOSE, HNX, and UPCOM sequentially.
     """
     logger.info("=== WEEKLY TICKER REFRESH START ===")
     async with async_session() as session:
@@ -124,12 +179,16 @@ async def weekly_ticker_refresh():
         try:
             crawler = VnstockCrawler()
             service = TickerService(session, crawler)
-            result = await service.fetch_and_sync_tickers()
+            combined_result = {}
+            for exchange in VALID_EXCHANGES:
+                logger.info(f"Refreshing {exchange} ticker list...")
+                result = await service.fetch_and_sync_tickers(exchange=exchange)
+                combined_result[exchange] = result
 
-            summary = {"result": result}
+            summary = {"result": combined_result}
             await job_svc.complete(execution, status="success", result_summary=summary)
             await session.commit()
-            logger.info(f"=== WEEKLY TICKER REFRESH COMPLETE: {result} ===")
+            logger.info(f"=== WEEKLY TICKER REFRESH COMPLETE: {combined_result} ===")
 
         except Exception as e:
             if execution.status == "running":
@@ -540,4 +599,32 @@ async def daily_corporate_action_check():
                 await job_svc.fail(execution, error=str(e))
                 await session.commit()
             logger.error(f"=== DAILY CORPORATE ACTION CHECK FAILED: {e} ===")
+            raise
+
+
+async def daily_hnx_upcom_analysis():
+    """Tiered AI analysis for watchlisted HNX/UPCOM tickers.
+
+    Chained after daily_combined completes. Analyzes only tickers
+    in the UserWatchlist for HNX/UPCOM, capped at 50 per CONTEXT.md.
+    """
+    logger.info("=== DAILY HNX/UPCOM ANALYSIS START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_hnx_upcom_analysis")
+        try:
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            result = await service.analyze_watchlisted_tickers(
+                exchanges=["HNX", "UPCOM"], max_extra=50
+            )
+            summary = {"result": result}
+            await job_svc.complete(execution, status="success", result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY HNX/UPCOM ANALYSIS COMPLETE: {result} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY HNX/UPCOM ANALYSIS FAILED: {e} ===")
             raise

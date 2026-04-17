@@ -20,6 +20,7 @@ class TickerResponse(BaseModel):
     name: str
     sector: str | None = None
     industry: str | None = None
+    exchange: str = "HOSE"
     market_cap: float | None = None
     is_active: bool = True
 
@@ -38,6 +39,7 @@ class MarketTickerResponse(BaseModel):
     symbol: str
     name: str
     sector: str | None = None
+    exchange: str = "HOSE"
     market_cap: float | None = None
     last_price: float | None = None
     change_pct: float | None = None
@@ -45,14 +47,26 @@ class MarketTickerResponse(BaseModel):
 
 router = APIRouter(prefix="/tickers", tags=["tickers"])
 
+ALLOWED_EXCHANGES = {"HOSE", "HNX", "UPCOM"}
+
 
 @router.get("/", response_model=list[TickerResponse])
-async def list_tickers(sector: str | None = Query(None, description="Filter by sector")):
-    """List all active tickers, optionally filtered by sector."""
+async def list_tickers(
+    sector: str | None = Query(None, description="Filter by sector"),
+    exchange: str | None = Query(None, description="Filter by exchange: HOSE, HNX, UPCOM"),
+):
+    """List all active tickers, optionally filtered by sector and/or exchange."""
+    if exchange and exchange not in ALLOWED_EXCHANGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid exchange. Must be one of: {', '.join(sorted(ALLOWED_EXCHANGES))}",
+        )
     async with async_session() as session:
         stmt = select(Ticker).where(Ticker.is_active.is_(True))
         if sector:
             stmt = stmt.where(Ticker.sector == sector)
+        if exchange:
+            stmt = stmt.where(Ticker.exchange == exchange)
         stmt = stmt.order_by(Ticker.symbol)
         result = await session.execute(stmt)
         tickers = result.scalars().all()
@@ -63,6 +77,7 @@ async def list_tickers(sector: str | None = Query(None, description="Filter by s
             name=t.name,
             sector=t.sector,
             industry=t.industry,
+            exchange=t.exchange,
             market_cap=float(t.market_cap) if t.market_cap is not None else None,
             is_active=t.is_active,
         )
@@ -110,12 +125,19 @@ async def get_ticker_prices(
 
 
 @router.get("/market-overview", response_model=list[MarketTickerResponse])
-async def market_overview():
+async def market_overview(
+    exchange: str | None = Query(None, description="Filter by exchange: HOSE, HNX, UPCOM"),
+):
     """Return all active tickers with latest price and daily change %.
 
     Uses a ROW_NUMBER() window function to grab the latest 2 daily prices
     per ticker efficiently, then computes change_pct.
     """
+    if exchange and exchange not in ALLOWED_EXCHANGES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid exchange. Must be one of: {', '.join(sorted(ALLOWED_EXCHANGES))}",
+        )
     async with async_session() as session:
         # Subquery: rank prices per ticker by date desc, keep top 2
         ranked = (
@@ -158,6 +180,7 @@ async def market_overview():
                 Ticker.symbol,
                 Ticker.name,
                 Ticker.sector,
+                Ticker.exchange,
                 Ticker.market_cap,
                 latest.c.last_close,
                 prev.c.prev_close,
@@ -165,8 +188,10 @@ async def market_overview():
             .outerjoin(latest, Ticker.id == latest.c.ticker_id)
             .outerjoin(prev, Ticker.id == prev.c.ticker_id)
             .where(Ticker.is_active.is_(True))
-            .order_by(Ticker.symbol)
         )
+        if exchange:
+            stmt = stmt.where(Ticker.exchange == exchange)
+        stmt = stmt.order_by(Ticker.symbol)
 
         result = await session.execute(stmt)
         rows = result.all()
@@ -183,6 +208,7 @@ async def market_overview():
                 symbol=row.symbol,
                 name=row.name,
                 sector=row.sector,
+                exchange=row.exchange,
                 market_cap=float(row.market_cap) if row.market_cap is not None else None,
                 last_price=last_price,
                 change_pct=change_pct,
