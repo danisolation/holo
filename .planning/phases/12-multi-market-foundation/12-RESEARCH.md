@@ -544,27 +544,27 @@ export const useExchangeStore = create<ExchangeFilterState>()(
 | A4 | Gemini 1500 RPD budget is sufficient for 400 HOSE + 50 watchlisted HNX/UPCOM per analysis type | Pitfall 5 | If user watchlists >50 HNX/UPCOM tickers, analysis will be capped. User-facing: some tickers won't get daily analysis. |
 | A5 | The `UserWatchlist` table (Telegram watchlist) and `useWatchlistStore` (localStorage) are the authoritative sources for "watchlisted" status | Architecture | If they diverge (e.g., user adds via Telegram but not frontend), tiered analysis may miss some tickers. Consider syncing or using union of both sources. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **VN Stock Symbol Uniqueness Across Exchanges**
    - What we know: In practice, VN companies list on exactly one exchange. HNX companies that "graduate" to HOSE are delisted from HNX first. [ASSUMED]
    - What's unclear: Whether there's a transition period where a symbol exists on both exchanges
-   - Recommendation: Add defensive logging in TickerService — if a symbol is being upserted with a different exchange than what's in DB, log a warning. This catches the edge case without blocking.
+   - RESOLVED: Add defensive logging in TickerService — if a symbol is being upserted with a different exchange than what's in DB, log a warning. This catches the edge case without blocking. → Implemented in Plan 01 Task 1.
 
 2. **Watchlist Synchronization for Tiered Analysis**
    - What we know: Frontend watchlist is in localStorage (zustand persist). Telegram watchlist is in `UserWatchlist` table. These are independent.
    - What's unclear: Should tiered AI analysis use the union of both, or only the DB-based Telegram watchlist?
-   - Recommendation: Use `UserWatchlist` (DB) as the authoritative source for scheduled analysis since it's server-accessible. The "Analyze now" button handles the frontend-only watchlist case via on-demand analysis.
+   - RESOLVED: Use `UserWatchlist` (DB) as the authoritative source for scheduled analysis since it's server-accessible. The "Analyze now" button handles the frontend-only watchlist case via on-demand analysis. → Implemented in Plan 02 Task 2.
 
 3. **Weekly Ticker Refresh for HNX/UPCOM**
    - What we know: `weekly_ticker_refresh` currently only syncs HOSE tickers (Sunday 10:00 AM)
    - What's unclear: Should HNX/UPCOM also get weekly refreshes, or is the daily crawl's implicit discovery enough?
-   - Recommendation: Yes, extend `weekly_ticker_refresh` to all three exchanges with staggered timing (Sunday 10:00, 10:30, 11:00). This catches IPOs/delistings.
+   - RESOLVED: Yes, extend `weekly_ticker_refresh` to all three exchanges with staggered timing (Sunday 10:00, 10:30, 11:00). This catches IPOs/delistings. → Implemented in Plan 02 Task 1.
 
 4. **Financial Crawl Scope for HNX/UPCOM**
    - What we know: `weekly_financial_crawl` crawls financial ratios for all active tickers. With 800 tickers, this takes proportionally longer.
    - What's unclear: Should financials be crawled for all 800 tickers or only HOSE + watchlisted HNX/UPCOM?
-   - Recommendation: Crawl financials for all active tickers (800). The financial crawl runs on Saturday with no competing jobs, and financial data is needed for any ticker the user might click on.
+   - RESOLVED: Crawl financials for all active tickers (800). The financial crawl runs on Saturday with no competing jobs, and financial data is needed for any ticker the user might click on. → Naturally handled by existing weekly_financial_crawl once more tickers are active.
 
 ## Security Domain
 
