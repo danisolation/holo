@@ -7,6 +7,7 @@ import { TradeForm } from "@/components/trade-form";
 import { TradeHistory } from "@/components/trade-history";
 import { PerformanceChart } from "@/components/performance-chart";
 import { AllocationChart } from "@/components/allocation-chart";
+import CSVImportDialog from "@/components/csv-import-dialog";
 
 export default function PortfolioPage() {
   return (
@@ -22,7 +23,10 @@ export default function PortfolioPage() {
             Theo dõi giao dịch, lời lỗ và vị thế cổ phiếu
           </p>
         </div>
-        <TradeForm />
+        <div className="flex items-center gap-2">
+          <CSVImportDialog />
+          <TradeForm />
+        </div>
       </div>
 
       {/* Summary cards */}
