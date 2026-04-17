@@ -167,3 +167,29 @@ class TestExDateAlertServiceEventTypeLabels:
         assert EVENT_TYPE_LABELS["STOCK_DIVIDEND"] == "Cổ tức cổ phiếu"
         assert EVENT_TYPE_LABELS["BONUS_SHARES"] == "Thưởng cổ phiếu"
         assert EVENT_TYPE_LABELS["RIGHTS_ISSUE"] == "Phát hành quyền mua"
+
+
+# ---------------------------------------------------------------------------
+# Scheduler integration tests
+# ---------------------------------------------------------------------------
+
+class TestExDateAlertScheduler:
+    """Tests for daily_exdate_alert_check job and chain wiring."""
+
+    def test_daily_exdate_alert_check_is_callable(self):
+        """Job function must exist and be callable."""
+        from app.scheduler.jobs import daily_exdate_alert_check
+        assert callable(daily_exdate_alert_check)
+
+    def test_job_names_contains_exdate_alert(self):
+        """_JOB_NAMES must include the triggered job ID."""
+        from app.scheduler.manager import _JOB_NAMES
+        assert "daily_exdate_alert_check_triggered" in _JOB_NAMES
+
+    def test_chain_from_corporate_action_check(self):
+        """_on_job_executed must chain corporate_action_check → exdate_alert_check."""
+        from app.scheduler.manager import _on_job_executed
+        import inspect
+        source = inspect.getsource(_on_job_executed)
+        assert "daily_exdate_alert_check" in source
+        assert "daily_corporate_action_check_triggered" in source
