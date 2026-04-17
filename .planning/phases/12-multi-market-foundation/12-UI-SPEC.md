@@ -47,12 +47,14 @@ Exceptions: none — existing spacing patterns are preserved from prior phases.
 
 | Role | Size | Weight | Line Height | Font |
 |------|------|--------|-------------|------|
-| Body | 14px | 400 (regular) | 1.5 | Geist |
-| Label / Caption | 12px | 500 (medium) | 1.33 | Geist |
-| Heading (section) | 18px | 600 (semibold) | 1.33 | Geist |
-| Display (page title) | 24px | 700 (bold) | 1.2 | Geist |
+| Body | 14px (`text-sm`) | 400 (regular) | 1.5 | Geist |
+| Label / Caption | 12px (`text-xs`) | 400 (regular) | 1.33 | Geist |
+| Heading (section) | 18px (`text-lg`) | 600 (semibold) | 1.33 | Geist |
+| Display (page title) | 24px (`text-2xl`) | 600 (semibold) | 1.2 | Geist |
 
-Source: Existing codebase — `text-2xl font-bold` for page titles, `text-lg font-semibold` for section headings, `text-sm` for body, `text-xs` for labels. No changes from prior phases.
+**Scale:** 4 sizes (12 / 14 / 18 / 24). **Weights:** 2 (400 regular / 600 semibold). No `text-[Npx]` arbitrary values.
+
+Source: Existing codebase consolidated to 4 sizes and 2 weights. Prior phases used `font-bold` (700) for page titles and `font-medium` (500) for labels — this contract normalizes to `font-semibold` (600) for all emphasis and `font-normal` (400) for all body/labels in new components. Existing components outside this phase's scope retain their classes until touched.
 
 ---
 
@@ -115,6 +117,12 @@ Implementation: Add CSS custom properties to `globals.css` in `:root` and `.dark
 
 ---
 
+## Visual Hierarchy
+
+**Primary focal point:** Heatmap grid — largest visual element on the market overview page, draws the eye via color density and exchange-colored borders. Exchange filter tabs sit directly above as the primary control surface. Stats cards provide secondary summary data between the filter and the heatmap.
+
+---
+
 ## Component Inventory
 
 ### 1. ExchangeFilter (NEW)
@@ -137,7 +145,7 @@ Implementation: Add CSS custom properties to `globals.css` in `:root` and `.dark
 
 **Visual spec:**
 - Use `TabsList` default variant (filled background `bg-muted`), height `h-9`
-- Each `TabsTrigger` shows exchange name in uppercase, font-size 13px (`text-[13px]`), font-weight 500
+- Each `TabsTrigger` shows exchange name in uppercase, font-size 14px (`text-sm`), font-weight 400 (regular)
 - Active trigger gets `data-active` styling from shadcn (white bg in light, input/30 in dark)
 - Optional: Show ticker count next to each tab label as `(N)` in `text-muted-foreground text-xs` — e.g., `HOSE (400)`
 - Tab order: Tất cả | HOSE | HNX | UPCOM
@@ -158,7 +166,7 @@ Implementation: Add CSS custom properties to `globals.css` in `:root` and `.dark
 | HNX | `border-[var(--exchange-hnx)] text-[var(--exchange-hnx-fg)] bg-[var(--exchange-hnx)]/10` |
 | UPCOM | `border-[var(--exchange-upcom)] text-[var(--exchange-upcom-fg)] bg-[var(--exchange-upcom)]/10` |
 
-**Size:** `h-5` (default Badge height), `text-[11px]`, `font-semibold`, `uppercase`.
+**Size:** `h-5` (default Badge height), `text-xs` (12px), `font-semibold` (600), `uppercase`.
 **Content:** Exchange name string — `"HOSE"`, `"HNX"`, `"UPCOM"`.
 **Sorting:** When used in `@tanstack/react-table`, the exchange column is sortable (alphabetic) and filterable (by tab selection).
 
