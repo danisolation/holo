@@ -918,3 +918,347 @@ class TestAllocationData:
 
         result = await svc.get_allocation_data(mode="ticker")
         assert result == []
+
+
+# --- PORT-11: Recalculate Lots + Trade Edit/Delete Tests ---
+
+
+class TestRecalculateLots:
+    """Test FIFO lot recalculation from trade history replay."""
+
+    @pytest.mark.asyncio
+    async def test_recalculate_lots_buy_only(self):
+        """BUY trades only → creates lots with full remaining_quantity."""
+        from app.services.portfolio_service import PortfolioService
+        from app.models.lot import Lot
+        from sqlalchemy import delete
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Mock trade: BUY 100 @ 50000 on 2024-01-10
+        trade1 = MagicMock()
+        trade1.id = 1
+        trade1.ticker_id = 1
+        trade1.side = "BUY"
+        trade1.quantity = 100
+        trade1.price = Decimal("50000")
+        trade1.trade_date = date(2024, 1, 10)
+
+        trade2 = MagicMock()
+        trade2.id = 2
+        trade2.ticker_id = 1
+        trade2.side = "BUY"
+        trade2.quantity = 200
+        trade2.price = Decimal("55000")
+        trade2.trade_date = date(2024, 2, 1)
+
+        # session.execute: 1st call = delete lots, 2nd call = query trades
+        delete_result = MagicMock()
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = [trade1, trade2]
+
+        svc.session.execute = AsyncMock(side_effect=[delete_result, trades_result])
+        svc.session.flush = AsyncMock()
+
+        added_objects = []
+        svc.session.add = MagicMock(side_effect=lambda obj: added_objects.append(obj))
+
+        await svc.recalculate_lots(ticker_id=1)
+
+        # Should create 2 lots
+        assert len(added_objects) == 2
+        lot1 = added_objects[0]
+        assert lot1.trade_id == 1
+        assert lot1.quantity == 100
+        assert lot1.remaining_quantity == 100
+        assert lot1.buy_price == Decimal("50000")
+
+        lot2 = added_objects[1]
+        assert lot2.trade_id == 2
+        assert lot2.quantity == 200
+        assert lot2.remaining_quantity == 200
+
+    @pytest.mark.asyncio
+    async def test_recalculate_lots_buy_and_sell(self):
+        """BUY + SELL trades → lots consumed correctly FIFO."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # BUY 100@50000 on Jan 10, BUY 100@55000 on Feb 1, SELL 120 on Mar 1
+        trade1 = MagicMock()
+        trade1.id = 1
+        trade1.ticker_id = 1
+        trade1.side = "BUY"
+        trade1.quantity = 100
+        trade1.price = Decimal("50000")
+        trade1.trade_date = date(2024, 1, 10)
+
+        trade2 = MagicMock()
+        trade2.id = 2
+        trade2.ticker_id = 1
+        trade2.side = "BUY"
+        trade2.quantity = 100
+        trade2.price = Decimal("55000")
+        trade2.trade_date = date(2024, 2, 1)
+
+        trade3 = MagicMock()
+        trade3.id = 3
+        trade3.ticker_id = 1
+        trade3.side = "SELL"
+        trade3.quantity = 120
+        trade3.price = Decimal("60000")
+        trade3.trade_date = date(2024, 3, 1)
+
+        delete_result = MagicMock()
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = [trade1, trade2, trade3]
+
+        svc.session.execute = AsyncMock(side_effect=[delete_result, trades_result])
+        svc.session.flush = AsyncMock()
+
+        added_objects = []
+        svc.session.add = MagicMock(side_effect=lambda obj: added_objects.append(obj))
+
+        await svc.recalculate_lots(ticker_id=1)
+
+        # 2 lots created from BUY trades, then SELL 120 consumes FIFO
+        assert len(added_objects) == 2
+        lot1 = added_objects[0]
+        lot2 = added_objects[1]
+
+        # lot1: 100 bought, 100 consumed by SELL → remaining 0
+        assert lot1.remaining_quantity == 0
+        # lot2: 100 bought, 20 consumed by SELL → remaining 80
+        assert lot2.remaining_quantity == 80
+
+    @pytest.mark.asyncio
+    async def test_recalculate_lots_no_trades(self):
+        """No trades for ticker → deletes all lots, creates none."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        delete_result = MagicMock()
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = []
+
+        svc.session.execute = AsyncMock(side_effect=[delete_result, trades_result])
+        svc.session.flush = AsyncMock()
+
+        added_objects = []
+        svc.session.add = MagicMock(side_effect=lambda obj: added_objects.append(obj))
+
+        await svc.recalculate_lots(ticker_id=1)
+
+        # No lots created
+        assert len(added_objects) == 0
+
+    @pytest.mark.asyncio
+    async def test_recalculate_lots_sell_exceeds_available_raises(self):
+        """SELL qty exceeds available BUY qty during replay → ValueError (T-13-03 mitigation)."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # BUY 50, SELL 100 → should raise
+        trade1 = MagicMock()
+        trade1.id = 1
+        trade1.ticker_id = 1
+        trade1.side = "BUY"
+        trade1.quantity = 50
+        trade1.price = Decimal("50000")
+        trade1.trade_date = date(2024, 1, 10)
+
+        trade2 = MagicMock()
+        trade2.id = 2
+        trade2.ticker_id = 1
+        trade2.side = "SELL"
+        trade2.quantity = 100
+        trade2.price = Decimal("60000")
+        trade2.trade_date = date(2024, 2, 1)
+
+        delete_result = MagicMock()
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = [trade1, trade2]
+
+        svc.session.execute = AsyncMock(side_effect=[delete_result, trades_result])
+        svc.session.flush = AsyncMock()
+
+        added_objects = []
+        svc.session.add = MagicMock(side_effect=lambda obj: added_objects.append(obj))
+
+        with pytest.raises(ValueError, match="Cannot sell 100 shares"):
+            await svc.recalculate_lots(ticker_id=1)
+
+
+class TestUpdateTrade:
+    """Test trade update with FIFO recalculation."""
+
+    @pytest.mark.asyncio
+    async def test_update_trade_changes_fields_and_recalculates(self):
+        """update_trade modifies fields and triggers recalculate_lots."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Mock trade lookup
+        trade = MagicMock()
+        trade.id = 1
+        trade.ticker_id = 1
+        trade.side = "BUY"
+        trade.quantity = 100
+        trade.price = Decimal("50000")
+        trade.fees = Decimal("0")
+        trade.trade_date = date(2024, 1, 10)
+        trade.created_at = datetime(2024, 1, 10, 10, 0, 0)
+
+        trade_result = MagicMock()
+        trade_result.scalar_one_or_none.return_value = trade
+
+        # Mock ticker lookup for response
+        ticker = MagicMock()
+        ticker.symbol = "VNM"
+
+        ticker_result = MagicMock()
+        ticker_result.scalar_one_or_none.return_value = ticker
+
+        svc.session.execute = AsyncMock(side_effect=[trade_result, ticker_result])
+        svc.session.commit = AsyncMock()
+
+        # Mock recalculate_lots
+        svc.recalculate_lots = AsyncMock()
+
+        result = await svc.update_trade(
+            trade_id=1,
+            side="BUY",
+            quantity=200,
+            price=55000,
+            trade_date=date(2024, 1, 15),
+            fees=100,
+        )
+
+        # Verify trade fields updated
+        assert trade.quantity == 200
+        assert trade.price == Decimal("55000")
+        assert trade.fees == Decimal("100")
+        assert trade.trade_date == date(2024, 1, 15)
+
+        # Verify recalculate_lots called
+        svc.recalculate_lots.assert_awaited_once_with(1)
+
+        # Verify response
+        assert result["id"] == 1
+        assert result["symbol"] == "VNM"
+        assert result["quantity"] == 200
+
+    @pytest.mark.asyncio
+    async def test_update_trade_not_found_raises(self):
+        """update_trade with non-existent trade ID → ValueError."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        trade_result = MagicMock()
+        trade_result.scalar_one_or_none.return_value = None
+        svc.session.execute = AsyncMock(return_value=trade_result)
+
+        with pytest.raises(ValueError, match="Trade 999 not found"):
+            await svc.update_trade(
+                trade_id=999,
+                side="BUY",
+                quantity=100,
+                price=50000,
+                trade_date=date(2024, 1, 10),
+            )
+
+
+class TestDeleteTrade:
+    """Test trade deletion with FIFO recalculation."""
+
+    @pytest.mark.asyncio
+    async def test_delete_trade_removes_and_recalculates(self):
+        """delete_trade removes trade and triggers recalculate_lots."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Mock trade lookup
+        trade = MagicMock()
+        trade.id = 1
+        trade.ticker_id = 1
+
+        trade_result = MagicMock()
+        trade_result.scalar_one_or_none.return_value = trade
+        svc.session.execute = AsyncMock(return_value=trade_result)
+        svc.session.delete = AsyncMock()
+        svc.session.flush = AsyncMock()
+        svc.session.commit = AsyncMock()
+
+        # Mock recalculate_lots
+        svc.recalculate_lots = AsyncMock()
+
+        result = await svc.delete_trade(trade_id=1)
+
+        # Verify trade deleted
+        svc.session.delete.assert_awaited_once_with(trade)
+
+        # Verify recalculate_lots called
+        svc.recalculate_lots.assert_awaited_once_with(1)
+
+        # Verify response
+        assert result["deleted"] is True
+        assert result["trade_id"] == 1
+
+    @pytest.mark.asyncio
+    async def test_delete_trade_not_found_raises(self):
+        """delete_trade with non-existent trade ID → ValueError."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        trade_result = MagicMock()
+        trade_result.scalar_one_or_none.return_value = None
+        svc.session.execute = AsyncMock(return_value=trade_result)
+
+        with pytest.raises(ValueError, match="Trade 999 not found"):
+            await svc.delete_trade(trade_id=999)
+
+    @pytest.mark.asyncio
+    async def test_delete_sell_trade_restores_lots(self):
+        """Delete a SELL trade → recalculate_lots restores lots to pre-sell state."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # The SELL trade to be deleted
+        sell_trade = MagicMock()
+        sell_trade.id = 2
+        sell_trade.ticker_id = 1
+        sell_trade.side = "SELL"
+
+        trade_result = MagicMock()
+        trade_result.scalar_one_or_none.return_value = sell_trade
+        svc.session.execute = AsyncMock(return_value=trade_result)
+        svc.session.delete = AsyncMock()
+        svc.session.flush = AsyncMock()
+        svc.session.commit = AsyncMock()
+
+        # Mock recalculate_lots - after delete, only BUY trades remain
+        svc.recalculate_lots = AsyncMock()
+
+        result = await svc.delete_trade(trade_id=2)
+
+        assert result["deleted"] is True
+        # recalculate_lots is called, which will replay only BUY trades
+        # This ensures lots are restored to pre-sell state
+        svc.recalculate_lots.assert_awaited_once_with(1)
