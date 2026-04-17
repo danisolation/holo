@@ -467,3 +467,77 @@ async def daily_summary_send():
             )
             await session.commit()
             logger.error(f"=== DAILY SUMMARY SEND FAILED: {e} ===")
+
+
+async def daily_corporate_action_check():
+    """Crawl corporate events and recompute adjusted prices.
+
+    Triggered after daily_price_crawl via job chaining.
+    If new events found, recomputes adjusted_close for all tickers
+    and triggers indicator recompute (per D-07-05).
+    """
+    logger.info("=== DAILY CORPORATE ACTION CHECK START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_corporate_action_check")
+        try:
+            # Phase 1: Crawl events from VNDirect
+            from app.crawlers.corporate_event_crawler import CorporateEventCrawler
+
+            crawler = CorporateEventCrawler(session)
+            crawl_result = await crawler.crawl_all_tickers()
+
+            # DLQ permanently failed tickers
+            crawl_failed = crawl_result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_corporate_action_check", crawl_failed)
+
+            new_events = crawl_result.get("new_events", 0)
+
+            # Phase 2: If new events found, recompute adjusted_close
+            adjust_result = {"adjusted": 0, "skipped": 0, "failed": 0, "failed_symbols": []}
+            if new_events > 0:
+                logger.info(f"Found {new_events} new corporate events — recomputing adjusted prices")
+                from app.services.corporate_action_service import CorporateActionService
+
+                service = CorporateActionService(session)
+                adjust_result = await service.adjust_all_tickers()
+
+            status = "success"
+            total_failed = crawl_result.get("failed", 0) + adjust_result.get("failed", 0)
+            if total_failed > 0 and crawl_result.get("success", 0) == 0:
+                status = "failed"
+            elif total_failed > 0:
+                status = "partial"
+
+            summary = {
+                "events_crawled": crawl_result.get("total_events", 0),
+                "new_events": new_events,
+                "tickers_adjusted": adjust_result.get("adjusted", 0),
+                "tickers_failed": total_failed,
+                "failed_symbols": crawl_failed + adjust_result.get("failed_symbols", []),
+            }
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY CORPORATE ACTION CHECK COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete corporate action check failure")
+
+            # Phase 3: If adjustments were made, trigger indicator recompute
+            if adjust_result.get("adjusted", 0) > 0:
+                from app.scheduler.manager import scheduler
+
+                logger.info("Chaining: corporate_action_check → indicator recompute (post-adjustment)")
+                scheduler.add_job(
+                    daily_indicator_compute,
+                    id="daily_indicator_compute_post_corp_action",
+                    replace_existing=True,
+                    misfire_grace_time=3600,
+                )
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY CORPORATE ACTION CHECK FAILED: {e} ===")
+            raise

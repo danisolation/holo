@@ -32,6 +32,7 @@ _JOB_NAMES = {
     "daily_combined_triggered": "Daily Combined Analysis",
     "daily_combined_manual": "Daily Combined Analysis",
     "daily_signal_alert_check_triggered": "Daily Signal Alert Check",
+    "daily_corporate_action_check_triggered": "Daily Corporate Action Check",
     "daily_price_alert_check_triggered": "Daily Price Alert Check",
     "daily_summary_send": "Daily Market Summary",
 }
@@ -86,6 +87,15 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_price_alert_check,
             id="daily_price_alert_check_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+        # Also trigger corporate action check (parallel branch)
+        from app.scheduler.jobs import daily_corporate_action_check
+        logger.info("Chaining: daily_price_crawl → daily_corporate_action_check")
+        scheduler.add_job(
+            daily_corporate_action_check,
+            id="daily_corporate_action_check_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -222,7 +232,7 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl → [indicators → AI → news → sentiment → combined → signal_alerts] + [price_alerts], "
+        "daily_price_crawl → [indicators → AI → news → sentiment → combined → signal_alerts] + [price_alerts] + [corporate_action_check], "
         "daily_summary_send (cron 16:00)"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")

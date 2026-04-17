@@ -145,10 +145,11 @@ class TestJobChaining:
 
         with patch.object(scheduler, "add_job") as mock_add:
             _on_job_executed(mock_event)
-            assert mock_add.call_count == 2
+            assert mock_add.call_count == 3
             call_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in mock_add.call_args_list]
             assert "daily_indicator_compute_triggered" in call_ids
             assert "daily_price_alert_check_triggered" in call_ids
+            assert "daily_corporate_action_check_triggered" in call_ids
 
     def test_on_job_executed_chains_ai_after_indicators(self):
         """Successful daily_indicator_compute must trigger daily_ai_analysis."""

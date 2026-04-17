@@ -31,6 +31,7 @@ class PriceResponse(BaseModel):
     low: float
     close: float
     volume: int
+    adjusted_close: float | None = None
 
 
 class MarketTickerResponse(BaseModel):
@@ -102,6 +103,7 @@ async def get_ticker_prices(
             low=float(p.low),
             close=float(p.close),
             volume=p.volume,
+            adjusted_close=float(p.adjusted_close) if p.adjusted_close is not None else None,
         )
         for p in prices
     ]
