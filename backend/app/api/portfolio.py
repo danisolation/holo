@@ -166,11 +166,16 @@ async def import_trades(
     """Import trades from broker CSV. Per PORT-12.
     dry_run=true: parse and validate, return preview.
     dry_run=false: import valid trades."""
+    # T-13-08 mitigation: check declared file size before reading (defense-in-depth)
+    max_size = 5 * 1024 * 1024  # 5MB
+    if file.size and file.size > max_size:
+        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
+
     # Read file content
     content = await file.read()
 
-    # T-13-08 mitigation: enforce max size (5MB)
-    if len(content) > 5 * 1024 * 1024:
+    # Validate actual size (defense-in-depth against spoofed Content-Length)
+    if len(content) > max_size:
         raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
 
     try:
