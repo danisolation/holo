@@ -13,6 +13,7 @@ import pandas as pd
 from vnstock.explorer.vci.listing import Listing
 from vnstock.explorer.vci.quote import Quote
 from vnstock.explorer.vci.financial import Finance
+from vnstock.explorer.vci.trading import Trading
 from tenacity import retry, stop_after_attempt, wait_exponential
 from loguru import logger
 
@@ -122,3 +123,32 @@ class VnstockCrawler:
         Circuit breaker wraps OUTSIDE tenacity retries (Pitfall 1).
         """
         return await vnstock_breaker.call(self._fetch_industry_classification_with_retry)
+
+    async def fetch_price_board(self, symbols: list[str]) -> dict[str, dict]:
+        """Fetch current prices for multiple symbols via VCI price_board.
+
+        Uses vnstock Trading module to get real-time price board data.
+        Returns dict keyed by symbol: {"VNM": {"price": ..., "change": ..., "change_pct": ..., "volume": ...}}
+
+        No retry/circuit-breaker — this is called frequently (every 30s)
+        and transient failures are acceptable for real-time polling.
+        """
+        if not symbols:
+            return {}
+
+        def _fetch():
+            trading = Trading(show_log=False)
+            df = trading.price_board(symbols_list=symbols)
+            result = {}
+            for _, row in df.iterrows():
+                sym = row[("listing", "symbol")]
+                result[sym] = {
+                    "price": float(row[("match", "match_price")]),
+                    "change": float(row[("match", "price_change")]),
+                    "change_pct": float(row[("match", "price_change_percent")]),
+                    "volume": int(row[("match", "total_volume")]),
+                }
+            return result
+
+        logger.debug(f"Fetching price board for {len(symbols)} symbols")
+        return await asyncio.to_thread(_fetch)

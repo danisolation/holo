@@ -81,5 +81,9 @@ class Settings(BaseSettings):
     vndirect_delay_seconds: float = 1.0  # Delay between ticker requests
     vndirect_timeout: float = 15.0
 
+    # Real-time WebSocket (Phase 16)
+    realtime_poll_interval: int = 30  # seconds between VCI price polls
+    realtime_max_symbols: int = 50  # max symbols per poll request
+
 
 settings = Settings()
