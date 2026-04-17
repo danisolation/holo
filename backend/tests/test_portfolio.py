@@ -420,7 +420,7 @@ class TestDividendIncome:
 
     @pytest.mark.asyncio
     async def test_dividend_income_basic(self):
-        """1 CASH_DIVIDEND event (1500 VND/share), 1 lot with 200 remaining bought before record_date → 300000."""
+        """1 CASH_DIVIDEND event (1500 VND/share), 1 lot with 200 shares bought before record_date, no sells → 300000."""
         from app.services.portfolio_service import PortfolioService
 
         svc = PortfolioService.__new__(PortfolioService)
@@ -432,19 +432,23 @@ class TestDividendIncome:
         event.dividend_amount = Decimal("1500")
         event.record_date = date(2024, 6, 15)
 
-        # Mock lot held before record_date
+        # Mock lot held before record_date (need quantity and id for historical calc)
         lot = MagicMock()
-        lot.remaining_quantity = 200
+        lot.quantity = 200
+        lot.id = 1
         lot.buy_date = date(2024, 1, 1)
 
-        # session.execute called twice: first for events, then for lots
+        # session.execute called 3 times: events, lots, sold_before
         events_result = MagicMock()
         events_result.scalars.return_value.all.return_value = [event]
 
         lots_result = MagicMock()
         lots_result.scalars.return_value.all.return_value = [lot]
 
-        svc.session.execute = AsyncMock(side_effect=[events_result, lots_result])
+        sold_result = MagicMock()
+        sold_result.scalar_one.return_value = 0  # no sells before record_date
+
+        svc.session.execute = AsyncMock(side_effect=[events_result, lots_result, sold_result])
 
         result = await svc.get_dividend_income(ticker_id=1)
         assert result == 300000.0  # 1500 * 200
@@ -468,7 +472,8 @@ class TestDividendIncome:
         event2.record_date = date(2024, 6, 15)
 
         lot = MagicMock()
-        lot.remaining_quantity = 100
+        lot.quantity = 100
+        lot.id = 1
         lot.buy_date = date(2024, 1, 1)
 
         events_result = MagicMock()
@@ -477,11 +482,17 @@ class TestDividendIncome:
         lots_result1 = MagicMock()
         lots_result1.scalars.return_value.all.return_value = [lot]
 
+        sold_result1 = MagicMock()
+        sold_result1.scalar_one.return_value = 0
+
         lots_result2 = MagicMock()
         lots_result2.scalars.return_value.all.return_value = [lot]
 
+        sold_result2 = MagicMock()
+        sold_result2.scalar_one.return_value = 0
+
         svc.session.execute = AsyncMock(
-            side_effect=[events_result, lots_result1, lots_result2]
+            side_effect=[events_result, lots_result1, sold_result1, lots_result2, sold_result2]
         )
 
         result = await svc.get_dividend_income(ticker_id=1)
@@ -523,7 +534,10 @@ class TestDividendIncome:
         lots_result = MagicMock()
         lots_result.scalars.return_value.all.return_value = []
 
-        svc.session.execute = AsyncMock(side_effect=[events_result, lots_result])
+        sold_result = MagicMock()
+        sold_result.scalar_one.return_value = 0
+
+        svc.session.execute = AsyncMock(side_effect=[events_result, lots_result, sold_result])
 
         result = await svc.get_dividend_income(ticker_id=1)
         assert result == 0.0
