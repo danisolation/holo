@@ -44,7 +44,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 - [x] **Phase 12: Multi-Market Foundation** — HNX/UPCOM crawling, exchange filters, tiered AI analysis (completed 2026-04-17)
 - [x] **Phase 13: Portfolio Enhancements** — Dividend tracking, performance/allocation charts, trade edit/delete, CSV import (completed 2026-04-17)
 - [x] **Phase 14: Corporate Actions Enhancements** — Rights issues, ex-date alerts, event calendar, adjusted/raw toggle (completed 2026-04-17)
-- [ ] **Phase 15: Health & Monitoring** — Gemini usage tracking, pipeline timeline, Telegram health alerts
+- [x] **Phase 15: Health & Monitoring** — Gemini usage tracking, pipeline timeline, Telegram health alerts (completed 2026-04-17)
 - [ ] **Phase 16: Real-Time WebSocket** — WebSocket price streaming, 30s polling, market-hours auto-connect
 
 ## Phase Details
@@ -139,5 +139,5 @@ Plans:
 | 12. Multi-Market Foundation | 4/4 | Complete    | 2026-04-17 |
 | 13. Portfolio Enhancements | 5/5 | Complete    | 2026-04-17 |
 | 14. Corporate Actions Enhancements | 4/4 | Complete    | 2026-04-17 |
-| 15. Health & Monitoring | 2/3 | In Progress|  |
+| 15. Health & Monitoring | 3/3 | Complete   | 2026-04-17 |
 | 16. Real-Time WebSocket | 0/? | Not started | - |
