@@ -146,11 +146,6 @@ class ExDateAlertService:
                     sent = await bot.send_message(msg, chat_id=target_chat)
                     if sent:
                         # Mark alert_sent=True (dedup — T-14-04 mitigation)
-                        await self.session.execute(
-                            select(CorporateEvent)
-                            .where(CorporateEvent.id == event.id)
-                        )
-                        # Direct update via ORM
                         from sqlalchemy import update
                         await self.session.execute(
                             update(CorporateEvent)
