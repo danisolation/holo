@@ -12,6 +12,7 @@ import {
 } from "lightweight-charts";
 import type { PriceData, IndicatorData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 const TIME_RANGES = [
   { label: "1T", days: 30 },
@@ -24,11 +25,15 @@ const TIME_RANGES = [
 interface CandlestickChartProps {
   priceData: PriceData[];
   indicatorData?: IndicatorData[];
+  adjusted?: boolean;
+  onAdjustedChange?: (adjusted: boolean) => void;
 }
 
 export function CandlestickChart({
   priceData,
   indicatorData,
+  adjusted,
+  onAdjustedChange,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -234,8 +239,8 @@ export function CandlestickChart({
 
   return (
     <div className="space-y-2">
-      {/* Time range buttons */}
-      <div className="flex items-center gap-1">
+      {/* Time range and price toggle buttons */}
+      <div className="flex items-center gap-1 flex-wrap">
         <span className="text-xs text-muted-foreground mr-2">Khoảng thời gian:</span>
         {TIME_RANGES.map((range) => (
           <Button
@@ -247,6 +252,29 @@ export function CandlestickChart({
             {range.label}
           </Button>
         ))}
+
+        {onAdjustedChange && (
+          <>
+            <Separator orientation="vertical" className="mx-2 h-4" />
+            <span className="text-xs text-muted-foreground mr-2">Hiển thị:</span>
+            <Button
+              variant={adjusted !== false ? "default" : "outline"}
+              size="xs"
+              className="rounded-r-none border-r-0"
+              onClick={() => onAdjustedChange(true)}
+            >
+              Giá ĐC
+            </Button>
+            <Button
+              variant={adjusted === false ? "default" : "outline"}
+              size="xs"
+              className="rounded-l-none"
+              onClick={() => onAdjustedChange(false)}
+            >
+              Giá gốc
+            </Button>
+          </>
+        )}
       </div>
 
       {/* MA Legend */}

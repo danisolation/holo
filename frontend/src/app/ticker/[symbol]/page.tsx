@@ -109,6 +109,7 @@ export default function TickerDetailPage({
   const { symbol } = use(params);
   const upperSymbol = symbol.toUpperCase();
   const router = useRouter();
+  const [adjusted, setAdjusted] = useState(true);
 
   // Data hooks
   const { data: tickers } = useTickers();
@@ -117,7 +118,7 @@ export default function TickerDetailPage({
     isLoading: pricesLoading,
     error: pricesError,
     refetch: refetchPrices,
-  } = usePrices(upperSymbol, 730);
+  } = usePrices(upperSymbol, 730, adjusted);
   const {
     data: indicatorData,
     isLoading: indicatorsLoading,
@@ -224,6 +225,8 @@ export default function TickerDetailPage({
           <CandlestickChart
             priceData={priceData}
             indicatorData={indicatorData ?? undefined}
+            adjusted={adjusted}
+            onAdjustedChange={setAdjusted}
           />
         ) : null}
       </section>
