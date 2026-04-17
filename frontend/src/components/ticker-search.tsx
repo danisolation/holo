@@ -13,6 +13,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
+import { ExchangeBadge } from "@/components/exchange-badge";
 import { useTickers } from "@/lib/hooks";
 
 export function TickerSearch() {
@@ -59,6 +60,7 @@ export function TickerSearch() {
                   <span className="font-mono font-bold text-sm w-16">
                     {ticker.symbol}
                   </span>
+                  <ExchangeBadge exchange={ticker.exchange ?? "HOSE"} />
                   <span className="text-muted-foreground text-sm truncate">
                     {ticker.name}
                   </span>

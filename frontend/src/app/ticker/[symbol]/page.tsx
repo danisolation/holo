@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -8,11 +8,15 @@ import {
   StarOff,
   BarChart3,
   RefreshCw,
+  Sparkles,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { ExchangeBadge } from "@/components/exchange-badge";
 import { CandlestickChart } from "@/components/candlestick-chart";
 import { IndicatorChart } from "@/components/indicator-chart";
 import {
@@ -24,8 +28,78 @@ import {
   useIndicators,
   useAnalysisSummary,
   useTickers,
+  useTriggerAnalysis,
 } from "@/lib/hooks";
 import { useWatchlistStore } from "@/lib/store";
+
+/** AnalyzeNow button — shows for non-watchlisted HNX/UPCOM tickers without recent analysis */
+function AnalyzeNowButton({ symbol, exchange, isWatchlisted, hasRecentAnalysis }: {
+  symbol: string;
+  exchange: string;
+  isWatchlisted: boolean;
+  hasRecentAnalysis: boolean;
+}) {
+  const { mutate, isPending, isSuccess, isError } = useTriggerAnalysis();
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  // Start cooldown after trigger (success or error)
+  useEffect(() => {
+    if (isSuccess || isError) {
+      setCooldown(60);
+    }
+  }, [isSuccess, isError]);
+
+  // Only show for HNX/UPCOM, non-watchlisted, no recent analysis
+  if (exchange === "HOSE") return null;
+  if (isWatchlisted) return null;
+  if (hasRecentAnalysis) return null;
+
+  const isDisabled = isPending || cooldown > 0;
+
+  return (
+    <div className="flex items-center gap-3">
+      <Button
+        variant={isSuccess ? "outline" : "default"}
+        size="sm"
+        disabled={isDisabled}
+        onClick={() => mutate(symbol)}
+        aria-busy={isPending}
+        className="gap-1.5"
+      >
+        {isPending ? (
+          <>
+            <Loader2 className="size-3.5 animate-spin" />
+            Đang phân tích...
+          </>
+        ) : isSuccess ? (
+          <>
+            <Check className="size-3.5" />
+            Đã phân tích
+          </>
+        ) : cooldown > 0 ? (
+          `Thử lại sau ${cooldown}s`
+        ) : (
+          <>
+            <Sparkles className="size-3.5" />
+            Phân tích ngay
+          </>
+        )}
+      </Button>
+      {isError && (
+        <p className="text-sm text-destructive">
+          Không thể phân tích. Thử lại sau.
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function TickerDetailPage({
   params,
@@ -61,6 +135,9 @@ export default function TickerDetailPage({
   // Ticker metadata
   const ticker = tickers?.find((t) => t.symbol === upperSymbol);
 
+  // Check if recent analysis exists
+  const hasRecentAnalysis = !!analysisSummary?.combined;
+
   return (
     <div className="space-y-6">
       {/* Ticker header */}
@@ -77,6 +154,9 @@ export default function TickerDetailPage({
           <h1 className="text-lg font-bold tracking-tight font-mono">
             {upperSymbol}
           </h1>
+          {ticker?.exchange && (
+            <ExchangeBadge exchange={ticker.exchange} />
+          )}
           {ticker && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {ticker.name}
@@ -178,9 +258,17 @@ export default function TickerDetailPage({
 
       {/* Analysis Cards Grid */}
       <section>
-        <h2 className="text-lg font-semibold mb-3">
-          Phân tích AI đa chiều
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">
+            Phân tích AI đa chiều
+          </h2>
+          <AnalyzeNowButton
+            symbol={upperSymbol}
+            exchange={ticker?.exchange ?? "HOSE"}
+            isWatchlisted={inWatchlist}
+            hasRecentAnalysis={hasRecentAnalysis}
+          />
+        </div>
         {analysisLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -211,7 +299,7 @@ export default function TickerDetailPage({
         ) : (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground text-sm">
-              Chưa có dữ liệu phân tích AI cho mã {upperSymbol}
+              Chưa có phân tích AI. Nhấn &ldquo;Phân tích ngay&rdquo; để bắt đầu.
             </CardContent>
           </Card>
         )}
