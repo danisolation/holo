@@ -689,3 +689,232 @@ class TestAPIRouter:
         paths = [r.path for r in api_router.routes]
         assert "/portfolio/trades" in paths
         assert "/portfolio/holdings" in paths
+
+
+# --- PORT-09: Performance Data Tests ---
+
+
+class TestPerformanceData:
+    """Test portfolio performance data computation."""
+
+    @pytest.mark.asyncio
+    async def test_performance_data_3m_returns_snapshots(self):
+        """get_performance_data('3M') returns daily portfolio value snapshots for ~90 days."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Mock trade: BUY 100 VNM on 2024-01-10
+        trade = MagicMock()
+        trade.ticker_id = 1
+        trade.side = "BUY"
+        trade.quantity = 100
+        trade.trade_date = date(2024, 1, 10)
+
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = [trade]
+
+        # Mock daily prices for 3 days
+        price1 = MagicMock()
+        price1.ticker_id = 1
+        price1.date = date(2024, 1, 10)
+        price1.close = Decimal("50000")
+
+        price2 = MagicMock()
+        price2.ticker_id = 1
+        price2.date = date(2024, 1, 11)
+        price2.close = Decimal("51000")
+
+        price3 = MagicMock()
+        price3.ticker_id = 1
+        price3.date = date(2024, 1, 12)
+        price3.close = Decimal("52000")
+
+        prices_result = MagicMock()
+        prices_result.all.return_value = [price1, price2, price3]
+
+        svc.session.execute = AsyncMock(side_effect=[trades_result, prices_result])
+
+        result = await svc.get_performance_data(period="3M")
+        assert len(result) == 3
+        assert result[0]["date"] == "2024-01-10"
+        assert result[0]["value"] == 5000000.0  # 100 * 50000
+        assert result[1]["value"] == 5100000.0  # 100 * 51000
+        assert result[2]["value"] == 5200000.0  # 100 * 52000
+
+    @pytest.mark.asyncio
+    async def test_performance_data_no_trades_returns_empty(self):
+        """get_performance_data with no trades → empty list."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = []
+        svc.session.execute = AsyncMock(return_value=trades_result)
+
+        result = await svc.get_performance_data(period="3M")
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_performance_data_handles_buy_and_sell(self):
+        """BUY 200 on day 1, SELL 100 on day 2 → day 2 position = 100."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        trade1 = MagicMock()
+        trade1.ticker_id = 1
+        trade1.side = "BUY"
+        trade1.quantity = 200
+        trade1.trade_date = date(2024, 1, 10)
+
+        trade2 = MagicMock()
+        trade2.ticker_id = 1
+        trade2.side = "SELL"
+        trade2.quantity = 100
+        trade2.trade_date = date(2024, 1, 11)
+
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = [trade1, trade2]
+
+        price1 = MagicMock()
+        price1.ticker_id = 1
+        price1.date = date(2024, 1, 10)
+        price1.close = Decimal("50000")
+
+        price2 = MagicMock()
+        price2.ticker_id = 1
+        price2.date = date(2024, 1, 11)
+        price2.close = Decimal("55000")
+
+        prices_result = MagicMock()
+        prices_result.all.return_value = [price1, price2]
+
+        svc.session.execute = AsyncMock(side_effect=[trades_result, prices_result])
+
+        result = await svc.get_performance_data(period="3M")
+        assert len(result) == 2
+        # Day 1: BUY 200, value = 200 * 50000 = 10000000
+        assert result[0]["value"] == 10000000.0
+        # Day 2: SELL 100, position = 100, value = 100 * 55000 = 5500000
+        assert result[1]["value"] == 5500000.0
+
+    @pytest.mark.asyncio
+    async def test_performance_data_1m_period(self):
+        """get_performance_data('1M') should use ~30 day window."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        trade = MagicMock()
+        trade.ticker_id = 1
+        trade.side = "BUY"
+        trade.quantity = 50
+        trade.trade_date = date(2024, 1, 1)
+
+        trades_result = MagicMock()
+        trades_result.scalars.return_value.all.return_value = [trade]
+
+        price = MagicMock()
+        price.ticker_id = 1
+        price.date = date(2024, 1, 10)
+        price.close = Decimal("60000")
+
+        prices_result = MagicMock()
+        prices_result.all.return_value = [price]
+
+        svc.session.execute = AsyncMock(side_effect=[trades_result, prices_result])
+
+        result = await svc.get_performance_data(period="1M")
+        assert len(result) == 1
+        assert result[0]["value"] == 3000000.0  # 50 * 60000
+
+
+# --- PORT-10: Allocation Data Tests ---
+
+
+class TestAllocationData:
+    """Test portfolio allocation data computation."""
+
+    @pytest.mark.asyncio
+    async def test_allocation_by_ticker(self):
+        """get_allocation_data('ticker') returns per-ticker allocation."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        svc.get_holdings = AsyncMock(return_value=[
+            {"symbol": "VNM", "market_value": 5000000, "sector": "Thực phẩm"},
+            {"symbol": "FPT", "market_value": 3000000, "sector": "Công nghệ"},
+        ])
+
+        result = await svc.get_allocation_data(mode="ticker")
+        assert len(result) == 2
+        # Sorted by value descending
+        assert result[0]["name"] == "VNM"
+        assert result[0]["value"] == 5000000
+        assert result[0]["percentage"] == 62.5  # 5M / 8M * 100
+        assert result[1]["name"] == "FPT"
+        assert result[1]["percentage"] == 37.5
+
+    @pytest.mark.asyncio
+    async def test_allocation_by_sector(self):
+        """get_allocation_data('sector') groups holdings by sector."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        svc.get_holdings = AsyncMock(return_value=[
+            {"symbol": "VNM", "market_value": 3000000, "sector": "Thực phẩm"},
+            {"symbol": "MSN", "market_value": 2000000, "sector": "Thực phẩm"},
+            {"symbol": "FPT", "market_value": 5000000, "sector": "Công nghệ"},
+        ])
+
+        result = await svc.get_allocation_data(mode="sector")
+        assert len(result) == 2
+        # Sorted by value descending: Thực phẩm=5M first then Công nghệ=5M? No: both equal
+        # Actually: Thực phẩm=5M, Công nghệ=5M — equal, either order OK
+        total = sum(r["value"] for r in result)
+        assert total == 10000000
+        # Check percentages sum to 100
+        pct_sum = sum(r["percentage"] for r in result)
+        assert pct_sum == 100.0
+
+    @pytest.mark.asyncio
+    async def test_allocation_by_sector_none_uses_default(self):
+        """Holdings with no sector get grouped under 'Khác'."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        svc.get_holdings = AsyncMock(return_value=[
+            {"symbol": "VNM", "market_value": 5000000, "sector": None},
+        ])
+
+        result = await svc.get_allocation_data(mode="sector")
+        assert len(result) == 1
+        assert result[0]["name"] == "Khác"
+        assert result[0]["percentage"] == 100.0
+
+    @pytest.mark.asyncio
+    async def test_allocation_no_market_price_returns_empty(self):
+        """Holdings without market_value → empty allocation."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        svc.get_holdings = AsyncMock(return_value=[
+            {"symbol": "VNM", "market_value": None, "sector": "Thực phẩm"},
+        ])
+
+        result = await svc.get_allocation_data(mode="ticker")
+        assert result == []
