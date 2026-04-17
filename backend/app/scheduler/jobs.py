@@ -601,6 +601,35 @@ async def daily_corporate_action_check():
             raise
 
 
+async def daily_exdate_alert_check():
+    """Check for upcoming ex-dates and send Telegram alerts.
+
+    Triggered after daily_corporate_action_check via job chaining.
+    Never raises — alert failure must not break the pipeline.
+    """
+    logger.info("=== DAILY EXDATE ALERT CHECK START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_exdate_alert_check")
+        try:
+            from app.services.exdate_alert_service import ExDateAlertService
+            service = ExDateAlertService(session)
+            result = await service.check_upcoming_exdates()
+            await job_svc.complete(
+                execution, status="success",
+                result_summary={"alerts_sent": result},
+            )
+            await session.commit()
+            logger.info(f"=== DAILY EXDATE ALERT CHECK COMPLETE: {result} alerts sent ===")
+        except Exception as e:
+            await job_svc.complete(
+                execution, status="partial",
+                result_summary={"error": str(e)[:200]},
+            )
+            await session.commit()
+            logger.error(f"=== DAILY EXDATE ALERT CHECK FAILED: {e} ===")
+
+
 async def daily_hnx_upcom_analysis():
     """Tiered AI analysis for watchlisted HNX/UPCOM tickers.
 
