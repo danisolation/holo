@@ -234,7 +234,6 @@ class TestAIServiceRecordsUsage:
         """_analyze_technical_batch should call record_usage after success."""
         with patch("app.services.ai_analysis_service.settings") as mock_settings, \
              patch("app.services.ai_analysis_service.genai") as mock_genai, \
-             patch("app.services.ai_analysis_service.gemini_breaker") as mock_breaker, \
              patch("app.services.ai_analysis_service.GeminiUsageService") as MockUsageSvc:
 
             mock_settings.gemini_api_key = "test-key"
@@ -255,8 +254,6 @@ class TestAIServiceRecordsUsage:
             mock_response.parsed.results = []
             mock_response.text = '{"results": []}'
 
-            mock_breaker.call = AsyncMock(return_value=mock_response)
-
             # Mock usage service
             mock_usage_svc_instance = AsyncMock()
             MockUsageSvc.return_value = mock_usage_svc_instance
@@ -264,11 +261,17 @@ class TestAIServiceRecordsUsage:
             mock_session = AsyncMock()
             from app.services.ai_analysis_service import AIAnalysisService
             svc = AIAnalysisService(mock_session, api_key="test-key")
+
+            # Patch _call_gemini and _build_technical_prompt to bypass prompt building
+            svc._call_gemini = AsyncMock(return_value=mock_response)
+            svc._build_technical_prompt = MagicMock(return_value="test prompt")
             await svc._analyze_technical_batch({"VNM": {}})
 
             mock_usage_svc_instance.record_usage.assert_called_once()
             call_kwargs = mock_usage_svc_instance.record_usage.call_args
             assert call_kwargs.kwargs["analysis_type"] == "technical"
+            assert call_kwargs.kwargs["batch_size"] == 1
+            assert call_kwargs.kwargs["model_name"] == "gemini-2.0-flash"
 
 
 # ---- T-15-03: API Endpoint Tests ----

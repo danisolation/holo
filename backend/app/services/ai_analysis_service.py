@@ -41,6 +41,7 @@ from app.schemas.analysis import (
     SentimentBatchResponse,
     CombinedBatchResponse,
 )
+from app.services.gemini_usage_service import GeminiUsageService
 from app.services.ticker_service import TickerService
 
 # Module-level lock: serializes all Gemini API access across concurrent
@@ -647,6 +648,20 @@ class AIAnalysisService:
         """
         return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema, temperature, system_instruction)
 
+    async def _record_usage(self, analysis_type: str, batch_size: int, response) -> None:
+        """Record Gemini token usage after a successful API call."""
+        try:
+            usage_svc = GeminiUsageService(self.session)
+            await usage_svc.record_usage(
+                analysis_type=analysis_type,
+                batch_size=batch_size,
+                usage_metadata=getattr(response, "usage_metadata", None),
+                model_name=self.model,
+            )
+        except Exception as e:
+            # Usage tracking should never break analysis
+            logger.warning(f"Failed to record Gemini usage: {e}")
+
     async def _analyze_technical_batch(
         self, ticker_data: dict[str, dict]
     ) -> TechnicalBatchResponse | None:
@@ -659,6 +674,7 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini technical tokens: {response.usage_metadata.total_token_count}"
         )
+        await self._record_usage("technical", len(ticker_data), response)
         result = response.parsed
 
         if result is None and response.text:
@@ -688,6 +704,7 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini fundamental tokens: {response.usage_metadata.total_token_count}"
         )
+        await self._record_usage("fundamental", len(ticker_data), response)
         result = response.parsed
 
         if result is None and response.text:
@@ -716,6 +733,7 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini sentiment tokens: {response.usage_metadata.total_token_count}"
         )
+        await self._record_usage("sentiment", len(ticker_data), response)
         result = response.parsed
 
         if result is None and response.text:
@@ -744,6 +762,7 @@ class AIAnalysisService:
         logger.debug(
             f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
         )
+        await self._record_usage("combined", len(ticker_data), response)
         result = response.parsed
 
         if result is None and response.text:
