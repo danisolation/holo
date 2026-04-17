@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Holo — Stock Intelligence",
   description:
-    "AI-powered stock analysis dashboard for HOSE — technical, fundamental & sentiment",
+    "AI-powered stock analysis dashboard for Vietnamese stock market (HOSE, HNX, UPCOM)",
 };
 
 export default function RootLayout({

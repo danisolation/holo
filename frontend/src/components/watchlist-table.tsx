@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ExchangeBadge } from "@/components/exchange-badge";
 import { useMarketOverview, useAnalysisSummary } from "@/lib/hooks";
-import { useWatchlistStore } from "@/lib/store";
+import { useWatchlistStore, useExchangeStore } from "@/lib/store";
 import type { MarketTicker } from "@/lib/api";
 
 /** Signal badge cell — fetches analysis for individual ticker */
@@ -72,6 +73,7 @@ function SignalCell({ symbol }: { symbol: string }) {
 export function WatchlistTable() {
   const router = useRouter();
   const { watchlist, removeFromWatchlist } = useWatchlistStore();
+  const { exchange: selectedExchange } = useExchangeStore();
   const { data: marketData, isLoading } = useMarketOverview();
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -83,6 +85,12 @@ export function WatchlistTable() {
       .map((symbol) => marketMap.get(symbol))
       .filter((t): t is MarketTicker => t != null);
   }, [marketData, watchlist]);
+
+  // Filter by selected exchange
+  const filteredRows = useMemo(() => {
+    if (selectedExchange === "all" || !selectedExchange) return rows;
+    return rows.filter((t) => t.exchange === selectedExchange);
+  }, [rows, selectedExchange]);
 
   const columns = useMemo<ColumnDef<MarketTicker>[]>(
     () => [
@@ -102,6 +110,25 @@ export function WatchlistTable() {
         cell: ({ row }) => (
           <span className="font-mono font-bold text-sm">
             {row.getValue("symbol")}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "exchange",
+        header: ({ column }) => (
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="gap-1 -ml-2 hidden sm:flex"
+          >
+            Sàn
+            <ArrowUpDown className="size-3" />
+          </Button>
+        ),
+        cell: ({ row }) => (
+          <span className="hidden sm:inline">
+            <ExchangeBadge exchange={row.getValue("exchange") ?? "HOSE"} />
           </span>
         ),
       },
@@ -206,7 +233,7 @@ export function WatchlistTable() {
   );
 
   const table = useReactTable({
-    data: rows,
+    data: filteredRows,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -259,7 +286,9 @@ export function WatchlistTable() {
         {table.getRowModel().rows.length === 0 ? (
           <TableRow>
             <TableCell colSpan={columns.length} className="h-24 text-center">
-              Không tìm thấy dữ liệu thị trường cho các mã đang theo dõi.
+              {selectedExchange && selectedExchange !== "all"
+                ? `Không có mã nào trên sàn ${selectedExchange} trong danh mục theo dõi.`
+                : "Không tìm thấy dữ liệu thị trường cho các mã đang theo dõi."}
             </TableCell>
           </TableRow>
         ) : (

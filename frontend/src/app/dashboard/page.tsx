@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ExchangeFilter } from "@/components/exchange-filter";
 import { useMarketOverview, useAnalysisSummary } from "@/lib/hooks";
-import { useWatchlistStore } from "@/lib/store";
+import { useWatchlistStore, useExchangeStore } from "@/lib/store";
 import {
   PieChart,
   Pie,
@@ -109,7 +110,8 @@ const PIE_COLORS: Record<string, string> = {
 
 export default function DashboardPage() {
   const { watchlist } = useWatchlistStore();
-  const { data: marketData, isLoading } = useMarketOverview();
+  const { exchange } = useExchangeStore();
+  const { data: marketData, isLoading } = useMarketOverview(exchange);
 
   const stats = useMemo(() => {
     if (!marketData) return null;
@@ -153,6 +155,11 @@ export default function DashboardPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Tổng quan danh mục và thị trường
         </p>
+      </div>
+
+      {/* Exchange filter */}
+      <div>
+        <ExchangeFilter />
       </div>
 
       {/* Section 1: Watchlist Summary */}
