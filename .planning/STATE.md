@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
 status: executing
-last_updated: "2026-04-17T13:01:01.708Z"
+last_updated: "2026-04-17T13:07:34.594Z"
 last_activity: 2026-04-17 -- Phase null execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 13
-  completed_plans: 11
-  percent: 85
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -83,6 +83,7 @@ v2.0 decisions (from research):
 - [Phase 14]: RIGHTS_ISSUE factor returns 1.0 — rights voluntary, no price adjustment
 - [Phase 14]: alert_sent partial index WHERE FALSE for efficient unsent-alert queries
 - [Phase 14]: Lot model (remaining_quantity>0) for held tickers; lazy-import telegram_bot; 5-day window covers 3 business days
+- [Phase 14]: extract() for SQL month filtering prevents injection; adjusted=true default for backward compatibility
 
 ### Pending Todos
 

@@ -38,8 +38,8 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 - [x] **CORP-06**: System tracks rights issues from VNDirect with dilution impact on existing positions
 - [x] **CORP-07**: User receives Telegram alerts for upcoming ex-dates on watchlisted and held tickers
-- [ ] **CORP-08**: User can view corporate events calendar on dashboard with filterable event types
-- [ ] **CORP-09**: User can toggle between adjusted and raw price display on candlestick charts
+- [x] **CORP-08**: User can view corporate events calendar on dashboard with filterable event types
+- [x] **CORP-09**: User can toggle between adjusted and raw price display on candlestick charts
 
 ## Future Requirements (v3.0)
 
@@ -91,8 +91,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-12 | Phase 13: Portfolio Enhancements | Complete |
 | CORP-06 | Phase 14: Corporate Actions Enhancements | Complete |
 | CORP-07 | Phase 14: Corporate Actions Enhancements | Complete |
-| CORP-08 | Phase 14: Corporate Actions Enhancements | Pending |
-| CORP-09 | Phase 14: Corporate Actions Enhancements | Pending |
+| CORP-08 | Phase 14: Corporate Actions Enhancements | Complete |
+| CORP-09 | Phase 14: Corporate Actions Enhancements | Complete |
 | HEALTH-08 | Phase 15: Health & Monitoring | Pending |
 | HEALTH-09 | Phase 15: Health & Monitoring | Pending |
 | HEALTH-10 | Phase 15: Health & Monitoring | Pending |
