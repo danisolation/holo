@@ -82,7 +82,12 @@ const RealtimePriceContext = createContext<RealtimePriceContextValue | null>(
 
 export function RealtimePriceProvider({ children }: { children: ReactNode }) {
   const [prices, setPrices] = useState<Record<string, RealtimePrice>>({});
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const [status, _setStatus] = useState<ConnectionStatus>("disconnected");
+  const statusRef = useRef<ConnectionStatus>("disconnected");
+  const setStatus = useCallback((s: ConnectionStatus) => {
+    statusRef.current = s;
+    _setStatus(s);
+  }, []);
   const subscribedSymbolsRef = useRef<Set<string>>(new Set());
   const [subscribedSymbols, setSubscribedSymbols] = useState<Set<string>>(
     new Set(),
@@ -143,7 +148,7 @@ export function RealtimePriceProvider({ children }: { children: ReactNode }) {
           case "market_status":
             if (msg.is_open === false) {
               setStatus("market_closed");
-            } else if (status === "market_closed") {
+            } else if (statusRef.current === "market_closed") {
               setStatus("connected");
             }
             break;
@@ -166,7 +171,7 @@ export function RealtimePriceProvider({ children }: { children: ReactNode }) {
     ws.onerror = () => {
       // onerror is always followed by onclose, so let onclose handle reconnect
     };
-  }, [sendSubscribe, status]);
+  }, [sendSubscribe]);
 
   // Mount: establish connection; Unmount: tear down
   useEffect(() => {
