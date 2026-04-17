@@ -1,14 +1,23 @@
-"""Portfolio management endpoints: trade entry, holdings, summary, trade history."""
-from fastapi import APIRouter, HTTPException, Query
+"""Portfolio management endpoints: trade entry, holdings, summary, trade history,
+performance analytics, allocation breakdown, trade edit/delete, CSV import."""
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 
 from app.database import async_session
 from app.services.portfolio_service import PortfolioService
+from app.services.csv_import_service import CSVImportService
 from app.schemas.portfolio import (
     TradeRequest,
     TradeResponse,
+    TradeUpdateRequest,
     HoldingResponse,
     PortfolioSummaryResponse,
     TradeHistoryResponse,
+    PerformanceResponse,
+    PerformanceDataPoint,
+    AllocationResponse,
+    AllocationItem,
+    CSVDryRunResponse,
+    CSVImportResponse,
 )
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
@@ -70,4 +79,37 @@ async def get_trades(
         return TradeHistoryResponse(
             trades=[TradeResponse(**t) for t in result["trades"]],
             total=result["total"],
+        )
+
+
+# --- Analytics endpoints (PORT-09, PORT-10) ---
+
+
+@router.get("/performance", response_model=PerformanceResponse)
+async def get_performance(
+    period: str = Query("3M", pattern="^(1M|3M|6M|1Y|ALL)$", description="Chart period"),
+):
+    """Get daily portfolio value snapshots for performance chart. Per PORT-09."""
+    async with async_session() as session:
+        service = PortfolioService(session)
+        data = await service.get_performance_data(period)
+        return PerformanceResponse(
+            data=[PerformanceDataPoint(**d) for d in data],
+            period=period,
+        )
+
+
+@router.get("/allocation", response_model=AllocationResponse)
+async def get_allocation(
+    mode: str = Query("ticker", pattern="^(ticker|sector)$", description="Group by ticker or sector"),
+):
+    """Get portfolio allocation by ticker or sector. Per PORT-10."""
+    async with async_session() as session:
+        service = PortfolioService(session)
+        data = await service.get_allocation_data(mode)
+        total_value = sum(item["value"] for item in data) if data else 0
+        return AllocationResponse(
+            data=[AllocationItem(**d) for d in data],
+            mode=mode,
+            total_value=total_value,
         )
