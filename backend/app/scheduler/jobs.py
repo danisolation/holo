@@ -675,3 +675,48 @@ async def health_alert_check():
         logger.info("=== HEALTH ALERT CHECK COMPLETE ===")
     except Exception as e:
         logger.error(f"=== HEALTH ALERT CHECK FAILED: {e} ===")
+
+
+# ── Real-time WebSocket jobs (Phase 16) ─────────────────────────────────────
+
+
+async def realtime_price_poll():
+    """Poll VCI price board and broadcast to WebSocket clients.
+
+    Runs every 30s (configurable). Only polls VCI when market is open
+    AND clients are subscribed. Sends market status to all clients.
+    """
+    from app.services.realtime_price_service import (
+        is_market_open,
+        get_market_session,
+        RealtimePriceService,
+    )
+    from app.ws.prices import connection_manager
+    from app.crawlers.vnstock_crawler import VnstockCrawler
+
+    market_open = is_market_open()
+    session = get_market_session()
+
+    # Always send market status so clients know current state
+    await connection_manager.send_market_status(is_open=market_open, session=session)
+
+    if not market_open:
+        return
+
+    # Only poll if there are subscribed symbols
+    if not connection_manager.get_all_subscribed_symbols():
+        return
+
+    crawler = VnstockCrawler()
+    service = RealtimePriceService(crawler=crawler, connection_manager=connection_manager)
+    await service.poll_and_broadcast()
+
+
+async def realtime_heartbeat():
+    """Send heartbeat to all connected WebSocket clients.
+
+    Runs every 15s to keep connections alive through proxies/NAT.
+    """
+    from app.ws.prices import connection_manager
+
+    await connection_manager.send_heartbeat()

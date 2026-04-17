@@ -357,6 +357,7 @@ class TestHealthAlertSchedulerJob:
         with patch("app.scheduler.manager.scheduler") as mock_scheduler, \
              patch("app.scheduler.manager.settings") as mock_settings:
             mock_settings.timezone = "Asia/Ho_Chi_Minh"
+            mock_settings.realtime_poll_interval = 30
             mock_scheduler.add_job = MagicMock()
             mock_scheduler.add_listener = MagicMock()
 

@@ -8,6 +8,7 @@ import asyncio
 from apscheduler import events
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
 
 from app.config import settings
@@ -42,6 +43,8 @@ _JOB_NAMES = {
     "daily_hnx_upcom_analysis": "Daily HNX/UPCOM Watchlist Analysis",
     "daily_hnx_upcom_analysis_triggered": "Daily HNX/UPCOM Watchlist Analysis",
     "health_alert_check": "Health Alert Check",
+    "realtime_price_poll": "Real-Time Price Poll",
+    "realtime_heartbeat": "Real-Time Heartbeat",
 }
 
 
@@ -274,6 +277,32 @@ def configure_jobs():
         f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00), "
         f"daily_summary_send (Mon-Fri 18:30 {settings.timezone}), "
         f"health_alert_check (every 30min)"
+    )
+
+    # ── Real-time WebSocket jobs (Phase 16) ──────────────────────────────────
+    from app.scheduler.jobs import realtime_price_poll, realtime_heartbeat
+
+    scheduler.add_job(
+        realtime_price_poll,
+        trigger=IntervalTrigger(seconds=settings.realtime_poll_interval),
+        id="realtime_price_poll",
+        name="Real-Time Price Poll",
+        replace_existing=True,
+        misfire_grace_time=30,
+    )
+
+    scheduler.add_job(
+        realtime_heartbeat,
+        trigger=IntervalTrigger(seconds=15),
+        id="realtime_heartbeat",
+        name="Real-Time Heartbeat",
+        replace_existing=True,
+        misfire_grace_time=15,
+    )
+
+    logger.info(
+        f"Real-time jobs: realtime_price_poll (every {settings.realtime_poll_interval}s), "
+        f"realtime_heartbeat (every 15s)"
     )
 
     # Register job chaining listener (Phase 2 + Phase 4 + Phase 12)

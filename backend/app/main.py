@@ -14,6 +14,7 @@ from app.database import engine
 from app.scheduler.manager import scheduler, configure_jobs
 from app.api.router import api_router
 from app.telegram.bot import telegram_bot
+from app.ws.prices import websocket_prices
 
 
 @asynccontextmanager
@@ -58,6 +59,10 @@ app.add_middleware(
 
 # Mount API routes
 app.include_router(api_router, prefix="/api")
+
+# WebSocket route — real-time price updates (Phase 16)
+# Mounted directly on app (not via APIRouter) per FastAPI WebSocket best practice
+app.websocket("/ws/prices")(websocket_prices)
 
 
 # Global exception handler — log tracebacks and return JSON instead of bare 500

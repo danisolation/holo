@@ -38,7 +38,9 @@ class TestSchedulerManager:
         assert "weekly_financial_crawl" in job_ids
         assert "daily_summary_send" in job_ids
         assert "health_alert_check" in job_ids
-        assert len(job_ids) == 7
+        assert "realtime_price_poll" in job_ids
+        assert "realtime_heartbeat" in job_ids
+        assert len(job_ids) == 9
 
         # Clean up
         scheduler.remove_all_jobs()

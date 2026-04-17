@@ -3,6 +3,7 @@
 TDD RED phase: tests written before implementation.
 """
 import asyncio
+import json
 from datetime import datetime, time
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from zoneinfo import ZoneInfo
@@ -280,3 +281,193 @@ class TestRealtimePriceService:
         # Should have been called with at most 50 symbols
         call_args = mock_crawler.fetch_price_board.call_args[0][0]
         assert len(call_args) <= 50
+
+
+# ── ConnectionManager tests ─────────────────────────────────────────────────
+
+class TestConnectionManager:
+    """Test WebSocket ConnectionManager subscribe/unsubscribe/broadcast."""
+
+    def _make_mock_ws(self):
+        """Create a mock WebSocket with send_json async method."""
+        ws = AsyncMock()
+        ws.send_json = AsyncMock()
+        return ws
+
+    @pytest.mark.asyncio
+    async def test_connect_adds_client(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws = self._make_mock_ws()
+        await mgr.connect(ws)
+        assert ws in mgr._connections
+
+    @pytest.mark.asyncio
+    async def test_disconnect_removes_client(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws = self._make_mock_ws()
+        await mgr.connect(ws)
+        mgr.disconnect(ws)
+        assert ws not in mgr._connections
+
+    @pytest.mark.asyncio
+    async def test_subscribe_adds_symbols(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws = self._make_mock_ws()
+        await mgr.connect(ws)
+        mgr.subscribe(ws, ["VNM", "FPT"])
+        assert mgr._connections[ws] == {"VNM", "FPT"}
+
+    @pytest.mark.asyncio
+    async def test_subscribe_appends_symbols(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws = self._make_mock_ws()
+        await mgr.connect(ws)
+        mgr.subscribe(ws, ["VNM"])
+        mgr.subscribe(ws, ["FPT"])
+        assert mgr._connections[ws] == {"VNM", "FPT"}
+
+    def test_get_all_subscribed_symbols(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws1 = self._make_mock_ws()
+        ws2 = self._make_mock_ws()
+        mgr._connections[ws1] = {"VNM", "FPT"}
+        mgr._connections[ws2] = {"FPT", "VIC"}
+        assert mgr.get_all_subscribed_symbols() == {"VNM", "FPT", "VIC"}
+
+    def test_get_all_subscribed_symbols_empty(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        assert mgr.get_all_subscribed_symbols() == set()
+
+    @pytest.mark.asyncio
+    async def test_broadcast_filters_by_subscription(self):
+        """Each client should only receive prices for their subscribed symbols."""
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws1 = self._make_mock_ws()
+        ws2 = self._make_mock_ws()
+        await mgr.connect(ws1)
+        await mgr.connect(ws2)
+        mgr.subscribe(ws1, ["VNM"])
+        mgr.subscribe(ws2, ["FPT"])
+
+        prices = {
+            "VNM": {"price": 82500},
+            "FPT": {"price": 120000},
+        }
+        await mgr.broadcast(prices)
+
+        # ws1 should get VNM only
+        ws1.send_json.assert_called_once()
+        sent1 = ws1.send_json.call_args[0][0]
+        assert sent1["type"] == "price_update"
+        assert "VNM" in sent1["data"]
+        assert "FPT" not in sent1["data"]
+
+        # ws2 should get FPT only
+        ws2.send_json.assert_called_once()
+        sent2 = ws2.send_json.call_args[0][0]
+        assert sent2["type"] == "price_update"
+        assert "FPT" in sent2["data"]
+        assert "VNM" not in sent2["data"]
+
+    @pytest.mark.asyncio
+    async def test_broadcast_skips_clients_with_no_matching_symbols(self):
+        """Client subscribed to symbols not in price update should not receive."""
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws = self._make_mock_ws()
+        await mgr.connect(ws)
+        mgr.subscribe(ws, ["VIC"])
+
+        await mgr.broadcast({"VNM": {"price": 82500}})
+        ws.send_json.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_send_heartbeat(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws = self._make_mock_ws()
+        await mgr.connect(ws)
+
+        await mgr.send_heartbeat()
+        ws.send_json.assert_called_once_with({"type": "heartbeat"})
+
+    @pytest.mark.asyncio
+    async def test_send_market_status(self):
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws = self._make_mock_ws()
+        await mgr.connect(ws)
+
+        await mgr.send_market_status(is_open=True, session="morning")
+        ws.send_json.assert_called_once_with({
+            "type": "market_status",
+            "is_open": True,
+            "session": "morning",
+        })
+
+    @pytest.mark.asyncio
+    async def test_broadcast_handles_dead_connection(self):
+        """Dead WebSocket should be removed, not crash broadcast."""
+        from app.ws.prices import ConnectionManager
+
+        mgr = ConnectionManager()
+        ws_live = self._make_mock_ws()
+        ws_dead = self._make_mock_ws()
+        ws_dead.send_json.side_effect = Exception("Connection closed")
+
+        await mgr.connect(ws_live)
+        await mgr.connect(ws_dead)
+        mgr.subscribe(ws_live, ["VNM"])
+        mgr.subscribe(ws_dead, ["VNM"])
+
+        await mgr.broadcast({"VNM": {"price": 82500}})
+
+        # Live client should still get data
+        ws_live.send_json.assert_called_once()
+        # Dead client should be removed
+        assert ws_dead not in mgr._connections
+
+
+# ── WebSocket endpoint integration test ──────────────────────────────────────
+
+class TestWebSocketEndpoint:
+    """Test /ws/prices endpoint via HTTPX/TestClient."""
+
+    @pytest.mark.asyncio
+    async def test_ws_endpoint_exists(self):
+        """WebSocket route /ws/prices should be registered."""
+        from app.main import app
+
+        routes = [r.path for r in app.routes]
+        assert "/ws/prices" in routes
+
+
+# ── Scheduler job registration tests ────────────────────────────────────────
+
+class TestSchedulerJobRegistration:
+    """Test that realtime jobs are added to _JOB_NAMES."""
+
+    def test_realtime_poll_job_in_names(self):
+        from app.scheduler.manager import _JOB_NAMES
+        assert "realtime_price_poll" in _JOB_NAMES
+
+    def test_realtime_heartbeat_job_in_names(self):
+        from app.scheduler.manager import _JOB_NAMES
+        assert "realtime_heartbeat" in _JOB_NAMES
