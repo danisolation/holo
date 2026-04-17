@@ -31,8 +31,12 @@ class PriceService:
         self.crawler = crawler or VnstockCrawler()
         self.ticker_service = TickerService(session, self.crawler)
 
-    async def crawl_daily(self) -> dict:
-        """Crawl today's OHLCV data for all active tickers.
+    async def crawl_daily(self, exchange: str | None = None) -> dict:
+        """Crawl today's OHLCV data for active tickers, optionally filtered by exchange.
+
+        Args:
+            exchange: If provided, only crawl tickers for this exchange (HOSE/HNX/UPCOM).
+                      If None, crawl all active tickers across all exchanges.
 
         Returns: {success: int, failed: int, skipped: int, failed_symbols: list[str]}
         """
@@ -40,9 +44,9 @@ class PriceService:
         # Use a date range of 5 days back to catch any missed days
         start = date.today().replace(day=max(1, date.today().day - 5)).isoformat()
 
-        ticker_map = await self.ticker_service.get_ticker_id_map()
+        ticker_map = await self.ticker_service.get_ticker_id_map(exchange=exchange)
         symbols = list(ticker_map.keys())
-        logger.info(f"Starting daily crawl for {len(symbols)} tickers")
+        logger.info(f"Starting daily crawl for {len(symbols)} tickers" + (f" ({exchange})" if exchange else ""))
 
         return await self._crawl_batch(symbols, ticker_map, start, today)
 
