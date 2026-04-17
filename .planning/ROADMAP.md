@@ -62,7 +62,12 @@ Plans:
   2. Corporate events are crawled from VCI and stored in database with classified event types (cash dividend, stock dividend, bonus, split)
   3. New corporate events detected in the daily check trigger automatic price adjustment and indicator recompute for affected tickers
   4. Each event type (cash dividend, stock dividend, bonus shares, stock split) produces correct adjusted_close values using VN market formulas
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Foundation: CorporateEvent model, migration 006, vndirect_breaker, config
+- [ ] 07-02-PLAN.md — Crawler + Service: VNDirect event crawler, adjustment factor computation
+- [ ] 07-03-PLAN.md — Integration: daily job + scheduler chaining + PriceResponse + test suite
 
 ### Phase 8: Portfolio Core
 **Goal**: User can track personal trades and see accurate FIFO-based P&L on all positions
@@ -119,7 +124,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 6. Resilience Foundation | 0/4 | Planning complete | - |
-| 7. Corporate Actions | 0/? | Not started | - |
+| 7. Corporate Actions | 0/3 | Planning complete | - |
 | 8. Portfolio Core | 0/? | Not started | - |
 | 9. AI Prompt Improvements | 0/? | Not started | - |
 | 10. System Health Dashboard | 0/? | Not started | - |
