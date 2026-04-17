@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { MarketTicker } from "@/lib/api";
+import { ExchangeBadge } from "@/components/exchange-badge";
 
 /**
  * Interpolate change_pct to a color between red ↔ gray ↔ green.
@@ -32,9 +33,16 @@ function getChangeColor(pct: number | null): string {
 
 interface HeatmapProps {
   data: MarketTicker[];
+  exchange?: string;
 }
 
-export function Heatmap({ data }: HeatmapProps) {
+const EXCHANGE_BORDER_COLORS: Record<string, string> = {
+  HOSE: "border-[var(--exchange-hose)]",
+  HNX: "border-[var(--exchange-hnx)]",
+  UPCOM: "border-[var(--exchange-upcom)]",
+};
+
+export function Heatmap({ data, exchange }: HeatmapProps) {
   const router = useRouter();
 
   // Group tickers by sector
@@ -52,8 +60,13 @@ export function Heatmap({ data }: HeatmapProps) {
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-muted-foreground">
-        Không có dữ liệu thị trường
+      <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+        <p className="font-medium">Không có dữ liệu</p>
+        {exchange && exchange !== "all" && (
+          <p className="text-sm mt-1">
+            Không có mã nào trên sàn {exchange} hoặc dữ liệu chưa được cập nhật.
+          </p>
+        )}
       </div>
     );
   }
@@ -82,6 +95,7 @@ export function Heatmap({ data }: HeatmapProps) {
                   <span className="font-mono font-bold text-sm w-14 text-left">
                     {ticker.symbol}
                   </span>
+                  <ExchangeBadge exchange={ticker.exchange} />
                   <span className="text-xs text-muted-foreground truncate max-w-[140px]">
                     {ticker.name}
                   </span>
@@ -111,7 +125,7 @@ export function Heatmap({ data }: HeatmapProps) {
               <button
                 key={ticker.symbol}
                 onClick={() => router.push(`/ticker/${ticker.symbol}`)}
-                className="relative flex flex-col items-center justify-center rounded-md px-1 py-2 text-white transition-transform hover:scale-105 hover:z-10 hover:ring-1 hover:ring-white/30 cursor-pointer min-h-[52px]"
+                className={`relative flex flex-col items-center justify-center rounded-md px-1 py-2 text-white transition-transform hover:scale-105 hover:z-10 hover:ring-1 hover:ring-white/30 cursor-pointer min-h-[52px] border-2 ${EXCHANGE_BORDER_COLORS[ticker.exchange] ?? ""}`}
                 style={{ backgroundColor: getChangeColor(ticker.change_pct) }}
                 title={`${ticker.name} — ${ticker.change_pct != null ? (ticker.change_pct >= 0 ? "+" : "") + ticker.change_pct.toFixed(2) + "%" : "N/A"}`}
               >
