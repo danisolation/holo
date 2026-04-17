@@ -210,15 +210,22 @@ export function RealtimePriceProvider({ children }: { children: ReactNode }) {
 
   const unsubscribe = useCallback((symbols: string[]) => {
     let changed = false;
+    const removedSymbols: string[] = [];
     for (const s of symbols) {
       const upper = s.toUpperCase();
       if (subscribedSymbolsRef.current.has(upper)) {
         subscribedSymbolsRef.current.delete(upper);
+        removedSymbols.push(upper);
         changed = true;
       }
     }
     if (changed) {
       setSubscribedSymbols(new Set(subscribedSymbolsRef.current));
+      // Notify server to remove symbols from subscription set
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "unsubscribe", symbols: removedSymbols }));
+      }
     }
   }, []);
 

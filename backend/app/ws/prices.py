@@ -44,6 +44,12 @@ class ConnectionManager:
             self._connections[ws].update(symbols)
             logger.debug(f"Client subscribed to {symbols} (total: {len(self._connections[ws])})")
 
+    def unsubscribe(self, ws: WebSocket, symbols: list[str]) -> None:
+        """Remove symbols from a client's subscription set."""
+        if ws in self._connections:
+            self._connections[ws].difference_update(symbols)
+            logger.debug(f"Client unsubscribed from {symbols} (total: {len(self._connections[ws])})")
+
     def get_all_subscribed_symbols(self) -> set[str]:
         """Return union of all clients' subscribed symbols."""
         all_symbols: set[str] = set()
@@ -135,6 +141,17 @@ async def websocket_prices(ws: WebSocket) -> None:
                 connection_manager.subscribe(ws, clean_symbols)
                 await ws.send_json({
                     "type": "subscribed",
+                    "symbols": clean_symbols,
+                })
+            elif msg_type == "unsubscribe":
+                symbols = data.get("symbols", [])
+                if not isinstance(symbols, list):
+                    await ws.send_json({"type": "error", "message": "symbols must be a list"})
+                    continue
+                clean_symbols = [s.upper().strip() for s in symbols if isinstance(s, str) and s.strip()]
+                connection_manager.unsubscribe(ws, clean_symbols)
+                await ws.send_json({
+                    "type": "unsubscribed",
                     "symbols": clean_symbols,
                 })
             else:
