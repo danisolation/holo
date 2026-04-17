@@ -412,6 +412,266 @@ class TestSchemaValidation:
         assert req.fees == 0
 
 
+# --- PORT-08: Dividend Income Tests ---
+
+
+class TestDividendIncome:
+    """Test dividend income computation from CASH_DIVIDEND events."""
+
+    @pytest.mark.asyncio
+    async def test_dividend_income_basic(self):
+        """1 CASH_DIVIDEND event (1500 VND/share), 1 lot with 200 remaining bought before record_date → 300000."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Mock CASH_DIVIDEND event
+        event = MagicMock()
+        event.event_type = "CASH_DIVIDEND"
+        event.dividend_amount = Decimal("1500")
+        event.record_date = date(2024, 6, 15)
+
+        # Mock lot held before record_date
+        lot = MagicMock()
+        lot.remaining_quantity = 200
+        lot.buy_date = date(2024, 1, 1)
+
+        # session.execute called twice: first for events, then for lots
+        events_result = MagicMock()
+        events_result.scalars.return_value.all.return_value = [event]
+
+        lots_result = MagicMock()
+        lots_result.scalars.return_value.all.return_value = [lot]
+
+        svc.session.execute = AsyncMock(side_effect=[events_result, lots_result])
+
+        result = await svc.get_dividend_income(ticker_id=1)
+        assert result == 300000.0  # 1500 * 200
+
+    @pytest.mark.asyncio
+    async def test_dividend_income_multiple_events(self):
+        """2 CASH_DIVIDEND events, lots held for both → sum of both."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        event1 = MagicMock()
+        event1.event_type = "CASH_DIVIDEND"
+        event1.dividend_amount = Decimal("1000")
+        event1.record_date = date(2024, 3, 15)
+
+        event2 = MagicMock()
+        event2.event_type = "CASH_DIVIDEND"
+        event2.dividend_amount = Decimal("2000")
+        event2.record_date = date(2024, 6, 15)
+
+        lot = MagicMock()
+        lot.remaining_quantity = 100
+        lot.buy_date = date(2024, 1, 1)
+
+        events_result = MagicMock()
+        events_result.scalars.return_value.all.return_value = [event1, event2]
+
+        lots_result1 = MagicMock()
+        lots_result1.scalars.return_value.all.return_value = [lot]
+
+        lots_result2 = MagicMock()
+        lots_result2.scalars.return_value.all.return_value = [lot]
+
+        svc.session.execute = AsyncMock(
+            side_effect=[events_result, lots_result1, lots_result2]
+        )
+
+        result = await svc.get_dividend_income(ticker_id=1)
+        # event1: 1000*100=100000, event2: 2000*100=200000 → 300000
+        assert result == 300000.0
+
+    @pytest.mark.asyncio
+    async def test_dividend_income_no_events(self):
+        """No CASH_DIVIDEND events → returns 0.0."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        events_result = MagicMock()
+        events_result.scalars.return_value.all.return_value = []
+        svc.session.execute = AsyncMock(return_value=events_result)
+
+        result = await svc.get_dividend_income(ticker_id=1)
+        assert result == 0.0
+
+    @pytest.mark.asyncio
+    async def test_dividend_income_skips_lots_bought_after_record_date(self):
+        """Lot bought AFTER record_date → not entitled, skipped."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        event = MagicMock()
+        event.event_type = "CASH_DIVIDEND"
+        event.dividend_amount = Decimal("1500")
+        event.record_date = date(2024, 6, 15)
+
+        events_result = MagicMock()
+        events_result.scalars.return_value.all.return_value = [event]
+
+        # No lots match (all bought after record_date)
+        lots_result = MagicMock()
+        lots_result.scalars.return_value.all.return_value = []
+
+        svc.session.execute = AsyncMock(side_effect=[events_result, lots_result])
+
+        result = await svc.get_dividend_income(ticker_id=1)
+        assert result == 0.0
+
+    @pytest.mark.asyncio
+    async def test_dividend_income_ignores_non_cash_events(self):
+        """STOCK_DIVIDEND and BONUS_SHARES are filtered out by the query."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Only CASH_DIVIDEND events are returned by the query (service filters)
+        events_result = MagicMock()
+        events_result.scalars.return_value.all.return_value = []
+        svc.session.execute = AsyncMock(return_value=events_result)
+
+        result = await svc.get_dividend_income(ticker_id=1)
+        assert result == 0.0
+
+
+class TestHoldingsDividendAndSector:
+    """Test that get_holdings includes dividend_income and sector fields."""
+
+    @pytest.mark.asyncio
+    async def test_holdings_includes_dividend_income(self):
+        """Each holding should have a dividend_income field."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Mock lot aggregation query
+        row = MagicMock()
+        row.ticker_id = 1
+        row.total_qty = 100
+        row.avg_cost = Decimal("50000")
+        row.total_cost = Decimal("5000000")
+
+        agg_result = MagicMock()
+        agg_result.all.return_value = [row]
+
+        # Mock ticker query
+        ticker = MagicMock()
+        ticker.id = 1
+        ticker.symbol = "VNM"
+        ticker.name = "Vinamilk"
+        ticker.sector = "Thực phẩm"
+
+        ticker_result = MagicMock()
+        ticker_result.scalar_one_or_none.return_value = ticker
+
+        # Mock latest price query
+        price_result = MagicMock()
+        price_result.scalar_one_or_none.return_value = Decimal("55000")
+
+        svc.session.execute = AsyncMock(
+            side_effect=[agg_result, ticker_result, price_result]
+        )
+
+        # Mock get_dividend_income
+        svc.get_dividend_income = AsyncMock(return_value=150000.0)
+
+        holdings = await svc.get_holdings()
+        assert len(holdings) == 1
+        assert holdings[0]["dividend_income"] == 150000.0
+
+    @pytest.mark.asyncio
+    async def test_holdings_includes_sector(self):
+        """Each holding should have a sector field from Ticker model."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        row = MagicMock()
+        row.ticker_id = 1
+        row.total_qty = 100
+        row.avg_cost = Decimal("50000")
+        row.total_cost = Decimal("5000000")
+
+        agg_result = MagicMock()
+        agg_result.all.return_value = [row]
+
+        ticker = MagicMock()
+        ticker.id = 1
+        ticker.symbol = "VNM"
+        ticker.name = "Vinamilk"
+        ticker.sector = "Thực phẩm"
+
+        ticker_result = MagicMock()
+        ticker_result.scalar_one_or_none.return_value = ticker
+
+        price_result = MagicMock()
+        price_result.scalar_one_or_none.return_value = Decimal("55000")
+
+        svc.session.execute = AsyncMock(
+            side_effect=[agg_result, ticker_result, price_result]
+        )
+
+        svc.get_dividend_income = AsyncMock(return_value=0.0)
+
+        holdings = await svc.get_holdings()
+        assert len(holdings) == 1
+        assert holdings[0]["sector"] == "Thực phẩm"
+
+
+class TestSummaryDividendIncome:
+    """Test that get_summary includes total dividend_income."""
+
+    @pytest.mark.asyncio
+    async def test_summary_includes_dividend_income(self):
+        """Summary should aggregate dividend_income across all holdings."""
+        from app.services.portfolio_service import PortfolioService
+
+        svc = PortfolioService.__new__(PortfolioService)
+        svc.session = AsyncMock()
+
+        # Mock BUY total
+        buy_result = MagicMock()
+        buy_result.scalar_one.return_value = Decimal("10000000")
+
+        # Mock SELL revenue
+        sell_revenue_result = MagicMock()
+        sell_revenue_result.scalar_one.return_value = Decimal("0")
+
+        # Mock SELL fees
+        sell_fees_result = MagicMock()
+        sell_fees_result.scalar_one.return_value = Decimal("0")
+
+        # Mock consumed cost
+        consumed_cost_result = MagicMock()
+        consumed_cost_result.scalar_one.return_value = Decimal("0")
+
+        svc.session.execute = AsyncMock(
+            side_effect=[buy_result, sell_revenue_result, sell_fees_result, consumed_cost_result]
+        )
+
+        # Mock get_holdings returning 2 holdings with dividend_income
+        svc.get_holdings = AsyncMock(return_value=[
+            {"market_value": 5500000, "unrealized_pnl": 500000, "dividend_income": 150000.0},
+            {"market_value": 3200000, "unrealized_pnl": 200000, "dividend_income": 80000.0},
+        ])
+
+        summary = await svc.get_summary()
+        assert summary["dividend_income"] == 230000.0  # 150000 + 80000
+
+
 class TestAPIRouter:
     """Test API router registration."""
 
