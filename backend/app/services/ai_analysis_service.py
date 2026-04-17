@@ -671,9 +671,10 @@ class AIAnalysisService:
         sys_instr = TECHNICAL_SYSTEM_INSTRUCTION
 
         response = await self._call_gemini(prompt, TechnicalBatchResponse, temp, sys_instr)
-        logger.debug(
-            f"Gemini technical tokens: {response.usage_metadata.total_token_count}"
-        )
+        if response.usage_metadata:
+            logger.debug(
+                f"Gemini technical tokens: {response.usage_metadata.total_token_count}"
+            )
         await self._record_usage("technical", len(ticker_data), response)
         result = response.parsed
 
@@ -701,9 +702,10 @@ class AIAnalysisService:
         sys_instr = FUNDAMENTAL_SYSTEM_INSTRUCTION
 
         response = await self._call_gemini(prompt, FundamentalBatchResponse, temp, sys_instr)
-        logger.debug(
-            f"Gemini fundamental tokens: {response.usage_metadata.total_token_count}"
-        )
+        if response.usage_metadata:
+            logger.debug(
+                f"Gemini fundamental tokens: {response.usage_metadata.total_token_count}"
+            )
         await self._record_usage("fundamental", len(ticker_data), response)
         result = response.parsed
 
@@ -730,9 +732,10 @@ class AIAnalysisService:
         sys_instr = SENTIMENT_SYSTEM_INSTRUCTION
 
         response = await self._call_gemini(prompt, SentimentBatchResponse, temp, sys_instr)
-        logger.debug(
-            f"Gemini sentiment tokens: {response.usage_metadata.total_token_count}"
-        )
+        if response.usage_metadata:
+            logger.debug(
+                f"Gemini sentiment tokens: {response.usage_metadata.total_token_count}"
+            )
         await self._record_usage("sentiment", len(ticker_data), response)
         result = response.parsed
 
@@ -759,9 +762,10 @@ class AIAnalysisService:
         sys_instr = COMBINED_SYSTEM_INSTRUCTION
 
         response = await self._call_gemini(prompt, CombinedBatchResponse, temp, sys_instr)
-        logger.debug(
-            f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
-        )
+        if response.usage_metadata:
+            logger.debug(
+                f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
+            )
         await self._record_usage("combined", len(ticker_data), response)
         result = response.parsed
 
