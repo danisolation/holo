@@ -10,9 +10,9 @@ AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ li�
 
 ## Current State
 
-**Shipped:** v1.0 (2026-04-15)
-**Code:** ~9,400 LOC (Python 6,050 + TypeScript 3,350)
-**Tests:** 96 backend unit tests
+**Shipped:** v1.0 (2026-04-15), v1.1 (2026-04-17)
+**Code:** ~9,400+ LOC (Python + TypeScript)
+**Tests:** 96+ backend unit tests
 **Stack:** FastAPI + PostgreSQL + APScheduler + Google Gemini + python-telegram-bot + Next.js + lightweight-charts
 
 ## Requirements
@@ -38,23 +38,60 @@ AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ li�
 - ✓ DASH-04: Ticker detail page — v1.0
 - ✓ DASH-05: Responsive mobile layout — v1.0
 - ✓ DASH-06: Market overview heatmap — v1.0
+- ✓ ERR-01: Auto-retry failed AI analysis batches — v1.1
+- ✓ ERR-02: Dead letter table for permanently failed items — v1.1
+- ✓ ERR-03: Graceful degradation on partial failures — v1.1
+- ✓ ERR-04: Job execution logging — v1.1
+- ✓ ERR-05: Telegram notification on crawler failure — v1.1
+- ✓ ERR-06: Circuit breaker for external APIs — v1.1
+- ✓ ERR-07: Auto-retry failed jobs after delay — v1.1
+- ✓ CORP-01: Adjusted historical prices for splits/dividends — v1.1
+- ✓ CORP-02: Corporate event crawling from VCI — v1.1
+- ✓ CORP-03: Cumulative adjustment factors — v1.1
+- ✓ CORP-04: Daily corporate action check — v1.1
+- ✓ CORP-05: Correct VN market formulas per event type — v1.1
+- ✓ PORT-01: Manual buy/sell trade entry — v1.1
+- ✓ PORT-02: Holdings view with P&L — v1.1
+- ✓ PORT-03: FIFO cost basis — v1.1
+- ✓ PORT-04: Realized P&L — v1.1
+- ✓ PORT-05: Unrealized P&L — v1.1
+- ✓ PORT-06: Portfolio summary — v1.1
+- ✓ PORT-07: Trade history — v1.1
+- ✓ AI-07: system_instruction persona separation — v1.1
+- ✓ AI-08: Few-shot examples — v1.1
+- ✓ AI-09: Scoring rubric with anchors — v1.1
+- ✓ AI-10: Close price + SMA percentages in prompts — v1.1
+- ✓ AI-11: Consistent language per analysis type — v1.1
+- ✓ AI-12: Structured output retry — v1.1
+- ✓ AI-13: Temperature tuning per type — v1.1
+- ✓ HEALTH-01: Data freshness dashboard — v1.1
+- ✓ HEALTH-02: Job status (green/yellow/red) — v1.1
+- ✓ HEALTH-03: Error rate per job — v1.1
+- ✓ HEALTH-04: DB connection pool status — v1.1
+- ✓ HEALTH-05: Health page at /dashboard/health — v1.1
+- ✓ HEALTH-06: Scheduler status with last run result — v1.1
+- ✓ HEALTH-07: Manual job triggers from dashboard — v1.1
+- ✓ TBOT-01: /buy command — v1.1
+- ✓ TBOT-02: /sell command with realized P&L — v1.1
+- ✓ TBOT-03: /portfolio command — v1.1
+- ✓ TBOT-04: Daily portfolio P&L notification — v1.1
+- ✓ TBOT-05: /pnl command — v1.1
+- ✓ TBOT-06: Daily summary highlights owned tickers — v1.1
 
 ### Active
 
-(Defining requirements for v1.1)
+(Defining requirements for v2.0)
 
-## Current Milestone: v1.1 Reliability & Portfolio
+## Current Milestone: v2.0 Full Coverage & Real-Time
 
-**Goal:** Harden data pipeline with corporate actions handling and error recovery, add personal portfolio tracking with full P&L, and improve AI analysis quality — all visible across both dashboard and Telegram.
+**Goal:** Expand from HOSE-only to multi-market (HNX/UPCOM), add real-time WebSocket price streaming, enhance portfolio with dividend tracking and CSV import, and add advanced system monitoring — completing all deferred v1.1 features.
 
 **Target features:**
-- Corporate Actions — Handle splits, dividends, bonus shares, rights issues; adjust historical prices
-- AI Improvements — Better prompts with structured output, more consistent/accurate recommendations
-- Error Recovery — Auto-retry on failures, graceful degradation, dead-letter handling
-- Portfolio Tracking — Manual trade entry (buy/sell), holdings view, position management
-- Full P&L — Realized + unrealized gains, cost basis (FIFO), dividend income tracking
-- Portfolio on Telegram — /portfolio command, daily P&L notifications, alerts on owned positions
-- System Health Dashboard — Data freshness, last crawl status, error rates, job monitoring
+- Market Coverage — HNX/UPCOM crawling, exchange filter on dashboard
+- Real-Time — WebSocket price updates, sub-minute polling during market hours
+- Portfolio Enhancements — Dividend income tracking, performance chart, allocation pie chart, trade edit/delete, broker CSV import
+- Health Enhancements — Gemini API usage tracker, pipeline execution timeline, Telegram health notifications
+- Corporate Actions Enhancements — Rights issue tracking, ex-date Telegram alerts, event calendar view, adjusted/raw price toggle
 
 ### Out of Scope
 
@@ -111,4 +148,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-16 — v1.1 milestone started*
+*Last updated: 2026-04-17 — v2.0 milestone started*
