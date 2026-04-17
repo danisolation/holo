@@ -242,7 +242,9 @@ class PortfolioService:
         """Compute total dividend income for a ticker from CASH_DIVIDEND events.
 
         Per PORT-08: sum of dividend_amount × quantity held on record_date.
-        Joins corporate_events (CASH_DIVIDEND) with lots held before each record_date.
+        Uses historical position: for each dividend event, computes shares held
+        on the record_date by checking lots bought before/on record_date, then
+        FIFO-deducting shares sold before/on record_date.
         """
         # Query CASH_DIVIDEND events for this ticker with a valid record_date
         events_stmt = (
@@ -262,20 +264,37 @@ class PortfolioService:
         total_income = Decimal("0")
 
         for event in events:
-            # Find lots held on record_date (bought on or before record_date with remaining shares)
+            # Find ALL lots bought on or before record_date (regardless of current remaining)
             lots_stmt = (
                 select(Lot)
                 .where(
                     Lot.ticker_id == ticker_id,
                     Lot.buy_date <= event.record_date,
-                    Lot.remaining_quantity > 0,
                 )
             )
             lots_result = await self.session.execute(lots_stmt)
             lots = lots_result.scalars().all()
 
-            for lot in lots:
-                total_income += event.dividend_amount * lot.remaining_quantity
+            # Compute total sold on or before record_date for this ticker
+            sold_before_stmt = (
+                select(func.coalesce(func.sum(Trade.quantity), 0))
+                .where(
+                    Trade.ticker_id == ticker_id,
+                    Trade.side == "SELL",
+                    Trade.trade_date <= event.record_date,
+                )
+            )
+            sold_result = await self.session.execute(sold_before_stmt)
+            total_sold_before = int(sold_result.scalar_one())
+
+            # FIFO: deduct sold shares from oldest lots first
+            remaining_sold = total_sold_before
+            for lot in sorted(lots, key=lambda l: (l.buy_date, l.id)):
+                held = lot.quantity  # original buy quantity
+                consumed = min(held, remaining_sold)
+                held_on_record = held - consumed
+                remaining_sold -= consumed
+                total_income += event.dividend_amount * held_on_record
 
         return float(total_income)
 
