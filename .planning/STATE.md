@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
 status: executing
-last_updated: "2026-04-17T12:11:48.826Z"
+last_updated: "2026-04-17T12:18:11.553Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
-  percent: 78
+  completed_plans: 8
+  percent: 89
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 ## Current Position
 
 Phase: 13-portfolio-enhancements — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-17
 
@@ -74,6 +74,9 @@ v2.0 decisions (from research):
 - [Phase 13]: [Phase 13]: Dividend income via CASH_DIVIDEND x lots join on record_date; performance via trade-replay chronological; allocation by ticker/sector with Khac default
 - [Phase 13]: recalculate_lots in-memory lot tracking during trade replay; CSV import_trades accepts PortfolioService parameter to avoid circular deps
 - [Phase 13]: CSV import endpoint passes PortfolioService to CSVImportService to avoid circular dependency; file size 5MB check before decode; UTF-8 then CP1252 encoding fallback
+- [Phase 13-04]: Recharts AreaChart with monotone interpolation and blue-500 gradient for performance chart
+- [Phase 13-04]: base-ui Tabs controlled value/onValueChange for period and mode selectors
+- [Phase 13-04]: AllocationChart groups >7 items into Khac with gray-400 color
 
 ### Pending Todos
 
