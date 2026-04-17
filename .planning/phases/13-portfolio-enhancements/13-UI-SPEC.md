@@ -149,7 +149,7 @@ Rationale: Distinct hues, accessible contrast against both light and dark backgr
 | Label | `Cổ tức nhận` |
 | Label style | `text-xs text-muted-foreground` |
 | Value format | `{formatVND(dividend_income)} ₫` |
-| Value style | `text-lg font-bold truncate font-mono` |
+| Value style | `text-lg font-semibold truncate font-mono` |
 
 **Data source:** `dividend_income` field added to `PortfolioSummaryResponse`.
 
