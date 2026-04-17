@@ -37,3 +37,22 @@ export const useWatchlistStore = create<WatchlistState>()(
     },
   ),
 );
+
+export type Exchange = "all" | "HOSE" | "HNX" | "UPCOM";
+
+interface ExchangeFilterState {
+  exchange: Exchange;
+  setExchange: (exchange: Exchange) => void;
+}
+
+export const useExchangeStore = create<ExchangeFilterState>()(
+  persist(
+    (set) => ({
+      exchange: "all" as Exchange,
+      setExchange: (exchange: Exchange) => set({ exchange }),
+    }),
+    {
+      name: "holo-exchange-filter",
+    },
+  ),
+);

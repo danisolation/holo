@@ -7,6 +7,7 @@ export interface Ticker {
   name: string;
   sector: string | null;
   industry: string | null;
+  exchange: string;
   market_cap: number | null;
   is_active: boolean;
 }
@@ -87,9 +88,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // --- Fetch Functions ---
 
-export async function fetchTickers(sector?: string): Promise<Ticker[]> {
-  const params = sector ? `?sector=${encodeURIComponent(sector)}` : "";
-  return apiFetch<Ticker[]>(`/tickers/${params}`);
+export async function fetchTickers(sector?: string, exchange?: string): Promise<Ticker[]> {
+  const params = new URLSearchParams();
+  if (sector) params.set("sector", sector);
+  if (exchange && exchange !== "all") params.set("exchange", exchange);
+  const qs = params.toString();
+  return apiFetch<Ticker[]>(`/tickers/${qs ? `?${qs}` : ""}`);
 }
 
 export async function fetchPrices(
@@ -124,13 +128,22 @@ export interface MarketTicker {
   symbol: string;
   name: string;
   sector: string | null;
+  exchange: string;
   market_cap: number | null;
   last_price: number | null;
   change_pct: number | null;
 }
 
-export async function fetchMarketOverview(): Promise<MarketTicker[]> {
-  return apiFetch<MarketTicker[]>("/tickers/market-overview");
+export async function fetchMarketOverview(exchange?: string): Promise<MarketTicker[]> {
+  const params = exchange && exchange !== "all" ? `?exchange=${encodeURIComponent(exchange)}` : "";
+  return apiFetch<MarketTicker[]>(`/tickers/market-overview${params}`);
+}
+
+export async function triggerOnDemandAnalysis(symbol: string): Promise<{ message: string; triggered: boolean }> {
+  return apiFetch<{ message: string; triggered: boolean }>(
+    `/analysis/${encodeURIComponent(symbol)}/analyze-now`,
+    { method: "POST" },
+  );
 }
 
 // --- Portfolio Types ---

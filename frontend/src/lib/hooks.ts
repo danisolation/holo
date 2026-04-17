@@ -7,6 +7,7 @@ import {
   fetchIndicators,
   fetchAnalysisSummary,
   fetchMarketOverview,
+  triggerOnDemandAnalysis,
   fetchHoldings,
   fetchPortfolioSummary,
   fetchTradeHistory,
@@ -24,10 +25,10 @@ import {
  * Fetch all active tickers, optionally filtered by sector.
  * staleTime: 5 minutes — ticker list rarely changes.
  */
-export function useTickers(sector?: string) {
+export function useTickers(sector?: string, exchange?: string) {
   return useQuery({
-    queryKey: ["tickers", sector ?? "all"],
-    queryFn: () => fetchTickers(sector),
+    queryKey: ["tickers", sector ?? "all", exchange ?? "all"],
+    queryFn: () => fetchTickers(sector, exchange),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -75,11 +76,26 @@ export function useAnalysisSummary(symbol: string | undefined) {
  * Fetch market overview: all active tickers with latest price + daily change %.
  * staleTime: 5 minutes.
  */
-export function useMarketOverview() {
+export function useMarketOverview(exchange?: string) {
   return useQuery({
-    queryKey: ["market-overview"],
-    queryFn: () => fetchMarketOverview(),
+    queryKey: ["market-overview", exchange ?? "all"],
+    queryFn: () => fetchMarketOverview(exchange),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useTriggerAnalysis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (symbol: string) => triggerOnDemandAnalysis(symbol),
+    onSuccess: (_data, symbol) => {
+      // Invalidate analysis summary for the analyzed ticker
+      queryClient.invalidateQueries({ queryKey: ["analysis-summary", symbol] });
+      // Use a short delay to allow background task to complete
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["analysis-summary", symbol] });
+      }, 5000);
+    },
   });
 }
 
