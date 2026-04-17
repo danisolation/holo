@@ -12,6 +12,12 @@ import {
   fetchTradeHistory,
   createTrade,
   type TradeRequest,
+  fetchJobStatuses,
+  fetchDataFreshness,
+  fetchErrorRates,
+  fetchDbPool,
+  fetchHealthSummary,
+  triggerJob,
 } from "@/lib/api";
 
 /**
@@ -116,6 +122,64 @@ export function useCreateTrade() {
       queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio-summary"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio-trades"] });
+    },
+  });
+}
+
+// --- Health Hooks ---
+
+export function useJobStatuses() {
+  return useQuery({
+    queryKey: ["health-jobs"],
+    queryFn: fetchJobStatuses,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+}
+
+export function useDataFreshness() {
+  return useQuery({
+    queryKey: ["health-freshness"],
+    queryFn: fetchDataFreshness,
+    staleTime: 60 * 1000,
+    refetchInterval: 120 * 1000,
+  });
+}
+
+export function useErrorRates() {
+  return useQuery({
+    queryKey: ["health-errors"],
+    queryFn: fetchErrorRates,
+    staleTime: 60 * 1000,
+    refetchInterval: 120 * 1000,
+  });
+}
+
+export function useDbPool() {
+  return useQuery({
+    queryKey: ["health-db-pool"],
+    queryFn: fetchDbPool,
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
+  });
+}
+
+export function useHealthSummary() {
+  return useQuery({
+    queryKey: ["health-summary"],
+    queryFn: fetchHealthSummary,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+}
+
+export function useTriggerJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobName: string) => triggerJob(jobName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["health-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["health-summary"] });
     },
   });
 }

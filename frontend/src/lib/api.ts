@@ -213,3 +213,105 @@ export async function createTrade(trade: TradeRequest): Promise<TradeResponse> {
     body: JSON.stringify(trade),
   });
 }
+
+// --- Health Types ---
+
+export interface JobStatusItem {
+  job_id: string;
+  job_name: string;
+  status: string;
+  color: "green" | "yellow" | "red";
+  started_at: string | null;
+  completed_at: string | null;
+  duration_seconds: number | null;
+  result_summary: Record<string, unknown> | null;
+  error_message: string | null;
+}
+
+export interface JobStatusResponse {
+  jobs: JobStatusItem[];
+}
+
+export interface DataFreshnessItem {
+  data_type: string;
+  table_name: string;
+  latest: string | null;
+  is_stale: boolean;
+  threshold_hours: number;
+}
+
+export interface DataFreshnessResponse {
+  items: DataFreshnessItem[];
+}
+
+export interface ErrorRateDayItem {
+  day: string;
+  total: number;
+  failed: number;
+}
+
+export interface ErrorRateJobItem {
+  job_id: string;
+  job_name: string;
+  days: ErrorRateDayItem[];
+  total_runs: number;
+  total_failures: number;
+}
+
+export interface ErrorRateResponse {
+  jobs: ErrorRateJobItem[];
+}
+
+export interface DbPoolResponse {
+  pool_size: number;
+  checked_in: number;
+  checked_out: number;
+  overflow: number;
+  max_overflow: number;
+}
+
+export interface TriggerResponse {
+  message: string;
+  triggered: boolean;
+}
+
+export interface HealthSummary {
+  status: "healthy" | "warning" | "degraded";
+  jobs_total: number;
+  jobs_healthy: number;
+  jobs_warning: number;
+  jobs_error: number;
+  data_sources_total: number;
+  data_sources_stale: number;
+  pool_checked_out: number;
+  pool_available: number;
+}
+
+// --- Health Fetch Functions ---
+
+export async function fetchJobStatuses(): Promise<JobStatusResponse> {
+  return apiFetch<JobStatusResponse>("/health/jobs");
+}
+
+export async function fetchDataFreshness(): Promise<DataFreshnessResponse> {
+  return apiFetch<DataFreshnessResponse>("/health/data-freshness");
+}
+
+export async function fetchErrorRates(): Promise<ErrorRateResponse> {
+  return apiFetch<ErrorRateResponse>("/health/errors");
+}
+
+export async function fetchDbPool(): Promise<DbPoolResponse> {
+  return apiFetch<DbPoolResponse>("/health/db-pool");
+}
+
+export async function fetchHealthSummary(): Promise<HealthSummary> {
+  return apiFetch<HealthSummary>("/health/summary");
+}
+
+export async function triggerJob(jobName: string): Promise<TriggerResponse> {
+  return apiFetch<TriggerResponse>(
+    `/health/trigger/${encodeURIComponent(jobName)}`,
+    { method: "POST" }
+  );
+}
