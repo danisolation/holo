@@ -430,20 +430,26 @@ class AIAnalysisService:
 
         Used by the 'Analyze now' endpoint for HNX/UPCOM tickers
         not in the daily schedule.
+
+        Acquires the Gemini lock once for all 4 analysis types to avoid
+        starvation — without this, the daily pipeline (400+ tickers) could
+        grab the lock between each type, delaying on-demand results for hours.
         """
         logger.info(f"On-demand analysis for {symbol} (id={ticker_id})")
         ticker_filter = {symbol: ticker_id}
         results = {}
-        for analysis_type in ["technical", "fundamental", "sentiment", "combined"]:
-            try:
-                result = await self.analyze_all_tickers(
-                    analysis_type=analysis_type,
-                    ticker_filter=ticker_filter,
-                )
-                results[analysis_type] = result
-            except Exception as e:
-                logger.error(f"On-demand {analysis_type} failed for {symbol}: {e}")
-                results[analysis_type] = {"error": str(e)}
+        async with _gemini_lock:
+            for analysis_type, runner in [
+                ("technical", self.run_technical_analysis),
+                ("fundamental", self.run_fundamental_analysis),
+                ("sentiment", self.run_sentiment_analysis),
+                ("combined", self.run_combined_analysis),
+            ]:
+                try:
+                    results[analysis_type] = await runner(ticker_filter=ticker_filter)
+                except Exception as e:
+                    logger.error(f"On-demand {analysis_type} failed for {symbol}: {e}")
+                    results[analysis_type] = {"error": str(e)}
         return results
 
     # ------------------------------------------------------------------
