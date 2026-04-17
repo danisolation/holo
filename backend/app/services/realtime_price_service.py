@@ -112,3 +112,26 @@ class RealtimePriceService:
     def get_latest_prices(self, symbols: list[str]) -> dict[str, dict]:
         """Return cached prices for requested symbols only."""
         return {s: self._latest_prices[s] for s in symbols if s in self._latest_prices}
+
+
+# ── Module-level singleton ──────────────────────────────────────────────────
+
+_singleton: RealtimePriceService | None = None
+
+
+def get_realtime_price_service() -> RealtimePriceService:
+    """Return the module-level singleton RealtimePriceService.
+
+    Lazy-initialized on first call. Uses the shared VnstockCrawler and
+    connection_manager so the in-memory price cache persists across polls.
+    """
+    global _singleton
+    if _singleton is None:
+        from app.crawlers.vnstock_crawler import VnstockCrawler
+        from app.ws.prices import connection_manager
+
+        _singleton = RealtimePriceService(
+            crawler=VnstockCrawler(),
+            connection_manager=connection_manager,
+        )
+    return _singleton

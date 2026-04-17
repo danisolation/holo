@@ -685,14 +685,15 @@ async def realtime_price_poll():
 
     Runs every 30s (configurable). Only polls VCI when market is open
     AND clients are subscribed. Sends market status to all clients.
+
+    Uses module-level singleton so the in-memory price cache persists.
     """
     from app.services.realtime_price_service import (
         is_market_open,
         get_market_session,
-        RealtimePriceService,
+        get_realtime_price_service,
     )
     from app.ws.prices import connection_manager
-    from app.crawlers.vnstock_crawler import VnstockCrawler
 
     market_open = is_market_open()
     session = get_market_session()
@@ -707,8 +708,7 @@ async def realtime_price_poll():
     if not connection_manager.get_all_subscribed_symbols():
         return
 
-    crawler = VnstockCrawler()
-    service = RealtimePriceService(crawler=crawler, connection_manager=connection_manager)
+    service = get_realtime_price_service()
     await service.poll_and_broadcast()
 
 
