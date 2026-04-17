@@ -48,10 +48,10 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 **Plans**: 4 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Resilience foundation: DB models, migration, circuit breaker, config
-- [ ] 06-02-PLAN.md — Services + Telegram failure notifications
-- [ ] 06-03-PLAN.md — Circuit breaker integration into crawlers
-- [ ] 06-04-PLAN.md — Job function refactoring + resilience test suite
+- [x] 06-01-PLAN.md — Resilience foundation: DB models, migration, circuit breaker, config
+- [x] 06-02-PLAN.md — Services + Telegram failure notifications
+- [x] 06-03-PLAN.md — Circuit breaker integration into crawlers
+- [x] 06-04-PLAN.md — Job function refactoring + resilience test suite
 
 ### Phase 7: Corporate Actions
 **Goal**: Historical prices accurately reflect stock splits, dividends, and bonus shares so charts and analysis use correct data
