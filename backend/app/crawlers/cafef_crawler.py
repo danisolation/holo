@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.news_article import NewsArticle
+from app.resilience import cafef_breaker
 from app.services.ticker_service import TickerService
 
 
@@ -90,15 +91,8 @@ class CafeFCrawler:
         logger.info(f"CafeF news crawl complete: {result}")
         return result
 
-    async def _fetch_news(self, client: httpx.AsyncClient, symbol: str) -> list[dict]:
-        """Fetch recent news articles for a single ticker from CafeF AJAX endpoint.
-
-        Args:
-            client: Reused httpx client (connection pooling)
-            symbol: Ticker symbol (e.g., 'VNM', 'FPT')
-
-        Returns: list of dicts with title, url, published_at, source
-        """
+    async def _fetch_news_raw(self, client: httpx.AsyncClient, symbol: str) -> list[dict]:
+        """Internal: raw HTTP fetch without circuit breaker."""
         params = {
             "symbol": symbol.upper(),
             "floorID": "0",
@@ -112,6 +106,10 @@ class CafeFCrawler:
         resp.raise_for_status()
 
         return self._parse_articles(resp.text)
+
+    async def _fetch_news(self, client: httpx.AsyncClient, symbol: str) -> list[dict]:
+        """Fetch news for a single ticker with circuit breaker protection."""
+        return await cafef_breaker.call(self._fetch_news_raw, client, symbol)
 
     def _parse_articles(self, html: str) -> list[dict]:
         """Parse CafeF HTML fragment for article titles, dates, URLs.

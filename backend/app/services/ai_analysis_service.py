@@ -32,6 +32,7 @@ from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.models.financial import Financial
 from app.models.news_article import NewsArticle
 from app.models.technical_indicator import TechnicalIndicator
+from app.resilience import gemini_breaker
 from app.schemas.analysis import (
     TechnicalBatchResponse,
     FundamentalBatchResponse,
@@ -410,11 +411,8 @@ class AIAnalysisService:
         retry=retry_if_exception_type(ServerError),
         reraise=True,
     )
-    async def _call_gemini(self, prompt: str, response_schema):
-        """Call Gemini with retry on server errors only.
-
-        429 rate limits are handled at the batch level, not here.
-        """
+    async def _call_gemini_with_retry(self, prompt: str, response_schema):
+        """Internal: Gemini call with tenacity retry. Circuit breaker wraps this."""
         # For thinking models (2.5-flash), set thinking budget to prevent
         # internal reasoning from consuming the entire output token budget
         thinking_config = None
@@ -433,6 +431,16 @@ class AIAnalysisService:
             ),
         )
         return response
+
+    async def _call_gemini(self, prompt: str, response_schema):
+        """Call Gemini API with circuit breaker protection.
+
+        Circuit breaker wraps OUTSIDE tenacity (Pitfall 1):
+        - tenacity retries 2x on ServerError
+        - If all retries fail, that counts as 1 circuit breaker failure
+        - After 3 such sequences, circuit opens
+        """
+        return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema)
 
     async def _analyze_technical_batch(
         self, ticker_data: dict[str, dict]
