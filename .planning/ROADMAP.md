@@ -26,7 +26,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 ### v1.1 Reliability & Portfolio
 
-- [ ] **Phase 6: Resilience Foundation** — Circuit breakers, job tracking, dead-letter queue, auto-retry
+- [ ] **Phase 6: Resilience Foundation** — Circuit breakers, job tracking, dead-letter queue, auto-retry (4 plans)
 - [ ] **Phase 7: Corporate Actions** — Crawl VCI events, adjust historical prices, cascade indicator recompute
 - [ ] **Phase 8: Portfolio Core** — Trade entry, FIFO lots, realized/unrealized P&L, portfolio summary
 - [ ] **Phase 9: AI Prompt Improvements** — System instruction, few-shot, scoring rubric, temperature tuning
@@ -45,7 +45,13 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
   3. External API calls (VCI, Gemini, CafeF) stop after N consecutive failures and auto-resume after cooldown period
   4. Every scheduled job logs execution start/end, status (success/partial/fail), and result summary to job_executions table
   5. Complete crawler failure triggers a Telegram notification to the user within minutes
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Resilience foundation: DB models, migration, circuit breaker, config
+- [ ] 06-02-PLAN.md — Services + Telegram failure notifications
+- [ ] 06-03-PLAN.md — Circuit breaker integration into crawlers
+- [ ] 06-04-PLAN.md — Job function refactoring + resilience test suite
 
 ### Phase 7: Corporate Actions
 **Goal**: Historical prices accurately reflect stock splits, dividends, and bonus shares so charts and analysis use correct data
@@ -112,7 +118,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 6. Resilience Foundation | 0/? | Not started | - |
+| 6. Resilience Foundation | 0/4 | Planning complete | - |
 | 7. Corporate Actions | 0/? | Not started | - |
 | 8. Portfolio Core | 0/? | Not started | - |
 | 9. AI Prompt Improvements | 0/? | Not started | - |
