@@ -6,6 +6,7 @@ import {
   TrendingDown,
   BarChart3,
   Briefcase,
+  Coins,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,8 +21,8 @@ export function PortfolioSummary() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
       </div>
@@ -66,12 +67,22 @@ export function PortfolioSummary() {
           ? "text-[#26a69a]"
           : "text-[#ef5350]",
     },
+    {
+      label: "Cổ tức nhận",
+      value: `${formatVND(data.dividend_income)} ₫`,
+      icon: Coins,
+      color: "text-[#26a69a]",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {cards.map((card) => (
-        <Card key={card.label} size="sm">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      {cards.map((card, index) => (
+        <Card
+          key={card.label}
+          size="sm"
+          className={index === cards.length - 1 ? "col-span-2 lg:col-span-1" : undefined}
+        >
           <CardContent className="flex items-center gap-3">
             <card.icon className={`size-8 shrink-0 ${card.color}`} />
             <div className="min-w-0">

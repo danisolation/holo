@@ -5,6 +5,8 @@ import { PortfolioSummary } from "@/components/portfolio-summary";
 import { HoldingsTable } from "@/components/holdings-table";
 import { TradeForm } from "@/components/trade-form";
 import { TradeHistory } from "@/components/trade-history";
+import { PerformanceChart } from "@/components/performance-chart";
+import { AllocationChart } from "@/components/allocation-chart";
 
 export default function PortfolioPage() {
   return (
@@ -25,6 +27,16 @@ export default function PortfolioPage() {
 
       {/* Summary cards */}
       <PortfolioSummary />
+
+      {/* Charts section */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3">
+          <PerformanceChart />
+        </div>
+        <div className="lg:col-span-2">
+          <AllocationChart />
+        </div>
+      </div>
 
       {/* Holdings table */}
       <HoldingsTable />
