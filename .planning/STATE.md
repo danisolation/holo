@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
 status: executing
-last_updated: "2026-04-17T13:30:44.968Z"
-last_activity: 2026-04-17 -- Phase null planning complete
+last_updated: "2026-04-17T13:40:27.660Z"
+last_activity: 2026-04-17 -- Completed 15-01-PLAN.md
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 16
-  completed_plans: 13
-  percent: 81
+  completed_plans: 14
+  percent: 88
 ---
 
 # Project State
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu HOSE real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** Phase null
+**Current focus:** Phase 15 — Health & Monitoring
 
 ## Current Position
 
-Phase: null — EXECUTING
-Plan: 1 of ?
-Status: Ready to execute
-Last activity: 2026-04-17 -- Phase null planning complete
+Phase: 15-health-monitoring — EXECUTING
+Plan: 2 of 3
+Status: Executing
+Last activity: 2026-04-17 -- Completed 15-01-PLAN.md
 
-Progress: [█████░░░░░] 56%
+Progress: [████████░░] 82%
 
 ## Shipped Milestones
 
@@ -85,6 +85,8 @@ v2.0 decisions (from research):
 - [Phase 14]: Lot model (remaining_quantity>0) for held tickers; lazy-import telegram_bot; 5-day window covers 3 business days
 - [Phase 14]: extract() for SQL month filtering prevents injection; adjusted=true default for backward compatibility
 - [Phase 14]: Popover-based day click for calendar events; event type CSS custom properties for theme-aware colors; DilutionBadge as separate component
+- [Phase 15]: Usage recording via _record_usage helper in each batch method — tracking never breaks analysis
+- [Phase 15]: Free-tier limits hardcoded as module constants (1500 RPD, 1M tokens/day) per D-15-02
 
 ### Pending Todos
 
