@@ -89,8 +89,15 @@ async def list_tickers(
 async def get_ticker_prices(
     symbol: str,
     days: int = Query(365, ge=1, le=730, description="Number of days of price history"),
+    adjusted: bool = Query(True, description="Use adjusted prices (default true). Set false for raw prices."),
 ):
-    """Get OHLCV price data for a ticker, ordered by date ASC (for charting)."""
+    """Get OHLCV price data for a ticker, ordered by date ASC (for charting).
+
+    When adjusted=True (default): close field uses adjusted_close if available,
+    falls back to raw close. Backward compatible with existing consumers.
+    When adjusted=False: close field always uses raw close value.
+    The adjusted_close field is always populated from the stored value.
+    """
     async with async_session() as session:
         # Resolve ticker
         ticker_result = await session.execute(
@@ -116,7 +123,7 @@ async def get_ticker_prices(
             open=float(p.open),
             high=float(p.high),
             low=float(p.low),
-            close=float(p.close),
+            close=float(p.adjusted_close if adjusted and p.adjusted_close is not None else p.close),
             volume=p.volume,
             adjusted_close=float(p.adjusted_close) if p.adjusted_close is not None else None,
         )
