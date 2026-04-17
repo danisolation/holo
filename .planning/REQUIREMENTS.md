@@ -30,9 +30,9 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Health Enhancements
 
-- [ ] **HEALTH-08**: Health dashboard shows Gemini API usage (tokens consumed, requests made) vs free tier limits
-- [ ] **HEALTH-09**: Health dashboard shows pipeline execution timeline with per-step duration visualization
-- [ ] **HEALTH-10**: System sends Telegram notification when health checks detect sustained errors or stale data
+- [x] **HEALTH-08**: Health dashboard shows Gemini API usage (tokens consumed, requests made) vs free tier limits
+- [x] **HEALTH-09**: Health dashboard shows pipeline execution timeline with per-step duration visualization
+- [x] **HEALTH-10**: System sends Telegram notification when health checks detect sustained errors or stale data
 
 ### Corporate Actions Enhancements
 
@@ -93,9 +93,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CORP-07 | Phase 14: Corporate Actions Enhancements | Complete |
 | CORP-08 | Phase 14: Corporate Actions Enhancements | Complete |
 | CORP-09 | Phase 14: Corporate Actions Enhancements | Complete |
-| HEALTH-08 | Phase 15: Health & Monitoring | Pending |
-| HEALTH-09 | Phase 15: Health & Monitoring | Pending |
-| HEALTH-10 | Phase 15: Health & Monitoring | Pending |
+| HEALTH-08 | Phase 15: Health & Monitoring | Complete |
+| HEALTH-09 | Phase 15: Health & Monitoring | Complete |
+| HEALTH-10 | Phase 15: Health & Monitoring | Complete |
 | RT-01 | Phase 16: Real-Time WebSocket | Complete |
 | RT-02 | Phase 16: Real-Time WebSocket | Complete |
 | RT-03 | Phase 16: Real-Time WebSocket | Complete |
