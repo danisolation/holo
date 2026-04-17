@@ -79,8 +79,14 @@ Plans:
   3. Cost basis is calculated using FIFO method with explicit lot tracking (first bought = first sold)
   4. User can see both realized P&L on closed positions and unrealized P&L on open positions using latest market price
   5. Portfolio summary shows total invested, current market value, and total return percentage; trade history is sortable and filterable
-**Plans**: TBD
+**Plans**: 4 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 08-01-PLAN.md — Data foundation: Trade + Lot models, migration 007, Pydantic schemas
+- [ ] 08-02-PLAN.md — PortfolioService: FIFO lot matching, P&L computation, holdings, summary
+- [ ] 08-03-PLAN.md — API endpoints + backend test suite
+- [ ] 08-04-PLAN.md — Frontend portfolio page: summary cards, holdings table, trade form, trade history
 
 ### Phase 9: AI Prompt Improvements
 **Goal**: AI analysis produces more consistent, accurately calibrated recommendations with structured output reliability
