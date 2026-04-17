@@ -13,6 +13,13 @@ import {
   fetchTradeHistory,
   createTrade,
   type TradeRequest,
+  fetchPerformanceData,
+  fetchAllocationData,
+  updateTrade,
+  deleteTrade,
+  uploadCSVDryRun,
+  importCSV,
+  type TradeUpdateRequest,
   fetchJobStatuses,
   fetchDataFreshness,
   fetchErrorRates,
@@ -138,6 +145,73 @@ export function useCreateTrade() {
       queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio-summary"] });
       queryClient.invalidateQueries({ queryKey: ["portfolio-trades"] });
+    },
+  });
+}
+
+// --- Portfolio Enhancement Hooks (Phase 13) ---
+
+export function usePerformanceData(period: string = "3M") {
+  return useQuery({
+    queryKey: ["portfolio-performance", period],
+    queryFn: () => fetchPerformanceData(period),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAllocationData(mode: "ticker" | "sector" = "ticker") {
+  return useQuery({
+    queryKey: ["portfolio-allocation", mode],
+    queryFn: () => fetchAllocationData(mode),
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useUpdateTrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tradeId, data }: { tradeId: number; data: TradeUpdateRequest }) =>
+      updateTrade(tradeId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-trades"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-performance"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-allocation"] });
+    },
+  });
+}
+
+export function useDeleteTrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tradeId: number) => deleteTrade(tradeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-trades"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-performance"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-allocation"] });
+    },
+  });
+}
+
+export function useCSVDryRun() {
+  return useMutation({
+    mutationFn: (file: File) => uploadCSVDryRun(file),
+  });
+}
+
+export function useCSVImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => importCSV(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-trades"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-performance"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-allocation"] });
     },
   });
 }

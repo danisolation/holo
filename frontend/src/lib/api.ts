@@ -179,6 +179,8 @@ export interface HoldingResponse {
   total_cost: number;
   unrealized_pnl: number | null;
   unrealized_pnl_pct: number | null;
+  dividend_income: number;
+  sector: string | null;
 }
 
 export interface PortfolioSummaryResponse {
@@ -188,11 +190,69 @@ export interface PortfolioSummaryResponse {
   total_unrealized_pnl: number | null;
   total_return_pct: number | null;
   holdings_count: number;
+  dividend_income: number;
 }
 
 export interface TradeHistoryResponse {
   trades: TradeResponse[];
   total: number;
+}
+
+// --- Portfolio Enhancement Types (Phase 13) ---
+
+export interface PerformanceDataPoint {
+  date: string;
+  value: number;
+}
+
+export interface PerformanceResponse {
+  data: PerformanceDataPoint[];
+  period: string;
+}
+
+export interface AllocationItem {
+  name: string;
+  value: number;
+  percentage: number;
+}
+
+export interface AllocationResponse {
+  data: AllocationItem[];
+  mode: string;
+  total_value: number;
+}
+
+export interface TradeUpdateRequest {
+  side: "BUY" | "SELL";
+  quantity: number;
+  price: number;
+  trade_date: string;
+  fees?: number;
+}
+
+export interface CSVPreviewRow {
+  row_number: number;
+  symbol: string;
+  side: string;
+  quantity: number;
+  price: number;
+  trade_date: string;
+  fees: number;
+  status: "valid" | "warning" | "error";
+  message: string | null;
+}
+
+export interface CSVDryRunResponse {
+  format_detected: string;
+  rows: CSVPreviewRow[];
+  total_valid: number;
+  total_warnings: number;
+  total_errors: number;
+}
+
+export interface CSVImportResponse {
+  trades_imported: number;
+  tickers_recalculated: number;
 }
 
 // --- Portfolio Fetch Functions ---
@@ -225,6 +285,53 @@ export async function createTrade(trade: TradeRequest): Promise<TradeResponse> {
     method: "POST",
     body: JSON.stringify(trade),
   });
+}
+
+// --- Portfolio Enhancement Fetch Functions (Phase 13) ---
+
+export async function fetchPerformanceData(period: string = "3M"): Promise<PerformanceResponse> {
+  return apiFetch<PerformanceResponse>(`/portfolio/performance?period=${encodeURIComponent(period)}`);
+}
+
+export async function fetchAllocationData(mode: string = "ticker"): Promise<AllocationResponse> {
+  return apiFetch<AllocationResponse>(`/portfolio/allocation?mode=${encodeURIComponent(mode)}`);
+}
+
+export async function updateTrade(tradeId: number, data: TradeUpdateRequest): Promise<TradeResponse> {
+  return apiFetch<TradeResponse>(`/portfolio/trades/${tradeId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTrade(tradeId: number): Promise<{ deleted: boolean; trade_id: number }> {
+  return apiFetch<{ deleted: boolean; trade_id: number }>(`/portfolio/trades/${tradeId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function uploadCSVDryRun(file: File): Promise<CSVDryRunResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const url = `${API_BASE}/portfolio/import?dry_run=true`;
+  const res = await fetch(url, { method: "POST", body: formData });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "Unknown error");
+    throw new ApiError(res.status, `${res.status}: ${body}`);
+  }
+  return res.json();
+}
+
+export async function importCSV(file: File): Promise<CSVImportResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const url = `${API_BASE}/portfolio/import?dry_run=false`;
+  const res = await fetch(url, { method: "POST", body: formData });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "Unknown error");
+    throw new ApiError(res.status, `${res.status}: ${body}`);
+  }
+  return res.json();
 }
 
 // --- Health Types ---
