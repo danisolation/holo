@@ -29,6 +29,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from app.config import settings
 from app.models.ai_analysis import AIAnalysis, AnalysisType
+from app.models.daily_price import DailyPrice
 from app.models.financial import Financial
 from app.models.news_article import NewsArticle
 from app.models.technical_indicator import TechnicalIndicator
@@ -554,13 +555,21 @@ class AIAnalysisService:
         """Analyze a batch of tickers for technical signals."""
         prompt = self._build_technical_prompt(ticker_data)
         temp = ANALYSIS_TEMPERATURES[AnalysisType.TECHNICAL]
-        response = await self._call_gemini(prompt, TechnicalBatchResponse, temp, TECHNICAL_SYSTEM_INSTRUCTION)
+        sys_instr = TECHNICAL_SYSTEM_INSTRUCTION
+
+        response = await self._call_gemini(prompt, TechnicalBatchResponse, temp, sys_instr)
         logger.debug(
             f"Gemini technical tokens: {response.usage_metadata.total_token_count}"
         )
         result = response.parsed
+
         if result is None and response.text:
-            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            logger.warning("response.parsed is None, retrying at temperature=0.05")
+            response = await self._call_gemini(prompt, TechnicalBatchResponse, 0.05, sys_instr)
+            result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("Low-temp retry also failed, falling back to manual JSON parse")
             try:
                 data = json.loads(response.text)
                 result = TechnicalBatchResponse.model_validate(data)
@@ -575,13 +584,21 @@ class AIAnalysisService:
         """Analyze a batch of tickers for fundamental health."""
         prompt = self._build_fundamental_prompt(ticker_data)
         temp = ANALYSIS_TEMPERATURES[AnalysisType.FUNDAMENTAL]
-        response = await self._call_gemini(prompt, FundamentalBatchResponse, temp, FUNDAMENTAL_SYSTEM_INSTRUCTION)
+        sys_instr = FUNDAMENTAL_SYSTEM_INSTRUCTION
+
+        response = await self._call_gemini(prompt, FundamentalBatchResponse, temp, sys_instr)
         logger.debug(
             f"Gemini fundamental tokens: {response.usage_metadata.total_token_count}"
         )
         result = response.parsed
+
         if result is None and response.text:
-            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            logger.warning("response.parsed is None, retrying at temperature=0.05")
+            response = await self._call_gemini(prompt, FundamentalBatchResponse, 0.05, sys_instr)
+            result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("Low-temp retry also failed, falling back to manual JSON parse")
             try:
                 data = json.loads(response.text)
                 result = FundamentalBatchResponse.model_validate(data)
@@ -595,13 +612,21 @@ class AIAnalysisService:
         """Analyze a batch of tickers for sentiment from news titles."""
         prompt = self._build_sentiment_prompt(ticker_data)
         temp = ANALYSIS_TEMPERATURES[AnalysisType.SENTIMENT]
-        response = await self._call_gemini(prompt, SentimentBatchResponse, temp, SENTIMENT_SYSTEM_INSTRUCTION)
+        sys_instr = SENTIMENT_SYSTEM_INSTRUCTION
+
+        response = await self._call_gemini(prompt, SentimentBatchResponse, temp, sys_instr)
         logger.debug(
             f"Gemini sentiment tokens: {response.usage_metadata.total_token_count}"
         )
         result = response.parsed
+
         if result is None and response.text:
-            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            logger.warning("response.parsed is None, retrying at temperature=0.05")
+            response = await self._call_gemini(prompt, SentimentBatchResponse, 0.05, sys_instr)
+            result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("Low-temp retry also failed, falling back to manual JSON parse")
             try:
                 data = json.loads(response.text)
                 result = SentimentBatchResponse.model_validate(data)
@@ -615,13 +640,21 @@ class AIAnalysisService:
         """Analyze a batch of tickers for combined recommendation."""
         prompt = self._build_combined_prompt(ticker_data)
         temp = ANALYSIS_TEMPERATURES[AnalysisType.COMBINED]
-        response = await self._call_gemini(prompt, CombinedBatchResponse, temp, COMBINED_SYSTEM_INSTRUCTION)
+        sys_instr = COMBINED_SYSTEM_INSTRUCTION
+
+        response = await self._call_gemini(prompt, CombinedBatchResponse, temp, sys_instr)
         logger.debug(
             f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
         )
         result = response.parsed
+
         if result is None and response.text:
-            logger.warning("response.parsed is None, falling back to manual JSON parse")
+            logger.warning("response.parsed is None, retrying at temperature=0.05")
+            response = await self._call_gemini(prompt, CombinedBatchResponse, 0.05, sys_instr)
+            result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("Low-temp retry also failed, falling back to manual JSON parse")
             try:
                 data = json.loads(response.text)
                 result = CombinedBatchResponse.model_validate(data)
@@ -699,6 +732,24 @@ class AIAnalysisService:
                 context["macd_crossover"] = "none"
         else:
             context["macd_crossover"] = "none"
+
+        # Latest close price + SMA distance percentages (AI-10)
+        price_result = await self.session.execute(
+            select(DailyPrice.close)
+            .where(DailyPrice.ticker_id == ticker_id)
+            .order_by(DailyPrice.date.desc())
+            .limit(1)
+        )
+        latest_close_decimal = price_result.scalar_one_or_none()
+
+        if latest_close_decimal is not None:
+            close_val = float(latest_close_decimal)
+            context["latest_close"] = close_val
+            for sma_key in ("sma_20", "sma_50", "sma_200"):
+                sma_val = context.get(sma_key)
+                if sma_val is not None and sma_val != 0:
+                    pct = (close_val - sma_val) / sma_val * 100
+                    context[f"price_vs_{sma_key}_pct"] = round(pct, 2)
 
         return context
 
@@ -850,6 +901,14 @@ class AIAnalysisService:
             lines.append(f"SMA(20): {data['sma_20']}, SMA(50): {data['sma_50']}, SMA(200): {data['sma_200']}")
             lines.append(f"EMA(12): {data['ema_12']}, EMA(26): {data['ema_26']}")
             lines.append(f"Bollinger Bands — Upper: {data['bb_upper']}, Middle: {data['bb_middle']}, Lower: {data['bb_lower']}")
+            if "latest_close" in data:
+                lines.append(f"Latest close: {data['latest_close']:,.0f} VND")
+            if "price_vs_sma_20_pct" in data:
+                lines.append(
+                    f"Price vs SMA(20): {data['price_vs_sma_20_pct']:+.1f}%, "
+                    f"Price vs SMA(50): {data.get('price_vs_sma_50_pct', 'N/A')}%, "
+                    f"Price vs SMA(200): {data.get('price_vs_sma_200_pct', 'N/A')}%"
+                )
 
         return "\n".join(lines)
 
