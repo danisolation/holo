@@ -98,7 +98,7 @@ class HealthService:
 
     async def get_error_rates(self, days: int = 7) -> list[dict]:
         """Error counts grouped by job and day over the last N days."""
-        since = now_utc = datetime.now(timezone.utc) - timedelta(days=days)
+        since = datetime.now(timezone.utc) - timedelta(days=days)
         result = await self.session.execute(
             text(
                 "SELECT job_id, DATE(started_at AT TIME ZONE 'UTC') as day, "
