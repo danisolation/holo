@@ -78,12 +78,12 @@ Plans:
   3. User can view portfolio allocation as a pie chart broken down by ticker or by sector
   4. User can edit or delete existing trades with all FIFO lots and P&L automatically recalculated
   5. User can import trades from a broker CSV file with format preview and dry-run validation before committing
-**Plans:** 2/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 - [x] 13-01-PLAN.md — Backend service: dividend income + performance snapshots + allocation data
 - [x] 13-02-PLAN.md — Backend service: FIFO recalculation + trade edit/delete + CSV import parsing
-- [ ] 13-03-PLAN.md — Backend API: all new portfolio endpoints (performance, allocation, trade CRUD, CSV import)
+- [x] 13-03-PLAN.md — Backend API: all new portfolio endpoints (performance, allocation, trade CRUD, CSV import)
 - [ ] 13-04-PLAN.md — Frontend: types, hooks, charts, dividend card, page layout
 - [ ] 13-05-PLAN.md — Frontend: trade edit/delete dialogs, CSV import dialog, visual verification
 
@@ -130,7 +130,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 12. Multi-Market Foundation | 4/4 | Complete    | 2026-04-17 |
-| 13. Portfolio Enhancements | 2/5 | In Progress|  |
+| 13. Portfolio Enhancements | 3/5 | In Progress|  |
 | 14. Corporate Actions Enhancements | 0/? | Not started | - |
 | 15. Health & Monitoring | 0/? | Not started | - |
 | 16. Real-Time WebSocket | 0/? | Not started | - |
