@@ -3,7 +3,7 @@
 Core business logic for Phase 8 portfolio tracking.
 Per D-08-01/02/03/06/07 from CONTEXT.md.
 """
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from loguru import logger
@@ -278,6 +278,150 @@ class PortfolioService:
                 total_income += event.dividend_amount * lot.remaining_quantity
 
         return float(total_income)
+
+    async def get_performance_data(self, period: str = "3M") -> list[dict]:
+        """Compute daily portfolio value snapshots for performance chart.
+
+        Per PORT-09: replay trades chronologically against daily prices.
+        Period: 1M→30d, 3M→90d, 6M→180d, 1Y→365d, ALL→earliest trade.
+        T-13-01 mitigation: bounded period param, single bulk price query.
+        """
+        # Compute start_date from period
+        period_days = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365}
+        today = date.today()
+
+        # Fetch all trades ordered by trade_date ASC
+        trades_stmt = select(Trade).order_by(Trade.trade_date.asc(), Trade.id.asc())
+        trades_result = await self.session.execute(trades_stmt)
+        trades = trades_result.scalars().all()
+
+        if not trades:
+            return []
+
+        if period == "ALL":
+            start_date = trades[0].trade_date
+        else:
+            days = period_days.get(period, 90)
+            start_date = today - timedelta(days=days)
+
+        # Get unique ticker_ids from trades
+        ticker_ids = list({t.ticker_id for t in trades})
+
+        # Bulk-fetch daily prices for all held tickers in date range
+        prices_stmt = (
+            select(DailyPrice)
+            .where(
+                DailyPrice.ticker_id.in_(ticker_ids),
+                DailyPrice.date >= start_date,
+            )
+            .order_by(DailyPrice.date.asc())
+        )
+        prices_result = await self.session.execute(prices_stmt)
+        price_rows = prices_result.all()
+
+        # Build price lookup: (ticker_id, date) → close
+        price_lookup: dict[tuple[int, date], Decimal] = {}
+        all_dates: set[date] = set()
+        for row in price_rows:
+            # Handle both ORM objects and Row tuples
+            if hasattr(row, "ticker_id"):
+                p = row
+            else:
+                p = row[0] if len(row) == 1 else row
+            price_lookup[(p.ticker_id, p.date)] = p.close
+            all_dates.add(p.date)
+
+        if not all_dates:
+            return []
+
+        sorted_dates = sorted(all_dates)
+
+        # Build trade lookup by date: date → list of trades on that date
+        trades_by_date: dict[date, list] = {}
+        for t in trades:
+            trades_by_date.setdefault(t.trade_date, []).append(t)
+
+        # Replay positions chronologically
+        positions: dict[int, int] = {}  # ticker_id → quantity held
+        result = []
+
+        for d in sorted_dates:
+            # Apply trades that happened on or before this date
+            # (need to apply all trades up to and including this date)
+            for trade_date in sorted(trades_by_date.keys()):
+                if trade_date > d:
+                    break
+                for t in trades_by_date[trade_date]:
+                    if t.side == "BUY":
+                        positions[t.ticker_id] = positions.get(t.ticker_id, 0) + t.quantity
+                    else:
+                        positions[t.ticker_id] = positions.get(t.ticker_id, 0) - t.quantity
+                # Remove processed trades to avoid double-counting
+                del trades_by_date[trade_date]
+
+            # Compute total portfolio value for this date
+            total_value = Decimal("0")
+            has_position = False
+            for tid, qty in positions.items():
+                if qty > 0:
+                    close = price_lookup.get((tid, d))
+                    if close is not None:
+                        total_value += close * qty
+                        has_position = True
+
+            if has_position:
+                result.append({
+                    "date": d.isoformat(),
+                    "value": round(float(total_value), 2),
+                })
+
+        return result
+
+    async def get_allocation_data(self, mode: str = "ticker") -> list[dict]:
+        """Compute portfolio allocation by ticker or sector.
+
+        Per PORT-10: group holdings by ticker or sector with percentages.
+        """
+        holdings = await self.get_holdings()
+
+        # Filter holdings with valid market_value
+        valid_holdings = [h for h in holdings if h.get("market_value") is not None]
+        if not valid_holdings:
+            return []
+
+        total_value = sum(h["market_value"] for h in valid_holdings)
+        if total_value == 0:
+            return []
+
+        if mode == "sector":
+            # Group by sector
+            sector_values: dict[str, float] = {}
+            for h in valid_holdings:
+                sector = h.get("sector") or "Khác"
+                sector_values[sector] = sector_values.get(sector, 0) + h["market_value"]
+
+            items = [
+                {
+                    "name": sector,
+                    "value": value,
+                    "percentage": round(value / total_value * 100, 2),
+                }
+                for sector, value in sector_values.items()
+            ]
+        else:
+            # Per ticker
+            items = [
+                {
+                    "name": h["symbol"],
+                    "value": h["market_value"],
+                    "percentage": round(h["market_value"] / total_value * 100, 2),
+                }
+                for h in valid_holdings
+            ]
+
+        # Sort by value descending
+        items.sort(key=lambda x: x["value"], reverse=True)
+        return items
 
     async def get_trades(
         self,

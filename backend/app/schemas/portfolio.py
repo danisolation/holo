@@ -62,3 +62,33 @@ class TradeHistoryResponse(BaseModel):
 
     trades: list[TradeResponse]
     total: int
+
+
+class PerformanceDataPoint(BaseModel):
+    """Single data point for portfolio performance chart."""
+
+    date: str
+    value: float
+
+
+class PerformanceResponse(BaseModel):
+    """Portfolio performance chart data."""
+
+    data: list[PerformanceDataPoint]
+    period: str
+
+
+class AllocationItem(BaseModel):
+    """Single allocation item (ticker or sector)."""
+
+    name: str
+    value: float
+    percentage: float
+
+
+class AllocationResponse(BaseModel):
+    """Portfolio allocation breakdown."""
+
+    data: list[AllocationItem]
+    mode: str
+    total_value: float
