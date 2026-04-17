@@ -141,13 +141,28 @@ class VnstockCrawler:
             df = trading.price_board(symbols_list=symbols)
             result = {}
             for _, row in df.iterrows():
-                sym = row[("listing", "symbol")]
-                result[sym] = {
-                    "price": float(row[("match", "match_price")]),
-                    "change": float(row[("match", "price_change")]),
-                    "change_pct": float(row[("match", "price_change_percent")]),
-                    "volume": int(row[("match", "total_volume")]),
-                }
+                try:
+                    sym = row[("listing", "symbol")]
+                    price = row[("match", "match_price")]
+                    change = row[("match", "price_change")]
+                    change_pct = row[("match", "price_change_percent")]
+                    volume = row[("match", "total_volume")]
+
+                    # Skip tickers with NaN/None price data (e.g. suspended tickers)
+                    if not pd.notna(price) or not pd.notna(volume):
+                        logger.debug(f"Skipping {sym}: NaN price or volume")
+                        continue
+
+                    result[sym] = {
+                        "price": float(price),
+                        "change": float(change) if pd.notna(change) else 0.0,
+                        "change_pct": float(change_pct) if pd.notna(change_pct) else 0.0,
+                        "volume": int(volume),
+                    }
+                except (ValueError, TypeError, KeyError) as e:
+                    # Isolate per-ticker failures so one bad row doesn't crash the batch
+                    logger.warning(f"Skipping ticker due to data error: {e}")
+                    continue
             return result
 
         logger.debug(f"Fetching price board for {len(symbols)} symbols")
