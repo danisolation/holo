@@ -27,6 +27,8 @@ import {
   fetchHealthSummary,
   triggerJob,
   fetchCorporateEvents,
+  fetchGeminiUsage,
+  fetchPipelineTimeline,
 } from "@/lib/api";
 
 /**
@@ -282,5 +284,25 @@ export function useCorporateEvents(params?: { month?: string; type?: string; sym
     queryKey: ["corporate-events", params?.month ?? "default", params?.type ?? "all", params?.symbol ?? "all"],
     queryFn: () => fetchCorporateEvents(params),
     staleTime: 10 * 60 * 1000, // 10 min — events change rarely
+  });
+}
+
+// --- Gemini Usage & Pipeline Timeline Hooks (Phase 15) ---
+
+export function useGeminiUsage(days: number = 7) {
+  return useQuery({
+    queryKey: ["health-gemini-usage", days],
+    queryFn: () => fetchGeminiUsage(days),
+    staleTime: 60 * 1000,
+    refetchInterval: 120 * 1000,
+  });
+}
+
+export function usePipelineTimeline(days: number = 7) {
+  return useQuery({
+    queryKey: ["health-pipeline-timeline", days],
+    queryFn: () => fetchPipelineTimeline(days),
+    staleTime: 60 * 1000,
+    refetchInterval: 120 * 1000,
   });
 }

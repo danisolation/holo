@@ -464,3 +464,60 @@ export async function fetchCorporateEvents(params?: {
   const qs = searchParams.toString();
   return apiFetch<CorporateEventResponse[]>(`/corporate-events/${qs ? `?${qs}` : ""}`);
 }
+
+// --- Gemini Usage Types (Phase 15) ---
+
+export interface GeminiUsageTodayBreakdown {
+  analysis_type: string;
+  requests: number;
+  tokens: number;
+}
+
+export interface GeminiUsageToday {
+  requests: number;
+  tokens: number;
+  limit_requests: number;
+  limit_tokens: number;
+  breakdown: GeminiUsageTodayBreakdown[];
+}
+
+export interface GeminiUsageDaily {
+  date: string;
+  tokens: number;
+  requests: number;
+}
+
+export interface GeminiUsageResponse {
+  today: GeminiUsageToday;
+  daily: GeminiUsageDaily[];
+}
+
+// --- Pipeline Timeline Types (Phase 15) ---
+
+export interface PipelineStep {
+  job_id: string;
+  job_name: string;
+  started_at: string;
+  duration_seconds: number | null;
+  status: string;
+}
+
+export interface PipelineRun {
+  date: string;
+  total_seconds: number;
+  steps: PipelineStep[];
+}
+
+export interface PipelineTimelineResponse {
+  runs: PipelineRun[];
+}
+
+// --- Gemini Usage & Pipeline Timeline Fetch Functions (Phase 15) ---
+
+export async function fetchGeminiUsage(days: number = 7): Promise<GeminiUsageResponse> {
+  return apiFetch<GeminiUsageResponse>(`/health/gemini-usage?days=${days}`);
+}
+
+export async function fetchPipelineTimeline(days: number = 7): Promise<PipelineTimelineResponse> {
+  return apiFetch<PipelineTimelineResponse>(`/health/pipeline-timeline?days=${days}`);
+}
