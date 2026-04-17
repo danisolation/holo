@@ -99,3 +99,26 @@ class GeminiUsageResponse(BaseModel):
     """GET /health/gemini-usage response."""
     today: GeminiUsageToday
     daily: list[GeminiUsageDaily]
+
+
+# ---- Pipeline Timeline Schemas (D-15-08) ----
+
+class PipelineStep(BaseModel):
+    """Single job step within a pipeline run."""
+    job_id: str
+    job_name: str
+    started_at: str
+    duration_seconds: float | None
+    status: str
+
+
+class PipelineRun(BaseModel):
+    """Daily pipeline run with ordered steps."""
+    date: str
+    total_seconds: float
+    steps: list[PipelineStep]
+
+
+class PipelineTimelineResponse(BaseModel):
+    """GET /health/pipeline-timeline response."""
+    runs: list[PipelineRun]

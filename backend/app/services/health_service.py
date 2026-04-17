@@ -9,6 +9,18 @@ from app.scheduler.manager import _JOB_NAMES
 
 _STATUS_COLORS = {"success": "green", "partial": "yellow", "failed": "red"}
 
+# Vietnamese job name mapping for pipeline timeline (D-15-03)
+_JOB_NAMES_VN = {
+    "daily_price_crawl_hose": "Crawl giá HOSE",
+    "daily_price_crawl_hnx": "Crawl giá HNX",
+    "daily_price_crawl_upcom": "Crawl giá UPCOM",
+    "daily_indicator_compute_triggered": "Tính chỉ báo KT",
+    "daily_ai_analysis_triggered": "Phân tích AI",
+    "daily_news_crawl_triggered": "Crawl tin tức",
+    "daily_sentiment_triggered": "Phân tích sentiment",
+    "daily_combined_triggered": "Phân tích kết hợp",
+}
+
 _FRESHNESS_SOURCES = [
     ("daily_prices", "Giá cổ phiếu", "date", 48),
     ("technical_indicators", "Chỉ báo kỹ thuật", "date", 48),
@@ -121,3 +133,55 @@ class HealthService:
                 "total_failures": total_failures,
             })
         return jobs
+
+    async def get_pipeline_timeline(self, days: int = 7) -> list[dict]:
+        """Pipeline execution timeline grouped by date for Gantt visualization.
+
+        Per D-15-08: Query job_executions for last N days, group by date,
+        compute duration, map to Vietnamese names.
+        """
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        result = await self.session.execute(
+            text(
+                "SELECT job_id, started_at, completed_at, status "
+                "FROM job_executions "
+                "WHERE started_at >= :since "
+                "ORDER BY started_at"
+            ),
+            {"since": since},
+        )
+        rows = result.fetchall()
+
+        # Group by date
+        date_groups: dict[str, list[dict]] = defaultdict(list)
+        for row in rows:
+            duration = None
+            if row.completed_at and row.started_at:
+                duration = (row.completed_at - row.started_at).total_seconds()
+
+            date_key = row.started_at.strftime("%Y-%m-%d")
+            date_groups[date_key].append({
+                "job_id": row.job_id,
+                "job_name": _JOB_NAMES_VN.get(
+                    row.job_id,
+                    _JOB_NAMES.get(row.job_id, row.job_id.replace("_", " ").title()),
+                ),
+                "started_at": row.started_at.isoformat(),
+                "duration_seconds": duration,
+                "status": row.status,
+            })
+
+        # Build sorted runs (most recent first)
+        runs = []
+        for date_key in sorted(date_groups.keys(), reverse=True):
+            steps = date_groups[date_key]
+            total_seconds = sum(
+                s["duration_seconds"] for s in steps if s["duration_seconds"] is not None
+            )
+            runs.append({
+                "date": date_key,
+                "total_seconds": total_seconds,
+                "steps": steps,
+            })
+
+        return runs

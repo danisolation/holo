@@ -13,7 +13,7 @@ from app.services.health_service import HealthService
 from app.schemas.health import (
     JobStatusResponse, DataFreshnessResponse, ErrorRateResponse,
     DbPoolResponse, TriggerResponse, GeminiUsageResponse, GeminiUsageToday,
-    GeminiUsageTodayBreakdown, GeminiUsageDaily,
+    GeminiUsageTodayBreakdown, GeminiUsageDaily, PipelineTimelineResponse,
 )
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -126,6 +126,21 @@ async def get_health_summary():
 # Gemini free-tier limits (D-15-02)
 GEMINI_FREE_TIER_RPD = 1500       # Requests per day
 GEMINI_FREE_TIER_TOKENS = 1_000_000  # Tokens per day
+
+
+@router.get("/pipeline-timeline", response_model=PipelineTimelineResponse)
+async def get_pipeline_timeline(days: int = Query(default=7, ge=1)):
+    """Pipeline execution timeline for Gantt chart visualization.
+
+    Per D-15-08: Returns daily pipeline runs with per-step durations.
+    """
+    days = min(days, 30)
+
+    async with async_session() as session:
+        svc = HealthService(session)
+        runs = await svc.get_pipeline_timeline(days=days)
+
+    return PipelineTimelineResponse(runs=runs)
 
 
 @router.get("/gemini-usage", response_model=GeminiUsageResponse)
