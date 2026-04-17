@@ -117,18 +117,35 @@ async def get_ticker_prices(
         result = await session.execute(stmt)
         prices = result.scalars().all()
 
-    return [
-        PriceResponse(
-            date=p.date.isoformat(),
-            open=float(p.open),
-            high=float(p.high),
-            low=float(p.low),
-            close=float(p.adjusted_close if adjusted and p.adjusted_close is not None else p.close),
-            volume=p.volume,
-            adjusted_close=float(p.adjusted_close) if p.adjusted_close is not None else None,
+    result_prices = []
+    for p in prices:
+        adj_close = p.adjusted_close
+        raw_close = p.close
+        # When adjusted=True and adjustment data exists, scale all OHLC fields
+        # by the same ratio so candlestick proportions remain valid.
+        if adjusted and adj_close is not None and raw_close and float(raw_close) != 0:
+            ratio = float(adj_close) / float(raw_close)
+            o = float(p.open) * ratio
+            h = float(p.high) * ratio
+            lo = float(p.low) * ratio
+            c = float(adj_close)
+        else:
+            o = float(p.open)
+            h = float(p.high)
+            lo = float(p.low)
+            c = float(raw_close)
+        result_prices.append(
+            PriceResponse(
+                date=p.date.isoformat(),
+                open=o,
+                high=h,
+                low=lo,
+                close=c,
+                volume=p.volume,
+                adjusted_close=float(adj_close) if adj_close is not None else None,
+            )
         )
-        for p in prices
-    ]
+    return result_prices
 
 
 @router.get("/market-overview", response_model=list[MarketTickerResponse])
