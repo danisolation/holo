@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
-status: ready_to_plan
-stopped_at: Roadmap created for v2.0
-last_updated: "2026-04-17"
-last_activity: 2026-04-17 -- Roadmap created, 5 phases (12-16), 17 requirements mapped
+status: executing
+last_updated: "2026-04-17T10:39:51.012Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 
 ## Current Position
 
-Phase: 12 of 16 (Multi-Market Foundation)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-04-17 — Roadmap created for v2.0
+Phase: 12 (Multi-Market Foundation) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-04-17
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -42,6 +41,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0 (v2.0)
 - Average duration: —
 - Total execution time: —
@@ -55,12 +55,14 @@ Progress: [░░░░░░░░░░] 0%
 All v1.0/v1.1 decisions archived in PROJECT.md Key Decisions table.
 
 v2.0 decisions (from research):
+
 - Zero new backend packages — existing stack covers all v2.0 requirements
 - 3 new frontend deps only: react-day-picker, papaparse, @types/papaparse
 - No free VN WebSocket — RT-01/02 use 30s polling via VCI REST wrapped as WS push
 - Gemini 1500 RPD budget → tiered analysis: HOSE daily, HNX/UPCOM watchlist-only daily, rest on-demand
 - Trade edit/delete needs FIFO lot replay via sell_allocations audit table
 - Dividend tracking uses separate dividend_payments table, not trades
+- [Phase 12]: EXCHANGE_MAX_TICKERS dict in ticker_service.py (not config.py) — consistent with existing MAX_TICKERS pattern
 
 ### Pending Todos
 
