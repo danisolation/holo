@@ -1,10 +1,10 @@
 """Health monitoring API endpoints.
 
 Provides system health visibility: job statuses, data freshness,
-error rates, DB pool stats, and manual job triggers.
+error rates, DB pool stats, manual job triggers, and Gemini API usage.
 Per D-10-01: New router at /health prefix.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from app.database import async_session, engine
@@ -12,7 +12,8 @@ from app.scheduler.manager import scheduler
 from app.services.health_service import HealthService
 from app.schemas.health import (
     JobStatusResponse, DataFreshnessResponse, ErrorRateResponse,
-    DbPoolResponse, TriggerResponse,
+    DbPoolResponse, TriggerResponse, GeminiUsageResponse, GeminiUsageToday,
+    GeminiUsageTodayBreakdown, GeminiUsageDaily,
 )
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -120,3 +121,39 @@ async def get_health_summary():
         "pool_checked_out": pool.checkedout(),
         "pool_available": pool.size() - pool.checkedout() + (3 - pool.overflow()),
     }
+
+
+# Gemini free-tier limits (D-15-02)
+GEMINI_FREE_TIER_RPD = 1500       # Requests per day
+GEMINI_FREE_TIER_TOKENS = 1_000_000  # Tokens per day
+
+
+@router.get("/gemini-usage", response_model=GeminiUsageResponse)
+async def get_gemini_usage(days: int = Query(default=7, ge=1)):
+    """Gemini API usage: today's progress vs limits + daily history.
+
+    Per D-15-09: Aggregated usage data for the health dashboard.
+    """
+    # Cap days at 30 to prevent excessive queries
+    days = min(days, 30)
+
+    from app.services.gemini_usage_service import GeminiUsageService
+
+    async with async_session() as session:
+        svc = GeminiUsageService(session)
+        today_data = await svc.get_today_usage()
+        daily_data = await svc.get_daily_usage(days=days)
+
+    today = GeminiUsageToday(
+        requests=today_data["requests"],
+        tokens=today_data["tokens"],
+        limit_requests=GEMINI_FREE_TIER_RPD,
+        limit_tokens=GEMINI_FREE_TIER_TOKENS,
+        breakdown=[
+            GeminiUsageTodayBreakdown(**item)
+            for item in today_data["breakdown"]
+        ],
+    )
+    daily = [GeminiUsageDaily(**item) for item in daily_data]
+
+    return GeminiUsageResponse(today=today, daily=daily)

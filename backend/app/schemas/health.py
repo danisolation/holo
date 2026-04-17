@@ -68,3 +68,34 @@ class TriggerResponse(BaseModel):
     """POST /health/trigger/{job_name} response."""
     message: str
     triggered: bool
+
+
+# ---- Gemini Usage Schemas (D-15-09) ----
+
+class GeminiUsageTodayBreakdown(BaseModel):
+    """Per-analysis-type usage breakdown for today."""
+    analysis_type: str
+    requests: int
+    tokens: int
+
+
+class GeminiUsageToday(BaseModel):
+    """Today's Gemini usage vs free-tier limits."""
+    requests: int
+    tokens: int
+    limit_requests: int  # 1500 RPD
+    limit_tokens: int    # 1,000,000 tokens/day
+    breakdown: list[GeminiUsageTodayBreakdown]
+
+
+class GeminiUsageDaily(BaseModel):
+    """Single day's aggregated Gemini usage."""
+    date: str
+    tokens: int
+    requests: int
+
+
+class GeminiUsageResponse(BaseModel):
+    """GET /health/gemini-usage response."""
+    today: GeminiUsageToday
+    daily: list[GeminiUsageDaily]
