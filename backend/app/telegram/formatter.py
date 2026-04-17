@@ -214,6 +214,28 @@ class MessageFormatter:
         return f"⚠️ Sai cú pháp\n\n💡 Dùng: <code>{usage}</code>"
 
     @staticmethod
+    def job_failure_alert(job_name: str, error_summary: str) -> str:
+        """Format critical job failure notification (D-12).
+        error_summary is pre-truncated by caller."""
+        import html
+        safe_error = html.escape(error_summary[:300])
+        return (
+            f"⚠️ <b>JOB FAILED</b>\n\n"
+            f"<b>{html.escape(job_name)}</b>\n"
+            f"<code>{safe_error}</code>"
+        )
+
+    @staticmethod
+    def circuit_open_alert(api_name: str, fail_count: int) -> str:
+        """Format circuit breaker open notification (D-12)."""
+        import html
+        return (
+            f"🔴 <b>CIRCUIT OPEN</b>\n\n"
+            f"<b>{html.escape(api_name)}</b> — {fail_count} consecutive failures\n"
+            f"Auto-reset after 2 minutes"
+        )
+
+    @staticmethod
     def _signal_emoji(signal: str) -> str:
         """Map signal/recommendation to emoji."""
         mapping = {

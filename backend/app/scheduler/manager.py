@@ -3,15 +3,62 @@
 Uses AsyncIOScheduler (APScheduler 3.11) embedded in FastAPI process.
 No external broker needed — jobs run in-process.
 """
+import asyncio
+
 from apscheduler import events
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
 
 from app.config import settings
+from app.telegram.formatter import MessageFormatter
 
 # Single scheduler instance — shared across the application
 scheduler = AsyncIOScheduler(timezone=settings.timezone)
+
+# Job ID → human-readable name mapping
+_JOB_NAMES = {
+    "daily_price_crawl": "Daily Price Crawl",
+    "weekly_ticker_refresh": "Weekly Ticker Refresh",
+    "weekly_financial_crawl": "Weekly Financial Crawl",
+    "daily_indicator_compute_triggered": "Daily Indicator Compute",
+    "daily_indicator_compute_manual": "Daily Indicator Compute",
+    "daily_ai_analysis_triggered": "Daily AI Analysis",
+    "daily_ai_analysis_manual": "Daily AI Analysis",
+    "daily_news_crawl_triggered": "Daily News Crawl",
+    "daily_news_crawl_manual": "Daily News Crawl",
+    "daily_sentiment_triggered": "Daily Sentiment Analysis",
+    "daily_sentiment_manual": "Daily Sentiment Analysis",
+    "daily_combined_triggered": "Daily Combined Analysis",
+    "daily_combined_manual": "Daily Combined Analysis",
+    "daily_signal_alert_check_triggered": "Daily Signal Alert Check",
+    "daily_price_alert_check_triggered": "Daily Price Alert Check",
+    "daily_summary_send": "Daily Market Summary",
+}
+
+
+def _on_job_error(event: events.JobExecutionEvent):
+    """Send Telegram notification on complete job failure (D-10).
+
+    Per D-11: Uses existing bot.send_message() pattern (2-retry, never-raises).
+    Per D-10: Only fires on complete failure (EVENT_JOB_ERROR), not partial.
+    Also logs the alert content as fallback (Pitfall 5 mitigation).
+    """
+    from app.telegram.bot import telegram_bot
+
+    job_name = _JOB_NAMES.get(event.job_id, event.job_id.replace("_", " ").title())
+    error_msg = str(event.exception)[:200] if event.exception else "Unknown error"
+    message = MessageFormatter.job_failure_alert(job_name, error_msg)
+
+    # Log the alert content so it's not lost even if Telegram fails (Pitfall 5)
+    logger.error(f"CRITICAL FAILURE ALERT: {job_name} — {error_msg}")
+
+    if telegram_bot.is_configured:
+        try:
+            loop = asyncio.get_event_loop()
+            loop.create_task(telegram_bot.send_message(message))
+        except RuntimeError:
+            logger.warning("Could not send Telegram alert: no running event loop")
 
 
 def _on_job_executed(event: events.JobExecutionEvent):
@@ -171,8 +218,11 @@ def configure_jobs():
 
     # Register job chaining listener (Phase 2 + Phase 4)
     scheduler.add_listener(_on_job_executed, events.EVENT_JOB_EXECUTED)
+    # Register failure notification listener (Phase 6 — ERR-05)
+    scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
         "daily_price_crawl → [indicators → AI → news → sentiment → combined → signal_alerts] + [price_alerts], "
         "daily_summary_send (cron 16:00)"
     )
+    logger.info("Failure notification listener registered for EVENT_JOB_ERROR")
