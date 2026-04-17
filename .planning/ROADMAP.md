@@ -121,7 +121,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 12. Multi-Market Foundation | 4/4 | Complete   | 2026-04-17 |
+| 12. Multi-Market Foundation | 4/4 | Complete    | 2026-04-17 |
 | 13. Portfolio Enhancements | 0/? | Not started | - |
 | 14. Corporate Actions Enhancements | 0/? | Not started | - |
 | 15. Health & Monitoring | 0/? | Not started | - |
