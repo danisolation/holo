@@ -1,164 +1,240 @@
-# Technology Stack
+# Technology Stack — v1.1 Reliability & Portfolio
 
-**Project:** Holo — Vietnam Stock Market Intelligence Platform
-**Researched:** 2025-07-17
-**Overall Confidence:** HIGH (all versions verified via pip/npm index)
+**Project:** Holo — Stock Intelligence Platform
+**Milestone:** v1.1 Reliability & Portfolio
+**Researched:** 2026-04-16
+**Overall confidence:** HIGH
+
+## Executive Summary
+
+v1.1 needs **zero new backend Python libraries** and only **3 small frontend additions**. The existing stack (FastAPI + SQLAlchemy + tenacity + google-genai + vnstock) already covers corporate actions data sourcing, retry/backoff, and structured AI output. New features are implemented as **business logic + new DB models**, not new dependencies.
+
+The key discovery: vnstock 3.5.1's `Company.events()` already returns corporate action data (splits, dividends, bonus, rights) with `eventListCode`, `ratio`, `value`, `recordDate`, `exrightDate` — no scraping or alternative data source needed.
+
+Circuit breaker does NOT need a library (aiobreaker 1.2.0 is Tornado-legacy with only 3 releases ever; pybreaker 1.4.1 has no native asyncio). A ~30-line custom async circuit breaker is more maintainable.
+
+Prometheus/Grafana is overkill for a single-user app. System health monitoring is a `job_runs` DB table + dashboard page using existing recharts.
 
 ---
 
-## Recommended Stack
+## What the Existing Stack Already Covers
 
-### Vietnam Stock Market Data Layer
+Before listing additions, it's critical to map what's already handled:
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **vnstock** | 3.5.1 | Primary data source for HOSE OHLCV, financials, company info | The de-facto Python library for VN stock data. Wraps VNDirect & SSI APIs into a clean interface. Actively maintained (jumped from 0.x→3.x). Already depends on pandas, pydantic, beautifulsoup4. Eliminates need to reverse-engineer VNDirect/SSI endpoints yourself. | HIGH |
-| **httpx** | 0.28.1 | HTTP client for CafeF scraping & custom API calls | Modern async-first HTTP client. Drop-in replacement for `requests` but with native `async/await`. Essential for CafeF news scraping that vnstock doesn't cover. | HIGH |
-| **beautifulsoup4** | 4.14.3 | HTML parsing for CafeF news/events scraping | Industry standard for web scraping. vnstock already depends on it, so zero extra weight. Use with `lxml` parser for speed. | HIGH |
+| v1.1 Feature | Covered By (Existing) | How |
+|---|---|---|
+| Corporate actions data | **vnstock 3.5.1** `Company.events()` | Returns `eventListCode`, `ratio`, `value`, `recordDate`, `exrightDate` via VCI GraphQL |
+| Price adjustment math | **Python `decimal.Decimal`** + existing `adjusted_close` column | Multiply/divide by ratio — pure arithmetic |
+| FIFO cost basis | **Python `decimal.Decimal`** | Sort trades by date, dequeue oldest lots on sell |
+| Realized/unrealized P&L | **SQLAlchemy 2.0** queries + Python | Query current prices vs cost basis |
+| AI structured output | **google-genai** `response_schema` + Pydantic | Already using `response_schema=PydanticModel` in `_call_gemini()` |
+| AI system instructions | **google-genai** `system_instruction` param | Available in `GenerateContentConfig` — currently unused, prompts are inline |
+| Retry with backoff | **tenacity 9.1.4** | Already decorating `_call_gemini()` with `@retry` |
+| Rate limit handling | **Custom batch loop** in `_run_batched_analysis()` | Already handles 429s with progressive backoff |
+| DB migrations | **Alembic 1.18** | New tables (corporate_actions, trades, job_runs) are standard migrations |
+| Health dashboard charts | **Recharts 3.x** | Bar charts for error rates, area charts for data freshness |
+| Health dashboard UI | **shadcn/ui 4.x** + **@tanstack/react-table** | Cards for status, tables for job history |
+| Portfolio data tables | **@tanstack/react-table 8.x** | Holdings view, trade history |
+| Portfolio charts | **Recharts 3.x** | P&L over time, allocation pie chart |
+| Logging | **loguru 0.7.3** | Structured logging for error tracking, job status |
+| Date handling | **date-fns 4.x** (frontend), **datetime** (backend) | Ex-right dates, trade dates |
 
-#### Data Source Strategy
+---
 
+## New Stack Additions
+
+### Backend: No New Libraries
+
+**Rationale:** Every v1.1 backend feature is implementable with existing dependencies. Adding libraries for problems that are 30 lines of custom code introduces dependency risk without benefit.
+
+#### Circuit Breaker — Custom Implementation (NOT a library)
+
+**Decision:** Build a ~30-line `AsyncCircuitBreaker` class instead of using `aiobreaker` or `pybreaker`.
+
+**Why not aiobreaker 1.2.0:**
+- Only 3 releases ever (1.0, 1.1, 1.2) — effectively abandoned
+- Internal state transitions use `threading.Lock` (not asyncio-native)
+- Bug: `timeout_duration=int` crashes with `TypeError: unsupported operand type(s) for +: 'datetime.datetime' and 'int'` — requires `timedelta` (undocumented)
+
+**Why not pybreaker 1.4.1:**
+- `call_async` uses Tornado's `@gen.coroutine` — not compatible with native asyncio
+- No awareness of FastAPI/asyncio patterns
+
+**Custom implementation pattern:**
+```python
+class AsyncCircuitBreaker:
+    """Async circuit breaker for external service calls."""
+    def __init__(self, name: str, fail_max: int = 5, reset_timeout: float = 60.0):
+        self.name = name
+        self.fail_max = fail_max
+        self.reset_timeout = reset_timeout
+        self._failures = 0
+        self._opened_at: float | None = None
+        self._lock = asyncio.Lock()
+
+    @property
+    def is_open(self) -> bool:
+        if self._opened_at is None:
+            return False
+        if time.monotonic() - self._opened_at >= self.reset_timeout:
+            return False  # Half-open: allow one attempt
+        return True
+
+    async def call(self, func, *args, **kwargs):
+        async with self._lock:
+            if self.is_open:
+                raise CircuitOpenError(f"{self.name} circuit is open")
+        try:
+            result = await func(*args, **kwargs)
+            async with self._lock:
+                self._failures = 0
+                self._opened_at = None
+            return result
+        except Exception as e:
+            async with self._lock:
+                self._failures += 1
+                if self._failures >= self.fail_max:
+                    self._opened_at = time.monotonic()
+            raise
 ```
-vnstock (primary)
-├── OHLCV price data (VNDirect API backend)
-├── Financial statements (revenue, profit, P/E, P/B...)
-├── Company info & listings
-└── Intraday data during market hours
 
-httpx + beautifulsoup4 (supplementary)
-├── CafeF news articles & events scraping
-├── Custom VNDirect/SSI endpoints vnstock doesn't cover
-└── Fallback if vnstock API changes break
-```
+**Where to apply:** One breaker per external service:
+- `vci_breaker` — vnstock/VCI API calls
+- `gemini_breaker` — Google Gemini API calls
+- `cafef_breaker` — CafeF scraping calls
 
-> **IMPORTANT:** vnstock v3.x includes a `vnai` telemetry dependency. Review its behavior on first install. For a personal project this is acceptable, but be aware it phones home.
+#### Dead-Letter Queue — DB Table Pattern
 
-### Core Framework (Backend)
+**Decision:** A `dead_letter_operations` PostgreSQL table, not a message queue.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **Python** | 3.12 | Runtime | Already installed on system. Mature async support, excellent data science ecosystem. 3.12 has significant performance improvements over 3.11. | HIGH |
-| **FastAPI** | ~0.135 | Web framework & API server | Async-first, auto-generates OpenAPI docs, native Pydantic integration. Perfect for financial data APIs where type safety matters. | HIGH |
-| **uvicorn** | ~0.44 | ASGI server | Standard FastAPI deployment server. Use `uvicorn[standard]` for better performance (includes uvloop on Linux, httptools). | HIGH |
-| **Pydantic** | ~2.13 | Data validation & serialization | FastAPI's built-in validation layer. Use for all API models, config, and data schemas. v2 is 5-50x faster than v1. | HIGH |
-| **pydantic-settings** | ~2.13 | Configuration management | Reads from .env files + environment variables. Type-safe config with validation. Better than raw python-dotenv. | HIGH |
+**Why not Redis/RabbitMQ:** Single-user app, APScheduler is in-process. A DB table with `status`, `payload`, `error`, `retry_count`, `next_retry_at` is queryable, persistent, and requires zero infrastructure.
 
-### Database
+#### Job Run Tracking — DB Table Pattern
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **PostgreSQL** (Aiven) | — | Primary data store | Already provisioned. Managed service = zero ops. PostgreSQL excels at time-series financial data with proper indexing. | HIGH |
-| **SQLAlchemy** | ~2.0 | ORM & query builder | Industry standard Python ORM. v2.0 has native async support, modern type annotations, and excellent PostgreSQL dialect. | HIGH |
-| **asyncpg** | ~0.31 | Async PostgreSQL driver | Fastest Python PostgreSQL driver. Required for SQLAlchemy async engine. 3-5x faster than psycopg2 for async workloads. | HIGH |
-| **Alembic** | ~1.18 | Database migrations | SQLAlchemy's official migration tool. Auto-generates migrations from model changes. Non-negotiable for schema evolution. | HIGH |
+**Decision:** A `job_runs` PostgreSQL table for health monitoring.
 
-### AI / LLM Integration
+**Why not Prometheus:** Prometheus requires a scraper + Grafana for visualization. For a personal app, a DB table queried by the existing FastAPI API + rendered by the existing Next.js dashboard is simpler and more integrated.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **google-genai** | ~1.73 | Google Gemini API SDK | **The NEW unified SDK** — replaces the legacy `google-generativeai` package. Actively maintained with weekly releases (1.0→1.73 in ~6 months). Supports Gemini 2.0+, structured output, function calling, system instructions. | HIGH |
+### Frontend: 3 New Dependencies
 
-> **DO NOT USE** `google-generativeai` (v0.8.6). It's the **legacy SDK** being phased out. The new `google-genai` package is Google's official recommendation going forward. The API surface is different — `google-genai` uses `from google import genai` while legacy uses `import google.generativeai as genai`.
+| Library | Version | Purpose | Why | Confidence |
+|---------|---------|---------|-----|------------|
+| **react-hook-form** | ~7.72 | Form state for trade entry (buy/sell) | shadcn/ui's `<Form>` component is built on top of react-hook-form. Trade entry form needs validation, error display, submit handling. Using this enables shadcn's form primitives directly. | HIGH |
+| **@hookform/resolvers** | ~5.2 | Connects react-hook-form with zod | Bridge between form library and schema validation. Required for `zodResolver()`. | HIGH |
+| **zod** | ~3.24 | Schema validation for forms | Validates trade entry inputs (positive quantity, valid date, price > 0). Pydantic-equivalent for TypeScript. Use zod 3.x — zod 4.x (4.3.6) is very new and `@hookform/resolvers` 5.2 is validated against zod 3.x. | HIGH |
 
-#### Gemini Integration Pattern
+**Why sonner/toast was considered but NOT a separate install:**
+shadcn/ui 4.x's `npx shadcn@latest add sonner` handles the sonner dependency automatically. No explicit `npm install sonner` needed.
+
+**Why numeral.js NOT recommended:**
+`Intl.NumberFormat('vi-VN')` handles VND formatting natively. No library needed for `1,234,567 ₫`.
+
+---
+
+## Detailed Integration Points
+
+### 1. Corporate Actions → Existing vnstock Pipeline
+
+**Data source:** `vnstock.Vnstock().stock(symbol, source='VCI').company.events()`
+
+**Returns DataFrame with columns (verified via source inspection):**
+- `eventListCode` — Event type identifier (dividend, split, bonus, rights)
+- `eventTitle` / `en_EventTitle` — Human-readable description
+- `ratio` — Split/bonus ratio
+- `value` — Dividend amount (VND per share) or similar
+- `recordDate` → renamed to `record_date` — Record date for eligibility
+- `exrightDate` → renamed to `exright_date` — Ex-rights date (when price adjusts)
+- `publicDate` → renamed to `public_date`, `issueDate` → renamed to `issue_date`
+
+**Integration:** New `CorporateActionCrawler` follows same pattern as `VnstockCrawler` — sync `Company.events()` call wrapped in `asyncio.to_thread()`. Store in `corporate_actions` table. Trigger price adjustment via job chain after crawl.
+
+**Price adjustment formulas:**
+- **Cash dividend:** `adjusted = price - dividend_per_share`
+- **Stock split N:1:** `adjusted = price / N`
+- **Bonus shares (ratio R):** `adjusted = price / (1 + R)`
+- **Rights issue (ratio R, subscription price P):** `adjusted = (price + R × P) / (1 + R)`
+
+Apply adjustment factors to ALL historical `adjusted_close` values before the `exrightDate`.
+
+### 2. Portfolio P&L → Existing SQLAlchemy Models
+
+**New models follow existing patterns in `app/models/`:**
 
 ```python
-from google import genai
-
-client = genai.Client(api_key="YOUR_KEY")
-
-# Structured output for trading signals
-response = client.models.generate_content(
-    model="gemini-2.0-flash",  # Fast & cheap for analysis
-    contents="Analyze VNM stock technical indicators...",
-    config={
-        "response_mime_type": "application/json",
-        "response_schema": TradingSignalSchema,  # Pydantic model
-    }
-)
+# app/models/trade.py — follows Ticker/DailyPrice model pattern
+class Trade(Base):
+    __tablename__ = "trades"
+    id: Mapped[int]           # PK
+    ticker_id: Mapped[int]    # FK → tickers.id
+    trade_type: Mapped[str]   # 'buy' or 'sell'
+    trade_date: Mapped[date]
+    quantity: Mapped[int]
+    price: Mapped[Decimal]    # Price per share (VND)
+    fees: Mapped[Decimal]     # Transaction fees
+    notes: Mapped[str | None]
+    created_at: Mapped[datetime]
 ```
 
-### Technical Analysis
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **ta** | 0.11.0 | Technical indicators (RSI, MACD, Bollinger, MA, etc.) | Pure Python — zero C dependencies, zero install issues. Covers ALL standard indicators: 40+ indicators across momentum, volume, volatility, trend. Works directly with pandas DataFrames. | HIGH |
-| **pandas** | ~2.2 | Data manipulation & analysis | Core data processing. Pin to 2.2.x (not 3.0) — pandas 3.0 has breaking changes and vnstock may not be fully compatible yet. | HIGH |
-| **numpy** | ~2.1 | Numerical computing | Pandas dependency. Pin to 2.1.x for stability with pandas 2.2.x. | HIGH |
-
-> **DO NOT USE `ta-lib`** (v0.6.8). Requires installing a C library (`TA-Lib`) system-wide — notoriously painful on Windows. The pure Python `ta` library covers the same indicators without the install hell.
->
-> **DO NOT USE `pandas-ta`**. It has been **removed from PyPI** entirely. Not installable. Dead project.
-
-### Scheduling & Background Tasks
-
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **APScheduler** | 3.11.2 | Job scheduling (daily crawls, market-hours polling) | Embeds directly into FastAPI process — no external broker needed. Supports cron-like schedules, interval jobs, and one-off jobs. Perfect for single-user app. | HIGH |
-
-> **DO NOT USE Celery** for this project. Celery requires a separate message broker (Redis or RabbitMQ), a separate worker process, and adds operational complexity. For a personal-use app with predictable scheduling needs, APScheduler embedded in the FastAPI process is the right choice.
->
-> **Note on APScheduler v4:** APScheduler v4 was announced as a complete rewrite but has **never been released to PyPI** — only v3.x exists. Stick with v3.11.x. It is stable and production-ready.
-
-#### Scheduling Strategy
-
+**FIFO cost basis:** Pure Python with `decimal.Decimal`:
 ```python
-# Market hours: 9:00-11:30 & 13:00-14:45 (UTC+7)
-scheduler.add_job(crawl_realtime_prices, 'interval', minutes=1,
-                  start_date='09:00', end_date='14:45',
-                  timezone='Asia/Ho_Chi_Minh')
-
-# Daily EOD crawl: after market close
-scheduler.add_job(crawl_eod_data, 'cron', hour=15, minute=30,
-                  day_of_week='mon-fri',
-                  timezone='Asia/Ho_Chi_Minh')
-
-# Weekly fundamental data refresh
-scheduler.add_job(crawl_financials, 'cron', day_of_week='sat',
-                  hour=8, timezone='Asia/Ho_Chi_Minh')
+# On sell: dequeue oldest buy lots
+remaining_sell = sell_quantity
+realized_pnl = Decimal(0)
+for lot in sorted(buy_lots, key=lambda l: l.trade_date):
+    if remaining_sell <= 0:
+        break
+    deducted = min(remaining_sell, lot.remaining_quantity)
+    realized_pnl += deducted * (sell_price - lot.price)
+    lot.remaining_quantity -= deducted
+    remaining_sell -= deducted
 ```
 
-### Telegram Bot
+**Unrealized P&L:** `(current_close - avg_cost_basis) × remaining_shares` — current_close from latest `daily_prices` row.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **python-telegram-bot** | 22.7 | Telegram bot for trading alerts | Largest community, best documentation, mature v20+ async rewrite. Handles message formatting, inline keyboards, and command handling. For an alert bot (not a complex conversational bot), this is the simpler choice. | HIGH |
+### 3. AI Prompt Improvements → Existing google-genai
 
-> **Why not aiogram (v3.27)?** aiogram is more "framework-like" with middleware, routers, FSM — great for complex bots with multi-step conversations. For a simple alert/command bot, python-telegram-bot is more straightforward. Both are actively maintained; this is a complexity preference.
+**What changes (no new libraries):**
 
-### Frontend Framework
+1. **Use `system_instruction`** — move role/persona text from prompt body to `system_instruction` param in `GenerateContentConfig`. Already supported but currently unused.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **Next.js** | ~15.x | React framework for dashboard | App Router, server components, API routes. v15.x is the battle-tested stable line. v16 exists (16.2.3) but is very new — prefer 15.x for stability in a personal project. | HIGH |
-| **TypeScript** | ~5.7 | Type safety | Non-negotiable for any frontend project. Pin to 5.7.x — TS 6.0 is brand new and ecosystem (Next.js, libraries) may not fully support it yet. | MEDIUM |
-| **Tailwind CSS** | ~4.x | Utility-first CSS | v4 is the latest with significant performance and DX improvements. shadcn/ui v4 supports it. | HIGH |
-| **Node.js** | 22.x | Runtime | LTS version already installed on system (v22.17.0). | HIGH |
+2. **Enhanced Pydantic schemas** — add more structured fields:
+```python
+class TickerTechnicalAnalysis(BaseModel):
+    ticker: str
+    signal: TechnicalSignal
+    strength: int = Field(ge=1, le=10)
+    reasoning: str
+    key_indicators: list[str]  # NEW: which indicators drove the signal
+    risk_level: str            # NEW: low/medium/high
+```
 
-### Frontend Charting & UI
+3. **Few-shot examples in prompts** — include 1-2 example outputs to improve consistency.
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| **lightweight-charts** | 5.1.0 | Candlestick/OHLCV financial charts | **TradingView's own open-source library.** Purpose-built for financial charts: candlesticks, line, area, histogram. 60fps canvas rendering. Zero dependencies. This IS the standard for financial chart UIs. | HIGH |
-| **shadcn/ui** | 4.x | UI component library | Copy-paste components (not a dependency). Full control. Built on Radix primitives + Tailwind. Dashboard tables, cards, buttons, dialogs — all covered. | HIGH |
-| **@tanstack/react-query** | ~5.x | Server state management / data fetching | Auto-caching, background refetching, stale-while-revalidate. Perfect for frequently-updating stock data. Replaces manual fetch + useState patterns. | HIGH |
-| **@tanstack/react-table** | ~8.x | Data tables for stock listings, watchlists | Headless table with sorting, filtering, pagination. Renders 400 tickers efficiently. | HIGH |
-| **Recharts** | ~3.x | Non-financial charts (portfolio stats, P&L distribution) | For bar charts, pie charts, area charts that aren't candlestick data. Simpler API than D3. | HIGH |
-| **zustand** | ~5.x | Client state management | Minimal boilerplate. Stores watchlist state, UI preferences, filter state. Much simpler than Redux for a personal app. | HIGH |
-| **lucide-react** | ~1.x | Icons | shadcn/ui's default icon library. Consistent with the component system. | HIGH |
-| **date-fns** | ~4.x | Date manipulation | Lightweight, tree-shakeable. Essential for formatting VN market times, chart axis labels. | HIGH |
-| **clsx** + **class-variance-authority** | ~2.1 / ~0.7 | Conditional CSS classes | Required by shadcn/ui. Tiny utilities for composing Tailwind classes. | HIGH |
-| **next-themes** | ~0.4 | Dark/light mode toggle | SSR-safe theme switching. Works with Tailwind's dark mode. | HIGH |
+4. **Prompt versioning** — store prompt templates as constants with version numbers for A/B comparison.
 
-### Supporting Libraries (Backend)
+### 4. Error Recovery → Existing tenacity + Custom Code
 
-| Library | Version | Purpose | When to Use | Confidence |
-|---------|---------|---------|-------------|------------|
-| **loguru** | 0.7.3 | Structured logging | Always. Drop-in replacement for stdlib logging with zero config. Color output, file rotation, structured JSON logs. | HIGH |
-| **tenacity** | 9.1.4 | Retry logic with backoff | Every HTTP call to external APIs. vnstock already depends on it. Use for CafeF scraping, Gemini API calls. | HIGH |
-| **python-dotenv** | 1.2.2 | .env file loading | Development only. pydantic-settings handles this in production, but dotenv is useful for quick scripts. | HIGH |
-| **websockets** | 16.0 | WebSocket client/server | If implementing real-time price push to dashboard during market hours. Optional — polling with React Query may be sufficient for personal use. | MEDIUM |
-| **orjson** | latest | Fast JSON serialization | Optional performance optimization. 3-10x faster than stdlib json. FastAPI can use it as response class. | MEDIUM |
+**Layer 1 — Retry (existing tenacity):**
+Already in place on `_call_gemini()`. Extend to:
+- `VnstockCrawler` methods (currently bare try/except in jobs.py)
+- CafeF scraping calls
+
+**Layer 2 — Circuit breaker (custom, see above):**
+Wrap external service calls. When circuit opens, jobs fail fast instead of waiting for timeouts.
+
+**Layer 3 — Dead-letter (DB table, see above):**
+When a batch/ticker fails after all retries, insert into `dead_letter_operations` with payload. A periodic "retry dead letters" job picks up pending items.
+
+### 5. System Health → Existing Stack + job_runs Table
+
+**Backend:**
+- New `JobRunService` writes to `job_runs` at job start/end
+- New `/api/system/health` endpoint returns last crawl times, error counts, data freshness, circuit breaker states
+- Existing `app/api/system.py` already has a system router — extend it
+
+**Frontend:**
+- New `/dashboard/health` page using existing shadcn Cards + Recharts + Table components
+- Color-coded freshness indicators (green/yellow/red)
 
 ---
 
@@ -166,237 +242,78 @@ scheduler.add_job(crawl_financials, 'cron', day_of_week='sat',
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| VN Data | vnstock 3.5.1 | vnquant 0.1.23 | Only 2 releases ever. Barely maintained. vnstock is far more comprehensive. |
-| VN Data | vnstock 3.5.1 | ssi-fc-data 2.2.2 | SSI-only, narrow scope. vnstock already wraps SSI + VNDirect + more. |
-| VN Data | vnstock 3.5.1 | Direct API reverse-engineering | Fragile, undocumented APIs that change. vnstock maintainers handle breakage. |
-| AI SDK | google-genai 1.73 | google-generativeai 0.8.6 | Legacy SDK being phased out. New SDK is the official path forward. |
-| AI SDK | google-genai | LangChain | Massive overkill for single-model usage. Adds abstraction layers with no benefit when you're only using Gemini. |
-| Tech Analysis | ta 0.11.0 | ta-lib 0.6.8 | Requires C library install. Nightmare on Windows. `ta` covers same indicators in pure Python. |
-| Tech Analysis | ta 0.11.0 | pandas-ta | **Removed from PyPI.** Cannot be installed. Dead project. |
-| Scheduler | APScheduler 3.11 | Celery 5.6 | Requires Redis/RabbitMQ broker + worker process. Overkill for single-user cron-like scheduling. |
-| Scheduler | APScheduler 3.11 | Built-in asyncio.create_task | No persistence, no cron expressions, no job management. APScheduler handles all of this. |
-| Telegram | python-telegram-bot 22.7 | aiogram 3.27 | More complex (middleware, FSM, routers). Overkill for an alert bot. Fine for complex conversational bots. |
-| HTTP Client | httpx 0.28 | requests 2.33 | No native async support. FastAPI is async-first; mixing sync HTTP calls blocks the event loop. |
-| HTTP Client | httpx 0.28 | aiohttp 3.13 | Works, but httpx has cleaner API, better typing, and is the modern standard. |
-| Frontend Charts | lightweight-charts 5.1 | recharts | Recharts can't do candlestick charts properly. lightweight-charts is built for financial data. |
-| Frontend Charts | lightweight-charts 5.1 | @tradingview/charting_library | Commercial TradingView library. Requires paid license. lightweight-charts is the free OSS version. |
-| Frontend Charts | lightweight-charts 5.1 | D3.js | Low-level SVG charting. Huge effort to build candlestick charts from scratch. |
-| State Mgmt | zustand 5 | Redux Toolkit | Massive boilerplate for a personal dashboard. zustand achieves the same with 90% less code. |
-| State Mgmt | zustand 5 | Jotai | Fine alternative, but zustand's store pattern is more intuitive for app-wide state like watchlists. |
-| DB Driver | asyncpg 0.31 | psycopg2 | Sync-only. Blocks FastAPI's async event loop. asyncpg is purpose-built for async PostgreSQL. |
-| Pandas | pandas ~2.2 | polars | Polars is faster but vnstock outputs pandas DataFrames. Converting between the two adds friction for no real gain at 400 tickers. |
-
----
-
-## Version Pinning Strategy
-
-Pin **major.minor**, allow patch updates:
-
-```
-# requirements.txt (backend)
-vnstock~=3.5
-fastapi~=0.135
-uvicorn[standard]~=0.44
-sqlalchemy[asyncio]~=2.0
-asyncpg~=0.31
-alembic~=1.18
-pydantic~=2.13
-pydantic-settings~=2.13
-google-genai~=1.73
-python-telegram-bot~=22.7
-httpx~=0.28
-beautifulsoup4~=4.14
-pandas~=2.2
-numpy~=2.1
-ta~=0.11
-apscheduler~=3.11
-tenacity~=9.1
-loguru~=0.7
-python-dotenv~=1.2
-websockets~=16.0
-```
-
-> **Why pin pandas to ~2.2 not ~3.0?** pandas 3.0 was released recently with breaking changes (string dtype default, CoW always-on). vnstock 3.5.1 lists `pandas` as a dependency without an upper bound, but it was built against pandas 2.x. Using pandas 3.0 risks subtle breakage. Start with 2.2.x, upgrade after testing.
+| Circuit breaker | Custom ~30-line class | aiobreaker 1.2.0 | Only 3 releases, Tornado-legacy internals, `timeout_duration` bug with int |
+| Circuit breaker | Custom ~30-line class | pybreaker 1.4.1 | `call_async` uses Tornado `@gen.coroutine`, not native asyncio |
+| Circuit breaker | Custom ~30-line class | circuitbreaker 2.1.3 | Sync-only, no async support at all |
+| Health monitoring | DB table + custom dashboard | prometheus-client 0.25 + instrumentator 7.1 | Requires Prometheus server + Grafana. Overkill for single-user |
+| Health monitoring | DB table + custom dashboard | Sentry | External SaaS dependency, free tier limited |
+| Dead-letter queue | PostgreSQL table | Redis Streams / RabbitMQ | Requires external infrastructure. DB table is persistent, zero-ops |
+| Form validation | zod 3.24 | zod 4.3 | zod 4.x is very new, `@hookform/resolvers` tested against zod 3.x |
+| Form state | react-hook-form 7.72 | Manual useState | Trade entry needs validation + shadcn Form component requires it |
+| Corp action data | vnstock `Company.events()` | Direct CafeF scraping | vnstock already wraps VCI GraphQL with structured event data |
+| Cost basis method | FIFO | Weighted average / LIFO | FIFO is Vietnam tax standard; simplest to implement |
+| AI improvement | Prompt engineering + system_instruction | Fine-tuning / RAG | Overkill. Better prompts + structured output already available |
+| Number formatting | Intl.NumberFormat | numeral.js 2.0.6 | Native browser API handles VND. Zero extra bytes |
+| Toast notifications | shadcn `add sonner` | react-toastify | sonner is shadcn/ui's native toast solution |
 
 ---
 
 ## Installation
 
-### Backend
+### Backend — No Changes to requirements.txt
 
-```bash
-# Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-
-# Core
-pip install vnstock fastapi "uvicorn[standard]" "sqlalchemy[asyncio]" asyncpg alembic
-
-# AI & Analysis
-pip install google-genai ta
-
-# Bot & Scheduling
-pip install python-telegram-bot apscheduler
-
-# HTTP & Scraping
-pip install httpx beautifulsoup4 lxml
-
-# Data
-pip install pandas numpy
-
-# Utilities
-pip install pydantic-settings loguru tenacity python-dotenv
-
-# Optional
-pip install orjson websockets
+```
+# All existing deps remain as-is — NO NEW LINES NEEDED
 ```
 
-### Frontend
+### Frontend — 3 New Dependencies
 
 ```bash
-# Initialize Next.js project
-npx create-next-app@15 frontend --typescript --tailwind --eslint --app --src-dir
-
 cd frontend
 
-# UI Components
-npx shadcn@latest init
+# Form handling (for trade entry)
+npm install react-hook-form @hookform/resolvers zod@3
 
-# Charting
-npm install lightweight-charts
-
-# Data fetching & state
-npm install @tanstack/react-query @tanstack/react-table zustand axios
-
-# Charts (non-financial)
-npm install recharts
-
-# Utilities
-npm install date-fns clsx class-variance-authority lucide-react next-themes
+# Add shadcn form + toast + select components (copy-paste, not npm deps)
+npx shadcn@latest add form
+npx shadcn@latest add sonner
+npx shadcn@latest add select
+npx shadcn@latest add popover
+npx shadcn@latest add calendar
 ```
+
+**Note:** `npx shadcn@latest add form` will auto-install `react-hook-form` and `@hookform/resolvers` as peer deps. The explicit `npm install` is for clarity.
+
+**Note:** `zod@3` pins to latest 3.x. Do NOT use zod 4.x yet.
 
 ---
 
-## Project Structure (Recommended)
+## New Database Tables Summary
 
-```
-holo/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app + APScheduler setup
-│   │   ├── config.py            # pydantic-settings config
-│   │   ├── database.py          # SQLAlchemy async engine + session
-│   │   ├── models/              # SQLAlchemy ORM models
-│   │   │   ├── ticker.py
-│   │   │   ├── ohlcv.py
-│   │   │   ├── financial.py
-│   │   │   └── signal.py
-│   │   ├── schemas/             # Pydantic request/response models
-│   │   ├── api/                 # FastAPI routers
-│   │   │   ├── prices.py
-│   │   │   ├── analysis.py
-│   │   │   └── watchlist.py
-│   │   ├── crawlers/            # Data collection modules
-│   │   │   ├── vnstock_crawler.py   # vnstock wrapper
-│   │   │   ├── cafef_scraper.py     # CafeF news scraping
-│   │   │   └── scheduler.py        # APScheduler job definitions
-│   │   ├── analysis/            # AI + technical analysis
-│   │   │   ├── technical.py     # ta library indicators
-│   │   │   ├── fundamental.py   # Financial ratio analysis
-│   │   │   ├── sentiment.py     # Gemini news sentiment
-│   │   │   └── signals.py       # Combined signal generation
-│   │   └── bot/                 # Telegram bot
-│   │       ├── bot.py
-│   │       └── handlers.py
-│   ├── alembic/                 # Database migrations
-│   ├── requirements.txt
-│   └── alembic.ini
-├── frontend/
-│   ├── src/
-│   │   ├── app/                 # Next.js App Router pages
-│   │   ├── components/          # React components
-│   │   │   ├── charts/          # lightweight-charts wrappers
-│   │   │   ├── tables/          # Stock tables
-│   │   │   └── ui/              # shadcn components
-│   │   ├── hooks/               # Custom React hooks
-│   │   ├── lib/                 # API client, utils
-│   │   └── stores/              # zustand stores
-│   ├── package.json
-│   └── next.config.ts
-├── .env                         # Secrets (git-ignored)
-└── .planning/                   # Project planning
-```
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `corporate_actions` | Store split/dividend/bonus/rights events | `ticker_id`, `event_type`, `ratio`, `value`, `ex_date`, `record_date` |
+| `trades` | Manual trade entries (buy/sell) | `ticker_id`, `trade_type`, `date`, `quantity`, `price`, `fees` |
+| `trade_lots` | FIFO lot tracking (remaining shares per buy) | `trade_id`, `remaining_quantity` |
+| `dividend_income` | Track dividend payments received | `ticker_id`, `amount`, `ex_date`, `payment_date` |
+| `job_runs` | Job execution history for health monitoring | `job_name`, `status`, `started_at`, `duration`, `error` |
+| `dead_letter_operations` | Failed operations for retry | `operation_type`, `payload`, `error`, `retry_count`, `status` |
+
+All managed via Alembic migrations (already in stack).
 
 ---
 
-## Key Integration Notes
+## What NOT to Add
 
-### vnstock Usage Pattern
-
-```python
-from vnstock import Vnstock
-
-stock = Vnstock().stock(symbol='VNM', source='VCI')
-
-# OHLCV historical data
-df_price = stock.quote.history(start='2024-01-01', end='2025-07-17')
-
-# Financial statements
-df_income = stock.finance.income_statement(period='quarter')
-df_balance = stock.finance.balance_sheet(period='quarter')
-df_ratios = stock.finance.ratio(period='quarter')
-
-# Company info
-info = stock.company.overview()
-
-# List all HOSE tickers
-listing = Vnstock().stock(source='VCI').listing.all_symbols()
-```
-
-### FastAPI + APScheduler Integration
-
-```python
-from contextlib import asynccontextmanager
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-scheduler = AsyncIOScheduler(timezone='Asia/Ho_Chi_Minh')
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    scheduler.start()
-    yield
-    scheduler.shutdown()
-
-app = FastAPI(lifespan=lifespan)
-```
-
-### PostgreSQL Connection (Aiven + asyncpg)
-
-```python
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-
-# Aiven PostgreSQL URL: postgresql+asyncpg://user:pass@host:port/db?ssl=require
-engine = create_async_engine(
-    settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
-    pool_size=5,       # Personal use, keep small
-    max_overflow=10,
-    echo=False,
-)
-```
-
----
-
-## Runtime Requirements
-
-| Requirement | Status | Notes |
-|-------------|--------|-------|
-| Python 3.12 | ✅ Installed | System has 3.12.7 |
-| Node.js 22.x | ✅ Installed | System has 22.17.0 |
-| PostgreSQL (Aiven) | ✅ Provisioned | Connection URL available |
-| Gemini API Key | ✅ Available | User has key |
-| Telegram Bot Token | ⚠️ Need to create | Via @BotFather on Telegram |
-| No Redis needed | ✅ | APScheduler doesn't require external broker |
-| No Docker needed | ✅ | Can run natively on Windows for personal use |
+| Tempting Addition | Why Not |
+|---|---|
+| **Celery + Redis** for retry queue | APScheduler + DB dead-letter table is sufficient for single-user |
+| **Prometheus + Grafana** for monitoring | Need separate server/dashboard. DB table + existing Next.js achieves same |
+| **aiobreaker / pybreaker** for circuit breaker | No native asyncio support. Custom class is simpler |
+| **zod 4.x** | Too new, `@hookform/resolvers` not yet validated against it |
+| **Additional AI SDKs** (LangChain) | google-genai already does structured output, system instructions, thinking config |
+| **WebSocket library** for real-time health | Polling with React Query is sufficient for personal health checks |
+| **Redux Toolkit** for portfolio state | zustand (already in stack) handles client state simply |
 
 ---
 
@@ -404,13 +321,16 @@ engine = create_async_engine(
 
 | Claim | Source | Confidence |
 |-------|--------|------------|
-| vnstock 3.5.1 is latest | `pip index versions vnstock` — verified 2025-07-17 | HIGH |
-| google-genai replaces google-generativeai | Package naming + rapid release cadence (0.1→1.73 = new primary SDK) | HIGH |
-| pandas-ta removed from PyPI | `pip index versions pandas-ta` → ERROR: No matching distribution | HIGH |
-| APScheduler v4 never released | `pip index versions apscheduler` → only 3.x versions exist on PyPI | HIGH |
-| ta-lib requires C dependency | Training data + known community issue. Pure `ta` avoids this. | HIGH |
-| lightweight-charts is TradingView OSS | npm description: "Performant financial charts built with HTML5 canvas" | HIGH |
-| All version numbers | Verified via `pip index versions` and `npm view X version` | HIGH |
-| vnstock vnai telemetry concern | Observed in `pip install --dry-run` dependency: `vnai>=2.4.3` | MEDIUM |
-| pandas 3.0 compatibility risk with vnstock | Inferred: vnstock built against pandas 2.x, 3.0 has breaking changes | MEDIUM |
-| TypeScript 6.0 ecosystem readiness | TS 6.0.2 on npm but very new — ecosystem may lag | LOW |
+| vnstock `Company.events()` returns corporate action data | Inspected source: `vnstock/explorer/vci/company.py` — GraphQL query includes `OrganizationEvents` with `eventListCode`, `ratio`, `value`, `exrightDate` | HIGH |
+| vnstock `Company.dividends()` exists as wrapper | Inspected `vnstock/common/data.py` — delegates to `data_source.dividends()` but VCI source doesn't implement it; events() covers dividends | HIGH |
+| aiobreaker uses Tornado patterns internally | Inspected source: `aiobreaker/state.py` — `call()` checks `isinstance(ret, types.GeneratorType)` | HIGH |
+| aiobreaker `timeout_duration` bug | Tested: `timeout_duration=30` → `TypeError`. Requires `timedelta`. Fixed with `timedelta(seconds=30)` | HIGH |
+| aiobreaker decorator works with asyncio | Tested: `@breaker async def test_func()` works, circuit opens after `fail_max` failures | HIGH |
+| pybreaker `call_async` is Tornado-based | Inspected source: uses `@gen.coroutine` decorator from Tornado | HIGH |
+| google-genai `system_instruction` available | Inspected `GenerateContentConfig.model_fields` — field present, accepts str/Content/parts | HIGH |
+| google-genai `thinking_config` available | Already in use at `ai_analysis_service.py:422`: `ThinkingConfig(thinking_budget=1024)` | HIGH |
+| tenacity 9.1.4 is installed | `pip show tenacity` → Version: 9.1.4 | HIGH |
+| react-hook-form 7.72 is current | `npm view react-hook-form version` → 7.72.1 | HIGH |
+| @hookform/resolvers 5.2 is current | `npm view @hookform/resolvers version` → 5.2.2 | HIGH |
+| zod 3.x vs 4.x compatibility | Training data; zod 4.3.6 on npm but 3.x is mature/stable line | MEDIUM |
+| FIFO is Vietnam tax standard for securities | Training data — common practice in VN brokerage systems | MEDIUM |
