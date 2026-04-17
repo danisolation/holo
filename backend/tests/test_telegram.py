@@ -309,3 +309,431 @@ class TestHandlerRegistration:
                 commands.extend(handler.commands)
         expected = {"start", "watch", "unwatch", "list", "check", "alert", "summary", "buy", "sell", "portfolio", "pnl"}
         assert set(commands) == expected
+
+
+class TestPortfolioFormatter:
+    """Tests for portfolio-related MessageFormatter methods."""
+
+    def test_trade_recorded_buy(self):
+        from app.telegram.formatter import MessageFormatter
+        trade = {"side": "BUY", "symbol": "VNM", "quantity": 100, "price": 85000.0,
+                 "fees": 0.0, "realized_pnl": None}
+        msg = MessageFormatter.trade_recorded(trade)
+        assert "MUA" in msg
+        assert "VNM" in msg
+        assert "85,000" in msg
+        assert "🟢" in msg
+        assert "Lãi/Lỗ" not in msg
+
+    def test_trade_recorded_sell_with_pnl(self):
+        from app.telegram.formatter import MessageFormatter
+        trade = {"side": "SELL", "symbol": "VNM", "quantity": 50, "price": 90000.0,
+                 "fees": 0.0, "realized_pnl": 250000.0}
+        msg = MessageFormatter.trade_recorded(trade)
+        assert "BÁN" in msg
+        assert "🔴" in msg
+        assert "250,000" in msg
+        assert "Lãi/Lỗ" in msg
+
+    def test_trade_recorded_with_fees(self):
+        from app.telegram.formatter import MessageFormatter
+        trade = {"side": "BUY", "symbol": "VNM", "quantity": 100, "price": 85000.0,
+                 "fees": 150000.0, "realized_pnl": None}
+        msg = MessageFormatter.trade_recorded(trade)
+        assert "Phí" in msg
+        assert "150,000" in msg
+
+    def test_portfolio_view_empty(self):
+        from app.telegram.formatter import MessageFormatter
+        msg = MessageFormatter.portfolio_view([], {})
+        assert "Chưa có" in msg
+        assert "/buy" in msg
+
+    def test_portfolio_view_with_holdings(self):
+        from app.telegram.formatter import MessageFormatter
+        holdings = [
+            {"symbol": "VNM", "quantity": 100, "avg_cost": 85000.0, "market_price": 90000.0,
+             "market_value": 9000000.0, "total_cost": 8500000.0,
+             "unrealized_pnl": 500000.0, "unrealized_pnl_pct": 5.88},
+            {"symbol": "FPT", "quantity": 50, "avg_cost": 120000.0, "market_price": 115000.0,
+             "market_value": 5750000.0, "total_cost": 6000000.0,
+             "unrealized_pnl": -250000.0, "unrealized_pnl_pct": -4.17},
+        ]
+        summary = {"total_invested": 14500000.0, "total_market_value": 14750000.0,
+                    "total_realized_pnl": 0.0, "total_unrealized_pnl": 250000.0,
+                    "total_return_pct": 1.72, "holdings_count": 2}
+        msg = MessageFormatter.portfolio_view(holdings, summary)
+        assert "VNM" in msg
+        assert "FPT" in msg
+        assert "🟢" in msg
+        assert "🔴" in msg
+
+    def test_ticker_pnl_with_lots(self):
+        from app.telegram.formatter import MessageFormatter
+        data = {"symbol": "VNM", "name": "Vinamilk", "quantity": 100, "avg_cost": 85000.0,
+                "market_price": 90000.0, "unrealized_pnl": 500000.0, "unrealized_pnl_pct": 5.88,
+                "realized_pnl": 0.0,
+                "lots": [
+                    {"buy_date": "2024-01-10", "buy_price": 85000.0, "quantity": 100,
+                     "remaining": 100, "lot_pnl": 500000.0, "lot_pnl_pct": 5.88},
+                ]}
+        msg = MessageFormatter.ticker_pnl(data)
+        assert "VNM" in msg
+        assert "2024-01-10" in msg
+        assert "FIFO" in msg or "Lô" in msg
+        assert "500,000" in msg
+
+    def test_ticker_pnl_no_position(self):
+        from app.telegram.formatter import MessageFormatter
+        data = {"symbol": "VNM", "name": "Vinamilk", "quantity": 0,
+                "avg_cost": 0, "market_price": None, "unrealized_pnl": None,
+                "unrealized_pnl_pct": None, "realized_pnl": 0.0, "lots": []}
+        msg = MessageFormatter.ticker_pnl(data)
+        assert "Không có vị thế" in msg or "VNM" in msg
+
+    def test_welcome_includes_portfolio_commands(self):
+        from app.telegram.formatter import MessageFormatter
+        msg = MessageFormatter.welcome()
+        assert "/buy" in msg
+        assert "/sell" in msg
+        assert "/portfolio" in msg
+        assert "/pnl" in msg
+
+
+class TestPortfolioCommands:
+    """Tests for /buy, /sell, /portfolio, /pnl command handlers."""
+
+    def _make_update_context(self, args=None):
+        """Create mock update and context for handler tests."""
+        update = MagicMock()
+        update.message = MagicMock()
+        update.message.reply_text = AsyncMock()
+        update.effective_chat.id = 12345
+        context = MagicMock()
+        context.args = args or []
+        return update, context
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_buy_records_trade(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context(["VNM", "100", "85000"])
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.record_trade = AsyncMock(return_value={
+                "side": "BUY", "symbol": "VNM", "quantity": 100, "price": 85000.0,
+                "fees": 0.0, "realized_pnl": None,
+            })
+            from app.telegram.handlers import buy_command
+            await buy_command(update, context)
+            mock_svc.record_trade.assert_called_once()
+            call_kwargs = mock_svc.record_trade.call_args
+            assert call_kwargs[1]["side"] == "BUY"
+            assert call_kwargs[1]["symbol"] == "VNM"
+            assert call_kwargs[1]["quantity"] == 100
+            update.message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_buy_with_fee(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context(["VNM", "100", "85000", "150000"])
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.record_trade = AsyncMock(return_value={
+                "side": "BUY", "symbol": "VNM", "quantity": 100, "price": 85000.0,
+                "fees": 150000.0, "realized_pnl": None,
+            })
+            from app.telegram.handlers import buy_command
+            await buy_command(update, context)
+            call_kwargs = mock_svc.record_trade.call_args[1]
+            assert call_kwargs["fees"] == 150000.0
+
+    @pytest.mark.asyncio
+    async def test_buy_invalid_args_too_few(self):
+        update, context = self._make_update_context(["VNM"])
+        from app.telegram.handlers import buy_command
+        await buy_command(update, context)
+        msg = update.message.reply_text.call_args[0][0]
+        assert "Sai cú pháp" in msg
+
+    @pytest.mark.asyncio
+    async def test_buy_invalid_args_non_numeric(self):
+        update, context = self._make_update_context(["VNM", "abc", "85000"])
+        from app.telegram.handlers import buy_command
+        await buy_command(update, context)
+        msg = update.message.reply_text.call_args[0][0]
+        assert "Sai cú pháp" in msg
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_buy_unknown_ticker(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context(["XYZ", "100", "85000"])
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.record_trade = AsyncMock(side_effect=ValueError("Ticker 'XYZ' not found"))
+            from app.telegram.handlers import buy_command
+            await buy_command(update, context)
+            msg = update.message.reply_text.call_args[0][0]
+            assert "Không tìm thấy" in msg or "XYZ" in msg
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_sell_shows_pnl(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context(["VNM", "50", "90000"])
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.record_trade = AsyncMock(return_value={
+                "side": "SELL", "symbol": "VNM", "quantity": 50, "price": 90000.0,
+                "fees": 0.0, "realized_pnl": 250000.0,
+            })
+            from app.telegram.handlers import sell_command
+            await sell_command(update, context)
+            call_kwargs = mock_svc.record_trade.call_args[1]
+            assert call_kwargs["side"] == "SELL"
+            update.message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_sell_exceeds_shares(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context(["VNM", "500", "90000"])
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.record_trade = AsyncMock(
+                side_effect=ValueError("Cannot sell 500 shares — only 100 available"))
+            from app.telegram.handlers import sell_command
+            await sell_command(update, context)
+            msg = update.message.reply_text.call_args[0][0]
+            assert "Cannot sell" in msg or "⚠️" in msg
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_portfolio_shows_holdings(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context()
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.get_holdings = AsyncMock(return_value=[
+                {"symbol": "VNM", "quantity": 100, "avg_cost": 85000.0,
+                 "market_price": 90000.0, "market_value": 9000000.0,
+                 "total_cost": 8500000.0, "unrealized_pnl": 500000.0, "unrealized_pnl_pct": 5.88}
+            ])
+            mock_svc.get_summary = AsyncMock(return_value={
+                "total_invested": 8500000.0, "total_market_value": 9000000.0,
+                "total_realized_pnl": 0.0, "total_unrealized_pnl": 500000.0,
+                "total_return_pct": 5.88, "holdings_count": 1,
+            })
+            from app.telegram.handlers import portfolio_command
+            await portfolio_command(update, context)
+            mock_svc.get_holdings.assert_called_once()
+            mock_svc.get_summary.assert_called_once()
+            update.message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_portfolio_empty(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context()
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.get_holdings = AsyncMock(return_value=[])
+            mock_svc.get_summary = AsyncMock(return_value={
+                "total_invested": 0, "total_market_value": None,
+                "total_realized_pnl": 0, "total_unrealized_pnl": None,
+                "total_return_pct": None, "holdings_count": 0,
+            })
+            from app.telegram.handlers import portfolio_command
+            await portfolio_command(update, context)
+            msg = update.message.reply_text.call_args[0][0]
+            assert "Chưa có" in msg
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_pnl_shows_lots(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context(["VNM"])
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.get_ticker_pnl = AsyncMock(return_value={
+                "symbol": "VNM", "name": "Vinamilk", "quantity": 100,
+                "avg_cost": 85000.0, "market_price": 90000.0,
+                "unrealized_pnl": 500000.0, "unrealized_pnl_pct": 5.88,
+                "realized_pnl": 0.0,
+                "lots": [{"buy_date": "2024-01-10", "buy_price": 85000.0,
+                          "quantity": 100, "remaining": 100,
+                          "lot_pnl": 500000.0, "lot_pnl_pct": 5.88}],
+            })
+            from app.telegram.handlers import pnl_command
+            await pnl_command(update, context)
+            update.message.reply_text.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_pnl_missing_args(self):
+        update, context = self._make_update_context([])
+        from app.telegram.handlers import pnl_command
+        await pnl_command(update, context)
+        msg = update.message.reply_text.call_args[0][0]
+        assert "Sai cú pháp" in msg
+
+    @pytest.mark.asyncio
+    @patch("app.telegram.handlers.async_session")
+    async def test_pnl_unknown_ticker(self, mock_session_factory):
+        mock_session = AsyncMock()
+        mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+
+        update, context = self._make_update_context(["XYZ"])
+
+        with patch("app.telegram.handlers.PortfolioService") as MockPS:
+            mock_svc = MockPS.return_value
+            mock_svc.get_ticker_pnl = AsyncMock(side_effect=ValueError("Ticker 'XYZ' not found"))
+            from app.telegram.handlers import pnl_command
+            await pnl_command(update, context)
+            msg = update.message.reply_text.call_args[0][0]
+            assert "Không tìm thấy" in msg or "XYZ" in msg
+
+
+class TestDailySummaryPortfolio:
+    """Tests for portfolio integration in daily summary."""
+
+    def test_summary_includes_portfolio(self):
+        from app.telegram.formatter import MessageFormatter
+        data = {
+            "date": "2024-01-15",
+            "top_movers": [{"symbol": "VNM", "close": 85000.0, "change_pct": 2.5}],
+            "watchlist_changes": [],
+            "new_recommendations": [
+                {"symbol": "VNM", "signal": "mua", "score": 8},
+                {"symbol": "FPT", "signal": "mua", "score": 9},
+            ],
+            "total_tickers": 400, "analyzed_count": 400,
+            "portfolio_holdings": [
+                {"symbol": "VNM", "quantity": 100, "market_price": 85000.0,
+                 "unrealized_pnl": 500000.0, "unrealized_pnl_pct": 5.88}
+            ],
+            "portfolio_summary": {"total_unrealized_pnl": 500000.0, "total_return_pct": 5.88},
+            "owned_symbols": {"VNM"},
+        }
+        msg = MessageFormatter.daily_summary(data)
+        assert "Danh mục của bạn" in msg
+        assert "📌" in msg
+
+    def test_summary_without_portfolio(self):
+        from app.telegram.formatter import MessageFormatter
+        data = {"date": "2024-01-15", "top_movers": [], "watchlist_changes": [],
+                "new_recommendations": [], "total_tickers": 0, "analyzed_count": 0}
+        msg = MessageFormatter.daily_summary(data)
+        assert "Danh mục" not in msg
+
+    def test_owned_tickers_first(self):
+        from app.telegram.formatter import MessageFormatter
+        data = {
+            "date": "2024-01-15",
+            "top_movers": [], "watchlist_changes": [],
+            "new_recommendations": [
+                {"symbol": "FPT", "signal": "mua", "score": 9},
+                {"symbol": "VNM", "signal": "mua", "score": 8},
+            ],
+            "total_tickers": 400, "analyzed_count": 400,
+            "owned_symbols": {"VNM"},
+        }
+        msg = MessageFormatter.daily_summary(data)
+        # VNM should appear before FPT in recommendations section
+        rec_start = msg.index("Khuyến nghị")
+        vnm_pos = msg.index("VNM", rec_start)
+        fpt_pos = msg.index("FPT", rec_start)
+        assert vnm_pos < fpt_pos
+        assert "📌" in msg
+
+    def test_owned_tickers_no_recommendations(self):
+        from app.telegram.formatter import MessageFormatter
+        data = {
+            "date": "2024-01-15",
+            "top_movers": [], "watchlist_changes": [],
+            "new_recommendations": [],
+            "total_tickers": 400, "analyzed_count": 400,
+            "owned_symbols": {"VNM"},
+        }
+        msg = MessageFormatter.daily_summary(data)
+        assert "📌" not in msg
+
+    @pytest.mark.asyncio
+    async def test_build_daily_summary_fetches_portfolio(self):
+        from app.telegram.services import AlertService
+
+        mock_session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        service = AlertService(mock_session)
+
+        with patch("app.telegram.services.settings") as mock_settings, \
+             patch("app.services.portfolio_service.PortfolioService") as MockPS:
+            mock_settings.telegram_chat_id = "12345"
+            mock_svc = MockPS.return_value
+            mock_svc.get_holdings = AsyncMock(return_value=[
+                {"symbol": "VNM", "quantity": 100, "market_price": 85000.0,
+                 "unrealized_pnl": 500000.0, "unrealized_pnl_pct": 5.88}
+            ])
+            mock_svc.get_summary = AsyncMock(return_value={
+                "total_unrealized_pnl": 500000.0, "total_return_pct": 5.88})
+            result = await service.build_daily_summary()
+            assert "portfolio_holdings" in result
+            assert "owned_symbols" in result
+
+    @pytest.mark.asyncio
+    async def test_build_daily_summary_portfolio_failure_graceful(self):
+        from app.telegram.services import AlertService
+
+        mock_session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        service = AlertService(mock_session)
+
+        with patch("app.telegram.services.settings") as mock_settings, \
+             patch("app.services.portfolio_service.PortfolioService") as MockPS:
+            mock_settings.telegram_chat_id = "12345"
+            MockPS.return_value.get_holdings = AsyncMock(side_effect=Exception("DB error"))
+            result = await service.build_daily_summary()
+            assert "portfolio_holdings" not in result
+            assert "date" in result
