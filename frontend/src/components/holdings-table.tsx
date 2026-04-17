@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useHoldings } from "@/lib/hooks";
-import type { HoldingResponse } from "@/lib/api";
+import { useHoldings, useCorporateEvents } from "@/lib/hooks";
+import type { HoldingResponse, CorporateEventResponse } from "@/lib/api";
+import { DilutionBadge } from "@/components/dilution-badge";
 
 function formatVND(value: number): string {
   return new Intl.NumberFormat("vi-VN").format(Math.round(value));
@@ -30,16 +31,50 @@ function formatVND(value: number): string {
 
 export function HoldingsTable() {
   const { data: holdings, isLoading } = useHoldings();
+  const { data: rightsEvents } = useCorporateEvents({ type: "RIGHTS_ISSUE" });
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Build a map of symbol → upcoming RIGHTS_ISSUE events
+  const dilutionMap = useMemo(() => {
+    const map = new Map<string, CorporateEventResponse>();
+    if (!rightsEvents) return map;
+    const today = new Date().toISOString().split("T")[0];
+    for (const event of rightsEvents) {
+      const exDate = event.ex_date.split("T")[0];
+      if (exDate >= today && event.ratio != null) {
+        // Keep only the nearest event per symbol
+        const existing = map.get(event.symbol);
+        if (!existing || exDate < existing.ex_date.split("T")[0]) {
+          map.set(event.symbol, event);
+        }
+      }
+    }
+    return map;
+  }, [rightsEvents]);
 
   const columns = useMemo<ColumnDef<HoldingResponse>[]>(
     () => [
       {
         accessorKey: "symbol",
         header: "Mã CK",
-        cell: ({ row }) => (
-          <span className="font-mono font-bold">{row.original.symbol}</span>
-        ),
+        cell: ({ row }) => {
+          const event = dilutionMap.get(row.original.symbol);
+          const dilutionPct = event?.ratio
+            ? (event.ratio / (100 + event.ratio)) * 100
+            : null;
+          return (
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-semibold">{row.original.symbol}</span>
+              {event && dilutionPct != null && (
+                <DilutionBadge
+                  dilutionPct={dilutionPct}
+                  ratio={event.ratio!}
+                  exDate={event.ex_date}
+                />
+              )}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "name",
@@ -139,7 +174,7 @@ export function HoldingsTable() {
         },
       },
     ],
-    [],
+    [dilutionMap],
   );
 
   const table = useReactTable({
