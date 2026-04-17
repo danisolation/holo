@@ -29,7 +29,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [x] **Phase 6: Resilience Foundation** — Circuit breakers, job tracking, dead-letter queue, auto-retry (4 plans)
 - [x] **Phase 7: Corporate Actions** — Crawl VNDirect events, adjust historical prices, cascade indicator recompute (3 plans)
 - [x] **Phase 8: Portfolio Core** — Trade entry, FIFO lots, realized/unrealized P&L, portfolio summary (4 plans)
-- [ ] **Phase 9: AI Prompt Improvements** — System instruction, few-shot, scoring rubric, temperature tuning (3 plans)
+- [x] **Phase 9: AI Prompt Improvements** — System instruction, few-shot, scoring rubric, temperature tuning (3 plans)
 - [ ] **Phase 10: System Health Dashboard** — Health API + frontend page with job status, error rates, manual triggers
 - [ ] **Phase 11: Telegram Portfolio** — /buy, /sell, /portfolio, /pnl, daily P&L notification
 
@@ -101,9 +101,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — System instruction separation + scoring rubric + temperature + few-shot + language consistency
-- [ ] 09-02-PLAN.md — Technical prompt close price/SMA enhancement + structured output retry
-- [ ] 09-03-PLAN.md — Comprehensive test suite for all AI prompt improvements
+- [x] 09-01-PLAN.md — System instruction separation + scoring rubric + temperature + few-shot + language consistency
+- [x] 09-02-PLAN.md — Technical prompt close price/SMA enhancement + structured output retry
+- [x] 09-03-PLAN.md — Comprehensive test suite for all AI prompt improvements
 
 ### Phase 10: System Health Dashboard
 **Goal**: User can monitor system health, data freshness, and error rates from a dedicated dashboard page
