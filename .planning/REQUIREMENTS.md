@@ -16,9 +16,9 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Real-Time
 
-- [ ] **RT-01**: Dashboard receives price updates via WebSocket during market hours without manual refresh
-- [ ] **RT-02**: System polls VCI at 30-second intervals during market hours for watchlist and portfolio tickers
-- [ ] **RT-03**: WebSocket automatically connects during market hours (9:00-11:30, 13:00-14:45 UTC+7) and disconnects outside
+- [x] **RT-01**: Dashboard receives price updates via WebSocket during market hours without manual refresh
+- [x] **RT-02**: System polls VCI at 30-second intervals during market hours for watchlist and portfolio tickers
+- [x] **RT-03**: WebSocket automatically connects during market hours (9:00-11:30, 13:00-14:45 UTC+7) and disconnects outside
 
 ### Portfolio Enhancements
 
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HEALTH-08 | Phase 15: Health & Monitoring | Pending |
 | HEALTH-09 | Phase 15: Health & Monitoring | Pending |
 | HEALTH-10 | Phase 15: Health & Monitoring | Pending |
-| RT-01 | Phase 16: Real-Time WebSocket | Pending |
-| RT-02 | Phase 16: Real-Time WebSocket | Pending |
-| RT-03 | Phase 16: Real-Time WebSocket | Pending |
+| RT-01 | Phase 16: Real-Time WebSocket | Complete |
+| RT-02 | Phase 16: Real-Time WebSocket | Complete |
+| RT-03 | Phase 16: Real-Time WebSocket | Complete |
 
 **Coverage:**
 - v2.0 requirements: 17 total

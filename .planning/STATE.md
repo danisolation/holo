@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
-status: completed
-last_updated: "2026-04-17T14:18:15.654Z"
-last_activity: 2026-04-17 -- Phase 16 plan 16-01 complete
+status: executing
+last_updated: "2026-04-17T14:26:33.629Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 18
-  completed_plans: 17
-  percent: 94
+  completed_plans: 18
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 ## Current Position
 
 Phase: 16-real-time-websocket — EXECUTING
-Plan: 1 of 2
-Status: Plan 16-01 complete, ready for 16-02
-Last activity: 2026-04-17 -- Phase 16 plan 16-01 complete
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-17
 
 Progress: [█████████░] 89%
 
@@ -92,6 +92,8 @@ v2.0 decisions (from research):
 - [Phase 16]: Trading module used for fetch_price_board — confirmed available in vnstock 3.5.1
 - [Phase 16]: WebSocket route mounted directly on FastAPI app (not APIRouter) per FastAPI best practice
 - [Phase 16]: No retry/circuit-breaker on fetch_price_board — transient failures acceptable for 30s real-time polling
+- [Phase 16]: Global RealtimePriceProvider wraps app layout — single WebSocket connection shared by all pages
+- [Phase 16]: PriceFlashCell uses 100ms timeout + CSS transition-colors duration-1000 for flash-then-fade animation
 
 ### Pending Todos
 
