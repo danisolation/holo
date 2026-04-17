@@ -1,8 +1,19 @@
-"""Scheduled job functions.
+"""Scheduled job functions with resilience.
 
 Each job creates its own database session (jobs run outside of HTTP
 request context, so they can't use FastAPI's Depends(get_db)).
+
+Resilience pattern per CONTEXT.md decisions:
+- D-06: Retry failed tickers once (re-batch only failures)
+- D-07: Retry inside job functions, not wrapping them
+- D-08/D-09: Permanently failed items go to dead-letter queue
+- D-10: Complete failure raises → EVENT_JOB_ERROR → Telegram alert
+- D-13/D-14: One job_executions row per run, not per ticker
+- Pitfall 2: Partial failure returns normally (chain continues);
+  complete failure raises (chain breaks)
 """
+from datetime import date
+
 from loguru import logger
 
 from app.database import async_session
@@ -10,209 +21,449 @@ from app.crawlers.vnstock_crawler import VnstockCrawler
 from app.services.price_service import PriceService
 from app.services.ticker_service import TickerService
 from app.services.financial_service import FinancialService
+from app.services.job_execution_service import JobExecutionService
+from app.services.dead_letter_service import DeadLetterService
+from app.resilience import CircuitOpenError
+
+
+def _determine_status(result: dict) -> str:
+    """Determine job status from crawl/compute results."""
+    success = result.get("success", 0)
+    failed = result.get("failed", 0)
+    if success == 0 and failed > 0:
+        return "failed"
+    elif failed > 0:
+        return "partial"
+    return "success"
+
+
+def _build_summary(result: dict, retried: int = 0, dlq_count: int = 0) -> dict:
+    """Build standardized result_summary for job tracking."""
+    return {
+        "tickers_processed": result.get("success", 0),
+        "tickers_failed": result.get("failed", 0),
+        "tickers_skipped": result.get("skipped", 0),
+        "failed_symbols": result.get("failed_symbols", []),
+        "retried_count": retried,
+        "dlq_count": dlq_count,
+    }
+
+
+async def _dlq_failures(session, job_type: str, failed_symbols: list[str], retry_count: int = 1):
+    """Send permanently failed symbols to dead-letter queue."""
+    if not failed_symbols:
+        return
+    dlq_svc = DeadLetterService(session)
+    for symbol in failed_symbols:
+        await dlq_svc.add(job_type, symbol, "Persistent failure after retry", retry_count)
 
 
 async def daily_price_crawl():
-    """Daily OHLCV crawl for all active tickers.
+    """Daily OHLCV crawl with retry + DLQ.
 
     Runs Mon-Fri at 15:30 Asia/Ho_Chi_Minh.
-    Creates its own DB session since this runs from the scheduler, not HTTP.
+    Retries failed tickers once (D-06). DLQs permanent failures (D-08).
+    Returns normally on partial failure (chain continues).
+    Raises on complete failure (chain breaks → Telegram alert).
     """
     logger.info("=== DAILY PRICE CRAWL START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_price_crawl")
+        try:
             crawler = VnstockCrawler()
             service = PriceService(session, crawler)
             result = await service.crawl_daily()
-            logger.info(f"=== DAILY PRICE CRAWL COMPLETE: {result} ===")
-    except Exception as e:
-        logger.error(f"=== DAILY PRICE CRAWL FAILED: {e} ===")
-        raise
+
+            # D-06: Retry failed tickers only (one re-batch attempt)
+            failed_symbols = result.get("failed_symbols", [])
+            retried = len(failed_symbols)
+            if failed_symbols:
+                logger.info(f"Retrying {retried} failed tickers...")
+                ticker_map = await service.ticker_service.get_ticker_id_map()
+                today = date.today().isoformat()
+                start = date.today().replace(day=max(1, date.today().day - 5)).isoformat()
+                retry_map = {s: ticker_map[s] for s in failed_symbols if s in ticker_map}
+                retry_result = await service._crawl_batch(
+                    list(retry_map.keys()), retry_map, start, today
+                )
+                result["success"] += retry_result.get("success", 0)
+                result["failed"] = retry_result.get("failed", 0)
+                result["failed_symbols"] = retry_result.get("failed_symbols", [])
+
+            # D-08: DLQ permanently failed tickers
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_price_crawl", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, retried, len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY PRICE CRAWL COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete crawl failure: all tickers failed")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY PRICE CRAWL FAILED: {e} ===")
+            raise
 
 
 async def weekly_ticker_refresh():
     """Weekly ticker list refresh — sync HOSE listing to database.
 
-    Runs Sunday 10:00. Catches IPOs, delistings, suspensions.
+    Runs Sunday 10:00. All-or-nothing (no per-ticker retry).
     """
     logger.info("=== WEEKLY TICKER REFRESH START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("weekly_ticker_refresh")
+        try:
             crawler = VnstockCrawler()
             service = TickerService(session, crawler)
             result = await service.fetch_and_sync_tickers()
+
+            summary = {"result": result}
+            await job_svc.complete(execution, status="success", result_summary=summary)
+            await session.commit()
             logger.info(f"=== WEEKLY TICKER REFRESH COMPLETE: {result} ===")
-    except Exception as e:
-        logger.error(f"=== WEEKLY TICKER REFRESH FAILED: {e} ===")
-        raise
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== WEEKLY TICKER REFRESH FAILED: {e} ===")
+            raise
 
 
 async def weekly_financial_crawl():
-    """Weekly financial data crawl for all active tickers.
+    """Weekly financial data crawl with DLQ.
 
     Runs Saturday 08:00. Fetches latest quarterly financial ratios.
     """
     logger.info("=== WEEKLY FINANCIAL CRAWL START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("weekly_financial_crawl")
+        try:
             crawler = VnstockCrawler()
             service = FinancialService(session, crawler)
             result = await service.crawl_financials(period="quarter")
-            logger.info(f"=== WEEKLY FINANCIAL CRAWL COMPLETE: {result} ===")
-    except Exception as e:
-        logger.error(f"=== WEEKLY FINANCIAL CRAWL FAILED: {e} ===")
-        raise
+
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "weekly_financial_crawl", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== WEEKLY FINANCIAL CRAWL COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete financial crawl failure: all tickers failed")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== WEEKLY FINANCIAL CRAWL FAILED: {e} ===")
+            raise
 
 
 async def daily_indicator_compute():
-    """Compute technical indicators for all active tickers.
+    """Compute technical indicators with DLQ.
 
-    Triggered automatically after daily_price_crawl via job chaining.
-    Can also be triggered manually via API endpoint.
+    Triggered after daily_price_crawl via job chaining.
     """
     logger.info("=== DAILY INDICATOR COMPUTE START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_indicator_compute")
+        try:
             from app.services.indicator_service import IndicatorService
             service = IndicatorService(session)
             result = await service.compute_all_tickers()
-            logger.info(f"=== DAILY INDICATOR COMPUTE COMPLETE: {result} ===")
-    except Exception as e:
-        logger.error(f"=== DAILY INDICATOR COMPUTE FAILED: {e} ===")
-        raise
+
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_indicator_compute", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY INDICATOR COMPUTE COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete indicator compute failure: all tickers failed")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY INDICATOR COMPUTE FAILED: {e} ===")
+            raise
+
+
+def _merge_ai_failed_symbols(results: dict) -> list[str]:
+    """Extract unique failed symbols across all AI analysis types."""
+    all_failed: set[str] = set()
+    for analysis_result in results.values():
+        if isinstance(analysis_result, dict):
+            all_failed.update(analysis_result.get("failed_symbols", []))
+    return list(all_failed)
+
+
+def _sum_ai_results(results: dict) -> dict:
+    """Aggregate success/failed counts across AI analysis types."""
+    total_success = 0
+    total_failed = 0
+    for analysis_result in results.values():
+        if isinstance(analysis_result, dict):
+            total_success += analysis_result.get("success", 0)
+            total_failed += analysis_result.get("failed", 0)
+    failed_symbols = _merge_ai_failed_symbols(results)
+    return {"success": total_success, "failed": total_failed, "failed_symbols": failed_symbols}
 
 
 async def daily_ai_analysis():
-    """Run Gemini AI analysis for all active tickers.
+    """Run Gemini AI analysis with DLQ.
 
-    Triggered automatically after daily_indicator_compute via job chaining.
-    Can also be triggered manually via API endpoint.
+    Triggered after daily_indicator_compute via job chaining.
     Requires GEMINI_API_KEY to be set.
     """
     logger.info("=== DAILY AI ANALYSIS START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_ai_analysis")
+        try:
             from app.services.ai_analysis_service import AIAnalysisService
             service = AIAnalysisService(session)
-            result = await service.analyze_all_tickers(analysis_type="both")
-            logger.info(f"=== DAILY AI ANALYSIS COMPLETE: {result} ===")
-    except ValueError as e:
-        logger.warning(f"=== DAILY AI ANALYSIS SKIPPED: {e} ===")
-        # ValueError from AIAnalysisService if GEMINI_API_KEY not set
-    except Exception as e:
-        logger.error(f"=== DAILY AI ANALYSIS FAILED: {e} ===")
-        raise
+            results = await service.analyze_all_tickers(analysis_type="both")
+
+            result = _sum_ai_results(results)
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_ai_analysis", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY AI ANALYSIS COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete AI analysis failure: all tickers failed")
+
+        except ValueError as e:
+            await job_svc.complete(execution, status="skipped", result_summary={"reason": str(e)})
+            await session.commit()
+            logger.warning(f"=== DAILY AI ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY AI ANALYSIS FAILED: {e} ===")
+            raise
 
 
 async def daily_news_crawl():
-    """Crawl CafeF news for all active tickers.
+    """Crawl CafeF news with DLQ.
 
-    Triggered automatically after daily_ai_analysis via job chaining.
-    Can also be triggered manually via API endpoint.
+    Triggered after daily_ai_analysis via job chaining.
     """
     logger.info("=== DAILY NEWS CRAWL START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_news_crawl")
+        try:
             from app.crawlers.cafef_crawler import CafeFCrawler
             crawler = CafeFCrawler(session)
             result = await crawler.crawl_all_tickers()
-            logger.info(f"=== DAILY NEWS CRAWL COMPLETE: {result} ===")
-    except Exception as e:
-        logger.error(f"=== DAILY NEWS CRAWL FAILED: {e} ===")
-        raise
+
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_news_crawl", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY NEWS CRAWL COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete news crawl failure: all tickers failed")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY NEWS CRAWL FAILED: {e} ===")
+            raise
 
 
 async def daily_sentiment_analysis():
-    """Run Gemini sentiment analysis for all active tickers.
+    """Run Gemini sentiment analysis with DLQ.
 
-    Triggered automatically after daily_news_crawl via job chaining.
-    Can also be triggered manually via API endpoint.
+    Triggered after daily_news_crawl via job chaining.
     Requires GEMINI_API_KEY to be set.
     """
     logger.info("=== DAILY SENTIMENT ANALYSIS START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_sentiment_analysis")
+        try:
             from app.services.ai_analysis_service import AIAnalysisService
             service = AIAnalysisService(session)
-            result = await service.analyze_all_tickers(analysis_type="sentiment")
-            logger.info(f"=== DAILY SENTIMENT ANALYSIS COMPLETE: {result} ===")
-    except ValueError as e:
-        logger.warning(f"=== DAILY SENTIMENT ANALYSIS SKIPPED: {e} ===")
-    except Exception as e:
-        logger.error(f"=== DAILY SENTIMENT ANALYSIS FAILED: {e} ===")
-        raise
+            results = await service.analyze_all_tickers(analysis_type="sentiment")
+
+            result = _sum_ai_results(results)
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_sentiment_analysis", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY SENTIMENT ANALYSIS COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete sentiment analysis failure")
+
+        except ValueError as e:
+            await job_svc.complete(execution, status="skipped", result_summary={"reason": str(e)})
+            await session.commit()
+            logger.warning(f"=== DAILY SENTIMENT ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY SENTIMENT ANALYSIS FAILED: {e} ===")
+            raise
 
 
 async def daily_combined_analysis():
-    """Run Gemini combined recommendation for all active tickers.
+    """Run Gemini combined recommendation with DLQ.
 
-    Triggered automatically after daily_sentiment_analysis via job chaining.
-    Can also be triggered manually via API endpoint.
+    Triggered after daily_sentiment_analysis via job chaining.
     Requires GEMINI_API_KEY to be set.
     """
     logger.info("=== DAILY COMBINED ANALYSIS START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_combined_analysis")
+        try:
             from app.services.ai_analysis_service import AIAnalysisService
             service = AIAnalysisService(session)
-            result = await service.analyze_all_tickers(analysis_type="combined")
-            logger.info(f"=== DAILY COMBINED ANALYSIS COMPLETE: {result} ===")
-    except ValueError as e:
-        logger.warning(f"=== DAILY COMBINED ANALYSIS SKIPPED: {e} ===")
-    except Exception as e:
-        logger.error(f"=== DAILY COMBINED ANALYSIS FAILED: {e} ===")
-        raise
+            results = await service.analyze_all_tickers(analysis_type="combined")
+
+            result = _sum_ai_results(results)
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_combined_analysis", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY COMBINED ANALYSIS COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete combined analysis failure")
+
+        except ValueError as e:
+            await job_svc.complete(execution, status="skipped", result_summary={"reason": str(e)})
+            await session.commit()
+            logger.warning(f"=== DAILY COMBINED ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY COMBINED ANALYSIS FAILED: {e} ===")
+            raise
 
 
 async def daily_signal_alert_check():
     """Check watched tickers for signal changes and send Telegram alerts.
 
-    Triggered automatically after daily_combined_analysis via job chaining.
-    Per CONTEXT.md D-2.1 and D-3.2.
+    Triggered after daily_combined_analysis via job chaining.
+    Never raises — alert failure must not break the pipeline (D-3.4).
     """
     logger.info("=== DAILY SIGNAL ALERT CHECK START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_signal_alert_check")
+        try:
             from app.telegram.services import AlertService
             service = AlertService(session)
             result = await service.check_signal_changes()
+            await job_svc.complete(
+                execution, status="success",
+                result_summary={"alerts_sent": result},
+            )
+            await session.commit()
             logger.info(f"=== DAILY SIGNAL ALERT CHECK COMPLETE: {result} alerts sent ===")
-    except Exception as e:
-        logger.error(f"=== DAILY SIGNAL ALERT CHECK FAILED: {e} ===")
-        # Never raise — alert failure must not break the pipeline (D-3.4)
+        except Exception as e:
+            await job_svc.complete(
+                execution, status="partial",
+                result_summary={"error": str(e)[:200]},
+            )
+            await session.commit()
+            logger.error(f"=== DAILY SIGNAL ALERT CHECK FAILED: {e} ===")
 
 
 async def daily_price_alert_check():
     """Check price alerts against latest close prices after daily crawl.
 
-    Triggered automatically after daily_price_crawl via job chaining.
-    Per CONTEXT.md D-2.2 and D-3.2.
+    Triggered after daily_price_crawl via job chaining.
+    Never raises — alert failure must not break the pipeline (D-3.4).
     """
     logger.info("=== DAILY PRICE ALERT CHECK START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_price_alert_check")
+        try:
             from app.telegram.services import AlertService
             service = AlertService(session)
             result = await service.check_price_alerts()
+            await job_svc.complete(
+                execution, status="success",
+                result_summary={"alerts_triggered": result},
+            )
+            await session.commit()
             logger.info(f"=== DAILY PRICE ALERT CHECK COMPLETE: {result} alerts triggered ===")
-    except Exception as e:
-        logger.error(f"=== DAILY PRICE ALERT CHECK FAILED: {e} ===")
-        # Never raise — alert failure must not break the pipeline (D-3.4)
+        except Exception as e:
+            await job_svc.complete(
+                execution, status="partial",
+                result_summary={"error": str(e)[:200]},
+            )
+            await session.commit()
+            logger.error(f"=== DAILY PRICE ALERT CHECK FAILED: {e} ===")
 
 
 async def daily_summary_send():
     """Send daily market summary via Telegram.
 
     Runs on cron schedule at 16:00 UTC+7 (after full pipeline completes).
-    Per CONTEXT.md D-2.3 and D-3.2.
+    Never raises — summary failure is non-critical.
     """
     logger.info("=== DAILY SUMMARY SEND START ===")
-    try:
-        async with async_session() as session:
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_summary_send")
+        try:
             from app.telegram.services import AlertService
             service = AlertService(session)
             result = await service.send_daily_summary()
+            await job_svc.complete(
+                execution, status="success",
+                result_summary={"sent": result},
+            )
+            await session.commit()
             logger.info(f"=== DAILY SUMMARY SEND COMPLETE: sent={result} ===")
-    except Exception as e:
-        logger.error(f"=== DAILY SUMMARY SEND FAILED: {e} ===")
-        # Never raise — summary failure is non-critical
+        except Exception as e:
+            await job_svc.complete(
+                execution, status="partial",
+                result_summary={"error": str(e)[:200]},
+            )
+            await session.commit()
+            logger.error(f"=== DAILY SUMMARY SEND FAILED: {e} ===")

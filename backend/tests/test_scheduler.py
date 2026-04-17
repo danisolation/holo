@@ -3,6 +3,17 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
 
+def _mock_job_svc():
+    """Create a mock JobExecutionService for job function tests."""
+    mock_svc = MagicMock()
+    mock_execution = MagicMock()
+    mock_execution.status = "running"
+    mock_svc.start = AsyncMock(return_value=mock_execution)
+    mock_svc.complete = AsyncMock()
+    mock_svc.fail = AsyncMock()
+    return mock_svc
+
+
 class TestSchedulerManager:
 
     def test_scheduler_has_correct_timezone(self):
@@ -62,16 +73,19 @@ class TestJobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.scheduler.jobs.PriceService") as MockPriceService:
-                mock_service = AsyncMock()
-                mock_service.crawl_daily = AsyncMock(return_value={"success": 10, "failed": 0, "skipped": 0, "failed_symbols": []})
-                MockPriceService.return_value = mock_service
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import daily_price_crawl
-                await daily_price_crawl()
+                with patch("app.scheduler.jobs.PriceService") as MockPriceService:
+                    mock_service = AsyncMock()
+                    mock_service.crawl_daily = AsyncMock(return_value={"success": 10, "failed": 0, "skipped": 0, "failed_symbols": []})
+                    MockPriceService.return_value = mock_service
 
-                MockPriceService.assert_called_once()
-                mock_service.crawl_daily.assert_called_once()
+                    from app.scheduler.jobs import daily_price_crawl
+                    await daily_price_crawl()
+
+                    MockPriceService.assert_called_once()
+                    mock_service.crawl_daily.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_weekly_ticker_refresh_calls_service(self):
@@ -81,16 +95,19 @@ class TestJobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.scheduler.jobs.TickerService") as MockTickerService:
-                mock_service = AsyncMock()
-                mock_service.fetch_and_sync_tickers = AsyncMock(return_value={"synced": 400, "deactivated": 0, "total": 400})
-                MockTickerService.return_value = mock_service
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import weekly_ticker_refresh
-                await weekly_ticker_refresh()
+                with patch("app.scheduler.jobs.TickerService") as MockTickerService:
+                    mock_service = AsyncMock()
+                    mock_service.fetch_and_sync_tickers = AsyncMock(return_value={"synced": 400, "deactivated": 0, "total": 400})
+                    MockTickerService.return_value = mock_service
 
-                MockTickerService.assert_called_once()
-                mock_service.fetch_and_sync_tickers.assert_called_once()
+                    from app.scheduler.jobs import weekly_ticker_refresh
+                    await weekly_ticker_refresh()
+
+                    MockTickerService.assert_called_once()
+                    mock_service.fetch_and_sync_tickers.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_weekly_financial_crawl_calls_service(self):
@@ -100,16 +117,19 @@ class TestJobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.scheduler.jobs.FinancialService") as MockFinancialService:
-                mock_service = AsyncMock()
-                mock_service.crawl_financials = AsyncMock(return_value={"success": 10, "failed": 0, "failed_symbols": []})
-                MockFinancialService.return_value = mock_service
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import weekly_financial_crawl
-                await weekly_financial_crawl()
+                with patch("app.scheduler.jobs.FinancialService") as MockFinancialService:
+                    mock_service = AsyncMock()
+                    mock_service.crawl_financials = AsyncMock(return_value={"success": 10, "failed": 0, "failed_symbols": []})
+                    MockFinancialService.return_value = mock_service
 
-                MockFinancialService.assert_called_once()
-                mock_service.crawl_financials.assert_called_once_with(period="quarter")
+                    from app.scheduler.jobs import weekly_financial_crawl
+                    await weekly_financial_crawl()
+
+                    MockFinancialService.assert_called_once()
+                    mock_service.crawl_financials.assert_called_once_with(period="quarter")
 
 
 class TestJobChaining:
@@ -188,15 +208,18 @@ class TestNewJobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.services.indicator_service.IndicatorService") as MockService:
-                mock_svc = AsyncMock()
-                mock_svc.compute_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "skipped": 0, "failed_symbols": []})
-                MockService.return_value = mock_svc
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import daily_indicator_compute
-                await daily_indicator_compute()
+                with patch("app.services.indicator_service.IndicatorService") as MockService:
+                    mock_svc = AsyncMock()
+                    mock_svc.compute_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "skipped": 0, "failed_symbols": []})
+                    MockService.return_value = mock_svc
 
-                mock_svc.compute_all_tickers.assert_called_once()
+                    from app.scheduler.jobs import daily_indicator_compute
+                    await daily_indicator_compute()
+
+                    mock_svc.compute_all_tickers.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_daily_ai_analysis_calls_service(self):
@@ -206,15 +229,18 @@ class TestNewJobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
-                mock_svc = AsyncMock()
-                mock_svc.analyze_all_tickers = AsyncMock(return_value={"technical": {"success": 400, "failed": 0}})
-                MockService.return_value = mock_svc
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import daily_ai_analysis
-                await daily_ai_analysis()
+                with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                    mock_svc = AsyncMock()
+                    mock_svc.analyze_all_tickers = AsyncMock(return_value={"technical": {"success": 400, "failed": 0, "failed_symbols": []}})
+                    MockService.return_value = mock_svc
 
-                mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="both")
+                    from app.scheduler.jobs import daily_ai_analysis
+                    await daily_ai_analysis()
+
+                    mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="both")
 
 
 class TestPhase3Chaining:
@@ -301,16 +327,19 @@ class TestPhase3JobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.crawlers.cafef_crawler.CafeFCrawler") as MockCrawler:
-                mock_crawler = AsyncMock()
-                mock_crawler.crawl_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "total_articles": 100, "failed_symbols": []})
-                MockCrawler.return_value = mock_crawler
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import daily_news_crawl
-                await daily_news_crawl()
+                with patch("app.crawlers.cafef_crawler.CafeFCrawler") as MockCrawler:
+                    mock_crawler = AsyncMock()
+                    mock_crawler.crawl_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "total_articles": 100, "failed_symbols": []})
+                    MockCrawler.return_value = mock_crawler
 
-                MockCrawler.assert_called_once()
-                mock_crawler.crawl_all_tickers.assert_called_once()
+                    from app.scheduler.jobs import daily_news_crawl
+                    await daily_news_crawl()
+
+                    MockCrawler.assert_called_once()
+                    mock_crawler.crawl_all_tickers.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_daily_sentiment_calls_service(self):
@@ -320,15 +349,18 @@ class TestPhase3JobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
-                mock_svc = AsyncMock()
-                mock_svc.analyze_all_tickers = AsyncMock(return_value={"sentiment": {"success": 400, "failed": 0}})
-                MockService.return_value = mock_svc
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import daily_sentiment_analysis
-                await daily_sentiment_analysis()
+                with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                    mock_svc = AsyncMock()
+                    mock_svc.analyze_all_tickers = AsyncMock(return_value={"sentiment": {"success": 400, "failed": 0, "failed_symbols": []}})
+                    MockService.return_value = mock_svc
 
-                mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="sentiment")
+                    from app.scheduler.jobs import daily_sentiment_analysis
+                    await daily_sentiment_analysis()
+
+                    mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="sentiment")
 
     @pytest.mark.asyncio
     async def test_daily_combined_calls_service(self):
@@ -338,12 +370,15 @@ class TestPhase3JobFunctions:
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
-                mock_svc = AsyncMock()
-                mock_svc.analyze_all_tickers = AsyncMock(return_value={"combined": {"success": 400, "failed": 0}})
-                MockService.return_value = mock_svc
+            with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
+                MockJobSvc.return_value = _mock_job_svc()
 
-                from app.scheduler.jobs import daily_combined_analysis
-                await daily_combined_analysis()
+                with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                    mock_svc = AsyncMock()
+                    mock_svc.analyze_all_tickers = AsyncMock(return_value={"combined": {"success": 400, "failed": 0, "failed_symbols": []}})
+                    MockService.return_value = mock_svc
 
-                mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="combined")
+                    from app.scheduler.jobs import daily_combined_analysis
+                    await daily_combined_analysis()
+
+                    mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="combined")
