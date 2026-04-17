@@ -46,6 +46,111 @@ from app.services.ticker_service import TickerService
 # POST endpoints they queue instead of competing for the rate limit.
 _gemini_lock = asyncio.Lock()
 
+# ------------------------------------------------------------------
+# Phase 9 Constants: Prompt Architecture
+# ------------------------------------------------------------------
+
+SCORING_RUBRIC = """Scoring rubric (apply consistently):
+- 1-2: Very weak signal / very negative outlook
+- 3-4: Weak signal / slightly negative outlook
+- 5-6: Moderate / neutral — no clear direction
+- 7-8: Strong signal / positive outlook
+- 9-10: Very strong signal / very positive outlook
+Use the FULL range. Scores of 1-2 and 9-10 are valid for extreme cases."""
+
+# Per-type temperatures (D-09-06)
+ANALYSIS_TEMPERATURES: dict[AnalysisType, float] = {
+    AnalysisType.TECHNICAL: 0.1,
+    AnalysisType.FUNDAMENTAL: 0.2,
+    AnalysisType.SENTIMENT: 0.3,
+    AnalysisType.COMBINED: 0.2,
+}
+
+# System instructions (D-09-01, D-09-03, D-09-05)
+TECHNICAL_SYSTEM_INSTRUCTION = (
+    "You are a senior HOSE (Vietnam stock exchange) technical analyst. "
+    "For each ticker, output: signal (strong_buy/buy/neutral/sell/strong_sell), "
+    "strength (1-10), reasoning (2-3 sentences in English). "
+    "Consider RSI zones (oversold <30 = bullish, overbought >70 = bearish), "
+    "MACD crossovers, price position relative to moving averages, "
+    "and Bollinger Band positions.\n\n" + SCORING_RUBRIC
+)
+
+FUNDAMENTAL_SYSTEM_INSTRUCTION = (
+    "You are a senior HOSE (Vietnam stock exchange) fundamental analyst. "
+    "For each ticker, output: health (strong/good/neutral/weak/critical), "
+    "score (1-10), reasoning (2-3 sentences in English). "
+    "Consider P/E relative to VN market average (~12-15), profitability (ROE, ROA), "
+    "growth rates, and financial stability (current ratio, debt-to-equity).\n\n"
+    + SCORING_RUBRIC
+)
+
+SENTIMENT_SYSTEM_INSTRUCTION = (
+    "Bạn là chuyên gia phân tích tâm lý thị trường chứng khoán Việt Nam (HOSE). "
+    "Cho mỗi mã, đánh giá: sentiment (very_positive/positive/neutral/negative/very_negative), "
+    "score (1-10), reasoning (2-3 câu tiếng Việt). "
+    "Nếu không có tin tức, sentiment = neutral, score = 5.\n\n" + SCORING_RUBRIC
+)
+
+COMBINED_SYSTEM_INSTRUCTION = (
+    "Bạn là chuyên gia tư vấn đầu tư chứng khoán Việt Nam (HOSE). "
+    "Cho mỗi mã, cung cấp: recommendation (mua/ban/giu), confidence (1-10), "
+    "explanation (tiếng Việt, tối đa 200 từ). "
+    "Quy tắc confidence: 8-10 = cả 3 chiều đồng thuận; 5-7 = 2/3 đồng thuận; "
+    "1-4 = tín hiệu mâu thuẫn hoặc thiếu dữ liệu.\n\n" + SCORING_RUBRIC
+)
+
+# Few-shot examples (D-09-02)
+TECHNICAL_FEW_SHOT = """Example analysis:
+
+--- VNM ---
+RSI(14) last 5 days: [42.1, 44.3, 46.8, 49.2, 52.1]
+RSI zone: neutral
+MACD histogram last 5 days: [-0.12, -0.05, 0.03, 0.11, 0.18]
+MACD crossover: bullish
+SMA(20): 82000, SMA(50): 80500, SMA(200): 78000
+
+Expected output:
+{"ticker": "VNM", "signal": "buy", "strength": 7, "reasoning": "RSI rising from mid-range with bullish MACD crossover. Price above all major moving averages confirms uptrend. Momentum building but not yet overbought."}
+
+Now analyze the following tickers based on their technical indicators from the last 5 trading days:"""
+
+FUNDAMENTAL_FEW_SHOT = """Example analysis:
+
+--- VNM (Period: Q4/2024) ---
+P/E: 15.2, P/B: 3.1, EPS: 5000
+ROE: 0.25, ROA: 0.12
+Revenue Growth: 0.08, Profit Growth: 0.05
+
+Expected output:
+{"ticker": "VNM", "health": "good", "score": 7, "reasoning": "P/E of 15.2 is at market average but justified by strong ROE of 25%. Modest but stable growth in revenue and profit. Low debt profile supports financial health."}
+
+Now analyze the following tickers based on their most recent financial data:"""
+
+SENTIMENT_FEW_SHOT = """Ví dụ phân tích:
+
+--- HPG (3 tin tức) ---
+1. Hòa Phát đặt mục tiêu sản lượng thép kỷ lục năm 2025
+2. HPG báo lãi quý 4 tăng 35% so với cùng kỳ
+3. Giá thép xây dựng tăng mạnh, lợi cho Hòa Phát
+
+Kết quả mẫu:
+{"ticker": "HPG", "sentiment": "positive", "score": 7, "reasoning": "Tin tức tích cực với mục tiêu sản lượng mới và lãi tăng mạnh. Giá thép tăng hỗ trợ triển vọng kinh doanh."}
+
+Phân tích các mã cổ phiếu sau:"""
+
+COMBINED_FEW_SHOT = """Ví dụ phân tích:
+
+--- VNM ---
+Kỹ thuật: signal=buy, strength=7
+Cơ bản: health=good, score=8
+Tâm lý: sentiment=positive, score=7
+
+Kết quả mẫu:
+{"ticker": "VNM", "recommendation": "mua", "confidence": 8, "explanation": "Cả 3 chiều phân tích đều tích cực. Kỹ thuật cho tín hiệu mua với MACD bullish crossover. Cơ bản vững chắc với ROE 25% và tăng trưởng ổn định. Tâm lý thị trường tích cực với tin tốt về doanh thu. Khuyến nghị mua với độ tin cậy cao."}
+
+Đưa ra khuyến nghị tổng hợp cho các mã sau:"""
+
 
 class AIAnalysisService:
     """Gemini-powered analysis for technical, fundamental, sentiment, and combined scoring."""
@@ -411,7 +516,7 @@ class AIAnalysisService:
         retry=retry_if_exception_type(ServerError),
         reraise=True,
     )
-    async def _call_gemini_with_retry(self, prompt: str, response_schema):
+    async def _call_gemini_with_retry(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None):
         """Internal: Gemini call with tenacity retry. Circuit breaker wraps this."""
         # For thinking models (2.5-flash), set thinking budget to prevent
         # internal reasoning from consuming the entire output token budget
@@ -423,16 +528,17 @@ class AIAnalysisService:
             model=self.model,
             contents=prompt,
             config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
                 response_mime_type="application/json",
                 response_schema=response_schema,
-                temperature=0.2,  # Low for consistent analysis
+                temperature=temperature,
                 max_output_tokens=16384,
                 thinking_config=thinking_config,
             ),
         )
         return response
 
-    async def _call_gemini(self, prompt: str, response_schema):
+    async def _call_gemini(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None):
         """Call Gemini API with circuit breaker protection.
 
         Circuit breaker wraps OUTSIDE tenacity (Pitfall 1):
@@ -440,14 +546,15 @@ class AIAnalysisService:
         - If all retries fail, that counts as 1 circuit breaker failure
         - After 3 such sequences, circuit opens
         """
-        return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema)
+        return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema, temperature, system_instruction)
 
     async def _analyze_technical_batch(
         self, ticker_data: dict[str, dict]
     ) -> TechnicalBatchResponse | None:
         """Analyze a batch of tickers for technical signals."""
         prompt = self._build_technical_prompt(ticker_data)
-        response = await self._call_gemini(prompt, TechnicalBatchResponse)
+        temp = ANALYSIS_TEMPERATURES[AnalysisType.TECHNICAL]
+        response = await self._call_gemini(prompt, TechnicalBatchResponse, temp, TECHNICAL_SYSTEM_INSTRUCTION)
         logger.debug(
             f"Gemini technical tokens: {response.usage_metadata.total_token_count}"
         )
@@ -467,7 +574,8 @@ class AIAnalysisService:
     ) -> FundamentalBatchResponse | None:
         """Analyze a batch of tickers for fundamental health."""
         prompt = self._build_fundamental_prompt(ticker_data)
-        response = await self._call_gemini(prompt, FundamentalBatchResponse)
+        temp = ANALYSIS_TEMPERATURES[AnalysisType.FUNDAMENTAL]
+        response = await self._call_gemini(prompt, FundamentalBatchResponse, temp, FUNDAMENTAL_SYSTEM_INSTRUCTION)
         logger.debug(
             f"Gemini fundamental tokens: {response.usage_metadata.total_token_count}"
         )
@@ -486,7 +594,8 @@ class AIAnalysisService:
     ) -> SentimentBatchResponse | None:
         """Analyze a batch of tickers for sentiment from news titles."""
         prompt = self._build_sentiment_prompt(ticker_data)
-        response = await self._call_gemini(prompt, SentimentBatchResponse)
+        temp = ANALYSIS_TEMPERATURES[AnalysisType.SENTIMENT]
+        response = await self._call_gemini(prompt, SentimentBatchResponse, temp, SENTIMENT_SYSTEM_INSTRUCTION)
         logger.debug(
             f"Gemini sentiment tokens: {response.usage_metadata.total_token_count}"
         )
@@ -505,7 +614,8 @@ class AIAnalysisService:
     ) -> CombinedBatchResponse | None:
         """Analyze a batch of tickers for combined recommendation."""
         prompt = self._build_combined_prompt(ticker_data)
-        response = await self._call_gemini(prompt, CombinedBatchResponse)
+        temp = ANALYSIS_TEMPERATURES[AnalysisType.COMBINED]
+        response = await self._call_gemini(prompt, CombinedBatchResponse, temp, COMBINED_SYSTEM_INSTRUCTION)
         logger.debug(
             f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
         )
@@ -725,20 +835,8 @@ class AIAnalysisService:
     def _build_technical_prompt(self, ticker_data: dict[str, dict]) -> str:
         """Build prompt for technical analysis batch."""
         lines = [
-            "You are a Vietnamese stock market (HOSE) technical analyst. "
-            "Analyze the following tickers based on their technical indicators "
-            "from the last 5 trading days.",
+            TECHNICAL_FEW_SHOT,
             "",
-            "For each ticker, provide:",
-            "- signal: one of strong_buy, buy, neutral, sell, strong_sell",
-            "- strength: 1-10 (confidence in the signal)",
-            "- reasoning: brief explanation (2-3 sentences in English)",
-            "",
-            "Consider RSI zones (oversold <30 = bullish, overbought >70 = bearish), "
-            "MACD crossovers, price position relative to moving averages, "
-            "and Bollinger Band positions.",
-            "",
-            "Tickers:",
         ]
 
         for symbol, data in ticker_data.items():
@@ -758,20 +856,8 @@ class AIAnalysisService:
     def _build_fundamental_prompt(self, ticker_data: dict[str, dict]) -> str:
         """Build prompt for fundamental analysis batch."""
         lines = [
-            "You are a Vietnamese stock market (HOSE) fundamental analyst. "
-            "Evaluate the financial health of the following tickers based on "
-            "their most recent financial data.",
+            FUNDAMENTAL_FEW_SHOT,
             "",
-            "For each ticker, provide:",
-            "- health: one of strong, good, neutral, weak, critical",
-            "- score: 1-10 (overall financial health score)",
-            "- reasoning: brief explanation (2-3 sentences in English)",
-            "",
-            "Consider P/E relative to sector averages (Vietnam market P/E ~12-15), "
-            "profitability (ROE, ROA), growth rates, and financial stability "
-            "(current ratio, debt-to-equity).",
-            "",
-            "Tickers:",
         ]
 
         for symbol, data in ticker_data.items():
@@ -790,17 +876,8 @@ class AIAnalysisService:
         Per CONTEXT.md: Batch 10 tickers per call.
         """
         lines = [
-            "Bạn là chuyên gia phân tích tâm lý thị trường chứng khoán Việt Nam (HOSE). "
-            "Phân tích tiêu đề tin tức gần đây cho các mã cổ phiếu sau.",
+            SENTIMENT_FEW_SHOT,
             "",
-            "Cho mỗi mã, đánh giá:",
-            "- sentiment: very_positive, positive, neutral, negative, very_negative",
-            "- score: 1-10 (1 = rất tiêu cực, 10 = rất tích cực)",
-            "- reasoning: giải thích ngắn gọn bằng tiếng Việt (2-3 câu)",
-            "",
-            "Lưu ý: Nếu không có tin tức, sentiment = neutral, score = 5.",
-            "",
-            "Các mã cổ phiếu:",
         ]
 
         for symbol, data in ticker_data.items():
@@ -823,21 +900,8 @@ class AIAnalysisService:
         Per CONTEXT.md: Vietnamese explanation, max ~200 words, natural language.
         """
         lines = [
-            "Bạn là chuyên gia tư vấn đầu tư chứng khoán Việt Nam (HOSE). "
-            "Dựa trên 3 chiều phân tích (kỹ thuật, cơ bản, tâm lý thị trường), "
-            "đưa ra khuyến nghị tổng hợp cho các mã sau.",
+            COMBINED_FEW_SHOT,
             "",
-            "Cho mỗi mã, cung cấp:",
-            "- recommendation: mua, ban, giu",
-            "- confidence: 1-10 (dựa trên sự đồng thuận giữa 3 chiều, độ tươi dữ liệu, lượng tin)",
-            "- explanation: giải thích bằng tiếng Việt, tối đa 200 từ, ngôn ngữ tự nhiên",
-            "",
-            "Quy tắc confidence:",
-            "- 8-10: Cả 3 chiều đồng thuận, dữ liệu đầy đủ và mới",
-            "- 5-7: 2/3 chiều đồng thuận, hoặc dữ liệu không đầy đủ",
-            "- 1-4: Tín hiệu mâu thuẫn, hoặc thiếu dữ liệu nghiêm trọng",
-            "",
-            "Các mã cổ phiếu:",
         ]
 
         for symbol, data in ticker_data.items():
