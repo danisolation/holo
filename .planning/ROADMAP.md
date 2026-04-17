@@ -139,5 +139,5 @@ Plans:
 | 12. Multi-Market Foundation | 4/4 | Complete    | 2026-04-17 |
 | 13. Portfolio Enhancements | 5/5 | Complete    | 2026-04-17 |
 | 14. Corporate Actions Enhancements | 4/4 | Complete    | 2026-04-17 |
-| 15. Health & Monitoring | 1/3 | In Progress|  |
+| 15. Health & Monitoring | 2/3 | In Progress|  |
 | 16. Real-Time WebSocket | 0/? | Not started | - |
