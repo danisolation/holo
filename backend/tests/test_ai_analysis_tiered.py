@@ -73,16 +73,43 @@ class TestAnalyzeSingleTicker:
 
     @pytest.mark.asyncio
     async def test_analyze_single_ticker_calls_all_types(self, mock_db_session):
-        """analyze_single_ticker must call analyze_all_tickers for all 4 types."""
+        """analyze_single_ticker must call all 4 run_*_analysis methods under the lock."""
         from app.services.ai_analysis_service import AIAnalysisService
 
-        with patch.object(AIAnalysisService, "analyze_all_tickers", new_callable=AsyncMock) as mock_analyze:
-            mock_analyze.return_value = {"technical": {"success": 1}}
-            service = AIAnalysisService.__new__(AIAnalysisService)
-            service.session = mock_db_session
+        service = AIAnalysisService.__new__(AIAnalysisService)
+        service.session = mock_db_session
+
+        with (
+            patch.object(service, "run_technical_analysis", new_callable=AsyncMock) as mock_tech,
+            patch.object(service, "run_fundamental_analysis", new_callable=AsyncMock) as mock_fund,
+            patch.object(service, "run_sentiment_analysis", new_callable=AsyncMock) as mock_sent,
+            patch.object(service, "run_combined_analysis", new_callable=AsyncMock) as mock_comb,
+        ):
+            mock_tech.return_value = {"success": 1, "failed": 0}
+            mock_fund.return_value = {"success": 1, "failed": 0}
+            mock_sent.return_value = {"success": 1, "failed": 0}
+            mock_comb.return_value = {"success": 1, "failed": 0}
+
             result = await service.analyze_single_ticker(ticker_id=1, symbol="AAA")
-            # Should call 4 times: technical, fundamental, sentiment, combined
-            assert mock_analyze.call_count == 4
+
+            # All 4 methods should be called once each
+            mock_tech.assert_called_once()
+            mock_fund.assert_called_once()
+            mock_sent.assert_called_once()
+            mock_comb.assert_called_once()
+
+            # Each should receive the ticker_filter
+            expected_filter = {"AAA": 1}
+            mock_tech.assert_called_with(ticker_filter=expected_filter)
+            mock_fund.assert_called_with(ticker_filter=expected_filter)
+            mock_sent.assert_called_with(ticker_filter=expected_filter)
+            mock_comb.assert_called_with(ticker_filter=expected_filter)
+
+            # Result should have all 4 types
+            assert "technical" in result
+            assert "fundamental" in result
+            assert "sentiment" in result
+            assert "combined" in result
 
 
 class TestOnDemandEndpoint:
@@ -106,13 +133,17 @@ class TestOnDemandEndpoint:
                         mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
                         mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
 
-                        # Mock ticker lookup
+                        # Mock ticker lookup (1st execute) and cooldown check (2nd execute)
                         mock_ticker = MagicMock()
                         mock_ticker.id = 1
                         mock_ticker.symbol = "AAA"
-                        mock_result = MagicMock()
-                        mock_result.scalar_one_or_none.return_value = mock_ticker
-                        mock_session.execute = AsyncMock(return_value=mock_result)
+                        mock_ticker_result = MagicMock()
+                        mock_ticker_result.scalar_one_or_none.return_value = mock_ticker
+                        mock_cooldown_result = MagicMock()
+                        mock_cooldown_result.scalar_one_or_none.return_value = None  # no recent analysis
+                        mock_session.execute = AsyncMock(
+                            side_effect=[mock_ticker_result, mock_cooldown_result]
+                        )
 
                         response = client.post("/api/analysis/AAA/analyze-now")
                         assert response.status_code == 200
