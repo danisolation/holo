@@ -102,3 +102,34 @@ class AllocationResponse(BaseModel):
     data: list[AllocationItem]
     mode: str
     total_value: float
+
+
+class CSVPreviewRow(BaseModel):
+    """Single row in CSV dry-run preview with validation status."""
+
+    row_number: int
+    symbol: str
+    side: str
+    quantity: int
+    price: float
+    trade_date: str
+    fees: float
+    status: str  # "valid", "warning", "error"
+    message: str | None = None
+
+
+class CSVDryRunResponse(BaseModel):
+    """CSV dry-run validation result with per-row status and summary."""
+
+    format_detected: str
+    rows: list[CSVPreviewRow]
+    total_valid: int
+    total_warnings: int
+    total_errors: int
+
+
+class CSVImportResponse(BaseModel):
+    """Result of CSV import operation."""
+
+    trades_imported: int
+    tickers_recalculated: int
