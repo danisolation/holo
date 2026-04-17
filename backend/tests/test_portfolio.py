@@ -675,12 +675,14 @@ class TestSummaryDividendIncome:
 class TestAPIRouter:
     """Test API router registration."""
 
-    def test_portfolio_router_has_4_routes(self):
-        """Portfolio router has POST trades, GET holdings, GET summary, GET trades."""
+    def test_portfolio_router_has_9_routes(self):
+        """Portfolio router has 9 routes: POST trades, GET holdings, GET summary,
+        GET trades, GET performance, GET allocation, PUT trades/{id},
+        DELETE trades/{id}, POST import."""
         from app.api.portfolio import router
 
         assert router.prefix == "/portfolio"
-        assert len(router.routes) == 4
+        assert len(router.routes) == 9
 
     def test_portfolio_included_in_main_router(self):
         """Portfolio router is included in the main api_router."""
@@ -689,6 +691,16 @@ class TestAPIRouter:
         paths = [r.path for r in api_router.routes]
         assert "/portfolio/trades" in paths
         assert "/portfolio/holdings" in paths
+
+    def test_new_portfolio_routes_registered(self):
+        """New Phase 13 routes are registered."""
+        from app.api.portfolio import router
+
+        paths = [r.path for r in router.routes]
+        assert "/portfolio/performance" in paths
+        assert "/portfolio/allocation" in paths
+        assert "/portfolio/import" in paths
+        assert "/portfolio/trades/{trade_id}" in paths
 
 
 # --- PORT-09: Performance Data Tests ---

@@ -113,3 +113,87 @@ async def get_allocation(
             mode=mode,
             total_value=total_value,
         )
+
+
+# --- Trade edit/delete endpoints (PORT-11) ---
+
+
+@router.put("/trades/{trade_id}", response_model=TradeResponse)
+async def update_trade(trade_id: int, trade: TradeUpdateRequest):
+    """Update an existing trade. Triggers FIFO recalculation. Per PORT-11."""
+    async with async_session() as session:
+        service = PortfolioService(session)
+        try:
+            result = await service.update_trade(
+                trade_id=trade_id,
+                side=trade.side,
+                quantity=trade.quantity,
+                price=trade.price,
+                trade_date=trade.trade_date,
+                fees=trade.fees,
+            )
+            return TradeResponse(**result)
+        except ValueError as e:
+            error_msg = str(e)
+            if "not found" in error_msg:
+                raise HTTPException(status_code=404, detail=error_msg)
+            raise HTTPException(status_code=400, detail=error_msg)
+
+
+@router.delete("/trades/{trade_id}")
+async def delete_trade(trade_id: int):
+    """Delete a trade and recalculate FIFO lots. Per PORT-11."""
+    async with async_session() as session:
+        service = PortfolioService(session)
+        try:
+            result = await service.delete_trade(trade_id)
+            return result
+        except ValueError as e:
+            error_msg = str(e)
+            if "not found" in error_msg:
+                raise HTTPException(status_code=404, detail=error_msg)
+            raise HTTPException(status_code=400, detail=error_msg)
+
+
+# --- CSV import endpoint (PORT-12) ---
+
+
+@router.post("/import")
+async def import_trades(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(True, description="If true, validate only; if false, import trades"),
+):
+    """Import trades from broker CSV. Per PORT-12.
+    dry_run=true: parse and validate, return preview.
+    dry_run=false: import valid trades."""
+    # Read file content
+    content = await file.read()
+
+    # T-13-08 mitigation: enforce max size (5MB)
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum 5MB.")
+
+    try:
+        csv_text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        # Try common Vietnamese encoding
+        try:
+            csv_text = content.decode("cp1252")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot decode CSV file. Use UTF-8 or Windows-1252 encoding.",
+            )
+
+    async with async_session() as session:
+        csv_service = CSVImportService(session)
+        try:
+            if dry_run:
+                result = await csv_service.dry_run(csv_text)
+                return result
+            else:
+                portfolio_service = PortfolioService(session)
+                result = await csv_service.import_trades(csv_text, portfolio_service)
+                return CSVImportResponse(**result)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
