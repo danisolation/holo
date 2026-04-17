@@ -5,6 +5,14 @@ Vietnamese language with emojis for mobile-friendly reading.
 """
 from decimal import Decimal
 
+# Vietnamese labels for corporate event types (CORP-07)
+EVENT_TYPE_LABELS = {
+    "CASH_DIVIDEND": "Cổ tức tiền mặt",
+    "STOCK_DIVIDEND": "Cổ tức cổ phiếu",
+    "BONUS_SHARES": "Thưởng cổ phiếu",
+    "RIGHTS_ISSUE": "Phát hành quyền mua",
+}
+
 
 class MessageFormatter:
     """Formats trading data into Telegram HTML messages."""
@@ -268,6 +276,26 @@ class MessageFormatter:
             f"<b>{html.escape(api_name)}</b> — {fail_count} consecutive failures\n"
             f"Auto-reset after 2 minutes"
         )
+
+    @staticmethod
+    def exdate_alert(symbol: str, event_type: str, ex_date: str, detail: str = "") -> str:
+        """Format ex-date alert notification (CORP-07).
+
+        Args:
+            symbol: Ticker symbol (e.g., VNM)
+            event_type: CASH_DIVIDEND, STOCK_DIVIDEND, BONUS_SHARES, RIGHTS_ISSUE
+            ex_date: Ex-date string (YYYY-MM-DD)
+            detail: Optional detail line (dividend amount or ratio)
+        """
+        label = EVENT_TYPE_LABELS.get(event_type, event_type)
+        msg = (
+            f"📅 <b>Ex-date sắp tới</b>\n\n"
+            f"<b>{symbol}</b> — {label}\n"
+            f"📆 Ngày GDKHQ: <b>{ex_date}</b>"
+        )
+        if detail:
+            msg += f"\n📋 {detail}"
+        return msg
 
     @staticmethod
     def trade_recorded(trade: dict) -> str:
