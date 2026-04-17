@@ -115,8 +115,13 @@ Plans:
   3. Error rate per job over the last 7 days is visible as a metric or chart
   4. User can manually trigger crawl, indicator computation, or AI analysis jobs from the health dashboard
   5. Database connection pool status (active/idle connections) is displayed on the health page
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 10-01-PLAN.md — Backend health API: Pydantic schemas, HealthService, 6 endpoints (jobs, freshness, errors, pool, trigger, summary)
+- [ ] 10-02-PLAN.md — Backend health API test suite (all 6 endpoints)
+- [ ] 10-03-PLAN.md — Frontend health dashboard page with status cards, freshness table, error sparklines, pool status, trigger buttons
 
 ### Phase 11: Telegram Portfolio
 **Goal**: User can manage portfolio and receive P&L updates directly through Telegram commands
