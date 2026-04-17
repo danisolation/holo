@@ -22,7 +22,7 @@ class TestSchedulerManager:
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
     def test_configure_jobs_registers_six_jobs(self):
-        """configure_jobs must register 3 exchange crawls + weekly ticker + weekly financial + summary."""
+        """configure_jobs must register 3 exchange crawls + weekly ticker + weekly financial + summary + health alert."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         # Remove any existing jobs first
@@ -37,7 +37,8 @@ class TestSchedulerManager:
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
         assert "daily_summary_send" in job_ids
-        assert len(job_ids) == 6
+        assert "health_alert_check" in job_ids
+        assert len(job_ids) == 7
 
         # Clean up
         scheduler.remove_all_jobs()

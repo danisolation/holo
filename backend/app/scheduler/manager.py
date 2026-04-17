@@ -41,6 +41,7 @@ _JOB_NAMES = {
     "daily_summary_send": "Daily Market Summary",
     "daily_hnx_upcom_analysis": "Daily HNX/UPCOM Watchlist Analysis",
     "daily_hnx_upcom_analysis_triggered": "Daily HNX/UPCOM Watchlist Analysis",
+    "health_alert_check": "Health Alert Check",
 }
 
 
@@ -252,11 +253,27 @@ def configure_jobs():
         misfire_grace_time=3600,
     )
 
+    # Health alert check every 30 minutes — all day, every day (D-15-05)
+    from app.scheduler.jobs import health_alert_check
+
+    scheduler.add_job(
+        health_alert_check,
+        trigger=CronTrigger(
+            minute="*/30",
+            timezone=settings.timezone,
+        ),
+        id="health_alert_check",
+        name="Health Alert Check",
+        replace_existing=True,
+        misfire_grace_time=1800,
+    )
+
     logger.info(
         f"Scheduled jobs: daily_price_crawl_hose (Mon-Fri 15:30 {settings.timezone}), "
         f"daily_price_crawl_hnx (Mon-Fri 16:00), daily_price_crawl_upcom (Mon-Fri 16:30), "
         f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00), "
-        f"daily_summary_send (Mon-Fri 18:30 {settings.timezone})"
+        f"daily_summary_send (Mon-Fri 18:30 {settings.timezone}), "
+        f"health_alert_check (every 30min)"
     )
 
     # Register job chaining listener (Phase 2 + Phase 4 + Phase 12)

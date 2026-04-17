@@ -446,3 +446,48 @@ class MessageFormatter:
             "ban": "🔴🔴",
         }
         return mapping.get(signal.lower() if signal else "", "⚪")
+
+    @staticmethod
+    def health_alert(alert_type: str, details: list[str]) -> str:
+        """Format health alert notification for Telegram (D-15-07).
+
+        Vietnamese HTML message with severity emoji.
+        Args:
+            alert_type: "job_failures", "stale_data", "pool_exhaustion"
+            details: List of affected items descriptions
+        """
+        import html as html_mod
+
+        type_config = {
+            "job_failures": {
+                "emoji": "🔴",
+                "title": "LỖI PIPELINE LIÊN TỤC",
+                "severity": "critical",
+            },
+            "stale_data": {
+                "emoji": "🟡",
+                "title": "DỮ LIỆU CŨ",
+                "severity": "warning",
+            },
+            "pool_exhaustion": {
+                "emoji": "🔴",
+                "title": "DB POOL CẠN KIỆT",
+                "severity": "critical",
+            },
+        }
+
+        config = type_config.get(alert_type, {
+            "emoji": "⚠️",
+            "title": alert_type.upper(),
+            "severity": "warning",
+        })
+
+        lines = [
+            f"{config['emoji']} <b>{config['title']}</b>\n",
+        ]
+        for item in details:
+            lines.append(f"  • {html_mod.escape(item)}")
+
+        lines.append(f"\n(Xem chi tiết: /dashboard/health)")
+
+        return "\n".join(lines)

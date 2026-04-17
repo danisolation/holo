@@ -58,7 +58,7 @@ class TestConsecutiveFailureDetection:
 
         with patch("app.services.health_alert_service.HealthService") as MockHS, \
              patch("app.services.health_alert_service.engine") as mock_engine, \
-             patch("app.services.health_alert_service.telegram_bot", mock_telegram):
+             patch("app.telegram.bot.telegram_bot", mock_telegram):
             mock_hs_instance = AsyncMock()
             mock_hs_instance.get_data_freshness = AsyncMock(return_value=mock_stale_items)
             MockHS.return_value = mock_hs_instance
@@ -77,11 +77,9 @@ class TestConsecutiveFailureDetection:
 
         _last_alert_times.clear()
 
-        # Mock: failure query returns job with only 2 failures
+        # Mock: failure query returns no rows (HAVING COUNT >= 3 filters out jobs with < 3 failures)
         mock_fail_result = MagicMock()
-        mock_fail_result.fetchall.return_value = [
-            self._make_failure_row("daily_price_crawl_hose", 2),
-        ]
+        mock_fail_result.fetchall.return_value = []
         mock_stale_items = []
         mock_pool = MagicMock()
         mock_pool.size.return_value = 5
@@ -95,7 +93,7 @@ class TestConsecutiveFailureDetection:
 
         with patch("app.services.health_alert_service.HealthService") as MockHS, \
              patch("app.services.health_alert_service.engine") as mock_engine, \
-             patch("app.services.health_alert_service.telegram_bot", mock_telegram):
+             patch("app.telegram.bot.telegram_bot", mock_telegram):
             mock_hs_instance = AsyncMock()
             mock_hs_instance.get_data_freshness = AsyncMock(return_value=mock_stale_items)
             MockHS.return_value = mock_hs_instance
@@ -149,7 +147,7 @@ class TestStaleDataDetection:
 
         with patch("app.services.health_alert_service.HealthService") as MockHS, \
              patch("app.services.health_alert_service.engine") as mock_engine, \
-             patch("app.services.health_alert_service.telegram_bot", mock_telegram):
+             patch("app.telegram.bot.telegram_bot", mock_telegram):
             mock_hs_instance = AsyncMock()
             mock_hs_instance.get_data_freshness = AsyncMock(return_value=mock_stale_items)
             MockHS.return_value = mock_hs_instance
@@ -200,7 +198,7 @@ class TestCooldown:
 
         with patch("app.services.health_alert_service.HealthService") as MockHS, \
              patch("app.services.health_alert_service.engine") as mock_engine, \
-             patch("app.services.health_alert_service.telegram_bot", mock_telegram):
+             patch("app.telegram.bot.telegram_bot", mock_telegram):
             mock_hs_instance = AsyncMock()
             mock_hs_instance.get_data_freshness = AsyncMock(return_value=mock_stale_items)
             MockHS.return_value = mock_hs_instance
@@ -241,7 +239,7 @@ class TestCooldown:
 
         with patch("app.services.health_alert_service.HealthService") as MockHS, \
              patch("app.services.health_alert_service.engine") as mock_engine, \
-             patch("app.services.health_alert_service.telegram_bot", mock_telegram):
+             patch("app.telegram.bot.telegram_bot", mock_telegram):
             mock_hs_instance = AsyncMock()
             mock_hs_instance.get_data_freshness = AsyncMock(return_value=mock_stale_items)
             MockHS.return_value = mock_hs_instance
@@ -288,7 +286,7 @@ class TestPoolExhaustion:
 
         with patch("app.services.health_alert_service.HealthService") as MockHS, \
              patch("app.services.health_alert_service.engine") as mock_engine, \
-             patch("app.services.health_alert_service.telegram_bot", mock_telegram):
+             patch("app.telegram.bot.telegram_bot", mock_telegram):
             mock_hs_instance = AsyncMock()
             mock_hs_instance.get_data_freshness = AsyncMock(return_value=mock_stale_items)
             MockHS.return_value = mock_hs_instance

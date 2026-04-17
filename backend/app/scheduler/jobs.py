@@ -656,3 +656,22 @@ async def daily_hnx_upcom_analysis():
                 await session.commit()
             logger.error(f"=== DAILY HNX/UPCOM ANALYSIS FAILED: {e} ===")
             raise
+
+
+async def health_alert_check():
+    """Proactive health alert check — runs every 30 minutes.
+
+    Per D-15-05: Checks consecutive failures, stale data, pool exhaustion.
+    Never-raises pattern (try/except with logging) to avoid polluting
+    the scheduler error listener.
+    """
+    logger.info("=== HEALTH ALERT CHECK START ===")
+    try:
+        from app.services.health_alert_service import HealthAlertService
+
+        async with async_session() as session:
+            svc = HealthAlertService(session)
+            await svc.check_and_alert()
+        logger.info("=== HEALTH ALERT CHECK COMPLETE ===")
+    except Exception as e:
+        logger.error(f"=== HEALTH ALERT CHECK FAILED: {e} ===")
