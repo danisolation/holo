@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
-status: executing
-last_updated: "2026-04-17T14:07:33.517Z"
-last_activity: 2026-04-17 -- Phase null planning complete
+status: completed
+last_updated: "2026-04-17T14:18:15.654Z"
+last_activity: 2026-04-17 -- Phase 16 plan 16-01 complete
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 18
-  completed_plans: 16
-  percent: 89
+  completed_plans: 17
+  percent: 94
 ---
 
 # Project State
@@ -24,12 +24,12 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 
 ## Current Position
 
-Phase: null — EXECUTING
-Plan: 1 of ?
-Status: Ready to execute
-Last activity: 2026-04-17 -- Phase null planning complete
+Phase: 16-real-time-websocket — EXECUTING
+Plan: 1 of 2
+Status: Plan 16-01 complete, ready for 16-02
+Last activity: 2026-04-17 -- Phase 16 plan 16-01 complete
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 89%
 
 ## Shipped Milestones
 
@@ -89,6 +89,9 @@ v2.0 decisions (from research):
 - [Phase 15]: Free-tier limits hardcoded as module constants (1500 RPD, 1M tokens/day) per D-15-02
 - [Phase 15]: _JOB_NAMES_VN Vietnamese mapping for timeline display, in-memory cooldown dict for alert deduplication, never-raises health_alert_check pattern
 - [Phase 15]: formatTokens helper with 1M/K thresholds; hsl(var(--primary)) for Recharts theme fills; font-bold replaced with font-semibold per typography contract
+- [Phase 16]: Trading module used for fetch_price_board — confirmed available in vnstock 3.5.1
+- [Phase 16]: WebSocket route mounted directly on FastAPI app (not APIRouter) per FastAPI best practice
+- [Phase 16]: No retry/circuit-breaker on fetch_price_board — transient failures acceptable for 30s real-time polling
 
 ### Pending Todos
 

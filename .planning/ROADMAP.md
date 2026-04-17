@@ -140,4 +140,4 @@ Plans:
 | 13. Portfolio Enhancements | 5/5 | Complete    | 2026-04-17 |
 | 14. Corporate Actions Enhancements | 4/4 | Complete    | 2026-04-17 |
 | 15. Health & Monitoring | 3/3 | Complete    | 2026-04-17 |
-| 16. Real-Time WebSocket | 0/? | Not started | - |
+| 16. Real-Time WebSocket | 1/2 | In Progress|  |
