@@ -316,6 +316,19 @@ class AlertService:
         ]
         data["analyzed_count"] = len(today_price_map)  # Approximate
 
+        # --- Portfolio P&L (TBOT-04 + TBOT-06) ---
+        try:
+            from app.services.portfolio_service import PortfolioService
+            portfolio_svc = PortfolioService(self.session)
+            holdings = await portfolio_svc.get_holdings()
+            if holdings:
+                data["portfolio_holdings"] = holdings
+                portfolio_summary = await portfolio_svc.get_summary()
+                data["portfolio_summary"] = portfolio_summary
+                data["owned_symbols"] = {h["symbol"] for h in holdings}
+        except Exception as e:
+            logger.warning(f"Failed to fetch portfolio data for daily summary: {e}")
+
         return data
 
     async def send_daily_summary(self) -> bool:

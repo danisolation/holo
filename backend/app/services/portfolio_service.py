@@ -276,6 +276,99 @@ class PortfolioService:
 
         return {"trades": trades, "total": total}
 
+    async def get_ticker_pnl(self, symbol: str) -> dict:
+        """Get detailed P&L for a single ticker with FIFO lot breakdown."""
+        ticker = await self._resolve_ticker(symbol)
+
+        # Open lots ordered FIFO
+        lot_result = await self.session.execute(
+            select(Lot)
+            .where(Lot.ticker_id == ticker.id, Lot.remaining_quantity > 0)
+            .order_by(Lot.buy_date.asc(), Lot.id.asc())
+        )
+        lots = lot_result.scalars().all()
+
+        # Latest market price
+        price_result = await self.session.execute(
+            select(DailyPrice.close)
+            .where(DailyPrice.ticker_id == ticker.id)
+            .order_by(DailyPrice.date.desc())
+            .limit(1)
+        )
+        latest_close = price_result.scalar_one_or_none()
+        market_price = float(latest_close) if latest_close is not None else None
+
+        # Build lot breakdown
+        lot_details = []
+        total_remaining = 0
+        total_cost = Decimal("0")
+        total_unrealized = Decimal("0") if market_price is not None else None
+
+        for lot in lots:
+            remaining = lot.remaining_quantity
+            buy_price = float(lot.buy_price)
+            total_remaining += remaining
+            total_cost += lot.buy_price * remaining
+
+            lot_pnl = None
+            lot_pnl_pct = None
+            if market_price is not None:
+                lot_pnl = (market_price - buy_price) * remaining
+                lot_pnl_pct = round((market_price - buy_price) / buy_price * 100, 2) if buy_price > 0 else None
+                total_unrealized += Decimal(str(lot_pnl))
+
+            lot_details.append({
+                "buy_date": lot.buy_date.isoformat(),
+                "buy_price": buy_price,
+                "quantity": lot.quantity,
+                "remaining": remaining,
+                "lot_pnl": round(lot_pnl, 2) if lot_pnl is not None else None,
+                "lot_pnl_pct": lot_pnl_pct,
+            })
+
+        avg_cost = float(total_cost / total_remaining) if total_remaining > 0 else 0
+        unrealized_pnl = float(total_unrealized) if total_unrealized is not None else None
+        unrealized_pnl_pct = (
+            round((unrealized_pnl / float(total_cost)) * 100, 2)
+            if unrealized_pnl is not None and total_cost > 0
+            else None
+        )
+
+        # Realized P&L: sell revenue - consumed cost - sell fees
+        sell_revenue_stmt = select(
+            func.coalesce(func.sum(Trade.price * Trade.quantity), 0)
+        ).where(Trade.ticker_id == ticker.id, Trade.side == "SELL")
+        sell_revenue_result = await self.session.execute(sell_revenue_stmt)
+        sell_revenue = sell_revenue_result.scalar_one()
+
+        sell_fees_stmt = select(
+            func.coalesce(func.sum(Trade.fees), 0)
+        ).where(Trade.ticker_id == ticker.id, Trade.side == "SELL")
+        sell_fees_result = await self.session.execute(sell_fees_stmt)
+        sell_fees = sell_fees_result.scalar_one()
+
+        consumed_cost_stmt = select(
+            func.coalesce(
+                func.sum(Lot.buy_price * (Lot.quantity - Lot.remaining_quantity)), 0
+            )
+        ).where(Lot.ticker_id == ticker.id)
+        consumed_cost_result = await self.session.execute(consumed_cost_stmt)
+        consumed_cost = consumed_cost_result.scalar_one()
+
+        realized_pnl = float(sell_revenue - consumed_cost - sell_fees)
+
+        return {
+            "symbol": ticker.symbol,
+            "name": ticker.name,
+            "quantity": total_remaining,
+            "avg_cost": round(avg_cost, 2),
+            "market_price": market_price,
+            "unrealized_pnl": round(unrealized_pnl, 2) if unrealized_pnl is not None else None,
+            "unrealized_pnl_pct": unrealized_pnl_pct,
+            "realized_pnl": round(realized_pnl, 2),
+            "lots": lot_details,
+        }
+
     # --- Private helpers ---
 
     async def _resolve_ticker(self, symbol: str) -> Ticker:

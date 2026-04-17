@@ -21,8 +21,12 @@ class MessageFormatter:
             "/list — Xem danh sách theo dõi\n"
             "/check &lt;mã&gt; — Kiểm tra phân tích mã\n"
             "/alert &lt;mã&gt; &lt;giá&gt; — Đặt cảnh báo giá\n"
-            "/summary — Tóm tắt thị trường hôm nay\n\n"
-            "💡 Ví dụ: <code>/watch VNM</code>"
+            "/summary — Tóm tắt thị trường hôm nay\n"
+            "/buy &lt;mã&gt; &lt;SL&gt; &lt;giá&gt; — Ghi nhận mua\n"
+            "/sell &lt;mã&gt; &lt;SL&gt; &lt;giá&gt; — Ghi nhận bán\n"
+            "/portfolio — Xem danh mục đầu tư\n"
+            "/pnl &lt;mã&gt; — Chi tiết P&amp;L theo mã\n\n"
+            "💡 Ví dụ: <code>/buy VNM 100 85000</code>"
         )
 
     @staticmethod
@@ -180,6 +184,28 @@ class MessageFormatter:
                 lines.append(f"  {emoji} <b>{m['symbol']}</b>: {close_str} ({change:+.1f}%)")
             lines.append("")
 
+        # Portfolio P&L section (TBOT-04)
+        portfolio = data.get("portfolio_holdings", [])
+        portfolio_summary = data.get("portfolio_summary", {})
+        if portfolio:
+            lines.append("💼 <b>Danh mục của bạn:</b>")
+            for h in portfolio:
+                pnl = h.get("unrealized_pnl")
+                pnl_pct = h.get("unrealized_pnl_pct")
+                emoji = "🟢" if (pnl or 0) >= 0 else "🔴"
+                price_str = f"{h['market_price']:,.0f}đ" if h.get("market_price") else "—"
+                pnl_str = f"{pnl:+,.0f}đ ({pnl_pct:+.1f}%)" if pnl is not None else "—"
+                lines.append(f"  {emoji} <b>{h['symbol']}</b>: {price_str} | P&L: {pnl_str}")
+
+            total_upnl = portfolio_summary.get("total_unrealized_pnl")
+            if total_upnl is not None:
+                total_emoji = "📈" if total_upnl >= 0 else "📉"
+                lines.append(f"  {total_emoji} Tổng P&L: {total_upnl:+,.0f}đ")
+                return_pct = portfolio_summary.get("total_return_pct")
+                if return_pct is not None:
+                    lines.append(f"  📊 Lợi nhuận: {return_pct:+.1f}%")
+            lines.append("")
+
         # Watchlist signal changes
         changes = data.get("watchlist_changes", [])
         if changes:
@@ -191,14 +217,22 @@ class MessageFormatter:
                 )
             lines.append("")
 
-        # New strong recommendations
+        # New strong recommendations (TBOT-06: owned tickers first)
         recs = data.get("new_recommendations", [])
         if recs:
+            owned_symbols = data.get("owned_symbols", set())
+            owned_recs = [r for r in recs if r.get("symbol") in owned_symbols]
+            other_recs = [r for r in recs if r.get("symbol") not in owned_symbols]
+            sorted_recs = owned_recs + other_recs
+
             lines.append("💡 <b>Khuyến nghị mới:</b>")
-            for r in recs[:5]:
+            for r in sorted_recs[:5]:
                 emoji = MessageFormatter._recommendation_emoji(r.get("signal", ""))
+                symbol = r.get("symbol", "?")
+                owned_tag = " 📌" if symbol in owned_symbols else ""
                 lines.append(
-                    f"  {emoji} <b>{r['symbol']}</b>: {r.get('signal', '—')} ({r.get('score', '—')}/10)"
+                    f"  {emoji} <b>{symbol}</b>{owned_tag}: "
+                    f"{r.get('signal', '—')} ({r.get('score', '—')}/10)"
                 )
             lines.append("")
 
@@ -234,6 +268,123 @@ class MessageFormatter:
             f"<b>{html.escape(api_name)}</b> — {fail_count} consecutive failures\n"
             f"Auto-reset after 2 minutes"
         )
+
+    @staticmethod
+    def trade_recorded(trade: dict) -> str:
+        """Format buy/sell confirmation message."""
+        side = trade.get("side", "BUY")
+        is_buy = side.upper() == "BUY"
+        emoji = "🟢" if is_buy else "🔴"
+        side_vn = "MUA" if is_buy else "BÁN"
+        symbol = trade.get("symbol", "?")
+        qty = trade.get("quantity", 0)
+        price = trade.get("price", 0)
+        total = qty * price
+        fees = trade.get("fees", 0)
+
+        lines = [
+            f"{emoji} <b>{side_vn} — {symbol}</b>",
+            f"📦 Số lượng: {qty:,} cp",
+            f"💰 Giá: {price:,.0f}đ",
+            f"💵 Tổng: {total:,.0f}đ",
+        ]
+
+        if fees and fees > 0:
+            lines.append(f"🏷 Phí: {fees:,.0f}đ")
+
+        realized_pnl = trade.get("realized_pnl")
+        if realized_pnl is not None:
+            pnl_emoji = "📈" if realized_pnl >= 0 else "📉"
+            lines.append(f"{pnl_emoji} Lãi/Lỗ thực hiện: {realized_pnl:+,.0f}đ")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def portfolio_view(holdings: list[dict], summary: dict) -> str:
+        """Format /portfolio response with all holdings and summary."""
+        if not holdings:
+            return "📋 Chưa có vị thế nào\n\n💡 Dùng /buy &lt;mã&gt; &lt;SL&gt; &lt;giá&gt; để ghi nhận giao dịch"
+
+        lines = ["💼 <b>DANH MỤC ĐẦU TƯ</b>\n"]
+
+        for h in holdings:
+            pnl = h.get("unrealized_pnl")
+            pnl_pct = h.get("unrealized_pnl_pct")
+            emoji = "🟢" if (pnl or 0) >= 0 else "🔴"
+            price_str = f"{h['market_price']:,.0f}đ" if h.get("market_price") else "—"
+            pnl_str = f"{pnl:+,.0f}đ ({pnl_pct:+.1f}%)" if pnl is not None else "—"
+            lines.append(
+                f"{emoji} <b>{h['symbol']}</b>: {h['quantity']:,} cp | "
+                f"TB: {h['avg_cost']:,.0f}đ | Giá: {price_str}\n"
+                f"   P&L: {pnl_str}"
+            )
+
+        lines.append("\n" + "─" * 24)
+        total_invested = summary.get("total_invested", 0)
+        total_mv = summary.get("total_market_value")
+        total_upnl = summary.get("total_unrealized_pnl")
+        total_rpnl = summary.get("total_realized_pnl", 0)
+        total_return = summary.get("total_return_pct")
+
+        lines.append(f"💰 Đầu tư: {total_invested:,.0f}đ")
+        if total_mv is not None:
+            lines.append(f"📊 Giá trị: {total_mv:,.0f}đ")
+        if total_upnl is not None:
+            upnl_emoji = "📈" if total_upnl >= 0 else "📉"
+            lines.append(f"{upnl_emoji} Chưa thực hiện: {total_upnl:+,.0f}đ")
+        lines.append(f"✅ Đã thực hiện: {total_rpnl:+,.0f}đ")
+        if total_return is not None:
+            lines.append(f"📊 Tổng lợi nhuận: {total_return:+.1f}%")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def ticker_pnl(data: dict) -> str:
+        """Format /pnl response with FIFO lot breakdown."""
+        lots = data.get("lots", [])
+        quantity = data.get("quantity", 0)
+        symbol = data.get("symbol", "?")
+
+        if not lots and quantity == 0:
+            return f"📋 Không có vị thế <b>{symbol}</b>"
+
+        name = data.get("name", "")
+        avg_cost = data.get("avg_cost", 0)
+        market_price = data.get("market_price")
+        unrealized_pnl = data.get("unrealized_pnl")
+        unrealized_pnl_pct = data.get("unrealized_pnl_pct")
+        realized_pnl = data.get("realized_pnl", 0)
+
+        price_str = f"{market_price:,.0f}đ" if market_price is not None else "—"
+        upnl_str = f"{unrealized_pnl:+,.0f}đ ({unrealized_pnl_pct:+.1f}%)" if unrealized_pnl is not None else "—"
+
+        lines = [
+            f"📊 <b>CHI TIẾT P&L — {symbol}</b>",
+            f"{name}\n",
+            f"📦 Số lượng: {quantity:,} cp",
+            f"💰 Giá TB: {avg_cost:,.0f}đ",
+            f"📈 Giá TT: {price_str}",
+            f"💹 P&L chưa thực hiện: {upnl_str}\n",
+            "📦 <b>Lô FIFO:</b>",
+        ]
+
+        for i, lot in enumerate(lots, 1):
+            buy_date = lot.get("buy_date", "?")
+            buy_price = lot.get("buy_price", 0)
+            remaining = lot.get("remaining", 0)
+            original = lot.get("quantity", 0)
+            lot_pnl = lot.get("lot_pnl")
+            lot_pnl_str = f"{lot_pnl:+,.0f}đ" if lot_pnl is not None else "—"
+            emoji = "🟢" if (lot_pnl or 0) >= 0 else "🔴"
+            lines.append(
+                f"  {emoji} Lô {i}: {buy_date} | {buy_price:,.0f}đ | "
+                f"{remaining}/{original} cp | P&L: {lot_pnl_str}"
+            )
+
+        rpnl_emoji = "📈" if realized_pnl >= 0 else "📉"
+        lines.append(f"\n{rpnl_emoji} Lãi/Lỗ đã thực hiện: {realized_pnl:+,.0f}đ")
+
+        return "\n".join(lines)
 
     @staticmethod
     def _signal_emoji(signal: str) -> str:

@@ -294,18 +294,18 @@ class TestHandlerRegistration:
     """Tests for command handler registration."""
 
     def test_register_handlers_adds_all_commands(self):
-        """register_handlers should add 7 command handlers."""
+        """register_handlers should add 11 command handlers."""
         from app.telegram.handlers import register_handlers
 
         mock_app = MagicMock()
         register_handlers(mock_app)
 
-        assert mock_app.add_handler.call_count == 7
+        assert mock_app.add_handler.call_count == 11
         # Extract command names from the CommandHandler objects
         commands = []
         for call in mock_app.add_handler.call_args_list:
             handler = call[0][0]
             if hasattr(handler, "commands"):
                 commands.extend(handler.commands)
-        expected = {"start", "watch", "unwatch", "list", "check", "alert", "summary"}
+        expected = {"start", "watch", "unwatch", "list", "check", "alert", "summary", "buy", "sell", "portfolio", "pnl"}
         assert set(commands) == expected

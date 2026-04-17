@@ -4,6 +4,7 @@ All commands query the database directly using async_session (same pattern
 as scheduler jobs — running outside HTTP request context).
 Per CONTEXT.md: single-user, chat_id from settings, Vietnamese responses.
 """
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from loguru import logger
@@ -20,6 +21,7 @@ from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.models.user_watchlist import UserWatchlist
 from app.models.price_alert import PriceAlert
 from app.telegram.formatter import MessageFormatter
+from app.services.portfolio_service import PortfolioService
 
 
 def register_handlers(app: Application) -> None:
@@ -31,6 +33,10 @@ def register_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("check", check_command))
     app.add_handler(CommandHandler("alert", alert_command))
     app.add_handler(CommandHandler("summary", summary_command))
+    app.add_handler(CommandHandler("buy", buy_command))
+    app.add_handler(CommandHandler("sell", sell_command))
+    app.add_handler(CommandHandler("portfolio", portfolio_command))
+    app.add_handler(CommandHandler("pnl", pnl_command))
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -344,4 +350,119 @@ async def summary_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(
             "❌ Không thể tạo tóm tắt. Vui lòng thử lại sau.",
             parse_mode="HTML",
+        )
+
+
+async def buy_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/buy <ticker> <qty> <price> [fee] — Record a buy trade."""
+    if not context.args or len(context.args) < 3:
+        await update.message.reply_text(
+            MessageFormatter.usage_error("/buy", "/buy VNM 100 85000"),
+            parse_mode="HTML",
+        )
+        return
+
+    try:
+        symbol = context.args[0].upper().strip()
+        quantity = int(context.args[1])
+        price = float(context.args[2].replace(",", ""))
+        fees = float(context.args[3].replace(",", "")) if len(context.args) > 3 else 0
+    except (ValueError, IndexError):
+        await update.message.reply_text(
+            MessageFormatter.usage_error("/buy", "/buy VNM 100 85000"),
+            parse_mode="HTML",
+        )
+        return
+
+    try:
+        async with async_session() as session:
+            svc = PortfolioService(session)
+            result = await svc.record_trade(
+                symbol=symbol, side="BUY", quantity=quantity,
+                price=price, trade_date=date.today(), fees=fees,
+            )
+        await update.message.reply_text(
+            MessageFormatter.trade_recorded(result), parse_mode="HTML"
+        )
+    except ValueError as e:
+        await update.message.reply_text(
+            MessageFormatter.ticker_not_found(symbol), parse_mode="HTML"
+        )
+
+
+async def sell_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/sell <ticker> <qty> <price> [fee] — Record a sell trade."""
+    if not context.args or len(context.args) < 3:
+        await update.message.reply_text(
+            MessageFormatter.usage_error("/sell", "/sell VNM 50 90000"),
+            parse_mode="HTML",
+        )
+        return
+
+    try:
+        symbol = context.args[0].upper().strip()
+        quantity = int(context.args[1])
+        price = float(context.args[2].replace(",", ""))
+        fees = float(context.args[3].replace(",", "")) if len(context.args) > 3 else 0
+    except (ValueError, IndexError):
+        await update.message.reply_text(
+            MessageFormatter.usage_error("/sell", "/sell VNM 50 90000"),
+            parse_mode="HTML",
+        )
+        return
+
+    try:
+        async with async_session() as session:
+            svc = PortfolioService(session)
+            result = await svc.record_trade(
+                symbol=symbol, side="SELL", quantity=quantity,
+                price=price, trade_date=date.today(), fees=fees,
+            )
+        await update.message.reply_text(
+            MessageFormatter.trade_recorded(result), parse_mode="HTML"
+        )
+    except ValueError as e:
+        err_msg = str(e)
+        if "not found" in err_msg.lower():
+            await update.message.reply_text(
+                MessageFormatter.ticker_not_found(symbol), parse_mode="HTML"
+            )
+        else:
+            await update.message.reply_text(
+                f"⚠️ {err_msg}", parse_mode="HTML"
+            )
+
+
+async def portfolio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/portfolio — Show all holdings with P&L."""
+    async with async_session() as session:
+        svc = PortfolioService(session)
+        holdings = await svc.get_holdings()
+        summary = await svc.get_summary()
+    await update.message.reply_text(
+        MessageFormatter.portfolio_view(holdings, summary), parse_mode="HTML"
+    )
+
+
+async def pnl_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/pnl <ticker> — Detailed P&L with FIFO lot breakdown."""
+    if not context.args or len(context.args) != 1:
+        await update.message.reply_text(
+            MessageFormatter.usage_error("/pnl", "/pnl VNM"),
+            parse_mode="HTML",
+        )
+        return
+
+    symbol = context.args[0].upper().strip()
+
+    try:
+        async with async_session() as session:
+            svc = PortfolioService(session)
+            data = await svc.get_ticker_pnl(symbol)
+        await update.message.reply_text(
+            MessageFormatter.ticker_pnl(data), parse_mode="HTML"
+        )
+    except ValueError:
+        await update.message.reply_text(
+            MessageFormatter.ticker_not_found(symbol), parse_mode="HTML"
         )
