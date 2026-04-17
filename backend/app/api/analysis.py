@@ -24,6 +24,42 @@ from app.schemas.analysis import (
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 
+# --- On-Demand Single-Ticker Analysis ---
+
+@router.post("/{symbol}/analyze-now", response_model=AnalysisTriggerResponse)
+async def trigger_on_demand_analysis(
+    symbol: str,
+    background_tasks: BackgroundTasks,
+):
+    """Trigger on-demand AI analysis for a single ticker.
+
+    Used by the 'Phân tích ngay' button on ticker detail pages.
+    Primarily for HNX/UPCOM tickers not in the daily analysis schedule.
+    Runs all 4 analysis types in background.
+    """
+    # Verify ticker exists first (fail fast)
+    async with async_session() as session:
+        ticker = await _get_ticker_by_symbol(session, symbol.upper())
+        ticker_id = ticker.id
+        ticker_symbol = ticker.symbol
+
+    async def _run():
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            try:
+                service = AIAnalysisService(session)
+                result = await service.analyze_single_ticker(ticker_id, ticker_symbol)
+                logger.info(f"On-demand analysis for {ticker_symbol} complete: {result}")
+            except Exception as e:
+                logger.error(f"On-demand analysis for {ticker_symbol} failed: {e}")
+
+    background_tasks.add_task(_run)
+    return AnalysisTriggerResponse(
+        message=f"AI analysis for {ticker_symbol} triggered in background",
+        triggered=True,
+    )
+
+
 # --- Trigger Endpoints ---
 
 @router.post("/trigger/indicators", response_model=AnalysisTriggerResponse)

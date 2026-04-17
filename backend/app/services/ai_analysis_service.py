@@ -33,6 +33,7 @@ from app.models.daily_price import DailyPrice
 from app.models.financial import Financial
 from app.models.news_article import NewsArticle
 from app.models.technical_indicator import TechnicalIndicator
+from app.models.ticker import Ticker
 from app.resilience import gemini_breaker
 from app.schemas.analysis import (
     TechnicalBatchResponse,
@@ -172,7 +173,7 @@ class AIAnalysisService:
     # Public API
     # ------------------------------------------------------------------
 
-    async def analyze_all_tickers(self, analysis_type: str = "both") -> dict:
+    async def analyze_all_tickers(self, analysis_type: str = "both", ticker_filter: dict[str, int] | None = None) -> dict:
         """Run AI analysis for all active tickers.
 
         Acquires a module-level lock so that concurrent triggers (from separate
@@ -181,6 +182,8 @@ class AIAnalysisService:
         Args:
             analysis_type: 'technical', 'fundamental', 'sentiment', 'combined',
                            'both' (tech+fund only for backward compat), or 'all' (all 4 types)
+            ticker_filter: Optional dict of {symbol: ticker_id} to analyze only specific tickers.
+                          When provided, bypasses get_ticker_id_map() call.
 
         Returns: dict with results per analysis type run
         """
@@ -194,26 +197,29 @@ class AIAnalysisService:
             results: dict = {}
 
             if analysis_type in ("technical", "both", "all"):
-                results["technical"] = await self.run_technical_analysis()
+                results["technical"] = await self.run_technical_analysis(ticker_filter=ticker_filter)
 
             if analysis_type in ("fundamental", "both", "all"):
-                results["fundamental"] = await self.run_fundamental_analysis()
+                results["fundamental"] = await self.run_fundamental_analysis(ticker_filter=ticker_filter)
 
             if analysis_type in ("sentiment", "all"):
-                results["sentiment"] = await self.run_sentiment_analysis()
+                results["sentiment"] = await self.run_sentiment_analysis(ticker_filter=ticker_filter)
 
             if analysis_type in ("combined", "all"):
-                results["combined"] = await self.run_combined_analysis()
+                results["combined"] = await self.run_combined_analysis(ticker_filter=ticker_filter)
 
             return results
 
-    async def run_technical_analysis(self) -> dict:
+    async def run_technical_analysis(self, ticker_filter: dict[str, int] | None = None) -> dict:
         """Technical analysis for all tickers.
 
         Returns: {success: int, failed: int, failed_symbols: list[str]}
         """
-        ticker_service = TickerService(self.session)
-        ticker_map = await ticker_service.get_ticker_id_map()
+        if ticker_filter is not None:
+            ticker_map = ticker_filter
+        else:
+            ticker_service = TickerService(self.session)
+            ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting technical analysis for {len(ticker_map)} tickers")
 
         # Gather technical context for each ticker
@@ -241,13 +247,16 @@ class AIAnalysisService:
             batch_analyzer=self._analyze_technical_batch,
         )
 
-    async def run_fundamental_analysis(self) -> dict:
+    async def run_fundamental_analysis(self, ticker_filter: dict[str, int] | None = None) -> dict:
         """Fundamental analysis for all tickers.
 
         Returns: {success: int, failed: int, failed_symbols: list[str]}
         """
-        ticker_service = TickerService(self.session)
-        ticker_map = await ticker_service.get_ticker_id_map()
+        if ticker_filter is not None:
+            ticker_map = ticker_filter
+        else:
+            ticker_service = TickerService(self.session)
+            ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting fundamental analysis for {len(ticker_map)} tickers")
 
         # Gather fundamental context for each ticker
@@ -275,7 +284,7 @@ class AIAnalysisService:
             batch_analyzer=self._analyze_fundamental_batch,
         )
 
-    async def run_sentiment_analysis(self) -> dict:
+    async def run_sentiment_analysis(self, ticker_filter: dict[str, int] | None = None) -> dict:
         """Sentiment analysis for all tickers based on recent news.
 
         Feeds Vietnamese news titles to Gemini (no translation per CONTEXT.md).
@@ -284,8 +293,11 @@ class AIAnalysisService:
 
         Returns: {success: int, failed: int, failed_symbols: list[str]}
         """
-        ticker_service = TickerService(self.session)
-        ticker_map = await ticker_service.get_ticker_id_map()
+        if ticker_filter is not None:
+            ticker_map = ticker_filter
+        else:
+            ticker_service = TickerService(self.session)
+            ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting sentiment analysis for {len(ticker_map)} tickers")
 
         ticker_data: dict[str, dict] = {}
@@ -311,7 +323,7 @@ class AIAnalysisService:
             batch_analyzer=self._analyze_sentiment_batch,
         )
 
-    async def run_combined_analysis(self) -> dict:
+    async def run_combined_analysis(self, ticker_filter: dict[str, int] | None = None) -> dict:
         """Combined 3-dimensional recommendation for all tickers.
 
         Reads latest technical, fundamental, and sentiment analyses from ai_analyses table.
@@ -323,8 +335,11 @@ class AIAnalysisService:
 
         Returns: {success: int, failed: int, failed_symbols: list[str]}
         """
-        ticker_service = TickerService(self.session)
-        ticker_map = await ticker_service.get_ticker_id_map()
+        if ticker_filter is not None:
+            ticker_map = ticker_filter
+        else:
+            ticker_service = TickerService(self.session)
+            ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting combined analysis for {len(ticker_map)} tickers")
 
         ticker_data: dict[str, dict] = {}
@@ -353,6 +368,83 @@ class AIAnalysisService:
             analysis_type=AnalysisType.COMBINED,
             batch_analyzer=self._analyze_combined_batch,
         )
+
+    async def analyze_watchlisted_tickers(
+        self, exchanges: list[str], max_extra: int = 50
+    ) -> dict:
+        """Analyze only watchlisted tickers from given exchanges.
+
+        Per CONTEXT.md: HNX/UPCOM tickers get AI analysis only if in
+        the UserWatchlist (Telegram /watch). Capped at max_extra per day
+        to stay within Gemini 1500 RPD budget.
+
+        Args:
+            exchanges: List of exchanges to query (e.g., ["HNX", "UPCOM"])
+            max_extra: Maximum tickers to analyze (default 50)
+
+        Returns: {analyzed: int, skipped: int, exchanges: list[str]}
+        """
+        from app.models.user_watchlist import UserWatchlist
+
+        # Query active tickers in target exchanges that are in watchlist
+        stmt = (
+            select(Ticker.symbol, Ticker.id)
+            .join(UserWatchlist, UserWatchlist.ticker_id == Ticker.id)
+            .where(Ticker.exchange.in_(exchanges), Ticker.is_active == True)
+        )
+        result = await self.session.execute(stmt)
+        watchlisted = {row[0]: row[1] for row in result.fetchall()}
+
+        # Cap at max_extra
+        symbols_to_analyze = list(watchlisted.keys())[:max_extra]
+        skipped = len(watchlisted) - len(symbols_to_analyze)
+
+        if not symbols_to_analyze:
+            logger.info(f"No watchlisted tickers in {exchanges} — skipping analysis")
+            return {"analyzed": 0, "skipped": 0, "exchanges": exchanges}
+
+        logger.info(
+            f"Analyzing {len(symbols_to_analyze)} watchlisted tickers "
+            f"from {exchanges} (capped at {max_extra}, skipped {skipped})"
+        )
+
+        # Run analysis for selected tickers using existing batch method
+        ticker_id_map = {s: watchlisted[s] for s in symbols_to_analyze}
+        for analysis_type in ["technical", "fundamental"]:
+            try:
+                await self.analyze_all_tickers(
+                    analysis_type=analysis_type,
+                    ticker_filter=ticker_id_map,
+                )
+            except Exception as e:
+                logger.error(f"Failed {analysis_type} analysis for watchlisted: {e}")
+
+        return {
+            "analyzed": len(symbols_to_analyze),
+            "skipped": skipped,
+            "exchanges": exchanges,
+        }
+
+    async def analyze_single_ticker(self, ticker_id: int, symbol: str) -> dict:
+        """Run all analysis types for a single ticker (on-demand).
+
+        Used by the 'Analyze now' endpoint for HNX/UPCOM tickers
+        not in the daily schedule.
+        """
+        logger.info(f"On-demand analysis for {symbol} (id={ticker_id})")
+        ticker_filter = {symbol: ticker_id}
+        results = {}
+        for analysis_type in ["technical", "fundamental", "sentiment", "combined"]:
+            try:
+                result = await self.analyze_all_tickers(
+                    analysis_type=analysis_type,
+                    ticker_filter=ticker_filter,
+                )
+                results[analysis_type] = result
+            except Exception as e:
+                logger.error(f"On-demand {analysis_type} failed for {symbol}: {e}")
+                results[analysis_type] = {"error": str(e)}
+        return results
 
     # ------------------------------------------------------------------
     # Batching & Orchestration

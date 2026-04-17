@@ -239,7 +239,7 @@ class TestSchedulerChaining:
 
         job_ids = [job.id for job in scheduler.get_jobs()]
         assert "daily_summary_send" in job_ids
-        assert "daily_price_crawl" in job_ids  # existing job still present
+        assert "daily_price_crawl_hose" in job_ids  # staggered exchange crawl
 
         scheduler.remove_all_jobs()
         scheduler._listeners = []
@@ -261,13 +261,13 @@ class TestSchedulerChaining:
             assert "daily_signal_alert_check_triggered" in job_ids
 
     def test_price_crawl_chains_to_both_indicators_and_price_alerts(self):
-        """After price crawl, both indicator compute AND price alert check should trigger."""
+        """After UPCOM price crawl (last exchange), both indicator compute AND price alert check should trigger."""
         from app.scheduler.manager import _on_job_executed
         from apscheduler import events as aps_events
 
         mock_event = MagicMock(spec=aps_events.JobExecutionEvent)
         mock_event.exception = None
-        mock_event.job_id = "daily_price_crawl"
+        mock_event.job_id = "daily_price_crawl_upcom"
 
         with patch("app.scheduler.manager.scheduler") as mock_scheduler:
             _on_job_executed(mock_event)
