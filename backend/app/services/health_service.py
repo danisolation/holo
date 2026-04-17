@@ -1,0 +1,123 @@
+"""Health monitoring service — aggregation queries on existing data."""
+from collections import defaultdict
+from datetime import date as date_type, datetime, timedelta, timezone
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.scheduler.manager import _JOB_NAMES
+
+_STATUS_COLORS = {"success": "green", "partial": "yellow", "failed": "red"}
+
+_FRESHNESS_SOURCES = [
+    ("daily_prices", "Giá cổ phiếu", "date", 48),
+    ("technical_indicators", "Chỉ báo kỹ thuật", "date", 48),
+    ("ai_analyses", "Phân tích AI", "analysis_date", 48),
+    ("news_articles", "Tin tức", "created_at", 48),
+    ("financials", "Báo cáo tài chính", "created_at", 168),
+]
+
+
+class HealthService:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get_job_statuses(self) -> list[dict]:
+        """Latest execution per job with status color."""
+        result = await self.session.execute(
+            text(
+                "SELECT DISTINCT ON (job_id) "
+                "job_id, status, started_at, completed_at, result_summary, error_message "
+                "FROM job_executions "
+                "ORDER BY job_id, started_at DESC"
+            )
+        )
+        rows = result.fetchall()
+        jobs = []
+        for row in rows:
+            duration = None
+            if row.completed_at and row.started_at:
+                duration = (row.completed_at - row.started_at).total_seconds()
+            jobs.append({
+                "job_id": row.job_id,
+                "job_name": _JOB_NAMES.get(row.job_id, row.job_id.replace("_", " ").title()),
+                "status": row.status,
+                "color": _STATUS_COLORS.get(row.status, "red"),
+                "started_at": row.started_at.isoformat() if row.started_at else None,
+                "completed_at": row.completed_at.isoformat() if row.completed_at else None,
+                "duration_seconds": duration,
+                "result_summary": row.result_summary,
+                "error_message": row.error_message,
+            })
+        return jobs
+
+    async def get_data_freshness(self) -> list[dict]:
+        """Latest timestamp per data type with stale flags."""
+        items = []
+        now_utc = datetime.now(timezone.utc)
+        today = date_type.today()
+
+        for table, label, col, threshold_h in _FRESHNESS_SOURCES:
+            result = await self.session.execute(
+                text(f"SELECT MAX({col}) as latest FROM {table}")
+            )
+            latest = result.scalar_one_or_none()
+
+            is_stale = True
+            latest_str = None
+            if latest is not None:
+                if isinstance(latest, date_type) and not isinstance(latest, datetime):
+                    age_hours = (today - latest).days * 24
+                else:
+                    if latest.tzinfo is None:
+                        latest = latest.replace(tzinfo=timezone.utc)
+                    age_hours = (now_utc - latest).total_seconds() / 3600
+                is_stale = age_hours > threshold_h
+                latest_str = latest.isoformat()
+
+            items.append({
+                "data_type": label,
+                "table_name": table,
+                "latest": latest_str,
+                "is_stale": is_stale,
+                "threshold_hours": threshold_h,
+            })
+        return items
+
+    async def get_error_rates(self, days: int = 7) -> list[dict]:
+        """Error counts grouped by job and day over the last N days."""
+        since = now_utc = datetime.now(timezone.utc) - timedelta(days=days)
+        result = await self.session.execute(
+            text(
+                "SELECT job_id, DATE(started_at AT TIME ZONE 'UTC') as day, "
+                "COUNT(*) as total, "
+                "COUNT(*) FILTER (WHERE status = 'failed') as failed "
+                "FROM job_executions "
+                "WHERE started_at >= :since "
+                "GROUP BY job_id, day "
+                "ORDER BY job_id, day"
+            ),
+            {"since": since},
+        )
+        rows = result.fetchall()
+
+        grouped: dict[str, list[dict]] = defaultdict(list)
+        for row in rows:
+            grouped[row.job_id].append({
+                "day": row.day.isoformat(),
+                "total": row.total,
+                "failed": row.failed,
+            })
+
+        jobs = []
+        for job_id, day_items in grouped.items():
+            total_runs = sum(d["total"] for d in day_items)
+            total_failures = sum(d["failed"] for d in day_items)
+            jobs.append({
+                "job_id": job_id,
+                "job_name": _JOB_NAMES.get(job_id, job_id.replace("_", " ").title()),
+                "days": day_items,
+                "total_runs": total_runs,
+                "total_failures": total_failures,
+            })
+        return jobs
