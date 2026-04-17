@@ -41,6 +41,8 @@ class HoldingResponse(BaseModel):
     total_cost: float
     unrealized_pnl: float | None = None
     unrealized_pnl_pct: float | None = None
+    dividend_income: float = 0
+    sector: str | None = None
 
 
 class PortfolioSummaryResponse(BaseModel):
@@ -52,6 +54,7 @@ class PortfolioSummaryResponse(BaseModel):
     total_unrealized_pnl: float | None = None
     total_return_pct: float | None = None
     holdings_count: int
+    dividend_income: float = 0
 
 
 class TradeHistoryResponse(BaseModel):

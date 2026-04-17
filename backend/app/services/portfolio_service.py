@@ -14,6 +14,7 @@ from app.models.ticker import Ticker
 from app.models.trade import Trade
 from app.models.lot import Lot
 from app.models.daily_price import DailyPrice
+from app.models.corporate_event import CorporateEvent
 
 
 class PortfolioService:
@@ -146,6 +147,9 @@ class PortfolioService:
                 else None
             )
 
+            # Compute dividend income for this ticker
+            dividend_income = await self.get_dividend_income(ticker_id)
+
             holdings.append(
                 {
                     "symbol": ticker.symbol,
@@ -157,6 +161,8 @@ class PortfolioService:
                     "total_cost": round(total_cost, 2),
                     "unrealized_pnl": round(unrealized_pnl, 2) if unrealized_pnl is not None else None,
                     "unrealized_pnl_pct": unrealized_pnl_pct,
+                    "dividend_income": dividend_income,
+                    "sector": ticker.sector,
                 }
             )
 
@@ -217,6 +223,11 @@ class PortfolioService:
 
         holdings_count = len(holdings)
 
+        # Aggregate dividend income from holdings
+        dividend_income = sum(
+            h.get("dividend_income", 0) for h in holdings
+        )
+
         return {
             "total_invested": round(total_invested, 2),
             "total_market_value": total_market_value,
@@ -224,7 +235,49 @@ class PortfolioService:
             "total_unrealized_pnl": total_unrealized_pnl,
             "total_return_pct": total_return_pct,
             "holdings_count": holdings_count,
+            "dividend_income": round(dividend_income, 2),
         }
+
+    async def get_dividend_income(self, ticker_id: int) -> float:
+        """Compute total dividend income for a ticker from CASH_DIVIDEND events.
+
+        Per PORT-08: sum of dividend_amount × quantity held on record_date.
+        Joins corporate_events (CASH_DIVIDEND) with lots held before each record_date.
+        """
+        # Query CASH_DIVIDEND events for this ticker with a valid record_date
+        events_stmt = (
+            select(CorporateEvent)
+            .where(
+                CorporateEvent.ticker_id == ticker_id,
+                CorporateEvent.event_type == "CASH_DIVIDEND",
+                CorporateEvent.record_date.isnot(None),
+            )
+        )
+        events_result = await self.session.execute(events_stmt)
+        events = events_result.scalars().all()
+
+        if not events:
+            return 0.0
+
+        total_income = Decimal("0")
+
+        for event in events:
+            # Find lots held on record_date (bought on or before record_date with remaining shares)
+            lots_stmt = (
+                select(Lot)
+                .where(
+                    Lot.ticker_id == ticker_id,
+                    Lot.buy_date <= event.record_date,
+                    Lot.remaining_quantity > 0,
+                )
+            )
+            lots_result = await self.session.execute(lots_stmt)
+            lots = lots_result.scalars().all()
+
+            for lot in lots:
+                total_income += event.dividend_amount * lot.remaining_quantity
+
+        return float(total_income)
 
     async def get_trades(
         self,
