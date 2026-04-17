@@ -43,7 +43,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 
 - [x] **Phase 12: Multi-Market Foundation** — HNX/UPCOM crawling, exchange filters, tiered AI analysis (completed 2026-04-17)
 - [x] **Phase 13: Portfolio Enhancements** — Dividend tracking, performance/allocation charts, trade edit/delete, CSV import (completed 2026-04-17)
-- [ ] **Phase 14: Corporate Actions Enhancements** — Rights issues, ex-date alerts, event calendar, adjusted/raw toggle
+- [x] **Phase 14: Corporate Actions Enhancements** — Rights issues, ex-date alerts, event calendar, adjusted/raw toggle (completed 2026-04-17)
 - [ ] **Phase 15: Health & Monitoring** — Gemini usage tracking, pipeline timeline, Telegram health alerts
 - [ ] **Phase 16: Real-Time WebSocket** — WebSocket price streaming, 30s polling, market-hours auto-connect
 
@@ -98,13 +98,13 @@ Plans:
   2. User receives Telegram alerts before upcoming ex-dates for watchlisted and held tickers
   3. User can view a corporate events calendar on the dashboard filterable by event type
   4. User can toggle between adjusted and raw price display on candlestick charts
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 14-01-PLAN.md — Backend foundation: RIGHTS_ISSUE type, alert_sent column, migration, crawler update
 - [x] 14-02-PLAN.md — Ex-date alert service: Telegram alerts for upcoming ex-dates, scheduler job
 - [x] 14-03-PLAN.md — Calendar API + price toggle: corporate events endpoint, adjusted param on prices
-- [ ] 14-04-PLAN.md — Frontend: calendar page, price toggle on chart, dilution badge on holdings
+- [x] 14-04-PLAN.md — Frontend: calendar page, price toggle on chart, dilution badge on holdings
 
 **UI hint**: yes
 
@@ -138,6 +138,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 12. Multi-Market Foundation | 4/4 | Complete    | 2026-04-17 |
 | 13. Portfolio Enhancements | 5/5 | Complete    | 2026-04-17 |
-| 14. Corporate Actions Enhancements | 3/4 | In Progress|  |
+| 14. Corporate Actions Enhancements | 4/4 | Complete   | 2026-04-17 |
 | 15. Health & Monitoring | 0/? | Not started | - |
 | 16. Real-Time WebSocket | 0/? | Not started | - |
