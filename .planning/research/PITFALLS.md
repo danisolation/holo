@@ -1,334 +1,541 @@
-# Pitfalls Research
+# Domain Pitfalls: Holo v2.0
 
-**Domain:** Adding reliability, portfolio tracking, and observability features to existing VN stock intelligence platform (HOSE)
-**Researched:** 2025-07-17
-**Confidence:** HIGH (grounded in actual codebase analysis + domain knowledge)
+**Domain:** Expanding VN stock intelligence platform — multi-market, real-time, portfolio & health enhancements
+**Researched:** 2025-07-18
+**Confidence:** HIGH (grounded in actual codebase analysis of 9,400+ LOC, database schema, and scheduler architecture)
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Corporate Actions Adjusting Historical Prices Retroactively Breaks Computed Indicators and AI Analyses
-
-**What goes wrong:**
-When a stock split or bonus share event occurs (e.g., VNM 2:1 split), all historical prices before the ex-date must be retroactively adjusted. But the existing `technical_indicators` and `ai_analyses` tables were computed from **unadjusted** prices. If you adjust `daily_prices.adjusted_close` but don't recompute indicators and re-run AI analysis for affected tickers, the system has internally inconsistent data: old indicator values based on unadjusted prices, new indicator values based on adjusted prices, and AI analyses trained on mixed data.
-
-**Why it happens:**
-Developers treat price adjustment as a standalone data-fix. They update `daily_prices.adjusted_close` but forget the downstream cascade: indicators use close prices → AI analysis uses indicators → combined uses AI → signals use combined. The chain in `manager.py` (`_on_job_executed`) runs daily but doesn't have a concept of "recompute because historical data changed."
-
-**How to avoid:**
-- Store the adjustment factor per corporate action event, not just the adjusted price. This allows forward-compatible re-adjustment.
-- When a corporate action is detected/entered, trigger a **targeted recompute pipeline**: adjust prices → recompute indicators for that ticker → invalidate AI analyses for that ticker (or mark as stale).
-- Keep `close` (raw) and `adjusted_close` as separate columns (already in schema — good). ALWAYS use `adjusted_close` for indicator computation when available, fall back to `close`.
-- Add a `last_adjusted_at` timestamp to a separate `corporate_actions` table to track when adjustments were applied.
-- NEVER modify the raw `open/high/low/close` columns — keep them pristine as source-of-truth from vnstock. Only `adjusted_close` gets modified.
-
-**Warning signs:**
-- SMA(200) values for a ticker suddenly jump by the split ratio on a specific date
-- AI analysis flips from "mua" to "bán" after a split with no real market change
-- Bollinger Bands show false breakout on the ex-date
-- `adjusted_close != close` for pre-event dates but `adjusted_close IS NULL` for post-event dates — inconsistency
-
-**Phase to address:**
-Corporate Actions phase (build this BEFORE portfolio tracking, since P&L needs adjusted prices too)
+Mistakes that cause rewrites, data corruption, or system-wide failures.
 
 ---
 
-### Pitfall 2: FIFO Cost Basis with Partial Sells Creates Precision and Lot-Tracking Nightmares
+### Pitfall 1: 3.75× Ticker Expansion Exhausts Crawl Pipeline Window and Starves DB Pool
 
 **What goes wrong:**
-FIFO (First-In, First-Out) cost basis sounds simple until you hit: (a) partial sells that split a lot — you bought 500 shares, sold 300, what's the cost basis of the remaining 200?; (b) multiple buys at different prices then one large sell that spans 3 lots; (c) VND (Vietnamese Dong) has no decimal subunits — prices are in whole VND but computations create fractional cost bases when dividing across lots; (d) stock splits changing the lot sizes retroactively.
+Adding HNX (~370 stocks) and UPCOM (~900+ stocks) to HOSE (400) grows the ticker universe from 400 to ~1,500+. The current daily price crawl (`price_service.py:_crawl_batch`) processes tickers sequentially with a `crawl_delay_seconds=3.5s` gap. At 400 tickers, this takes ~23 minutes. At 1,500 tickers, it takes **~87 minutes** — nearly 1.5 hours just for OHLCV. The chained pipeline (indicators → AI → news → sentiment → combined → signals) multiplies this further. The pipeline starts at 15:30 and the daily summary sends at 16:00 — a 30-minute window that's already tight at 400 tickers. At 1,500, the pipeline won't finish before midnight.
+
+Meanwhile, the database pool (`pool_size=5, max_overflow=3`) means max 8 connections. The crawl job holds a session for the entire batch duration (87+ minutes). Aiven's limit of ~20-25 connections means the combined load of crawl + indicator compute + AI analysis + API requests + Telegram bot + WebSocket connections (v2.0) will cause connection starvation.
 
 **Why it happens:**
-Developers implement P&L as `(sell_price - avg_buy_price) * quantity` — which is average cost, not FIFO. Or they implement FIFO but only track current total position instead of individual lots. When they need to handle partial sells or corporate actions that modify lot quantities, the data model doesn't support it.
+Developers treat multi-market as "just add more tickers to the same loop." They don't realize the O(n) crawl with rate limiting means linear time growth, and the chained pipeline is sequential.
 
-**How to avoid:**
-- Model trades as a `trades` table with individual records: `{ticker_id, date, type (buy/sell), quantity, price, fees}`.
-- Model lots explicitly: a `lots` table where each buy creates a lot, and each sell consumes from the oldest open lot. Store `remaining_quantity` per lot.
-- When a sell spans multiple lots, create multiple realized P&L records — one per lot consumed.
-- Use `Numeric(18, 2)` for all money fields. The existing `Numeric(12, 2)` for daily prices is fine for VND (max ~9,999,999,999.99 VND = ~400K USD), but aggregated portfolio values and cost bases from lot splitting can be fractional and large.
-- Corporate actions must adjust lot quantities AND lot costs: a 2:1 split doubles lot quantity and halves lot cost_per_share.
-- Build a `replay_lots(ticker_id)` utility function from day one — you WILL need to recompute lots from raw trades when corporate actions are applied retroactively.
+**Consequences:**
+- Daily summary at 16:00 contains stale data (pipeline not finished)
+- API endpoints timeout waiting for DB connections during crawl window
+- Aiven connection limit reached → `TooManyConnections` errors crash the entire app
+- Circuit breaker trips on vnstock after consecutive failures, blocking ALL tickers
 
-**Warning signs:**
-- Total portfolio cost basis doesn't equal sum of individual lot cost bases
-- Selling all shares of a ticker doesn't zero out the position
-- Realized P&L numbers change when you add another buy after a sell (means lots are computed on-the-fly, not tracked)
-- Rounding errors: portfolio value off by 1-10 VND from manual calculation
+**Prevention:**
+- **Split crawl jobs per exchange**: `daily_price_crawl_hose`, `daily_price_crawl_hnx`, `daily_price_crawl_upcom` — run them in parallel or stagger start times (15:15, 15:25, 15:35)
+- **Reduce per-exchange scope**: HOSE top 400, HNX top 200, UPCOM top 200 — that's 800 total, not 1,500. UPCOM penny stocks don't need AI analysis
+- **Per-exchange circuit breakers**: Currently `vnstock_breaker` is shared. One exchange's API failure shouldn't block others. Add `vnstock_hose_breaker`, `vnstock_hnx_breaker`, `vnstock_upcom_breaker`
+- **Session-per-batch, not session-per-crawl**: The current pattern `async with async_session() as session:` in `daily_price_crawl()` holds one session for the entire run. Use shorter-lived sessions: one per batch of 50 tickers, committed and released
+- **Push daily summary to 17:00 or later**: Give pipeline room to finish at 1,500 tickers
+- **Consider raising pool_size to 7, max_overflow to 5** (total 12) if Aiven plan supports it
 
-**Phase to address:**
-Portfolio Tracking phase — get the data model right FIRST (trades + lots tables), then build P&L calculations on top. Don't try to compute FIFO from trade history on every read.
+**Detection:**
+- Daily summary contains analysis from yesterday (pipeline not finished in time)
+- `pool.checkedout()` in health endpoint consistently at max
+- Crawl job duration in `job_executions` suddenly 3-4× longer after HNX/UPCOM added
+- `CircuitOpenError` in logs for vnstock during multi-exchange crawl
+
+**Phase to address:** Multi-market coverage phase — must redesign crawl architecture BEFORE adding exchanges
 
 ---
 
-### Pitfall 3: Adding Retry/Circuit-Breaker to Existing Job Chain Without Breaking the EVENT_JOB_EXECUTED Listener
+### Pitfall 2: Trade Edit/Delete on Immutable FIFO Lots Corrupts Realized P&L
 
 **What goes wrong:**
-The current `_on_job_executed` in `manager.py` chains jobs by matching `event.job_id` strings (lines 27-89). If you add retry logic (e.g., tenacity wrapping job functions, or retry at the scheduler level), the retry mechanics interact badly with the chaining:
-1. If a job fails on attempt 1, raises, then tenacity retries it, APScheduler sees the first failure and fires `EVENT_JOB_ERROR` — the chain breaks. The retry succeeds, but no chaining happens because `_on_job_executed` only fires once.
-2. If you add a circuit breaker that short-circuits a job (returns early without raising), `_on_job_executed` fires with success, chaining the next job — but the data wasn't actually produced. Downstream jobs process stale/missing data.
-3. Adding a "dead letter" mechanism that catches failures and logs them somewhere means the exception is swallowed — APScheduler sees success, chains continue on bad data.
+The current system treats trades as **append-only** — `record_trade()` creates trades and lots, `_consume_lots_fifo()` decrements `remaining_quantity` on sells. There's no `updated_at`, no soft delete, no edit history. Adding edit/delete means:
+
+1. **Editing a BUY trade's price** requires updating `Lot.buy_price` AND recalculating every SELL trade's realized P&L that consumed from that lot
+2. **Deleting a BUY trade** whose lot is partially consumed (e.g., bought 500, sold 300 — `remaining_quantity=200`) leaves orphaned sell P&L records and 300 shares of realized P&L based on a deleted trade
+3. **Deleting a SELL trade** means restoring consumed lot quantities, but which lots? The FIFO consumption order isn't stored — `_consume_lots_fifo` modifies `remaining_quantity` in-place with no audit trail
+4. **Editing a trade's date** changes FIFO ordering — a buy that was previously the oldest lot may become the second-oldest, changing which lot gets consumed by sells
 
 **Why it happens:**
-The `EVENT_JOB_EXECUTED` listener in APScheduler 3.x fires AFTER the job function returns. It only has two states: success (no exception) or failure (exception). Retry/circuit-breaker patterns blur this binary. APScheduler 3.x has no built-in retry or circuit breaker — these are manual additions that must respect the chaining contract.
+The existing `Trade` and `Lot` models were designed for immutable append-only operations. There's no `sell_allocations` join table recording "this sell consumed X shares from lot Y at cost Z." The consumption is implicit in the `remaining_quantity` field.
 
-**How to avoid:**
-- Keep retry logic INSIDE the job functions (already partially done — `tenacity` is on `VnstockCrawler` methods). Don't wrap the job functions themselves with tenacity at the scheduler level.
-- Return a result dict from each job (already done: `{"success": N, "failed": M}`). Add a `status` field: `"complete"`, `"partial"`, `"failed"`. The chaining listener can inspect `event.retval` to decide whether to chain.
-- For circuit breaker: don't use actual circuit-breaker libraries on the job functions. Instead, implement a simple "health check before running" pattern: at the start of each chained job, verify the prerequisite data exists (e.g., `daily_indicator_compute` checks that today's prices exist before computing).
-- For dead-letter: log failed items within the job (already done in `_crawl_batch` with `failed_symbols`), but still let the job return normally with partial success so chaining continues.
-- Consider refactoring the listener-based chain into an explicit "pipeline runner" function that calls jobs sequentially with error handling — more readable and testable than event-listener spaghetti.
+**Consequences:**
+- Realized P&L becomes incorrect after editing/deleting a trade that participated in FIFO matching
+- Portfolio summary `total_realized_pnl` doesn't match sum of individual trade P&Ls
+- Selling all shares doesn't zero out position after editing buy quantities
+- User trusts incorrect P&L numbers for tax/investment decisions
 
-**Warning signs:**
-- Downstream jobs run but produce empty results (no data to process)
-- The chain stops completely after one transient failure in an upstream job
-- `daily_signal_alert_check` at the end of the chain never fires
-- Log shows "Job X failed with exception, not chaining next job" for transient errors
+**Prevention:**
+- **Add a `sell_allocations` table**: `{sell_trade_id, lot_id, quantity, realized_pnl}` — records exactly how each sell consumed lots. This is the audit trail needed for reversals.
+- **Implement lot replay**: A `replay_lots(ticker_id)` function that wipes all lots and sell_allocations for a ticker, then replays all trades in chronological order, rebuilding FIFO state. Use this after any edit/delete.
+- **Soft delete trades**: Add `deleted_at` column. Don't hard-delete — mark as deleted, then replay lots. Keep audit trail.
+- **Block editing consumed trades by default**: If a BUY lot has been partially consumed, warn the user that editing will recompute all downstream P&L. Same for deleting.
+- **Validate after replay**: After any edit/delete + replay, assert that `sum(lot.remaining_quantity * lot.buy_price) + sum(sell_allocations.realized_pnl) == sum(buy_trades) - sum(sell_trades.fees)`.
 
-**Phase to address:**
-Error Recovery phase — must be designed carefully around the existing chaining mechanism in `manager.py`.
+**Detection:**
+- `total_realized_pnl` in portfolio summary changes unexpectedly after editing an old BUY trade
+- `Lot.remaining_quantity` goes negative (should be impossible but happens without proper replay)
+- Sum of all `Lot.remaining_quantity` for a ticker doesn't match `total_buys - total_sells`
+
+**Phase to address:** Portfolio Enhancements phase — implement sell_allocations and replay BEFORE adding edit/delete
 
 ---
 
-### Pitfall 4: Vietnam Market Ex-Date and Record Date Confusion — HOSE Uses T+2 Settlement
+### Pitfall 3: WebSocket Real-Time Layer Without Message Broker Creates Memory Leaks and Event Loop Starvation
 
 **What goes wrong:**
-On HOSE, stock settlement is T+2 (you buy on day T, ownership transfers on T+2). This means:
-- **Ex-date** (ngày giao dịch không hưởng quyền): The first day a stock trades without the right to the dividend/split. Anyone buying on or after this date does NOT get the corporate action benefit.
-- **Record date** (ngày đăng ký cuối cùng): Usually 2 trading days AFTER the ex-date due to T+2 settlement (i.e., ex-date = record_date - 2 trading days). If you use the wrong date for price adjustment, you'll adjust one or two days off.
+The current architecture is a single FastAPI process with APScheduler, Telegram long-polling, and synchronous vnstock calls wrapped in `asyncio.to_thread()`. Adding WebSocket price streaming means:
 
-Many sources report the record date, and the ex-date must be derived (subtract 2 trading days, skipping weekends and holidays). HOSE publishes corporate action announcements via HoSE website with record date; the ex-date is calculated.
-
-Dividends on HOSE are announced as VND per share (e.g., 1,500 VND/share), not as percentage. Stock dividends are announced as ratio (e.g., 10:3 meaning 10 existing shares get 3 new shares). Bonus shares (thưởng) and rights issues (quyền mua) have different adjustment formulas.
+1. **Long-lived connections**: Each WebSocket client holds a connection open. Even with 1 user and 5 browser tabs, that's 5 persistent connections competing for the event loop
+2. **No pub/sub mechanism**: Without Redis/message broker, price updates must be pushed to WebSocket clients via in-memory state. The "producer" (price crawler or polling loop) must directly manage connected client lists
+3. **Event loop contention**: APScheduler jobs use `asyncio.to_thread()` for vnstock (sync) calls. These thread pool tasks, combined with WebSocket heartbeats, Telegram polling, and API requests, create event loop pressure
+4. **No VN market WebSocket source**: vnstock doesn't provide streaming data. VCI/SSI don't offer public WebSocket APIs. "Real-time" must be implemented as frequent HTTP polling (every 10-30 seconds), which is NOT the same as WebSocket streaming
+5. **DB pool exhaustion from polling**: If polling 1,500 tickers every 30 seconds, that's 50 DB writes per second (batched), consuming connections during market hours
 
 **Why it happens:**
-Developers from Western market backgrounds use ex-date directly from Yahoo Finance or similar. VN market data from vnstock may not include corporate action events at all (vnstock focuses on price/financial data). Corporate actions must be sourced separately (e.g., from CafeF, vietstock.vn, or HoSE announcements).
+"Add WebSocket" sounds like a frontend feature. In reality it requires a fundamentally different data flow: producer → message channel → consumer. Without a message broker, the producer and consumer are tightly coupled in the same process.
 
-**How to avoid:**
-- Build a `corporate_actions` table with: `{ticker_id, action_type, ex_date, record_date, ratio_numerator, ratio_denominator, cash_dividend_vnd, effective_date, source, raw_data}`.
-- For price adjustment: adjust all prices BEFORE ex_date. The ex-date price is already the post-event price (market opens adjusted on ex-date morning).
-- Cash dividend adjustment formula: `adjusted_price = close × (1 - dividend / reference_price)` where reference_price is the closing price the day before ex-date. Simple version: `adjusted_price = close - dividend_per_share` for all pre-ex-date prices.
-- Stock split/bonus adjustment formula: `adjusted_price = close × old_shares / new_shares` (e.g., for 10:3 bonus, adjust = close × 10/13).
-- Start with MANUAL entry of corporate actions (you're the sole user) rather than trying to auto-scrape. Auto-scraping corporate actions from Vietnamese sources is fragile — announcements are PDF files, Vietnamese text with inconsistent formatting.
-- Validate: after adjustment, the closing price on the day before ex-date (adjusted) should be close to the opening price on ex-date (within normal ±7% HOSE limit movement).
+**Consequences:**
+- Memory growth as WebSocket connection state accumulates (no cleanup on disconnect)
+- Event loop blocked by thread pool exhaustion → API endpoints become unresponsive
+- Phantom "real-time" that's actually 10-30 second delayed polling dressed as WebSocket
+- DB pool contention during market hours kills all other functionality
 
-**Warning signs:**
-- Price chart shows sudden 50% drops that aren't real crashes (stock split not adjusted)
-- Cost basis calculations are wildly wrong after a dividend payment
-- AI analysis triggers "mua mạnh" (strong buy) on every stock that just had a dividend cut (unadjusted price drop looks like a crash)
+**Prevention:**
+- **Accept the reality**: For a single-user app, "real-time" via WebSocket is overkill. A better approach: 30-second polling interval during market hours (9:00-11:30, 13:00-14:45 UTC+7) with React Query's `refetchInterval`, keeping the current HTTP architecture
+- **If WebSocket is truly wanted**: Use FastAPI's built-in WebSocket support with a simple in-memory `ConnectionManager` class. One background task polls vnstock every 30s, stores to DB, then broadcasts to connected clients. Limit to top 50 tickers (watchlist only), not all 1,500
+- **Separate market-hours polling from EOD pipeline**: Don't reuse the daily crawl job. Create a lightweight `market_hours_poller` that fetches only latest price (not full OHLCV history) for watchlist tickers
+- **Set explicit thread pool size**: `asyncio.get_event_loop().set_default_executor(ThreadPoolExecutor(max_workers=4))` — bound the thread pool to prevent runaway
+- **WebSocket heartbeat with timeout**: Disconnect clients that don't respond to pings within 30 seconds to prevent connection leaks
 
-**Phase to address:**
-Corporate Actions phase — the FIRST feature to build in v1.1. Everything else (portfolio P&L, AI accuracy) depends on correct price adjustments.
+**Detection:**
+- Process memory steadily increases during market hours
+- API response times spike during market hours (9:00-14:45)
+- `asyncio` warnings about slow callbacks or blocked event loop in logs
+- Health endpoint shows all DB connections checked out during market hours
+
+**Phase to address:** Real-Time phase — design the data flow architecture BEFORE implementing WebSocket endpoints
 
 ---
 
-### Pitfall 5: Gemini Structured Output Schema Drift Between Prompt and Response Model
+### Pitfall 4: Dividend Tracking on Existing Portfolio Requires Retroactive Record-Date Holdings Check
 
 **What goes wrong:**
-The existing AI service uses `response_schema` for structured output (Pydantic models like `TechnicalBatchResponse`, `FundamentalBatchResponse`, etc.). When improving prompts in v1.1:
-1. You change the prompt to ask for new fields (e.g., "confidence_reason" in addition to "score") but forget to update the Pydantic response model → Gemini may still return the field (unvalidated) or silently drop it.
-2. You change the Pydantic model to add new required fields but forget to update the prompt → Gemini invents values for fields it wasn't asked about.
-3. `gemini-2.5-flash-lite` (current model in `config.py` line 56) may interpret structured output constraints differently than `gemini-2.0-flash` — model upgrades can break response schemas.
-4. Batch responses with 25 tickers (current `gemini_batch_size` in settings) — if ONE ticker's analysis fails Pydantic validation, the entire batch response could be rejected. 25 tickers' worth of Gemini API budget lost.
+The v2.0 feature PORT-08 requires tracking dividend income on positions held at the record date. But the current portfolio system only tracks **current** holdings via `Lot.remaining_quantity > 0`. It doesn't know what you held on a specific past date because:
+
+1. `Lot.remaining_quantity` is the **current** state — it gets decremented on every sell. There's no history of what it was on a given date
+2. A user could have held 1,000 VNM on the record date (2025-03-15), sold 500 on 2025-03-20, and the current `remaining_quantity` is 500. But the dividend should be calculated on 1,000 shares
+3. The `CorporateEvent` table has `record_date` but the portfolio has no mechanism to query "what was my position on date X?"
+4. Cash dividends should NOT affect cost basis in FIFO (they're income, not capital return), but if incorrectly added as a "trade" they'll pollute the lot tracking
 
 **Why it happens:**
-The prompt text and the `response_schema` Pydantic model are defined in different parts of the code. There's no compile-time check that they're in sync. Gemini's structured output is best-effort — it tries to match the schema but can fail on complex nested structures or when the prompt contradicts the schema.
+Developers implement dividends as a new trade type (`DIVIDEND`) in the existing trades table, which creates a lot with `buy_price=0`. This corrupts FIFO ordering and average cost calculations.
 
-**How to avoid:**
-- Keep the prompt template and the response Pydantic model adjacent in code (already done — both in `ai_analysis_service.py`). Add a comment on each Pydantic field: `# Referenced in prompt as: "..."`.
-- Parse batch responses per-ticker with try/except: if one ticker fails validation, log it and continue with the rest. Don't let one bad ticker reject the whole batch.
-- Version your prompt templates (e.g., `PROMPT_V2_TECHNICAL = """..."""`) so you can A/B test old vs new.
-- When upgrading the Gemini model, run the full pipeline once manually and diff the outputs before switching the scheduled model.
-- Test with edge cases: tickers with no data, tickers with extreme values (penny stocks at 1,000 VND, blue chips at 150,000 VND), tickers with Vietnamese characters in the name.
-- Make ALL new response fields `Optional[X] = None` initially. Only make them required after confirming Gemini reliably populates them.
+**Consequences:**
+- Dividend income calculated on current holdings instead of record-date holdings → incorrect amounts
+- If dividends are modeled as trades, FIFO cost basis gets polluted (lots with buy_price=0 absorb sells)
+- Total return % is wrong because dividend income isn't captured or is double-counted
 
-**Warning signs:**
-- Batch analysis returns fewer tickers than input (some failed validation silently)
-- `raw_response` JSONB column shows fields not in the Pydantic model
-- Error rate spikes after changing the Gemini model version in settings
-- Success count drops from ~400 to ~300 after a prompt change
+**Prevention:**
+- **Separate `dividend_payments` table**: `{id, ticker_id, corporate_event_id, shares_held, amount_per_share, total_amount, record_date, payment_date}` — NOT in the trades table
+- **Point-in-time holdings query**: Build a function `get_holdings_at_date(ticker_id, date)` that replays trades up to that date to determine the position. Since trades are chronologically ordered and few in number (personal use), this is cheap to compute
+- **Auto-detect dividends**: When daily corporate action check finds a new CASH_DIVIDEND event with `record_date <= today`, check holdings at record_date and auto-create a `dividend_payment` record. Alert user via Telegram
+- **Don't modify cost basis**: Dividend payments are income, not cost reduction. Display separately in portfolio: "Total Return = Capital Gains + Dividend Income"
 
-**Phase to address:**
-AI Improvements phase — refactor prompt management with versioning and per-ticker validation before changing any prompt content.
+**Detection:**
+- Dividend income shows 0 for a stock you held at record date but sold before today
+- Average cost per share drops to nonsensical values (dividend "trade" with price=0 averaged in)
+- Portfolio P&L summary doesn't match manual calculation
+
+**Phase to address:** Portfolio Enhancements — build dividend_payments table and holdings-at-date function BEFORE dividend tracking logic
 
 ---
 
-### Pitfall 6: Database Connection Pool Exhaustion When Adding Health Monitoring and Portfolio Queries
+### Pitfall 5: Broker CSV Import Without Format Normalization Creates Duplicate and Ghost Trades
 
 **What goes wrong:**
-Current pool in `database.py`: `pool_size=5, max_overflow=3` = max 8 connections. Aiven has ~20-25 connection limit for the tier. Currently used by: daily cron jobs (1 session each, held for duration of crawl), API endpoints (1 session per request via `get_db()`), Telegram handlers (1 session per command via `async_session()`). This works at v1.0 scale.
+Vietnamese brokers (VPS, SSI, TCBS, VNDirect, MBS, DNSE) each export CSV/Excel in wildly different formats:
 
-v1.1 adds:
-- Health monitoring endpoint polling DB for data freshness, error counts, connection status
-- Portfolio queries that join trades + lots + prices + tickers (heavier queries)
-- `/portfolio` Telegram command doing the same
-- P&L computation scanning all trades and current prices
-- Daily P&L notification job (new chained job)
-- Periodic health checks
-
-Each of these acquires a session. If the health endpoint polls every 30 seconds, and a daily crawl is running (holding a session for ~13 minutes), and someone uses the Telegram bot, and the dashboard is open with React Query auto-refreshing... you hit 8 connections and new requests queue/timeout.
+1. **Date formats**: `DD/MM/YYYY` (VPS), `YYYY-MM-DD` (SSI), `DD-MM-YYYY` (MBS), Excel serial dates
+2. **Number formats**: `85,000` vs `85.000` vs `85000` (VND uses dot as thousands separator, comma as decimal — opposite of US)
+3. **Column names**: Vietnamese headers (`Ngày GD`, `Mã CK`, `KL`, `Giá`) vary between brokers
+4. **Side encoding**: `Mua`/`Bán`, `M`/`B`, `Buy`/`Sell`, `1`/`2`
+5. **Fee inclusion**: Some CSVs include fees as separate rows, some embed fees in price, some omit fees entirely
+6. **Symbol variations**: Some use `VNM`, some `VNM.HM`, some `VNM.VN`
+7. **Dividend rows**: Some brokers include dividend receipts as transactions — these are NOT trades and must be filtered out
+8. **Duplicate detection**: Importing the same CSV twice should not create duplicate trades, but without a dedup key (broker CSVs don't have unique transaction IDs), matching on `(symbol, date, side, quantity, price)` can fail if you made two identical trades on the same day
 
 **Why it happens:**
-Pool size was correctly conservative for Aiven's connection limits. But each new feature adds another concurrent session consumer. The pool doesn't grow — it was designed for v1.0's workload.
+Developers build an importer for their own broker, ship it, and then discover other broker formats are completely different. Or they skip duplicate detection assuming users won't import twice.
 
-**How to avoid:**
-- Do NOT blindly increase `pool_size` beyond 8-10 total. Aiven's connection limit is a hard ceiling.
-- Make health checks use a SEPARATE lightweight approach: a single `SELECT 1` via the existing pool (not a dedicated connection), and cache the result for 60s.
-- Ensure scheduler jobs commit and close sessions promptly. The current `async with async_session() as session:` pattern is good (auto-closes on block exit). But the 13-minute crawl job holds a session for the full duration — verify it commits per-batch (it does — `_crawl_batch` commits after each batch).
-- For portfolio P&L computation: compute once after daily crawl and CACHE the result in a `portfolio_snapshots` table, don't recompute on every API/Telegram request.
-- Add connection pool metrics to health monitoring: `engine.pool.checkedout()`, `engine.pool.checkedin()`, `engine.pool.overflow()`.
-- Consider `pool_timeout=10` (fail fast with a clear error instead of hanging when pool exhausted).
+**Consequences:**
+- Duplicated trades → doubled position → incorrect P&L
+- Wrong date parsing (DD/MM vs MM/DD) → trades on wrong dates → FIFO order corrupted
+- Dividend rows imported as BUY trades → phantom positions with price=0
+- Symbol mismatch → `ValueError: Ticker 'VNM.HM' not found` on import
 
-**Warning signs:**
-- API requests timing out during daily crawl hours (15:30-15:45 UTC+7)
-- `asyncpg.exceptions.TooManyConnectionsError` from Aiven
-- Health endpoint reports "connected" but actual queries hang
-- Telegram commands become unresponsive during crawl window
+**Prevention:**
+- **Start with ONE broker format**: Pick the broker used (likely VPS or SSI), build and test thoroughly. Add others later as separate parsers
+- **Broker-specific parser pattern**: Each broker gets a parser class with `parse(file) → list[NormalizedTrade]`. The `NormalizedTrade` has: `symbol: str, side: BUY|SELL, quantity: int, price: Decimal, trade_date: date, fees: Decimal, source_row: int`
+- **Symbol normalization**: Strip suffixes (`.HM`, `.VN`, `.HN`) before matching against `tickers.symbol`
+- **Dry-run mode**: Parse CSV and show preview of trades to be imported WITHOUT saving. User confirms before commit
+- **Dedup via import batches**: Create an `import_batches` table with `{id, filename, broker, imported_at, trade_count}`. Each trade gets `import_batch_id`. To "undo" an import, delete all trades from that batch (then replay lots)
+- **VND number parsing**: Always strip dots AND commas, then parse as integer. VN stock prices are always whole numbers (VND, no decimals)
+- **Reject rows that don't match known tickers**: Log them with row numbers for user review
 
-**Phase to address:**
-System Health phase — must measure connection usage BEFORE adding more consumers. Add pool metrics first, then add features with awareness of headroom.
+**Detection:**
+- Portfolio suddenly doubles after import (duplicate trades)
+- Trades appear in January that should be in October (DD/MM vs MM/DD confusion)
+- `Lot.remaining_quantity` goes negative after import (sell trades imported without corresponding buys)
+- Import succeeds but 30% of rows silently skipped (unmatched symbols)
+
+**Phase to address:** Portfolio Enhancements — build CSV import AFTER trade edit/delete (need undo capability for bad imports)
 
 ---
 
-### Pitfall 7: Dual Watchlist State (localStorage vs PostgreSQL) Leading to Silent Data Divergence
+## Moderate Pitfalls
+
+Mistakes that cause significant rework or degraded functionality.
+
+---
+
+### Pitfall 6: Rights Issue Tracking Requires Optional Exercise Modeling — Not Just Another Corporate Event
 
 **What goes wrong:**
-The frontend watchlist (`useWatchlistStore` in `src/lib/store.ts`) uses `zustand/persist` → localStorage. The Telegram watchlist uses `user_watchlist` table in PostgreSQL (via `/watch` and `/unwatch` commands). These are SEPARATE stores with no sync mechanism. When building portfolio tracking:
-- If the portfolio is DB-backed (it must be — trades are financial records), portfolio tickers and watchlist tickers are different concepts stored in different places.
-- User adds ticker to watchlist on dashboard (localStorage only) → expects to see it when checking Telegram `/list` → it's not there.
-- User watches a ticker on Telegram → expects dashboard to reflect it → dashboard reads localStorage, not DB.
-- Portfolio "owned tickers" becomes a THIRD source of truth for "tickers I care about."
-- Signal alerts (via `check_signal_changes`) only fire for Telegram watchlist tickers — dashboard-only watchers never get alerts.
+Rights issues are fundamentally different from dividends and stock splits:
+- Splits/dividends are **automatic** — all shareholders get the adjustment
+- Rights issues are **optional** — the shareholder CHOOSES whether to subscribe for new shares at a discount price
+- The dilution impact depends on whether you exercise or not
+- The cost basis of new shares from rights is the subscription price, NOT the market price
+
+Developers add `RIGHTS_ISSUE` as another `event_type` in `CorporateEvent` and try to handle it like stock dividends. But without tracking whether the user exercised, the system can't correctly compute position size or cost basis.
 
 **Why it happens:**
-v1.0 made a reasonable decision (noted in PROJECT.md Key Decisions as "⚠️ Revisit"): localStorage for single-user dashboard speed, DB for Telegram bot. But portfolio tracking makes the DB the authoritative source for financial data. The split creates confusion about which list drives what.
+Corporate action code (`corporate_action_service.py`) uses a uniform `adjust_ticker()` pattern: fetch events → compute factors → adjust prices. Rights issues don't fit this pattern because the adjustment depends on user action.
 
-**How to avoid:**
-- Migrate the dashboard watchlist to DB-backed. Single-user means the API is simple: `GET/POST/DELETE /api/watchlist` with no auth. Keep zustand store for client-side caching, but sync from DB on load.
-- Clearly separate concepts in the data model: `user_watchlist` = monitoring list (for alerts and tracking), `portfolio_holdings` (computed from `trades` table) = ownership. You might watch VNM without owning it, and own HPG without having it on your watchlist.
-- OR: keep localStorage watchlist as a "dashboard view filter" (purely cosmetic) and make Telegram watchlist + portfolio holdings the functional data sources. But document this clearly.
+**Prevention:**
+- **Model rights issues with user interaction**: Add `exercised: bool | None` field to rights events. `None` = pending (within subscription period), `True` = exercised, `False` = lapsed
+- **Auto-create BUY trade on exercise**: When user marks a rights issue as exercised, automatically create a BUY trade at the subscription price for the correct quantity
+- **Price adjustment only if needed**: The reference price adjustment on ex-date happens regardless of individual exercise — this is a market-wide adjustment. But the user's position size only changes if they exercise
+- **Show pending rights in portfolio view**: "You have rights to buy 200 VNM @ 50,000 VND (deadline: 2025-08-15)" — separate from regular holdings
+- **For v2.0, keep it simple**: Track the event + auto-alert via Telegram. Let user manually `/buy` if they exercise. Don't automate the exercise modeling yet
 
-**Warning signs:**
-- Dashboard watchlist shows different tickers than Telegram `/list`
-- Adding a trade for a ticker doesn't add it to any watchlist automatically
-- User confusion about "why doesn't my portfolio ticker show up in signal alerts?"
+**Detection:**
+- Position size wrong after rights ex-date (applied dilution without exercise)
+- Cost basis includes subscription price for unexercised rights
+- Adjusted prices over-correct for rights issues (treating them like stock dividends)
 
-**Phase to address:**
-Portfolio Tracking phase — unify watchlist to DB as a prerequisite step before building portfolio tables.
+**Phase to address:** Corporate Actions Enhancements — implement AFTER basic corporate actions are solid
 
-## Technical Debt Patterns
+---
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Compute FIFO P&L on every request instead of caching | No cache invalidation logic needed | O(n) scan of all trades per request; gets slow as trade count grows | Never for portfolio summary; acceptable for single-ticker detail view with <20 trades |
-| Manual corporate action entry only (no auto-scraper) | No fragile scraper to maintain | Must remember to enter events; missed events corrupt data silently | Acceptable for personal use — you'll see the price chart anomaly and fix it. Add a weekly "unadjusted price anomaly" check. |
-| Hardcoded Gemini model name in `settings.gemini_model` | Simple config | Model deprecation breaks everything overnight; no fallback | Acceptable but add a startup health check that sends a dummy prompt to verify the model works |
-| `asyncio.to_thread()` for vnstock sync calls | Works, non-blocking | Each call occupies a thread from the default ThreadPoolExecutor (max ~32 threads on most systems) | Acceptable for 400 tickers with 3.5s delays between calls; would break if calls were parallelized |
-| Single `_gemini_lock` for all analysis types | Prevents rate limit hits | Serializes ALL Gemini calls — a manual trigger via API blocks until the daily batch finishes (can be 30+ minutes for all 4 analysis types) | Acceptable for single-user but be aware: new portfolio-specific Gemini calls will also queue behind this lock |
-| Event-listener job chaining instead of explicit pipeline | Works with APScheduler's built-in event system | Hard to test, hard to add branching/retry logic, job ID string matching is fragile | Consider refactoring to explicit pipeline runner in Error Recovery phase |
+### Pitfall 7: Adjusted/Raw Price Toggle Breaks Indicator Consistency on Chart
 
-## Integration Gotchas
+**What goes wrong:**
+CORP-09 adds a toggle on the candlestick chart to switch between adjusted and raw prices. But the technical indicators (SMA, Bollinger, MACD, RSI) in the existing `technical_indicators` table were computed from a specific price series. If indicators were computed from `close` (raw), toggling the chart to show `adjusted_close` creates a visual mismatch: the candlesticks show adjusted prices but the SMA overlays show raw-price-based moving averages.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| **APScheduler 3.x + retry** | Wrapping job functions with tenacity at the scheduler level, causing APScheduler to see the initial failure and fire `EVENT_JOB_ERROR` before retry completes | Keep retry INSIDE job functions. Job function should catch all exceptions internally and return result dict. Only `raise` for truly unrecoverable errors that should break the chain. |
-| **APScheduler `add_job` in listener** | Adding a job from `_on_job_executed` without `replace_existing=True` raises `ConflictingIdError` if the job ID exists from a previous run | Already handled correctly (all chained jobs use `replace_existing=True`) — preserve this pattern for any new chained jobs. |
-| **asyncpg + SQLAlchemy lazy loading** | Accessing lazy-loaded relationships after session close or in a different async context | Current config uses `expire_on_commit=False` (good). For new portfolio joins (trades → lots → ticker), use `selectinload()` or `joinedload()` to eagerly load related objects within the session context. |
-| **vnstock + corporate actions** | Expecting vnstock to provide adjusted prices or corporate action data | vnstock provides raw/unadjusted prices only (confirmed in `vnstock_crawler.py` line 62: "No adjusted_close — vnstock returns UNADJUSTED prices only"). Corporate action data must come from a separate source (manual entry, CafeF, or HoSE website). |
-| **Gemini 15 RPM + new portfolio analysis** | Adding portfolio-specific Gemini calls (e.g., "analyze my portfolio risk") that compete with the daily 400-ticker batch analysis | All Gemini calls already go through `_gemini_lock`. New portfolio analysis must also acquire this lock. Better: queue portfolio analysis as a chained job AFTER the daily pipeline completes, not during. |
-| **Partitioned `daily_prices` + new JOINs** | Writing queries that JOIN `daily_prices` to `trades` or `lots` without a date-range WHERE clause | Always include `WHERE daily_prices.date >= X` in JOINs involving `daily_prices`. Without it, PostgreSQL scans ALL year partitions. This is invisible during development with small data but devastating in production with 2+ years of data. |
-| **Telegram bot + heavy commands** | Creating `/portfolio` handler that does heavy P&L computation synchronously in the handler function, blocking the bot's polling loop | Keep handler lightweight: read pre-computed data from DB, format message, reply. If computation is heavy, reply with "⏳ Đang tính toán..." then use `asyncio.create_task()` to compute and edit the message when done. |
-| **Alembic + partitioned tables** | Using `alembic revision --autogenerate` which doesn't understand PostgreSQL partitioning — may try to recreate `daily_prices` as a regular (non-partitioned) table | Write partition-aware migrations manually for any `daily_prices` schema changes. Autogenerate is safe for new tables (`trades`, `lots`, `corporate_actions`). |
-| **loguru + health metrics** | Parsing loguru log output to extract error counts for the health dashboard | Don't parse logs for metrics. Add explicit counters (a simple in-memory dict, or `collections.Counter`) that track success/failure per job per day. Health endpoint reads counters directly. Logs are for humans, counters are for code. |
-| **vnstock freemium migration** | Continuing to crawl 400 tickers daily without checking if vnstock restricts free-tier usage | Monitor vnstock changelog and PyPI releases. The `vnai` telemetry dependency is already concerning (noted in STACK.md). If free tier is restricted, fallback options: reduce to top-100 tickers, increase `crawl_delay_seconds`, or call VCI API directly (vnstock's underlying source). |
+The existing chart (`candlestick-chart.tsx`) overlays SMA 20/50/200 and Bollinger Bands from `indicatorData`. These indicator values are fetched from the backend's `technical_indicators` table. There's no separate set of "adjusted indicators."
 
-## Performance Traps
+**Why it happens:**
+The toggle is implemented as a frontend-only feature (swap `d.close` for `d.adjusted_close` in chart data), but nobody adjusts the indicator overlays to match.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Computing P&L from full trade history on every API request | Portfolio endpoint latency grows linearly with trade count | Pre-compute P&L after daily price update; store in `portfolio_snapshots` table. API reads cached snapshot. | After ~200-500 trades per ticker, or ~50 total tickers with trades |
-| Health endpoint running `COUNT(*)` on `daily_prices` for freshness check | Query takes 2-5 seconds on partitioned table | Use `SELECT MAX(date) FROM daily_prices WHERE date >= CURRENT_DATE - 7` (partition-pruned) or maintain a `crawl_status` summary row updated by the crawl job. | Immediately — `COUNT(*)` on partitioned table is always slow |
-| Frontend polling health endpoint every 5 seconds via React Query | Consumes DB pool connections, adds latency to all other queries | Set `staleTime: 60000` and `refetchInterval: 60000` in React Query for health data. Health doesn't need real-time freshness. | When multiple dashboard tabs are open simultaneously |
-| Recomputing ALL 400 tickers' indicators when one corporate action adjusts prices | Indicator computation takes 5-10 minutes for all tickers | Only recompute indicators for the AFFECTED ticker. The `IndicatorService.compute_for_ticker()` method already exists — use it for targeted recomputation. | After any corporate action event |
-| N+1 queries in Telegram `/list` and `/portfolio` | Each watched ticker triggers 2 separate queries (analysis + price), visible as 40+ DB queries for 20 tickers | Batch queries: fetch all prices and analyses for the ticker list in one query each using `WHERE ticker_id IN (...)`. The existing `/list` handler (lines 134-183 of `handlers.py`) has this N+1 problem already. | Noticeable with >10 watched tickers |
+**Consequences:**
+- SMA lines don't align with candlestick bodies in adjusted mode (SMA computed from raw prices is higher/lower than adjusted candlesticks)
+- Bollinger Bands appear to have false breakouts in adjusted mode
+- User makes trading decisions based on visually inconsistent data
 
-## UX Pitfalls
+**Prevention:**
+- **Option A (simple, recommended for v2.0)**: When toggling to adjusted prices, HIDE indicator overlays. Show a note: "Chỉ báo kỹ thuật chỉ hiển thị trên giá gốc" (Indicators only shown on raw prices). This is honest and avoids confusion
+- **Option B (complex)**: Compute indicators from both raw and adjusted prices, store separately, and fetch the matching set based on toggle state. Doubles indicator storage and computation time — overkill for personal use
+- **Option C (middle ground)**: Recompute indicators client-side from the adjusted price series using a lightweight JS library. SMA and Bollinger are simple enough to compute in the browser from the price array
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Portfolio shows unrealized P&L based on yesterday's close without labeling the reference date | User thinks P&L is real-time; makes decisions on stale data | Always show "Giá tham chiếu: [date]" next to P&L. Color-code or dim stale data (>1 trading day old). |
-| Corporate action adjusts chart silently — price history changes shape without explanation | User sees chart change and thinks it's a bug or data corruption | Show annotation markers on candlestick charts at ex-dates (lightweight-charts supports markers). Tooltip: "Chia cổ tức 1,500 VND/cp" |
-| Daily P&L Telegram notification with absolute number only | "+2,500,000 VND" is meaningless without portfolio size context | Always show: absolute gain + percentage gain + total portfolio value. Format: "+2.5M VND (+1.2%) · Tổng: 210M VND" |
-| Health dashboard showing raw error counts instead of error rates | "47 errors" sounds alarming; "47/16,000 = 0.3% error rate" is routine | Show error rate (errors/total), not just absolute count. Include time window: "0.3% (24h)" |
-| Trade entry requiring manual price lookup | User must alt-tab to find the exact execution price for a past trade | Auto-fill price from `daily_prices.close` for the trade date. Allow override for exact execution price. Show "Giá đóng cửa: 85,200 VND" as default. |
-| Telegram `/portfolio` response for 20+ positions exceeds 4096-char limit | Message gets truncated or fails to send silently | Top-5 positions by value, then "... và N vị thế khác · Tổng: X VND". Link to dashboard for full view. |
+**Detection:**
+- SMA 200 line is 5-10% above candlestick high on tickers with recent splits (adjusted prices lower, SMA from raw prices higher)
+- User reports "BB kênh quá rộng" (BB bands too wide) in adjusted mode
 
-## "Looks Done But Isn't" Checklist
+**Phase to address:** Corporate Actions Enhancements — define the toggle behavior BEFORE implementing the frontend switch
 
-- [ ] **Corporate actions — price adjustment:** Works for splits → but did you also adjust `lots` table quantities and cost basis? A 2:1 split means each lot now has 2× shares at ½ cost per share.
-- [ ] **Corporate actions — indicator cascade:** Adjusted `adjusted_close` → but did you recompute `technical_indicators` for that ticker? Old RSI/MACD values are based on unadjusted prices.
-- [ ] **FIFO P&L — partial sells:** Realized P&L correct for full sells → but does it handle partial sells that split a lot? And does `remaining_quantity` on the lot update correctly?
-- [ ] **FIFO P&L — sell spanning lots:** Selling 700 shares when you have lots of 500 + 300 → does it consume 500 from lot 1 and 200 from lot 2, creating two realized P&L records?
-- [ ] **Portfolio value — dividend income:** Shows capital gains → but does total return include cash dividends received? Total return = capital gains + dividends.
-- [ ] **Error recovery — chain continuity:** Jobs retry on failure → but does the `_on_job_executed` chain still work after a successful retry? Test: mock vnstock to fail 2×, succeed on 3rd. Verify indicators still compute via chaining.
-- [ ] **Health monitoring — weekend awareness:** Shows data freshness → but does it distinguish "no crawl today" (Saturday/Sunday/holiday) vs "crawl failed" (Monday error)? HOSE doesn't trade weekends or VN holidays.
-- [ ] **AI prompts — regression testing:** New prompt produces better output for test cases → but did you verify it doesn't REGRESS on cases the old prompt handled well? Run both on the same 25-ticker sample and diff.
-- [ ] **Health monitoring — pool metrics:** Shows "DB connected" → but does it show how many connections are in use vs available? Pool exhaustion looks like "connected" on health check but hangs on real queries.
-- [ ] **Telegram /portfolio — zero holdings:** User sold all shares → does it show realized P&L for closed positions, or does it say "Chưa có vị thế nào"? Should show historical P&L.
+---
 
-## Recovery Strategies
+### Pitfall 8: Pipeline Timeline Visualization Requires Explicit Pipeline Run ID — Current Chaining Has No Concept of a "Run"
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Wrong corporate action applied (bad ratio) | MEDIUM | 1. Delete/correct the corporate action record. 2. Revert `adjusted_close` by recalculating from raw `close` + corrected factors. 3. Recompute indicators for affected ticker via `compute_for_ticker()`. 4. AI analyses regenerate on next daily run (or trigger manually). |
-| FIFO lots out of sync with trades | HIGH | 1. Delete all lot records for affected ticker. 2. Replay all trades in chronological order to rebuild lots (requires `replay_lots()` utility). 3. Recompute realized P&L from rebuilt lots. Build this replay function from day one. |
-| Daily chain completely broken (no data for 3 days) | LOW | 1. Trigger manual backfill for missing days via existing `/api/backfill` endpoint. 2. Manual trigger indicator compute via `/api/crawl/indicators`. 3. Manual trigger AI analysis. Chain self-heals on next successful `daily_price_crawl`. |
-| Connection pool exhausted | LOW | 1. Restart FastAPI process (clears pool). 2. Check Aiven console for leaked/idle connections. 3. Add `pool_recycle=300` to engine config to auto-close stale connections. 4. Review which processes are holding sessions too long. |
-| Gemini model deprecated / API changed | MEDIUM | 1. Update `gemini_model` in `.env` to new model name. 2. Run one batch manually via API trigger to verify structured output still parses. 3. If schema changed, update Pydantic response models in `schemas/analysis.py`. |
-| vnstock free tier restricted | HIGH | 1. Reduce crawl to top-100 tickers by market cap. 2. Increase `crawl_delay_seconds`. 3. If fully blocked: extract VCI API endpoints from vnstock source code and call them directly. 4. Long term: evaluate paid data providers. |
+**What goes wrong:**
+HEALTH-09 wants a Gantt-style pipeline timeline showing each step's duration. But the current job chaining (`manager.py:_on_job_executed`) is implicit — when `daily_price_crawl` finishes, it triggers `daily_indicator_compute` via `scheduler.add_job()`. Each job creates its own `job_executions` row independently. There's no shared `pipeline_run_id` linking them.
 
-## Pitfall-to-Phase Mapping
+To build a timeline, you need to query: "Show me all jobs that ran as part of the pipeline triggered at 15:30 on 2025-07-18." Currently, you'd have to infer this from timestamps (find a price crawl that finished around X, then an indicator compute that started around X+1 second, etc.). This is fragile — manual triggers, retries, and overlapping runs make timestamp-based inference unreliable.
 
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Price adjustment cascade (Pitfall 1) | Corporate Actions | After adjusting a test ticker, verify indicators recomputed and chart looks correct. Compare adjusted chart with CafeF's adjusted chart for same ticker. |
-| FIFO lot tracking (Pitfall 2) | Portfolio Tracking | Unit test: buy 500 @ 80K, buy 300 @ 85K, sell 600 → verify lot 1 consumed (500), lot 2 partially consumed (100 remaining at 85K), two realized P&L records created. |
-| Retry breaking chain (Pitfall 3) | Error Recovery | Integration test: mock vnstock to fail 2× then succeed. Verify full chain completes (prices → indicators → AI → news → sentiment → combined → alerts). |
-| VN market ex-date confusion (Pitfall 4) | Corporate Actions | Manual test: enter a known historical corporate action (find a VNM or FPT 2024 event). Verify adjusted chart aligns with TradingView or CafeF. |
-| Gemini schema drift (Pitfall 5) | AI Improvements | Before deploying new prompt: run old and new prompts on same 25-ticker batch. Diff outputs. Verify all fields parse into Pydantic model. |
-| Connection pool exhaustion (Pitfall 6) | System Health | Stress test: start daily crawl + hit health endpoint in a loop + trigger Telegram commands simultaneously. Monitor `engine.pool.status()`. |
-| Dual watchlist divergence (Pitfall 7) | Portfolio Tracking | After DB migration: verify Telegram `/list` and dashboard watchlist show identical tickers. Add a simple sync-check endpoint. |
-| N+1 queries in Telegram handlers | Portfolio Tracking | Benchmark: `/list` with 20 tickers should be <500ms. If >1s, batch queries are needed. |
-| Health endpoint performance | System Health | Health endpoint should respond in <200ms even during active crawl. If slower, caching or query optimization needed. |
+**Why it happens:**
+The EVENT_JOB_EXECUTED chaining was designed for reliability (if price crawl succeeds, trigger indicators), not observability. Adding observability after the fact requires threading context through the chain.
 
-## VN Market-Specific Gotchas
+**Prevention:**
+- **Add `pipeline_run_id` to `job_executions`**: UUID generated at the start of the first job in a chain (daily_price_crawl). Passed through the chain via a context mechanism
+- **Pass context via scheduler job kwargs**: When chaining, pass the pipeline_run_id: `scheduler.add_job(func, kwargs={"pipeline_run_id": run_id})`
+- **Modify each job function signature**: Add optional `pipeline_run_id: str | None = None` parameter. If present, store it in the job_execution row
+- **Frontend timeline**: Query `job_executions WHERE pipeline_run_id = X ORDER BY started_at`, render as horizontal bars on a time axis
+- **Handle orphans**: Manual triggers don't have a pipeline_run_id — show them as standalone in the timeline
 
-These are specific to HOSE/VN market and NOT generalizable from US/EU market experience:
+**Detection:**
+- Timeline visualization shows disconnected bars with no relationship
+- Cannot answer "how long did today's full pipeline take?" without manual timestamp math
 
-| Gotcha | Impact | Mitigation |
-|--------|--------|------------|
-| **VND has no decimal subunits** — prices are whole numbers (e.g., 85,000 VND), but per-share cost basis from lot splitting creates fractional VND | P&L rounding errors accumulate over many trades | Use `Numeric(18, 2)` for cost basis internally. Round final P&L display to whole VND (`ROUND(x, 0)`). Document the rounding policy. |
-| **HOSE trading hours: 9:00-11:30 & 13:00-14:45 ICT** — there's a mandatory lunch break | Health monitoring "no data" alarms during lunch break are false positives | Health check must know the HOSE trading schedule including the lunch gap. Don't alarm on missing data between 11:30-13:00 ICT. |
-| **Vietnamese holidays differ from Western** — Tết Nguyên Đán (Lunar New Year) is 5-9 days off, plus many other national holidays | Missing crawl on holidays isn't an error, but system may treat multi-day gaps as failures | Maintain a HOSE holiday calendar (or heuristic: if vnstock returns empty for ALL tickers, it's likely a holiday). Don't treat holiday gaps as crawl failures. |
-| **Tick sizes on HOSE** — 10 VND for <10K, 50 VND for 10K-50K, 100 VND for >50K stocks | Price alerts set at non-tick-aligned prices will never trigger exactly | Use `>=`/`<=` for alert triggers (already done with direction-based checking). For trade entry: validate price aligns with tick size, or at minimum warn. |
-| **Floor/ceiling price limits: ±7% on HOSE** | Stock can't move more than 7% in one day; corporate actions on ex-date can look like limit hits | When a corporate action adjusts the reference price, the visible intraday movement on ex-date can trigger false "floor hit" alerts. Filter out ex-date from anomaly detection. |
-| **VN stocks trade in lots of 100 shares (lô chẵn)** on HOSE main board | Invalid trade quantities entered in portfolio | Add validation on trade entry: `quantity % 100 == 0` for HOSE stocks. Odd lots (lô lẻ) trade on a separate mechanism at worse prices — warn if entered. Allow override for odd-lot trades. |
-| **vnstock 3.x freemium migration** — vnstock maintainers may restrict free tier API calls | Daily crawl of 400 tickers (400+ API calls) may exceed future free tier limits | Monitor vnstock releases and changelogs. The `vnai` telemetry dependency is a signal of commercial direction. Have a fallback: reduce ticker count, switch to direct VCI API, or cache aggressively. |
-| **Dividend payment delay** — dividends announced with ex-date but paid weeks/months later | Portfolio "dividend income" should distinguish announced vs received | Store both `ex_date` and `payment_date` in corporate actions table. Show "pending dividends" separately from "received dividends" in P&L. For simplicity in v1.1: count dividends as income on ex-date (standard accounting practice for individual investors). |
-| **Rights issues (quyền mua) are NOT free** — unlike bonus shares, rights issues give the right to BUY at a discounted price | Treating rights issues as bonus shares would overstate portfolio value | Rights issues require separate handling: the adjustment factor accounts for the dilution, and if the user exercises the rights, it's a new BUY trade at the subscription price. Track whether rights were exercised or sold. |
+**Phase to address:** Health Enhancements — add pipeline_run_id to schema BEFORE building the timeline UI
+
+---
+
+### Pitfall 9: Telegram Health Notifications Become Spam Without Dedup and Cooldown
+
+**What goes wrong:**
+HEALTH-10 adds Telegram notifications for health issues (stale data, failed jobs, degraded status). Combined with the existing ERR-05 (failure alerts), the bot can bombard the user:
+- Daily crawl partial failure → ERR-05 alert
+- Indicators fail (chained from partial crawl) → another alert
+- AI analysis fails → another alert
+- Health check detects stale data → health notification
+- That's 4 messages within minutes about the same root cause
+
+The existing `_on_job_error` in `manager.py` fires on every `EVENT_JOB_ERROR` with no dedup. Adding health notifications multiplies this.
+
+**Why it happens:**
+Each notification source (job failure, health check, pipeline status) is implemented independently without awareness of what other sources have already reported.
+
+**Consequences:**
+- User mutes the Telegram bot due to notification fatigue → misses real critical alerts
+- Bot hits Telegram's rate limits (30 messages/second per chat, but sustained bursts trigger throttling)
+- Same root cause generates 5+ messages
+
+**Prevention:**
+- **Notification cooldown**: Track last notification time per category. Don't send another `job_failure` notification within 30 minutes of the last one. Store in-memory dict: `{category: last_sent_time}`
+- **Aggregate pipeline failures**: If price crawl partially fails AND downstream jobs fail, send ONE summary: "🔴 Pipeline 15:30: crawl partial (5 failed), indicators skipped, AI skipped" instead of 3 separate messages
+- **Health notification schedule**: Don't trigger health notifications on every health check. Run a periodic (hourly) health summary check. Only send if status changed from healthy → degraded or degraded → critical
+- **Priority levels**: CRITICAL (complete pipeline failure, all data stale) = always send. WARNING (partial failure) = max 1 per hour. INFO (recovered) = once when status returns to healthy
+- **Add `/health` Telegram command**: Let user pull health status on-demand instead of pushing every issue
+
+**Detection:**
+- Telegram bot sends >5 messages in 10 minutes about different symptoms of the same problem
+- User reports bot is "too noisy" and mutes it
+- Telegram API returns 429 (rate limited) in bot logs
+
+**Phase to address:** Health Enhancements — design notification aggregation BEFORE implementing individual notification triggers
+
+---
+
+### Pitfall 10: Gemini API Usage Tracking Must Intercept the SDK — Not Just Count Requests
+
+**What goes wrong:**
+HEALTH-08 wants to track Gemini API usage (tokens, requests) against free tier limits. But the Gemini free tier limits are:
+- 15 RPM (requests per minute) — already managed via `gemini_delay_seconds=4.0`
+- **1 million tokens per minute** and **1,500 requests per day** (for gemini-2.0-flash)
+- Token usage varies per request (prompt size depends on number of tickers in batch, news article lengths, indicator data)
+
+Simply counting requests isn't enough — you need actual token counts from Gemini's response metadata. The `google-genai` SDK returns `usage_metadata` on each response with `prompt_token_count`, `candidates_token_count`, and `total_token_count`.
+
+Developers often build a counter that increments on each API call but doesn't capture actual token usage. The counter shows "142 requests today" but not "847,000 / 1,000,000 tokens used this minute."
+
+**Why it happens:**
+Token tracking requires intercepting the response object at the point of API call, not just counting function invocations.
+
+**Prevention:**
+- **Wrap Gemini calls with usage extraction**: In `ai_analysis_service.py`, after each `client.models.generate_content()` call, extract `response.usage_metadata` and log/store token counts
+- **Create `gemini_usage_log` table**: `{id, timestamp, request_type (technical/fundamental/sentiment/combined), prompt_tokens, completion_tokens, total_tokens, model}`
+- **Aggregate in health endpoint**: Sum tokens in current minute (RPM check), sum requests today (daily limit check), show as percentage of limit
+- **Alert when approaching limit**: At 80% of daily request limit, send Telegram warning. At 90%, switch to reduced-scope analysis (skip UPCOM tickers)
+- **Don't track in real-time for dashboard**: The health dashboard can query the usage_log table on page load. No need for live WebSocket updates of API usage
+
+**Detection:**
+- Usage tracker shows "150 requests" but Gemini returns 429 (actual usage higher due to retries not counted)
+- Token usage spikes after adding HNX/UPCOM tickers (more tickers per batch = more prompt tokens)
+
+**Phase to address:** Health Enhancements — add usage extraction to Gemini service BEFORE building the dashboard widget
+
+---
+
+## Minor Pitfalls
+
+Issues that cause friction, bugs, or technical debt but don't require rewrites.
+
+---
+
+### Pitfall 11: Exchange Filter on Dashboard Requires Backend Changes — Not Just Frontend Filtering
+
+**What goes wrong:**
+MKT-02 adds exchange filter to the dashboard. The current `tickers.py:list_tickers` endpoint has sector filtering but no exchange filtering. The current `tickers.py:market_overview` endpoint returns all active tickers with no exchange filter. The frontend `ticker-search.tsx` searches all tickers.
+
+Developers implement exchange filtering purely on the frontend: fetch all 1,500 tickers, filter in JavaScript. At 1,500 tickers, the `market-overview` endpoint (which uses a window function over `daily_prices`) becomes slow — the `ROW_NUMBER() OVER (PARTITION BY ticker_id ORDER BY date DESC)` subquery scans all 1,500 tickers' prices.
+
+**Prevention:**
+- Add `exchange: str | None = Query(None)` parameter to `/tickers/` and `/tickers/market-overview` endpoints
+- Filter in SQL: `WHERE tickers.exchange = :exchange` — let PostgreSQL optimize the join
+- Add index on `tickers.exchange` (not currently indexed, only `symbol` has a unique index)
+- Frontend: exchange filter as tabs (HOSE | HNX | UPCOM | All), default to "All" or user's last selection (zustand store)
+
+**Detection:**
+- Dashboard takes 3+ seconds to load market overview after adding HNX/UPCOM
+- Frontend renders 1,500 heatmap cells → browser lag
+
+**Phase to address:** Multi-market coverage — add backend filtering in the same phase as exchange support
+
+---
+
+### Pitfall 12: Performance Chart (PORT-09) Requires Daily Portfolio Snapshots — Can't Compute Retroactively from Trades Alone
+
+**What goes wrong:**
+PORT-09 wants a portfolio value-over-time chart. To plot "my portfolio was worth X on date Y," you need the market prices of all held tickers on each historical date. Computing this retroactively means: for every date in the range, determine holdings-at-date (replay trades), look up closing prices for each held ticker on that date, multiply and sum.
+
+For a 1-year chart with 250 trading days and 10 holdings, that's 2,500 price lookups. This is doable but slow — and the query would be a nightmare of cross-joins between trades, lots, and daily_prices.
+
+**Why it happens:**
+Developers try to compute the chart data on-the-fly from raw trades and prices. This works for small portfolios but is fragile and slow.
+
+**Prevention:**
+- **Create `portfolio_snapshots` table**: `{id, date, total_market_value, total_cost, total_realized_pnl, total_unrealized_pnl, holdings_json}`. One row per trading day
+- **Daily snapshot job**: After the daily summary at 16:00, compute current portfolio state and insert a snapshot. This is cheap (one query for current holdings + latest prices)
+- **Backfill on demand**: When user first views the chart, compute snapshots retroactively for the past year. Cache the result. This is a one-time cost
+- **Chart renders from snapshots**: Simple `SELECT date, total_market_value FROM portfolio_snapshots ORDER BY date` — fast, no complex joins
+- **Use Recharts line chart**: Already in the stack (`recharts ~3.x`). Simple `<LineChart>` with date on X-axis, value on Y-axis
+
+**Detection:**
+- Performance chart API endpoint takes >5 seconds to respond
+- Chart shows gaps on dates when no trades occurred (but portfolio still had value)
+
+**Phase to address:** Portfolio Enhancements — create snapshot table and daily job BEFORE building the chart component
+
+---
+
+### Pitfall 13: Allocation Pie Chart (PORT-10) Needs Sector Data on Holdings — Current Holdings Query Doesn't Include It
+
+**What goes wrong:**
+PORT-10 wants portfolio allocation by sector/ticker. The current `get_holdings()` in `portfolio_service.py` returns `symbol`, `name`, `quantity`, `avg_cost`, `market_price`, `market_value`, `unrealized_pnl` — but NOT `sector` or `exchange`. To build a sector pie chart, the frontend needs sector data.
+
+The `Ticker` model has `sector` and `industry` columns. But the holdings query only fetches `Ticker.symbol` and `Ticker.name` in the N+1 inner loop (line 120-124 of `portfolio_service.py`).
+
+**Prevention:**
+- Add `sector`, `industry`, and `exchange` to the holdings response
+- Refactor the N+1 query in `get_holdings()`: instead of querying `Ticker` per row inside the loop, join `Lot` with `Ticker` in the initial aggregate query using `select(...).join(Ticker, Lot.ticker_id == Ticker.id)`
+- This also fixes a latent performance issue — the current code does one DB query per holding inside a loop
+- Pie chart: use Recharts `<PieChart>` with data grouped by sector. Show "Unclassified" for tickers without sector data
+
+**Detection:**
+- Allocation chart shows "Unknown" for all sectors
+- Holdings API response time increases linearly with number of holdings (N+1 queries)
+
+**Phase to address:** Portfolio Enhancements — refactor holdings query BEFORE building allocation chart
+
+---
+
+### Pitfall 14: Ex-Date Alerts (CORP-07) Fire Too Late If Checked After Market Close
+
+**What goes wrong:**
+CORP-07 sends Telegram alerts for upcoming corporate action ex-dates. The current `daily_corporate_action_check` runs as part of the post-market pipeline chain (triggered after price crawl at ~15:30). But ex-date alerts need to fire BEFORE the ex-date, not on the ex-date.
+
+If a stock has ex-date tomorrow (2025-07-19) and the alert fires today at 16:00 (2025-07-18), that's fine. But if the corporate event was just crawled today, the system needs to immediately check for upcoming ex-dates within the next N days.
+
+The current `corporate_event_crawler.py:crawl_all_tickers()` fetches events but doesn't trigger alerts — it just stores them.
+
+**Prevention:**
+- **Separate alert check from event crawling**: After new events are stored, scan for events with `ex_date BETWEEN today AND today + 5 days` and send alerts
+- **Run alert check twice**: Once after corporate event crawl (catch newly discovered events), and once in the morning (8:30 AM) as a "today's ex-dates" reminder
+- **Track sent alerts**: Add `alert_sent_at` column to `corporate_events` table (or a separate `sent_alerts` table). Don't send the same alert twice
+- **Include actionable info**: "⚠️ VNM — Ex-date cổ tức tiền mặt: 2025-07-19 (ngày mai). Cần mua TRƯỚC ngày hôm nay để nhận quyền."
+
+**Detection:**
+- User learns about ex-date from the market (stock price drops) before receiving the alert
+- Duplicate alerts for the same event on consecutive days
+
+**Phase to address:** Corporate Actions Enhancements — implement alert tracking table alongside the alert logic
+
+---
+
+### Pitfall 15: Event Calendar View (CORP-08) Date Range Query on Unindexed ex_date Column
+
+**What goes wrong:**
+CORP-08 adds an event calendar showing corporate actions. The calendar needs efficient queries like `SELECT * FROM corporate_events WHERE ex_date BETWEEN '2025-07-01' AND '2025-07-31'`. The current `corporate_events` table has a unique constraint on `(ticker_id, event_type, ex_date)` and on `event_source_id`, but `ex_date` alone is not indexed.
+
+At 1,500 tickers × 5-10 events each = 7,500-15,000 rows. PostgreSQL will do a sequential scan for date range queries without an index on `ex_date`.
+
+**Prevention:**
+- Add index: `CREATE INDEX ix_corporate_events_ex_date ON corporate_events (ex_date)`
+- Calendar API endpoint: `GET /corporate-actions/calendar?start=2025-07-01&end=2025-07-31` returns events grouped by date
+- Frontend: Use a lightweight calendar component or a simple date-grouped list (not a full calendar library — overkill for corporate events)
+- Include exchange filter for multi-market: `WHERE ex_date BETWEEN :start AND :end AND ticker_id IN (SELECT id FROM tickers WHERE exchange = :exchange)`
+
+**Detection:**
+- Calendar page takes 1+ second to load (sequential scan on 15K rows)
+- EXPLAIN ANALYZE shows `Seq Scan on corporate_events` instead of `Index Scan`
+
+**Phase to address:** Corporate Actions Enhancements — add migration for index in same phase as calendar endpoint
+
+---
+
+### Pitfall 16: vnstock Freemium Model May Rate-Limit HNX/UPCOM Differently
+
+**What goes wrong:**
+The PROJECT.md notes vnstock is "moving to freemium model." The current `crawl_delay_seconds=3.5` was tuned for 400 HOSE tickers on VCI source. With HNX/UPCOM added:
+- vnstock may impose different rate limits per exchange
+- The VCI source may not support HNX/UPCOM tickers (VCI = Vietnam Credit Information, primarily HOSE)
+- The `vnstock_breaker` circuit breaker shares state across all exchanges — one exchange's rate limit trips the breaker for all
+- vnstock 3.5.1 `vnai` telemetry dependency may phone home with usage data, triggering quota checks
+
+**Prevention:**
+- **Test HNX/UPCOM fetching before committing to the architecture**: Run `Quote("PVS").history(start="2025-01-01")` for an HNX ticker and `Quote("BSR").history(start="2025-01-01")` for UPCOM in a test script. Verify the VCI source returns data
+- **If VCI doesn't support HNX/UPCOM**: May need SSI source — `vnstock.explorer.ssi.quote.Quote` — which has different rate limits and response format
+- **Per-exchange rate limit configuration**: `crawl_delay_hose=3.5`, `crawl_delay_hnx=5.0`, `crawl_delay_upcom=5.0` — start conservative for new exchanges
+- **Monitor vnstock changelog**: Pin to 3.5.1 but watch for 3.6.x releases that may change API behavior or add freemium restrictions
+- **Have a fallback**: If vnstock blocks heavy usage, the VNDirect REST API (already used for corporate events) also has OHLCV endpoints. Build the crawler abstraction to support multiple data sources
+
+**Detection:**
+- HNX/UPCOM crawl returns empty DataFrames or raises `KeyError`
+- Rate limit errors spike after adding new exchanges
+- vnstock raises new authentication/subscription errors after update
+
+**Phase to address:** Multi-market coverage — validate data source compatibility FIRST, before building multi-exchange crawl jobs
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Multi-market coverage (HNX/UPCOM) | **Pitfall 1** (crawl time explosion), **Pitfall 16** (vnstock source compatibility), **Pitfall 11** (backend filtering needed) | Validate vnstock HNX/UPCOM support first. Split crawl per exchange. Add exchange filter to all API endpoints. Limit to top N per exchange. |
+| Real-time WebSocket | **Pitfall 3** (no message broker, event loop contention) | Consider enhanced polling (30s React Query refetchInterval) instead of true WebSocket. If WebSocket needed, use in-memory ConnectionManager with watchlist-only scope. |
+| Dividend tracking | **Pitfall 4** (record-date holdings check) | Build `dividend_payments` table and `get_holdings_at_date()` function. Do NOT model dividends as trades. |
+| Performance chart | **Pitfall 12** (retroactive computation) | Build `portfolio_snapshots` table with daily snapshot job. Backfill on first view. |
+| Allocation chart | **Pitfall 13** (missing sector in holdings) | Refactor holdings query to JOIN Ticker for sector data. Fix N+1 query pattern. |
+| Trade edit/delete | **Pitfall 2** (FIFO lot corruption) | Add `sell_allocations` table. Implement lot replay. Soft delete trades. |
+| Broker CSV import | **Pitfall 5** (format chaos, duplicates) | One broker first. Dry-run preview. Import batch tracking. Symbol normalization. |
+| Gemini usage tracking | **Pitfall 10** (need SDK response interception) | Extract `usage_metadata` from Gemini responses. Store in `gemini_usage_log` table. |
+| Pipeline timeline | **Pitfall 8** (no pipeline run ID) | Add `pipeline_run_id` to `job_executions`. Pass through job chain. |
+| Telegram health notifications | **Pitfall 9** (notification spam) | Cooldown per category. Aggregate pipeline failures. Priority levels. |
+| Rights issue tracking | **Pitfall 6** (optional exercise modeling) | Keep simple: track event + alert. Let user manually /buy on exercise. |
+| Ex-date alerts | **Pitfall 14** (timing, dedup) | Morning alert check. Track sent alerts. Actionable Vietnamese messages. |
+| Event calendar | **Pitfall 15** (unindexed ex_date) | Add index on ex_date. Calendar API with date range and exchange filter. |
+| Adjusted/raw price toggle | **Pitfall 7** (indicator mismatch) | Hide indicators in adjusted mode, or compute client-side. |
+
+---
+
+## Integration Risk: Compound Effect of All v2.0 Features
+
+The biggest meta-pitfall is attempting all v2.0 features simultaneously. Each feature alone is manageable, but the compound effect creates emergent risks:
+
+| Compound Risk | Features Involved | Why Dangerous |
+|---------------|-------------------|---------------|
+| DB pool exhaustion | Multi-market + WebSocket + all enhanced queries | 1,500 tickers × longer crawls + persistent WS connections + snapshot queries + usage logging = pool starvation |
+| Pipeline time explosion | Multi-market + AI analysis + corporate actions for all | 1,500 tickers × (crawl + indicators + AI + corporate actions) = 3-4 hour pipeline |
+| Gemini quota exhaustion | Multi-market + AI analysis | 1,500 tickers at 25/batch = 60 batches × 4 analysis types = 240 Gemini calls/day. Free tier is 1,500/day. Add retries and you're at 50%+ quota. |
+| Telegram message flood | Ex-date alerts + health notifications + portfolio P&L + daily summary | 5-10 messages/day per feature = 20-40 messages/day |
+| Migration complexity | All new tables + columns + indexes | 5+ Alembic migrations that must be applied in order with data backfill |
+
+**Mitigation:** Implement features in strict dependency order. Multi-market first (affects everything downstream). Portfolio enhancements second (independent from market coverage). Health enhancements third (observes the expanded system). Corporate actions enhancements last (builds on both market and portfolio).
+
+---
 
 ## Sources
 
-- **Codebase analysis:** All backend modules reviewed — `main.py`, `database.py`, `config.py`, `scheduler/manager.py`, `scheduler/jobs.py`, all models, all services, all crawlers, all telegram handlers
-- **Specific code references:**
-  - `manager.py` lines 17-89: Job chaining via `_on_job_executed` event listener
-  - `vnstock_crawler.py` line 62: "No adjusted_close — vnstock returns UNADJUSTED prices only"
-  - `database.py` lines 5-11: Connection pool `pool_size=5, max_overflow=3`
-  - `config.py` line 56: `gemini_model = "gemini-2.5-flash-lite"`
-  - `store.ts`: Zustand localStorage-based watchlist (separate from DB)
-  - `daily_price.py` line 32: `adjusted_close` column already exists as nullable
-  - PROJECT.md Key Decisions: localStorage watchlist marked "⚠️ Revisit"
-- **VN market rules:** HOSE T+2 settlement, ±7% price limits, 100-share lots, tick sizes — standard publicly available HOSE trading regulations
-- **Confidence:** HIGH for codebase-grounded pitfalls (verified against actual code lines). MEDIUM for VN market specifics (domain knowledge; specific 2025 HOSE rule changes not verified against official HoSE website).
-
----
-*Pitfalls research for: Holo v1.1 — Reliability & Portfolio features*
-*Researched: 2025-07-17*
+- Codebase analysis: `backend/app/` (models, services, crawlers, scheduler, telegram, api)
+- Database schema: `models/daily_price.py`, `models/trade.py`, `models/lot.py`, `models/corporate_event.py`
+- Pipeline architecture: `scheduler/manager.py`, `scheduler/jobs.py`
+- Connection pool config: `database.py` (pool_size=5, max_overflow=3)
+- Frontend components: `components/candlestick-chart.tsx`, `components/holdings-table.tsx`
+- vnstock crawler: `crawlers/vnstock_crawler.py` (VCI source, exchange map)
+- Corporate event crawler: `crawlers/corporate_event_crawler.py` (VNDirect REST API)
+- Gemini integration: `services/ai_analysis_service.py` (batch size, delay, structured output)
+- v1.0/v1.1 pitfalls: `.planning/research/PITFALLS.md` (prior research)
+- Confidence: HIGH — all pitfalls derived from actual code patterns and database schema, not theoretical

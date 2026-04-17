@@ -1,350 +1,581 @@
-# Feature Landscape — v1.1 Reliability & Portfolio
+# Feature Landscape — v2.0 Full Coverage & Real-Time
 
-**Domain:** Stock Intelligence Platform — v1.1 Milestone Features
-**Researched:** 2026-04-16
-**Overall Confidence:** HIGH (based on codebase analysis, vnstock API inspection, VN market domain knowledge)
+**Domain:** Stock Intelligence Platform — v2.0 Expansion Features
+**Researched:** 2026-04-17
+**Overall Confidence:** HIGH (based on existing codebase analysis, vnstock 3.5.1 source inspection, VN market domain knowledge)
 
-**Context:** v1.0 shipped with data pipeline (400 HOSE tickers OHLCV + financials), 4-type AI analysis (technical + fundamental + sentiment + combined), Telegram bot (7 commands), and Next.js dashboard (charts, heatmap, watchlist). This research covers ONLY the v1.1 features.
-
----
-
-## 1. Corporate Actions Handling
-
-### Table Stakes
-
-Features required for data integrity. Without these, historical analysis and portfolio P&L are unreliable.
-
-| Feature | Why Expected | Complexity | Dependency | Notes |
-|---------|--------------|------------|------------|-------|
-| **Fetch corporate events from VCI** | vnstock `Company.events()` returns `OrganizationEvents` with `eventTitle`, `eventListCode`, `ratio`, `value`, `recordDate`, `exrightDate`, `issueDate`, `publicDate` — this is our data source | Low | Existing `VnstockCrawler` | Add `fetch_events(symbol)` method; same `asyncio.to_thread()` pattern as existing crawler. VCI GraphQL returns events per ticker. |
-| **Corporate actions DB table** | Store events to track what's been processed and avoid re-applying adjustments | Low | Alembic migration | Table: `corporate_actions` with fields: `ticker_id`, `event_type` (enum: cash_dividend, stock_dividend, bonus_shares, rights_issue, stock_split, reverse_split), `ex_date`, `record_date`, `ratio`, `value`, `is_processed`, `raw_data` (JSONB) |
-| **Cash dividend tracking** | Most common corporate action on HOSE. Companies pay 1-4 times/year. Typical VN format: "500 đồng/cổ phiếu" (VND per share). Price drops by dividend amount on ex-date. | Med | Corporate actions table | Store `value` field from VCI events. On ex-date, historical `adjusted_close` should reflect the dividend drop. VN dividends are always in VND (not %). |
-| **Stock dividend / bonus shares** | Very common on HOSE — companies issue free shares (e.g., ratio 10:1 = 1 bonus share per 10 held). Price adjusts proportionally on ex-date. | Med | Corporate actions table | VCI `ratio` field contains the issuance ratio. Adjustment factor = `old_shares / (old_shares + new_shares)`. |
-| **Stock split handling** | Less common than bonus shares on HOSE but happens. E.g., 1:2 split — price halves, shares double. | Med | Corporate actions table | Mechanically identical to bonus shares from an adjustment perspective. `ratio` from VCI encodes the split factor. |
-| **Historical price adjustment (adjusted_close)** | The `adjusted_close` column already exists in `daily_prices` (currently NULL per line 30-32 of daily_price.py). Populate it using cumulative adjustment factors from all corporate actions. | High | All corporate action types parsed | **Critical**: Must apply adjustments cumulatively from newest to oldest. Adjustment factor compounds: if a stock had a 2:1 split AND a 10:1 bonus, the adjustment factor for prices before both events is `(1/2) * (10/11)`. Recalculate for all historical prices per ticker. |
-| **Daily corporate actions check** | Crawl events on schedule to detect new corporate actions; process and adjust prices automatically. | Med | Scheduler (APScheduler), crawl job chain | Add to daily pipeline chain after `daily_price_crawl`. Or run weekly — events are announced days/weeks before ex-date. |
-
-### Differentiators
-
-| Feature | Value Proposition | Complexity | Dependency | Notes |
-|---------|-------------------|------------|------------|-------|
-| **Rights issue tracking** | Track rights offerings (phat hanh them cho co dong hien huu). Less frequent but impacts dilution and portfolio value. | Med | Corporate actions table | VCI events include rights issues. Ratio + exercise price stored. Does NOT auto-adjust prices (rights have optional exercise). |
-| **Corporate action Telegram alerts** | Notify via Telegram when a watched ticker has upcoming ex-date. | Low | Corporate actions table + Telegram bot | Scan for upcoming ex-dates (e.g., within next 7 days) during daily pipeline. |
-| **Event calendar on dashboard** | Show upcoming corporate actions on a timeline/calendar view for watchlist tickers. | Med | Corporate actions API endpoint + frontend | Useful for planning trades around ex-dates. |
-| **Adjusted vs raw price toggle on chart** | Let user switch between raw OHLCV and adjusted prices in candlestick chart. | Low | `adjusted_close` populated + frontend toggle | Use lightweight-charts `setData()` to swap series. Small UX win. |
-
-### Anti-Features
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Auto-adjust prices from external adjusted data** | vnstock returns UNADJUSTED prices only (confirmed in crawler line 62). Don't try to fetch pre-adjusted data from a paid source. | Calculate adjusted prices ourselves from corporate events — we have the data from VCI `OrganizationEvents`. |
-| **Real-time corporate action detection** | Corporate actions are announced days/weeks in advance. Real-time is unnecessary and wastes API calls. | Daily or weekly scan is sufficient. |
-| **Handling warrants/convertible bonds** | Out of scope — project covers 400 HOSE stock tickers only. | Ignore non-stock corporate actions. |
-
-### Vietnam-Specific Notes (HOSE Corporate Actions)
-
-**Key terms:**
-- **Ngay GDKHQ** (Ngay giao dich khong huong quyen) = Ex-right date — the day trading WITHOUT the right
-- **Ngay chot quyen** (Record date) = Who gets the dividend/bonus
-- **T+2 settlement**: VN market uses T+2. Ex-date is typically 2 business days before record date.
-- **Co tuc tien mat** = Cash dividend (always in VND per share, not percentage)
-- **Co tuc co phieu** = Stock dividend / bonus shares (ratio format: 10:1 = 1 new per 10 held)
-- **Tach co phieu** = Stock split (ratio format: 1:2 = 1 old becomes 2 new)
-- **Phat hanh them** = Rights issue (ratio + exercise price)
-
-**VCI `eventListCode` mapping** (inferred from GraphQL schema):
-The `eventListCode` and `eventListName`/`en_EventListName` fields categorize the event type. Common codes include cash dividends, stock dividends, bonus shares, and rights offerings. Map these to our enum during crawl.
-
-**Adjustment formula:**
-```
-For cash dividend of D VND per share on ex-date E:
-  adjustment_factor = (close_before_ex - D) / close_before_ex
-
-For stock dividend/split with ratio N:M (M new shares per N held):
-  adjustment_factor = N / (N + M)
-
-Cumulative: multiply all factors for events AFTER a given date
-adjusted_close = raw_close * cumulative_factor
-```
+**Context:** v1.0 + v1.1 shipped with: 400 HOSE ticker OHLCV crawling, 12 technical indicators + Gemini AI scoring, CafeF news + 3D recommendations, Telegram bot (10 commands), Next.js dashboard, error recovery (circuit breakers, DLQ, auto-retry), corporate actions (splits, dividends, bonus shares, adjusted prices), portfolio (buy/sell, FIFO lots, realized/unrealized P&L), AI improvements (system_instruction, few-shot, scoring rubric), health dashboard, and Telegram portfolio commands. This research covers ONLY v2.0 NEW features.
 
 ---
 
-## 2. Portfolio Tracking
+## Table Stakes
 
-### Table Stakes
+Features users expect given existing v1.x functionality. Missing = platform feels incomplete.
 
-| Feature | Why Expected | Complexity | Dependency | Notes |
-|---------|--------------|------------|------------|-------|
-| **Manual trade entry (buy/sell)** | Core of any portfolio tracker. Enter: ticker, quantity, price, date, side (buy/sell), fees/commission. | Med | New `trades` table + API endpoints | Single-user, no auth needed. Telegram `/buy VNM 100 82000` and dashboard form both write to same table. VN brokers charge 0.15-0.25% commission (configurable). |
-| **Holdings view (current positions)** | Show aggregated current holdings: ticker, quantity, avg cost, current price, market value, unrealized P&L, P&L %. | Med | `trades` table + `daily_prices` | Aggregate from trades using cost-basis method. Display on dashboard and via Telegram `/portfolio`. |
-| **FIFO cost basis** | Standard method in VN for individual investors. First shares bought = first shares sold. | Med | `trades` table, ordered by date | Track remaining lot quantities. When selling, consume oldest lots first. Update avg cost on remaining holdings. |
-| **Realized P&L** | Show profit/loss on closed positions. Realized when shares are sold. | Med | FIFO lot matching | `realized_pnl = sell_price * qty - cost_basis_of_lots_consumed - fees`. Track per-trade and aggregate. |
-| **Unrealized P&L** | Show paper profit/loss on open positions using latest market price. | Low | Holdings + latest `daily_prices.close` | `unrealized_pnl = (current_price - avg_cost) * remaining_qty`. Updates daily after price crawl. |
-| **Portfolio summary (total value, total P&L)** | Aggregate: total invested, total market value, total realized, total unrealized, total return %. | Low | Holdings + realized P&L | Simple aggregation. Core metric for `/portfolio` command. |
-| **Trade history** | View list of all entered trades with date, ticker, side, qty, price, fees, P&L (if sell). | Low | `trades` table + API | Sortable/filterable table on dashboard. |
+| Feature | Why Expected | Complexity | Req ID | Notes |
+|---------|--------------|------------|--------|-------|
+| Exchange filter on dashboard | Users seeing 1700 tickers need filtering by HOSE/HNX/UPCOM | Low | MKT-02 | Ticker model already has `exchange` column; add query param + UI tabs |
+| Trade edit for mistakes | Manual trade entry will have typos; no edit = frustration | Med | PORT-11 | Only safe for unconsumed BUY trades or latest trades; FIFO chain complicates arbitrary edits |
+| Trade delete for mistakes | Same as edit — correcting errors is basic functionality | Med | PORT-11 | Must recalculate FIFO lots after delete; restrict to most-recent or unconsumed trades |
+| Adjusted/raw price toggle | Platform computes adjusted_close but never shows it on chart | Low | CORP-09 | `adjusted_close` column exists in `daily_prices`; frontend just needs toggle + API param |
+| Telegram health alerts on errors | v1.1 only alerts on complete job failure; stale data silently degrades | Low | HEALTH-10 | Extend existing ERR-05 pattern; add periodic health check job |
+| Ex-date alerts for held positions | Platform tracks corporate events + portfolio but doesn't connect them | Med | CORP-07 | Join corporate_events.ex_date with lots.ticker_id WHERE remaining_quantity > 0 |
 
-### Differentiators
+## Differentiators
 
-| Feature | Value Proposition | Complexity | Dependency | Notes |
-|---------|-------------------|------------|------------|-------|
-| **Dividend income tracking** | Track cash dividends received on held positions. VN dividends are significant (3-8% yield common). | Med | Corporate actions + holdings snapshot at record date | On dividend record date, calculate: `dividend_income = shares_held * dividend_per_share`. Requires knowing holdings AT record date, not just current. Store in `portfolio_dividends` table. |
-| **Portfolio P&L on Telegram** | `/portfolio` full summary. `/pnl VNM` for specific ticker. Daily notification with portfolio change. | Med | Portfolio service + Telegram handlers | High personal utility — see P&L without opening dashboard. Daily P&L change notification at 16:00 alongside daily summary. |
-| **Position-aware AI alerts** | When AI generates a signal change for a ticker you HOLD (not just watch), elevate alert priority. | Low | Holdings + existing signal alert check | Cross-reference holdings with signal changes. Enhances existing `daily_signal_alert_check` job. |
-| **Portfolio performance chart** | Line chart showing portfolio total value over time. | Med | Daily portfolio snapshot table | Requires storing daily portfolio value snapshots. Use Recharts (already in stack) for the chart. |
-| **Portfolio allocation pie chart** | Show sector/ticker allocation breakdown. | Low | Holdings + ticker.sector | Use Recharts pie chart. Simple aggregation from holdings x current price. |
-| **Trade edit/delete** | Ability to correct mistakes in trade entry. | Low | CRUD on `trades` table | Essential for personal use — will make entry errors. Recalculates P&L after edit. |
+Features that set the platform apart from basic stock trackers. Not expected, but valued.
 
-### Anti-Features
+| Feature | Value Proposition | Complexity | Req ID | Notes |
+|---------|-------------------|------------|--------|-------|
+| Multi-market HNX/UPCOM crawling | ~1300 additional tickers; covers entire VN stock market | Med-High | MKT-01 | vnstock already supports all exchanges via VCI; complexity is in scale (3x crawl time, 3x AI cost) |
+| WebSocket real-time streaming | Intraday price visibility during market hours (9:00-14:30 ICT) | High | RT-01, RT-02 | No free VN market WebSocket exists; implement as FastAPI WS endpoint polling VCI at 30s intervals |
+| Dividend income tracking | Shows actual cash returns from held positions, not just capital gains | Med | PORT-08 | Cross-reference CorporateEvent (CASH_DIVIDEND) at record_date with Lot holdings; new table needed |
+| Portfolio performance chart | Visual P&L over time; most compelling portfolio view | Med | PORT-09 | Compute daily portfolio value from trades + daily_prices; recharts LineChart (already installed) |
+| Portfolio allocation chart | Visual breakdown by ticker/sector | Low | PORT-10 | Holdings data already computed; recharts PieChart already used in dashboard; straightforward |
+| Broker CSV import | Bulk import trades from VN broker export files | Med-High | PORT-12 | Each VN broker (SSI, VNDirect, TCBS, VCBS) has unique format; need per-broker parsers |
+| Gemini API usage tracking | Visibility into free-tier consumption to avoid surprise throttling | Med | HEALTH-08 | Parse `usage_metadata` from Gemini responses; new tracking table; usage vs limits dashboard |
+| Pipeline execution timeline | Gantt-style visualization of daily job chain | Med | HEALTH-09 | job_executions already has started_at/completed_at; custom frontend rendering needed |
+| Rights issue tracking | Complete corporate action coverage; VN market has frequent rights issues | Med | CORP-06 | New event type RIGHTS_ISSUE; dilution calculation; user decision tracking (exercise/lapse) |
+| Event calendar view | Visual upcoming corporate events with date-based navigation | Med | CORP-08 | API + frontend list component grouped by week; filter by held tickers |
+
+## Anti-Features
+
+Features to explicitly NOT build.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Broker API integration / auto-import trades** | VN broker APIs are not standardized, most don't offer them publicly. High complexity, fragile. | Manual entry via Telegram bot and dashboard form. |
-| **Multi-currency / multi-market portfolio** | Project scope is HOSE only, VND only. | Hardcode VND. No currency conversion. |
-| **Tax calculation module** | VN stock capital gains tax is 0.1% of sell value (flat rate). Not worth building a full tax module. | Show total sell value x 0.1% as a line item if needed. |
-| **Options / derivatives tracking** | Out of scope — HOSE stocks only. | Ignore. |
-| **Weighted average cost (WAC)** | FIFO is standard for VN individual investors and simpler to implement. | Use FIFO only. |
-| **Portfolio import from CSV/Excel** | Premature optimization for single user with maybe 20-50 trades. | Manual entry is fine. Add import later if pain point emerges. |
-
-### Data Model Notes
-
-```
-trades table:
-  id, ticker_id, trade_date, side (buy/sell), quantity, price,
-  fees, notes, created_at
-
-portfolio_holdings (materialized view or computed):
-  ticker_id, total_quantity, avg_cost, total_invested
-
-portfolio_daily_snapshot (for performance chart):
-  date, total_value, total_cost, realized_pnl, unrealized_pnl
-
-portfolio_dividends:
-  id, ticker_id, record_date, dividend_per_share, shares_held,
-  total_amount, corporate_action_id
-```
+| True exchange WebSocket feed | VN exchange WebSocket APIs (SSI, TCBS) require broker registration, API keys, have strict rate limits, are unstable | Poll VCI via vnstock at 30s intervals; push to frontend via FastAPI WebSocket. "Near-real-time" sufficient for personal use |
+| Universal CSV parser with AI | Using AI to auto-detect CSV columns is over-engineered and error-prone for financial data | Build explicit parsers for top 4 VN brokers (SSI, VNDirect, TCBS, VCBS) + manual column mapping fallback |
+| FullCalendar-style calendar | Heavy library for a single-user view of ~10-20 events/month | Simple list view grouped by week with date badges; use existing shadcn/ui components |
+| Real-time portfolio P&L updates | Combining WebSocket prices with portfolio recalculation adds latency and complexity | Update portfolio P&L on page load using latest daily_prices; WebSocket feeds chart only |
+| Multi-exchange simultaneous AI analysis | Running AI on 1700 tickers at 15 RPM free tier = 113 minutes of Gemini calls | Analyze only HOSE + watchlisted HNX/UPCOM tickers daily; full HNX/UPCOM analysis weekly or on-demand |
+| Automatic rights issue exercise recording | Auto-recording buys for exercised rights requires knowing user intent | Show rights issue alert with "exercise" button that pre-fills /buy command with subscription price |
+| Portfolio value snapshot table | Storing daily snapshots of portfolio value is wasteful for single user with <20 holdings | Compute on-the-fly: for each date, recalculate total value from trades + daily_prices |
+| Trade edit for any historical trade | Editing a BUY that has been partially sold via FIFO breaks the entire P&L chain | Only allow editing most recent trade, or unconsumed BUY trades. For older trades: delete + re-enter |
 
 ---
 
-## 3. AI Prompt Improvements
+## Detailed Feature Specifications
 
-### Table Stakes
+### MKT-01: Multi-Market Crawling (HNX/UPCOM)
 
-| Feature | Why Expected | Complexity | Dependency | Notes |
-|---------|--------------|------------|------------|-------|
-| **System instruction (persona)** | Move the "You are a Vietnamese stock market analyst" text from the user prompt to Gemini's `system_instruction` parameter. Produces more consistent persona behavior. Currently baked into every prompt. | Low | `_call_gemini()` method | `google-genai` supports `system_instruction` in `GenerateContentConfig`. Separate concerns: system = who you are, user = what to analyze. |
-| **Few-shot examples in prompts** | Add 1-2 concrete examples of ideal output for each analysis type. Dramatically improves output consistency. | Low | Prompt builder methods | Add a `## Example` section with one ticker analysis example. Keep brief — don't bloat token count (400 tickers x 25/batch = 16 batches). |
-| **Explicit scoring rubric** | Current prompts say "score 1-10" but don't define what each number means. Model interprets inconsistently. | Low | Prompt builder methods | Define clear score anchors. Reduces score clustering around 5-7 (common LLM behavior). |
-| **Price context in technical prompts** | Current technical prompt sends indicators but NOT the actual price. Model can't assess "price is at SMA(200) support" without knowing the price. | Low | `_get_technical_context()` | Add `latest_close`, `price_vs_sma20_pct`, `price_vs_sma50_pct` to context. Already available from `daily_prices` table. |
-| **Vietnamese consistency in combined prompts** | Technical + fundamental prompts use English reasoning; sentiment + combined use Vietnamese. Be explicit about language choice in prompt. | Low | Prompt builder methods | Keep English for tech/fund (Gemini more reliable in English for financial terms), Vietnamese for combined/sentiment only. |
+**How it works in existing codebase:**
+- `VnstockCrawler.fetch_listing(exchange)` already accepts exchange param
+- `_EXCHANGE_MAP = {"HOSE": "HSX", "HNX": "HNX", "UPCOM": "UPCOM"}` already defined in `vnstock_crawler.py`
+- `Quote(symbol)` fetches OHLCV for any symbol regardless of exchange — VCI is exchange-agnostic
+- `Ticker.exchange` column exists with `server_default="HOSE"`
+- `Listing().symbols_by_exchange()` returns ALL exchanges in one API call (VCI: `/price/symbols/getAll`)
+- VCI const `_GROUP_CODE` includes 'HOSE', 'HNX', 'UPCOM' (verified in vnstock source)
 
-### Differentiators
+**HNX vs HOSE vs UPCOM differences:**
+- HNX: ~380 stocks, smaller market cap, different tick sizes (100-500 VND steps), same trading hours (9:00-14:30)
+- UPCOM: ~900 stocks, unlisted/registration trading, lower liquidity, same hours
+- VCI data source treats all identically — same REST API, same OHLCV format, same response schema
+- Corporate events via VNDirect API also cover HNX/UPCOM (same endpoint, filter by ticker code)
+- Indicators + AI analysis use same formulas regardless of exchange
 
-| Feature | Value Proposition | Complexity | Dependency | Notes |
-|---------|-------------------|------------|------------|-------|
-| **Structured output validation + retry** | When `response.parsed` returns None (already has JSON fallback), retry the exact same prompt once instead of just falling back to manual parse. | Low | `_analyze_*_batch()` methods | Already partially implemented (JSON fallback exists). Add: if both fail, retry API call once with `temperature=0.1`. |
-| **Analysis quality tracking** | Log distribution of scores, signal types, reasoning length per batch. Detect drift: if all tickers suddenly score 5-6. | Med | Logging + optional analytics table | Store structured data. Alert if median score shifts >1.5 points vs 7-day average. |
-| **Confidence calibration guidelines** | Combined analysis confidence clusters around 5-7. Add explicit negative examples: "Do NOT give 8+ when sentiment data is missing." | Low | `_build_combined_prompt()` | Refine existing confidence rules. |
-| **Sector-relative context** | Add sector average P/E, P/B to fundamental prompt. Currently uses static "Vietnam market P/E ~12-15". | Med | Compute sector averages from `financials` table | Group by `ticker.sector`, compute median P/E and P/B per sector. |
-| **Prompt versioning** | Track which prompt version produced each analysis. Compare old vs new quality. | Low | `model_version` field already exists | Extend to include prompt version: "gemini-2.5-flash-lite:prompt-v2". |
-| **Temperature tuning per analysis type** | Technical = more deterministic (temp=0.1); sentiment = slightly creative (temp=0.3). Currently all temp=0.2. | Low | `_call_gemini()` method | Pass temperature as parameter. Minor but free improvement. |
+**Scale impact:**
+- Current: ~400 HOSE tickers × 3.5s delay = ~23 min daily crawl
+- After: ~1700 tickers × 3.5s delay = ~99 min daily crawl
+- Mitigation: batch by exchange, run HNX/UPCOM crawl at different time slot, or parallelize
+- AI analysis: 1700 × 4 types = 6800 analyses at 15 RPM → 7.5 hours. **MUST use selective approach**: full AI for HOSE + watchlisted HNX/UPCOM only; rest weekly or on-demand
+- Gemini free tier: 1500 requests/day → 375 tickers × 4 types = limit. Need tiered analysis strategy.
 
-### Anti-Features
+**Implementation approach:**
+1. Modify `weekly_ticker_refresh` to fetch all 3 exchanges (already structurally supported)
+2. Daily crawl: loop through all active tickers (VCI Quote is exchange-agnostic)
+3. Dashboard: add `?exchange=HOSE|HNX|UPCOM` param to `/tickers/` and `/tickers/market-overview`
+4. Frontend: tab bar (Tất cả / HOSE / HNX / UPCOM) on market overview and heatmap
+5. Heatmap: color grouping by exchange in addition to sector
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Fine-tuning Gemini** | Requires massive labeled datasets and is expensive. | Iterate on prompts + structured schemas (already using Pydantic response_schema). |
-| **Multi-model consensus** | Triples API cost for marginal benefit. | Use single model (Gemini) with good prompts. |
-| **RAG-based analysis** | Massive complexity, questionable benefit vs direct data feeding. | Continue feeding structured data directly in prompts. |
-| **Real-time prompt modification UI** | Overkill for personal use. | Edit prompts in code. Track version in `model_version` field. |
+**Dependencies:** None — builds on existing infrastructure.
 
-### Prompt Improvement Patterns (Specific to Current Codebase)
+### RT-01/RT-02: WebSocket Real-Time Price Streaming
 
-**Current weakness 1: No price in technical prompt**
+**VN market data landscape (verified via vnstock 3.5.1 source):**
+- vnstock `Quote.history(interval='1m')` — REST polling for 1-minute candles via VCI REST API
+- No public free WebSocket for VN market price streaming exists
+- SSI Fast Connect API has WebSocket but requires broker account + API key registration
+- TCBS has similar broker-only restrictions
+- VCI (Vietcap) REST API supports intervals: 1m, 5m, 15m, 30m, 1H, 1D, 1W, 1M (verified from `_TIMEFRAME_MAP` in vnstock const.py)
+
+**Recommended architecture:**
+```
+Backend: APScheduler IntervalTrigger (30s during 9:00-14:30 ICT weekdays)
+  → vnstock Quote.history(interval='1m', count_back=1) for subscribed tickers
+  → Push to connected WebSocket clients via FastAPI WebSocket
+
+Frontend: WebSocket client → update lightweight-charts in real-time
+  → Only subscribe to currently-viewed ticker + watchlist
+```
+
+**Key design decisions:**
+- Poll only during VN market hours: Mon-Fri, 9:00-11:30 (morning session) and 13:00-14:30 (afternoon session)
+- Poll only for actively-viewed/subscribed tickers (max 10-20 at a time, not all 1700)
+- Use `asyncio.to_thread()` wrapper (same pattern as existing `vnstock_crawler.py`)
+- Store intraday quotes in memory only (or lightweight `intraday_prices` table), don't pollute `daily_prices`
+- Degrade gracefully: if VCI poll fails, client shows last known price with "stale" indicator
+- FastAPI native WebSocket support — no additional library needed
+
+**Rate limiting concern:**
+- VCI free tier: 20 req/min (vnstock guest), 60 req/min (with API key)
+- Polling 10 tickers at 30s = 20 req/min → at the free tier limit
+- Mitigation: register free vnstock API key (60 RPM), or batch ticker queries if VCI supports it
+- Alternative: poll only the single ticker being viewed on chart + top-5 watchlist
+
+**Frontend integration with lightweight-charts:**
+- `candleSeries.update(barData)` — updates last candle in real-time without full re-render
+- Need WebSocket message format: `{ symbol, time, open, high, low, close, volume }`
+- Reconnect logic: exponential backoff on disconnect, auto-resubscribe
+
+**Dependencies:** MKT-01 (tickers from all exchanges must be crawlable).
+
+### PORT-08: Dividend Income Tracking
+
+**How it works in stock platforms:**
+1. At record_date, check which lots are held for each ticker
+2. Compute: `dividend_income = shares_held × dividend_amount_per_share`
+3. Track as income (not a trade), separate from capital gains
+4. Show in portfolio: total dividend income, per-ticker income history
+
+**Existing infrastructure:**
+- `CorporateEvent` has `event_type='CASH_DIVIDEND'`, `dividend_amount` (VND/share), `record_date`
+- `Lot` has `remaining_quantity`, `ticker_id`, `buy_date`
+- Need: cross-reference at each CASH_DIVIDEND record_date → sum(remaining_qty) for that ticker → income
+
+**Implementation approach:**
+1. New `DividendIncome` model: `id, ticker_id, corporate_event_id, shares_held, amount_per_share, total_income, record_date, created_at`
+2. Scheduled job (after corporate event crawl): for each new CASH_DIVIDEND event where record_date ≤ today, check Lots held at that date, compute income
+3. API: `GET /portfolio/dividends` — list all dividend income records
+4. Portfolio summary: add `total_dividend_income` to `get_summary()` response
+5. Telegram: include dividend income in daily P&L notification when applicable
+
+**Held shares at record_date calculation:**
 ```python
-# Current: sends indicators without price reference
-"RSI(14) last 5 days: [45.2, 48.1, 52.3, 49.7, 51.1]"
-"SMA(20): 82000.0, SMA(50): 80500.0, SMA(200): 78200.0"
-# Missing: what is the actual close price?
-
-# Fix: add to _get_technical_context()
-"Latest close: 83,500 VND"
-"Price vs SMA(20): +1.83%, Price vs SMA(50): +3.73%"
+# Must compute historical holdings, not current
+# At record_date R, shares_held = SUM of lots WHERE buy_date <= R AND
+#   (lot is still open OR was sold after R)
+# Simplified: SUM(lot.quantity) WHERE buy_date <= R
+#   MINUS SUM(consumed shares from sells WHERE sell_date <= R)
 ```
 
-**Current weakness 2: Score anchors undefined**
+**Edge cases:**
+- Record_date vs Ex-date: Entitlement determined by record_date (must hold on or before). CorporateEvent has both.
+- Backdated trades: If user enters a BUY trade dated before a past record_date, need to recompute dividends
+- Stock dividends: Not cash income, but increases share count — affects lot tracking. **Defer stock dividend lot adjustment to v3** (complex FIFO impact).
+
+**Dependencies:** Corporate events (CORP-01..05), portfolio lots (PORT-01..07).
+
+### PORT-09: Portfolio Performance Chart
+
+**How it works:**
+1. For each trading day, compute total portfolio value = sum(shares_held × close_price) for all tickers
+2. Plot as line chart over time
+3. Optional overlay: VN-Index benchmark for comparison
+
+**On-the-fly computation (recommended over snapshot table):**
+```sql
+-- Approach: for each date in range, compute portfolio value
+-- Step 1: Get all lots and their effective date ranges
+-- Step 2: For each date, join lots held at that date with daily_prices
+-- Step 3: SUM(lots.remaining_qty_at_date × daily_prices.close)
+```
+
+**Simplified computation for personal use (<20 holdings):**
+- Start from first trade date
+- For each subsequent trading day with price data:
+  - Replay all trades up to that date to determine lots held
+  - Multiply each lot's remaining_qty × that day's close price
+  - Sum = portfolio value for that date
+- Cache result for API response (recompute on trade change)
+- Limit to last N months for chart (default: 6 months, max 2 years)
+
+**Frontend:**
+- recharts `LineChart` with `ResponsiveContainer` (already in use on dashboard)
+- Add realized P&L cumulative line as secondary axis (optional)
+- Time range selector reusing same pattern as candlestick chart (1T/3T/6T/1N/2N)
+
+**Dependencies:** Portfolio trades (PORT-01..07), daily prices (DATA-01).
+
+### PORT-10: Portfolio Allocation Pie Chart
+
+**Already proven in codebase:**
+- Dashboard `page.tsx` uses recharts `PieChart` for market gainers/losers distribution (lines 240-274)
+- `get_holdings()` already returns per-ticker `market_value`
+- Ticker model has `sector` field
+
+**Two views:**
+1. **By ticker:** Each holding as a slice, sized by market_value
+2. **By sector:** Aggregate market_value by `tickers.sector`
+
+**Implementation:**
+- Backend: `get_holdings()` already returns per-ticker `market_value`; add `sector` to response (join Ticker)
+- Frontend: Reuse existing PieChart pattern, add toggle "Theo mã" / "Theo ngành"
+- Colors: assign consistent colors per ticker/sector
+
+**Dependencies:** Portfolio holdings (PORT-02). Complexity: **LOW**.
+
+### PORT-11: Trade Edit/Delete
+
+**FIFO complexity analysis:**
+
+A BUY creates a Lot. A SELL consumes lots FIFO via `_consume_lots_fifo()`. Editing/deleting a BUY that has been partially consumed breaks the chain.
+
+**Safe operations matrix:**
+| Operation | Condition | FIFO Impact | Allowed |
+|-----------|-----------|-------------|---------|
+| Edit latest BUY (unconsumed) | `Lot.remaining_quantity == Lot.quantity` | Update Trade + Lot fields | ✅ Simple |
+| Edit latest SELL | No subsequent trades for that ticker | Reverse lot consumption, re-consume with new qty/price | ✅ Medium |
+| Delete latest BUY (unconsumed) | `Lot.remaining_quantity == Lot.quantity` | Delete Trade + Lot | ✅ Simple |
+| Delete latest SELL | No subsequent trades for that ticker | Reverse lot consumption, delete Trade | ✅ Medium |
+| Edit/delete arbitrary historical trade | Other trades depend on it | **FULL RECALCULATION** required | ⚠️ Complex |
+
+**Recommended approach (v2.0):**
+1. **Validation first:** Check if trade has been consumed by subsequent sells
+2. **Simple path:** Allow edit/delete of unconsumed BUY trades OR the most recent trade per ticker
+3. **Full recalculation path (for any trade):**
+   - Delete all lots for ticker
+   - Replay all trades chronologically
+   - Rebuild FIFO chain from scratch
+   - Recompute all realized P&L
+4. **Confirmation on destructive operations:** "Sửa giao dịch này sẽ tính lại toàn bộ P&L. Tiếp tục?"
+
+**API design:**
+- `PUT /portfolio/trades/{id}` — edit trade (body: partial update fields)
+- `DELETE /portfolio/trades/{id}` — delete trade
+- Both trigger validation → recalculation → return updated portfolio state
+
+**Dependencies:** Portfolio core (PORT-01..07).
+
+### PORT-12: Broker CSV Import
+
+**VN broker CSV format landscape (MEDIUM confidence — should verify with actual exports):**
+
+| Broker | Date Format | Side Labels | Headers | Separator | Encoding | Market Share |
+|--------|-------------|-------------|---------|-----------|----------|-------------|
+| SSI | DD/MM/YYYY | Mua / Bán | Vietnamese | Comma | UTF-8-BOM | ~15% |
+| VNDirect | DD/MM/YYYY | Mua / Bán | Vietnamese | Comma | UTF-8 | ~12% |
+| TCBS | YYYY-MM-DD | BUY / SELL | English | Comma | UTF-8 | ~10% |
+| VCBS | DD/MM/YYYY | Mua / Bán | Vietnamese | Comma | Windows-1252 | ~8% |
+
+**Common fields across all formats:**
+- Trade date (required) — various date formats
+- Ticker symbol (required) — always uppercase 3-letter code
+- Buy/Sell side (required) — "Mua"/"Bán" or "BUY"/"SELL"
+- Quantity (required) — integer
+- Price (required) — VND, may have thousand separators (e.g., "82,000" or "82000")
+- Fees/Commission (optional) — may be split into broker fee + tax
+
+**Implementation approach:**
+1. **Per-broker parsers** for SSI, VNDirect, TCBS, VCBS (top 4)
+2. **Generic CSV parser** with user-specified column mapping (dropdown selectors) for other brokers
+3. **Preview step:** Parse → show table of detected trades → user confirms before committing
+4. **Validation:** Check ticker exists in DB, date is reasonable, qty > 0, price > 0
+5. **Batch processing:** Replay imported trades chronologically through `PortfolioService.record_trade()`
+
+**File upload flow:**
+```
+Frontend: File picker → select broker format → POST /portfolio/import/preview
+  → Returns parsed trades as JSON → User reviews table → POST /portfolio/import/confirm
+  → Backend: sort by date → record_trade() for each → return results summary
+```
+
+**Error handling:**
+- Show per-row validation errors in preview
+- Allow user to fix/skip invalid rows
+- Rollback entire batch on critical failure (database transaction)
+
+**Dependencies:** Portfolio core (PORT-01..07), ticker database (DATA-01).
+
+### HEALTH-08: Gemini API Usage Tracking
+
+**Gemini API response structure (HIGH confidence — from google-genai SDK):**
 ```python
-# Current: "strength: 1-10 (confidence in the signal)"
-# Fix: Add rubric
-# "strength scoring rubric:
-#  1-2 = extremely weak signal, barely detectable
-#  3-4 = weak signal, minor indicators align
-#  5-6 = moderate signal, some indicators support
-#  7-8 = strong signal, most indicators agree
-#  9-10 = very strong signal, all indicators strongly aligned"
+response.usage_metadata.prompt_token_count      # Input tokens
+response.usage_metadata.candidates_token_count   # Output tokens
+response.usage_metadata.total_token_count        # Total
 ```
 
-**Current weakness 3: System instruction not separated**
+**Free tier limits (gemini-2.5-flash-lite, per PROJECT.md):**
+- 15 requests per minute (RPM)
+- 1,000,000 tokens per minute (TPM)
+- 1,500 requests per day (RPD)
+- Note: Limits may change — v2.0 must handle this gracefully
+
+**Implementation:**
+1. New `GeminiUsage` model: `id, timestamp, job_id, ticker_symbol, analysis_type, prompt_tokens, completion_tokens, total_tokens, model, created_at`
+2. Intercept in `ai_analysis_service.py`: after each Gemini call, extract `usage_metadata` and log
+3. API: `GET /health/gemini-usage?period=day|week|month` — aggregated usage stats
+4. Dashboard card: requests today / RPD limit, tokens today / TPM budget, bar chart of daily usage
+5. Warning threshold: alert when approaching 80% of daily request limit → triggers HEALTH-10 Telegram alert
+
+**With 1700 tickers (post MKT-01), budget management becomes CRITICAL:**
+- 1500 RPD ÷ 4 analysis types = 375 tickers/day at full analysis
+- Strategy: prioritize HOSE (400) > watchlisted HNX/UPCOM > rest weekly
+- Track and display remaining daily budget on health dashboard
+
+**Dependencies:** AI analysis service (AI-01..13).
+
+### HEALTH-09: Pipeline Execution Timeline (Gantt)
+
+**Existing data that enables this:**
+- `job_executions` table: `job_id, started_at, completed_at, status` (per `job_execution.py`)
+- Job chain logged by `scheduler/manager.py`: price_crawl → indicators → AI → news → sentiment → combined → signals
+- Each step already logged with precise start/end timestamps
+- Parallel branches also logged: price_alerts, corporate_action_check
+
+**Visualization concept:**
+```
+14:30 ───────────────────────────────────── 16:00
+ │ daily_price_crawl    ████████████░░░░░░░░░ │
+ │ corporate_action     ░░░░██░░░░░░░░░░░░░░░ │
+ │ price_alerts         ░░░░█░░░░░░░░░░░░░░░░ │
+ │ indicators           ░░░░░░░░░░░██░░░░░░░░ │
+ │ ai_analysis          ░░░░░░░░░░░░░████████ │
+ │ news_crawl           ░░░░░░░░░░░░░░░░░░██░ │
+ │ sentiment            ░░░░░░░░░░░░░░░░░░░██ │
+ │ combined             ░░░░░░░░░░░░░░░░░░░░█ │
+ │ signal_alerts        ░░░░░░░░░░░░░░░░░░░░█ │
+```
+
+**Implementation:**
+- API: `GET /health/pipeline-timeline?date=YYYY-MM-DD` — returns all job_executions for that date
+- Frontend: Custom SVG component or CSS grid with absolute positioning
+  - Each job = horizontal bar, x-position = (started_at - min_start), width = duration
+  - Color by status: green = success, yellow = partial, red = failed
+  - Tooltip: job name, duration, result_summary preview
+- Date picker to navigate between days
+
+**No Gantt library needed** — 8-10 bars with simple horizontal layout. CSS + relative positioning is sufficient. recharts `BarChart` could work but custom SVG gives more control.
+
+**Dependencies:** Job execution logging (ERR-04).
+
+### HEALTH-10: Telegram Health Notifications
+
+**Current state:** Only ERR-05 exists (EVENT_JOB_ERROR → Telegram alert on complete job failure).
+
+**Expanded health checks:**
+| Check | Condition | Alert Message |
+|-------|-----------|---------------|
+| Stale data | Any data source >48h stale on trading day | "⚠️ Dữ liệu {source} chưa cập nhật >48h" |
+| High error rate | >50% failure rate for any job in last 24h | "🔴 Job {name}: {pct}% thất bại trong 24h qua" |
+| DB pool exhaustion | checked_out >= pool_size | "⚠️ DB pool bão hòa: {checked_out}/{pool_size}" |
+| Gemini quota warning | >80% daily request limit | "⚠️ Gemini API: đã dùng {used}/{limit} requests" |
+| Pipeline stall | Job chain hasn't completed by 17:00 on trading day | "🔴 Pipeline chưa hoàn thành lúc 17:00" |
+
+**Implementation:**
+1. New scheduled job: `health_check` running every 30 min during market hours (9:00-17:00 Mon-Fri)
+2. Queries existing `HealthService` methods: `get_data_freshness()`, `get_error_rates()`, `get_job_statuses()`
+3. Also queries new `GeminiUsage` service for quota check
+4. Sends Telegram alert only on state CHANGE (debounce — not every check cycle)
+5. Track last alert state in-memory dict `{ check_name: last_alert_status }` to prevent alert fatigue
+6. Uses existing `telegram_bot.send_message()` pattern (2-retry, never-raises)
+
+**Dependencies:** Health service (HEALTH-01..07), Telegram bot (BOT-01).
+
+### CORP-06: Rights Issue Tracking
+
+**VN market rights issues (quyền mua cổ phiếu):**
+- Company issues new shares to existing shareholders at below-market subscription price
+- Ratio: e.g., 5:1 means 1 new share per 5 existing shares
+- Record date determines eligibility; subscription period typically 2-4 weeks
+- Dilution: share count increases → EPS decreases → price typically drops on ex-date
+- User must DECIDE whether to exercise (buy new shares at subscription price) or let rights lapse
+
+**VNDirect API verification needed (MEDIUM confidence):**
+- Current crawl types: `DIVIDEND, STOCKDIV, KINDDIV` (in `corporate_event_crawler.py`)
+- Rights issues may be type `RIGHTS` or `STOCKRIGHTS` in VNDirect API — needs live verification
+- If VNDirect doesn't expose, fallback: CafeF scraping for rights issue announcements
+
+**Model extension needed:**
 ```python
-# Current: persona baked into user prompt
-"You are a Vietnamese stock market (HOSE) technical analyst..."
-
-# Fix: Use google-genai system_instruction
-config = types.GenerateContentConfig(
-    system_instruction="You are a senior Vietnamese stock market (HOSE) analyst...",
-    response_mime_type="application/json",
-    response_schema=schema,
-    ...
-)
+# Add to CorporateEvent or new RightsIssue model
+event_type: "RIGHTS_ISSUE"  # New enum value
+ratio: Decimal              # new shares per 100 existing (same format as STOCK_DIVIDEND)
+subscription_price: Decimal # price to exercise rights (NEW FIELD on CorporateEvent)
+subscription_deadline: date # last date to exercise (NEW FIELD on CorporateEvent)
 ```
 
----
+**Dilution calculation:**
+```
+dilution_pct = ratio / (100 + ratio) × 100
+# e.g., 20:100 → 20/120 = 16.7% dilution
 
-## 4. Error Recovery & Pipeline Resilience
+theoretical_ex_rights_price = (old_price × 100 + subscription_price × ratio) / (100 + ratio)
+```
 
-### Table Stakes
+**Price adjustment factor:**
+```
+factor = (100 × old_price + ratio × subscription_price) / ((100 + ratio) × old_price)
+# Only applied if user does NOT exercise (dilution without compensation)
+# If user exercises, they buy new shares at subscription_price → no adjustment needed
+```
 
-| Feature | Why Expected | Complexity | Dependency | Notes |
-|---------|--------------|------------|------------|-------|
-| **Granular retry with tenacity** | Batch-level failures in AI analysis skip entire batches. Need per-ticker retry for individual failures. | Med | `_run_batched_analysis()` | Already handles 429 and 503 at batch level. Add: re-batch only failed tickers for one more attempt. |
-| **Dead letter queue for failed tickers** | When a ticker fails after all retries, store in `failed_jobs` table with error details. | Med | New `failed_jobs` table | Fields: `job_type`, `ticker_id`, `error_message`, `failed_at`, `retry_count`, `resolved_at`. |
-| **Graceful degradation on partial pipeline failure** | If indicator compute fails for 5 tickers, the remaining 395 should still proceed. Currently works but failures aren't tracked. | Low | Already mostly implemented | Need to store partial results and log which tickers were skipped. |
-| **Job execution logging** | Log start/end time, success/fail count for every scheduled job. Queryable via API. | Med | New `job_executions` table | Fields: `job_id`, `started_at`, `completed_at`, `status`, `result_summary` (JSONB), `error_message`. |
-| **Crawler failure notification** | Telegram alert if daily price crawl fails completely. | Low | Jobs + Telegram bot | Add try/catch that sends Telegram on critical failure. |
+**User interaction flow (alert-driven, NOT automatic):**
+1. Crawl rights issue events → store in corporate_events
+2. Alert held positions via Telegram: "🔔 {TICKER} phát hành quyền mua: {ratio}:100, giá {subscription_price}, hạn {deadline}"
+3. If user exercises: manual `/buy {ticker} {qty} {subscription_price}` with fees=0
+4. If user does NOT exercise: rights lapse, price adjustment applied
 
-### Differentiators
+**Dependencies:** Corporate event crawling (CORP-02), portfolio lots (PORT-01).
 
-| Feature | Value Proposition | Complexity | Dependency | Notes |
-|---------|-------------------|------------|------------|-------|
-| **Automatic retry of failed jobs** | Schedule retry (30 min later) for failed tickers only. | Med | Dead letter queue + APScheduler | Only retry items with `retry_count < 3`. |
-| **Circuit breaker for external APIs** | If vnstock/VCI is down, stop hammering after N failures. | Med | Tenacity or custom | Already partially implemented for vnstock. Add for VCI company events. |
-| **Rate limit tracking** | Track Gemini API usage (RPM, tokens consumed). | Low | Already logging token counts | Aggregate from logs or store in DB. Show on health dashboard. |
+### CORP-07: Ex-Date Telegram Alerts
 
-### Anti-Features
+**How it works:**
+1. Daily scheduled job (run after corporate event crawl completes, part of job chain)
+2. Query: upcoming ex-dates in next 7 days for tickers with open positions
+3. Format alert with event details + expected income/impact
+4. Send once per event (track sent alerts to avoid duplicates)
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Message queue (Redis/RabbitMQ)** | Overkill for single-user app. Adds infrastructure dependency. | Keep APScheduler job chaining pattern. |
-| **Kubernetes-style health probes** | No container orchestration needed. | Simple `/health` endpoint (already exists). |
+**Alert format:**
+```
+📅 Sự kiện sắp tới cho danh mục:
 
----
+VNM — Cổ tức tiền mặt 1,500 VND/cp
+  Ex-date: 2026-04-20 (còn 3 ngày)
+  Bạn đang nắm: 200 cổ phiếu
+  Dự kiến nhận: 300,000 VND
 
-## 5. System Health Dashboard
+HPG — Cổ tức cổ phiếu 10:100
+  Ex-date: 2026-04-22 (còn 5 ngày)
+  Bạn đang nắm: 500 cổ phiếu
+  Dự kiến nhận thêm: 50 cổ phiếu
+```
 
-### Table Stakes
+**Implementation:**
+1. Track sent alerts: new `sent_event_alert` flag on `CorporateEvent` or separate tracking table
+2. Query: `corporate_events WHERE ex_date BETWEEN today AND today+7 AND ticker_id IN (SELECT DISTINCT ticker_id FROM lots WHERE remaining_quantity > 0)`
+3. Cross-reference with lots to compute expected income/shares
+4. Send via existing `telegram_bot.send_message()` pattern
+5. Run as new chain step after `daily_corporate_action_check_triggered`
 
-| Feature | Why Expected | Complexity | Dependency | Notes |
-|---------|--------------|------------|------------|-------|
-| **Data freshness indicator** | Show when data was last updated for each type: prices, financials, news, AI analysis. | Low | Query latest timestamps from each table | Flag stale data (>1 business day for prices). |
-| **Last crawl status** | Show success/failure/partial for last execution of each job. | Med | `job_executions` table | Green (success), yellow (partial), red (failed). |
-| **Scheduler status (enhanced)** | Already exists. Enhance with last run result and human-readable schedule. | Low | Existing endpoint | Add `last_run_result` to response. |
-| **Error rate display** | Show error count per job over last 7 days. | Med | `job_executions` table | Simple aggregation. Display as table or chart. |
-| **Database connection pool status** | Show active/idle connections. Aiven pool_size=5, max_overflow=3. | Low | SQLAlchemy engine `pool.status()` | Expose via API endpoint. |
-| **Health dashboard page** | Frontend page with all health metrics. Status cards with green/yellow/red indicators. | Med | All health API endpoints + new frontend page | Route: `/dashboard/health`. Use shadcn Card components. |
+**Dependencies:** Corporate events (CORP-01..05), portfolio lots (PORT-01), Telegram bot (BOT-01).
 
-### Differentiators
+### CORP-08: Event Calendar View
 
-| Feature | Value Proposition | Complexity | Dependency | Notes |
-|---------|-------------------|------------|------------|-------|
-| **Gemini API usage tracker** | Show daily token consumption, requests, errors vs free tier limits. | Med | Log aggregation or usage table | Show as line chart over last 30 days. |
-| **Pipeline execution timeline** | Visual timeline: crawl -> indicators -> AI -> alerts with duration per step. | Med | `job_executions` table | Gantt-style timeline for today's pipeline. |
-| **Telegram health notification** | Daily or on-error health summary via Telegram. | Low | Health data + Telegram bot | Add to daily summary or separate notification. |
-| **Manual job trigger from dashboard** | Buttons to re-trigger crawl, indicators, AI analysis. | Low | Existing `/crawl/*` endpoints + frontend buttons | Wire existing POST endpoints to UI buttons. |
+**Design decisions:**
+- Simple list view grouped by week — NOT a heavy FullCalendar widget (anti-feature)
+- Filter: Tất cả / Đang nắm giữ / By exchange / By event type
+- Each event row: ticker symbol, event type badge, ex-date, record_date, amount/ratio
+- Highlight events for held positions (bold or colored border)
 
-### Anti-Features
+**API:**
+```
+GET /corporate-events/calendar?from=2026-04-01&to=2026-04-30&held_only=false&exchange=HOSE
+```
+Returns events grouped by ISO week, with `is_held` flag for portfolio cross-reference.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Grafana / Prometheus monitoring** | Requires additional infrastructure. Overkill for personal use. | Build simple health page in existing Next.js dashboard. |
-| **APM (Sentry, DataDog, etc.)** | Adds cost and complexity. | Loguru structured logging + health endpoint. |
-| **Distributed tracing** | Single process app — nothing to trace. | Loguru with correlation IDs if needed. |
+**Frontend:**
+- Use existing Card/Table shadcn components
+- Group by week with date section headers
+- Badge colors by event type: 🟢 cash dividend, 🔵 stock dividend, 🟠 rights issue, ⚪ bonus shares
+- Toggle: "Chỉ mã đang nắm" checkbox filter
 
----
+**Dependencies:** Corporate events (CORP-01..05).
 
-## 6. Portfolio on Telegram
+### CORP-09: Adjusted vs Raw Price Toggle
 
-### Table Stakes
+**Current state (verified in codebase):**
+- `DailyPrice` model has both `close` (raw) and `adjusted_close` (adjusted after corporate actions)
+- Frontend `lib/api.ts` `PriceData` interface: `date, open, high, low, close, volume` — NO adjusted_close
+- `CandlestickChart` component uses `d.close` exclusively for rendering
+- `CorporateActionService.adjust_all_tickers()` already populates `adjusted_close`
 
-| Feature | Why Expected | Complexity | Dependency | Notes |
-|---------|--------------|------------|------------|-------|
-| **`/buy <ticker> <qty> <price>` command** | Primary trade entry. "/buy VNM 100 82000" | Low | Portfolio service + `trades` table | Same validation pattern as `/alert` handler. |
-| **`/sell <ticker> <qty> <price>` command** | Close/reduce positions. "/sell VNM 50 85000" | Low | Portfolio service + FIFO logic | Validate against holdings. Show realized P&L on sell. |
-| **`/portfolio` command** | Show all holdings with P&L. | Med | Portfolio service | Format as table. Truncate for Telegram 4096 char limit. |
-| **Daily portfolio P&L notification** | At 16:00 alongside daily summary. | Low | Portfolio snapshot + daily summary job | Add to existing `daily_summary_send` job. |
+**Implementation:**
+1. **API change:** Add `?adjusted=true` query param to `/tickers/{symbol}/prices`
+   - When `adjusted=true`, return adjusted OHLC (compute proportionally from close/adjusted_close ratio)
+   - When `adjusted=false` (default), return raw OHLC as today
+2. **Adjusted OHLC computation:**
+   ```python
+   if adjusted and adjusted_close and close:
+       ratio = adjusted_close / close
+       return {open: open*ratio, high: high*ratio, low: low*ratio, close: adjusted_close}
+   ```
+3. **Frontend:** Toggle button in CandlestickChart header: "Giá gốc" / "Giá điều chỉnh"
+4. Pass `adjusted` param to `fetchPrices()` call
+5. lightweight-charts: just `candleSeries.setData()` with new data (same pattern as time range change)
 
-### Differentiators
-
-| Feature | Value Proposition | Complexity | Dependency | Notes |
-|---------|-------------------|------------|------------|-------|
-| **`/pnl <ticker>` command** | Detailed P&L with FIFO lot breakdown. | Med | Portfolio service with lot-level detail | Useful before deciding to sell. |
-| **Position-aware daily summary** | Highlight owned tickers first with P&L context. | Low | Portfolio + daily summary | Small modification to existing `build_daily_summary()`. |
-| **`/trades` command** | Show recent trade history (last 10). | Low | `trades` table | Simple query + format. |
-
-### Anti-Features
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Inline keyboard trade confirmation** | Over-engineering for single user. | Execute immediately. Add `/trades` to review. |
-| **Natural language trade input** | Parsing ambiguity. | Strict format: `/buy VNM 100 82000`. |
+**Dependencies:** Corporate action adjustment (CORP-01..05), candlestick chart (DASH-01). Complexity: **LOW**.
 
 ---
 
 ## Feature Dependencies
 
 ```
-Corporate Actions --> Adjusted Price Calc --> More Accurate AI Analysis
-                 \-> Dividend Income --> Full P&L Reporting
+MKT-01 (Multi-market crawl) → MKT-02 (Exchange filter UI)
+MKT-01 → RT-01/RT-02 (WebSocket needs multi-exchange tickers)
 
-Trades Table --> Holdings --> Unrealized P&L --> Portfolio Summary
-            \-> FIFO Lots --> Realized P&L -/
-                                             \-> Telegram /portfolio
-                                             \-> Dashboard Portfolio Page
+PORT-01..07 (Existing portfolio) → PORT-08 (Dividend tracking)
+PORT-01..07 → PORT-09 (Performance chart)
+PORT-01..07 → PORT-10 (Allocation chart)
+PORT-01..07 → PORT-11 (Trade edit/delete)
+PORT-01..07 → PORT-12 (CSV import uses record_trade)
+PORT-08 → CORP-07 (Ex-date alerts compute expected dividend income)
 
-Job Executions Table --> Health Dashboard
-                    \-> Error Tracking --> Dead Letter Queue --> Auto Retry
+CORP-01..05 (Existing corp actions) → CORP-06 (Rights issues)
+CORP-01..05 → CORP-07 (Ex-date alerts)
+CORP-01..05 → CORP-08 (Event calendar)
+CORP-01..05 → CORP-09 (Adjusted price toggle)
 
-AI Prompt Improvements --> Better Analysis Quality (independent, no hard deps)
-
-System Health --> Data Freshness (requires existing tables only)
-            \-> Job Monitoring (requires job_executions table)
+ERR-04 (Job execution logging) → HEALTH-09 (Pipeline timeline)
+AI-01..13 (Existing AI) → HEALTH-08 (Gemini usage tracking)
+HEALTH-01..07 (Existing health) → HEALTH-10 (Telegram health alerts)
+HEALTH-08 → HEALTH-10 (Gemini quota check in health alerts)
 ```
 
 ### Critical Path
 
-1. **Corporate Actions table -> Price adjustment -> Portfolio tracking** — Portfolio P&L requires adjusted prices for accuracy. Build corporate actions first.
-2. **Trades table + FIFO -> Portfolio view -> Telegram commands** — Backend before bot.
-3. **Job executions table -> Health dashboard** — Need to log executions before displaying them.
-4. **AI prompt improvements** — Independent, can be done in parallel with anything.
+1. **MKT-01 first** — Expanding ticker universe is foundational; WebSocket and AI scaling depend on it
+2. **Portfolio enhancements (PORT-08..12) after MKT-01** — Need all tickers for CSV import; dividend tracking needs corp events for all exchanges
+3. **Health enhancements (HEALTH-08..10) alongside or after portfolio** — Gemini usage tracking becomes critical when ticker count triples
+4. **Corp action enhancements (CORP-06..09) can be parallel** — Independent of multi-market, depend only on existing v1.1 corp action infrastructure
+5. **WebSocket (RT-01/02) last** — Highest complexity, most infrastructure change, lowest dependency on other v2.0 features
+
+---
+
+## Scale & Capacity Concerns
+
+| Concern | Current (v1.x) | After v2.0 | Mitigation |
+|---------|-----------------|------------|------------|
+| Ticker count | ~400 (HOSE only) | ~1700 (all exchanges) | Selective AI analysis; batch crawl by exchange |
+| Daily crawl time | ~23 min | ~99 min | Split into exchange-specific jobs; start earlier (14:45) |
+| Gemini API calls/day | ~1600 (400×4) | ~6800 if all tickers | HOSE full + watchlisted HNX/UPCOM only = ~1500/day |
+| DB pool pressure | Low (pool_size=5) | Higher (WebSocket + more jobs) | Consider pool_size=8, monitor via HEALTH-10 |
+| WebSocket connections | 0 | 1 (single user) | Minimal concern; manage lifecycle properly |
+| daily_prices growth | ~400 rows/day | ~1700 rows/day | Yearly partitioning already in place ✓ |
+| Pipeline total time | ~30 min | ~2+ hours | Parallel branches where possible; tiered analysis |
 
 ---
 
 ## MVP Recommendation
 
-### Phase 1: Must ship (table stakes across all areas)
+**Prioritize:**
+1. MKT-01 + MKT-02 (Multi-market) — Foundation for all else
+2. CORP-09 (Adjusted/raw toggle) — Trivial, immediate value
+3. PORT-11 (Trade edit/delete) — Reduces friction
+4. PORT-10 (Allocation chart) — Low complexity, reuses existing PieChart
+5. HEALTH-10 (Telegram health alerts) — Quick, high operational value
 
-1. **Corporate actions crawl + storage** — Foundation for data integrity
-2. **Historical price adjustment** — Fills the existing `adjusted_close` NULL column
-3. **Trades table + buy/sell entry** — Core portfolio feature
-4. **FIFO cost basis + realized/unrealized P&L** — Core portfolio calculation
-5. **`/buy`, `/sell`, `/portfolio` Telegram commands** — Primary consumption channel
-6. **AI prompt improvements** (system instruction, few-shot, scoring rubric, price context) — Low effort, high impact
-7. **Job execution logging** — Foundation for health monitoring
-8. **Data freshness + basic health page** — Operational visibility
+**Then:**
+6. PORT-08 (Dividend income) — Medium complexity, high value
+7. PORT-09 (Performance chart) — Medium complexity, most requested
+8. HEALTH-08 (Gemini usage) — Critical with 3x ticker count
+9. CORP-07 (Ex-date alerts) — Connects corp events to portfolio
 
-### Phase 2: Differentiators (ship after table stakes work)
+**Then:**
+10. PORT-12 (CSV import) — High utility but needs broker format verification
+11. CORP-06 (Rights issues) — Needs VNDirect API verification
+12. CORP-08 (Event calendar) — Pure frontend, lower priority
+13. HEALTH-09 (Pipeline timeline) — Nice-to-have visualization
 
-1. **Dividend income tracking** — Depends on corporate actions + portfolio
-2. **Position-aware AI alerts** — Cross-references holdings with signals
-3. **Portfolio performance chart** — Needs daily snapshots
-4. **Dead letter queue + auto retry** — Pipeline resilience
-5. **Pipeline timeline visualization** — Health dashboard enhancement
-6. **Corporate action Telegram alerts** — Scan for upcoming ex-dates
+**Last (highest complexity):**
+14. RT-01 + RT-02 (WebSocket) — Build after everything else is stable
 
-### Defer
-
-- **Portfolio import from CSV** — add only if manual entry becomes painful
-- **Event calendar on dashboard** — nice but not critical for v1.1
-- **Sector-relative AI context** — meaningful but higher complexity
-- **Gemini usage tracking** — nice-to-have, not blocking
+**Defer to v3:**
+- Stock dividend lot adjustment (STOCK_DIVIDEND increasing lot share count)
+- Historical WebSocket data replay
+- More than 4 broker CSV formats
+- VN-Index benchmark overlay on performance chart
 
 ---
 
@@ -352,16 +583,19 @@ System Health --> Data Freshness (requires existing tables only)
 
 | Finding | Source | Confidence |
 |---------|--------|------------|
-| vnstock `Company.events()` returns OrganizationEvents with exrightDate, recordDate, ratio, value | Direct inspection of `vnstock.explorer.vci.company` source code | HIGH |
-| VCI GraphQL fields: eventTitle, eventListCode, en_EventListName, publicDate, issueDate, recordDate, exrightDate, ratio, value | Direct inspection of GraphQL payload in Company._fetch_data() | HIGH |
-| vnstock has NO built-in price adjustment (returns unadjusted OHLCV only) | Confirmed in existing `vnstock_crawler.py` comment line 62 | HIGH |
-| `adjusted_close` column already exists in DailyPrice model, currently NULL | Confirmed in `daily_price.py` line 30-32 | HIGH |
-| Current prompts embed persona in user message, no system_instruction used | Confirmed in `ai_analysis_service.py` prompt builder methods | HIGH |
-| Current prompts lack price data in technical analysis | Confirmed in `_build_technical_prompt()` — sends indicators but not close price | HIGH |
-| Existing health endpoint at `/health` with DB + scheduler checks | Confirmed in `api/system.py` | HIGH |
-| APScheduler job chaining via EVENT_JOB_EXECUTED | Confirmed in `scheduler/manager.py` | HIGH |
-| Gemini structured output via Pydantic response_schema already working | Confirmed in `_call_gemini()` and `schemas/analysis.py` | HIGH |
-| VN market T+2 settlement, cash dividends in VND per share | Standard HOSE market knowledge | HIGH |
-| VN individual stock capital gains tax is 0.1% of sell value | Standard VN tax regulation | HIGH |
-| FIFO as standard VN cost basis method | Standard accounting practice for VN individual investors | MEDIUM |
-| VN broker commission range 0.15-0.25% | General market knowledge, varies by broker and tier | MEDIUM |
+| vnstock supports all exchanges (HOSE/HNX/UPCOM) via same VCI API | Inspected `vnstock.explorer.vci.listing.py` and `const.py` `_GROUP_CODE` | HIGH |
+| `_EXCHANGE_MAP` already defined in `vnstock_crawler.py` for all 3 exchanges | Direct codebase inspection | HIGH |
+| VCI Quote works exchange-agnostically (any symbol, any exchange) | Inspected `vnstock.explorer.vci.quote.py` — validates symbol, not exchange | HIGH |
+| VCI supports 1-minute intervals for intraday data | Verified `_TIMEFRAME_MAP` in vnstock const.py: includes '1m', '5m', '15m', '30m' | HIGH |
+| No free public WebSocket for VN stock market | Inspected vnstock source — only REST API; SSI/TCBS require broker auth | HIGH |
+| Ticker model already has `exchange` column with server_default "HOSE" | Direct inspection of `models/ticker.py` line 20 | HIGH |
+| DailyPrice has both `close` and `adjusted_close` columns | Direct inspection of `models/daily_price.py` lines 28-32 | HIGH |
+| CorporateEvent has `record_date`, `ex_date`, `dividend_amount`, `ratio` | Direct inspection of `models/corporate_event.py` | HIGH |
+| Frontend uses recharts PieChart (already in dashboard for market stats) | Inspected `dashboard/page.tsx` lines 240-274 and `package.json` | HIGH |
+| Frontend uses lightweight-charts for candlestick (supports real-time update) | Inspected `candlestick-chart.tsx` | HIGH |
+| Job chain: price_crawl → indicators → AI → news → sentiment → combined → signals | Inspected `scheduler/manager.py` _on_job_executed() | HIGH |
+| job_executions table has started_at, completed_at, status, result_summary | Inspected `models/job_execution.py` | HIGH |
+| Gemini response.usage_metadata has prompt/completion/total token counts | google-genai SDK documentation | HIGH |
+| Gemini free tier: 15 RPM, 1500 RPD | google-genai SDK / AI Studio docs | MEDIUM |
+| VN broker CSV formats (SSI, VNDirect, TCBS, VCBS) | Domain knowledge of VN brokerage export patterns | MEDIUM — verify with actual exports |
+| VNDirect API rights issue type availability | Inferred from existing event types — needs live verification | LOW |

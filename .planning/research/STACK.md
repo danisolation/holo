@@ -1,240 +1,273 @@
-# Technology Stack — v1.1 Reliability & Portfolio
+# Technology Stack — v2.0 Full Coverage & Real-Time
 
 **Project:** Holo — Stock Intelligence Platform
-**Milestone:** v1.1 Reliability & Portfolio
-**Researched:** 2026-04-16
+**Milestone:** v2.0 Full Coverage & Real-Time
+**Researched:** 2026-04-17
 **Overall confidence:** HIGH
 
 ## Executive Summary
 
-v1.1 needs **zero new backend Python libraries** and only **3 small frontend additions**. The existing stack (FastAPI + SQLAlchemy + tenacity + google-genai + vnstock) already covers corporate actions data sourcing, retry/backoff, and structured AI output. New features are implemented as **business logic + new DB models**, not new dependencies.
+v2.0 needs **zero new backend Python packages** and only **3 new frontend packages**. The key finding is that the existing stack already covers every v2.0 feature with zero or minimal additions:
 
-The key discovery: vnstock 3.5.1's `Company.events()` already returns corporate action data (splits, dividends, bonus, rights) with `eventListCode`, `ratio`, `value`, `recordDate`, `exrightDate` — no scraping or alternative data source needed.
+- **Multi-market (HNX/UPCOM)**: vnstock 3.5.1 already supports all three exchanges via VCI source. The crawler already has `_EXCHANGE_MAP = {"HOSE": "HSX", "HNX": "HNX", "UPCOM": "UPCOM"}` and the Ticker model has an `exchange` field. This is purely a logic expansion.
+- **Real-time WebSocket**: FastAPI has native WebSocket support via Starlette. The `websockets` 16.0 package is already installed (dependency of `uvicorn[standard]`). vnstock supports intraday intervals (`1m`, `5m`, `15m`, `30m`) for source data polling.
+- **Portfolio enhancements**: All computed from existing Trade/Lot/CorporateEvent models + new DB columns. Python stdlib `csv` handles broker CSV parsing. `python-multipart` (already installed via `fastapi[standard]`) handles file uploads.
+- **Gemini usage tracking**: `google-genai` already returns `prompt_token_count`, `candidates_token_count`, `total_token_count` in `response.usage_metadata`. Just needs a new DB table + extraction logic.
+- **Event calendar**: shadcn/ui's Calendar component (requires `react-day-picker` as a new frontend dep).
 
-Circuit breaker does NOT need a library (aiobreaker 1.2.0 is Tornado-legacy with only 3 releases ever; pybreaker 1.4.1 has no native asyncio). A ~30-line custom async circuit breaker is more maintainable.
-
-Prometheus/Grafana is overkill for a single-user app. System health monitoring is a `job_runs` DB table + dashboard page using existing recharts.
+The deliberate restraint here is critical: **every "do we need a new library?" question answered NO for the backend.** The frontend adds `react-day-picker` (calendar via shadcn) and `papaparse` + `@types/papaparse` (CSV preview). That's it — 3 packages total.
 
 ---
 
 ## What the Existing Stack Already Covers
 
-Before listing additions, it's critical to map what's already handled:
+Before listing additions, map what v2.0 features are handled by existing packages:
 
-| v1.1 Feature | Covered By (Existing) | How |
+| v2.0 Feature | Covered By (Existing) | How |
 |---|---|---|
-| Corporate actions data | **vnstock 3.5.1** `Company.events()` | Returns `eventListCode`, `ratio`, `value`, `recordDate`, `exrightDate` via VCI GraphQL |
-| Price adjustment math | **Python `decimal.Decimal`** + existing `adjusted_close` column | Multiply/divide by ratio — pure arithmetic |
-| FIFO cost basis | **Python `decimal.Decimal`** | Sort trades by date, dequeue oldest lots on sell |
-| Realized/unrealized P&L | **SQLAlchemy 2.0** queries + Python | Query current prices vs cost basis |
-| AI structured output | **google-genai** `response_schema` + Pydantic | Already using `response_schema=PydanticModel` in `_call_gemini()` |
-| AI system instructions | **google-genai** `system_instruction` param | Available in `GenerateContentConfig` — currently unused, prompts are inline |
-| Retry with backoff | **tenacity 9.1.4** | Already decorating `_call_gemini()` with `@retry` |
-| Rate limit handling | **Custom batch loop** in `_run_batched_analysis()` | Already handles 429s with progressive backoff |
-| DB migrations | **Alembic 1.18** | New tables (corporate_actions, trades, job_runs) are standard migrations |
-| Health dashboard charts | **Recharts 3.x** | Bar charts for error rates, area charts for data freshness |
-| Health dashboard UI | **shadcn/ui 4.x** + **@tanstack/react-table** | Cards for status, tables for job history |
-| Portfolio data tables | **@tanstack/react-table 8.x** | Holdings view, trade history |
-| Portfolio charts | **Recharts 3.x** | P&L over time, allocation pie chart |
-| Logging | **loguru 0.7.3** | Structured logging for error tracking, job status |
-| Date handling | **date-fns 4.x** (frontend), **datetime** (backend) | Ex-right dates, trade dates |
+| HNX/UPCOM crawling | **vnstock 3.5.1** `Listing.symbols_by_exchange()` | Returns all exchanges in one call. `Quote(symbol)` works for any exchange's ticker. |
+| Intraday price polling | **vnstock 3.5.1** `Quote.history(interval='1m')` | VCI supports `1m`, `5m`, `15m`, `30m`, `1H` intervals. |
+| WebSocket server | **FastAPI** (Starlette) + **websockets 16.0** | `@app.websocket("/ws/prices")` — zero additional deps. |
+| File upload (CSV) | **python-multipart 0.0.26** (via `fastapi[standard]`) | `UploadFile` type in FastAPI endpoints. Already installed. |
+| CSV parsing (backend) | **Python stdlib `csv`** | `csv.DictReader` handles any delimiter, quoting. Zero deps. |
+| Dividend income tracking | **SQLAlchemy 2.0** + existing models | Cross-reference `CorporateEvent(CASH_DIVIDEND)` with `Lot` holdings at ex_date. |
+| Portfolio performance time series | **SQLAlchemy 2.0** aggregate queries | Daily portfolio value from `Lot.remaining_quantity * DailyPrice.close`. |
+| Allocation pie chart data | **SQLAlchemy 2.0** aggregate queries | Group holdings by ticker/sector, compute percentages. |
+| Trade edit/delete | **FastAPI** PUT/DELETE endpoints | Extend existing `PortfolioService`. FIFO lot recalculation on edit. |
+| Gemini usage tracking | **google-genai 1.73** `response.usage_metadata` | Fields: `prompt_token_count`, `candidates_token_count`, `total_token_count`. |
+| Pipeline timeline | Existing `job_executions` table | Already stores `started_at`, `completed_at`, `status` per job. |
+| Telegram health notifications | **python-telegram-bot 22.7** | Extend existing `telegram_bot.send_message()` with health digest. |
+| Rights issue tracking | Existing `CorporateEvent` model | Add `RIGHTS_ISSUE` event type. Extend VNDirect crawler. |
+| Ex-date alerts | **APScheduler 3.11** + **python-telegram-bot** | New daily job checking upcoming ex-dates → send Telegram alert. |
+| Adjusted/raw price toggle | Existing `adjusted_close` column in `DailyPrice` | API parameter `adjusted=true/false` → return `close` or `adjusted_close`. |
+| Performance chart (frontend) | **Recharts 3.x** | Line/area chart for portfolio value over time. Already installed. |
+| Allocation chart (frontend) | **Recharts 3.x** | Pie chart for holdings breakdown. Already installed. |
+| Pipeline timeline (frontend) | **Recharts 3.x** | Horizontal bar chart simulating Gantt timeline. Already installed. |
+| DB migrations for new tables | **Alembic 1.18** | New tables (`gemini_usage_log`, `dividend_income`, `intraday_prices`) + column additions |
+| Exchange filter UI | **shadcn/ui 4.x** Select component | Dropdown for HOSE/HNX/UPCOM filter on market overview |
+| Portfolio data tables | **@tanstack/react-table 8.x** | Dividend history, extended trade history with edit/delete |
+| Date handling | **date-fns 4.x** (frontend), **datetime** (backend) | Ex-dates, calendar date ranges, trade dates |
 
 ---
 
-## New Stack Additions
+## New Stack Additions for v2.0
 
-### Backend: No New Libraries
+### Backend: ZERO New Packages
 
-**Rationale:** Every v1.1 backend feature is implementable with existing dependencies. Adding libraries for problems that are 30 lines of custom code introduces dependency risk without benefit.
+**Rationale:** Every v2.0 backend feature is implementable with existing dependencies. The stack was designed with headroom for exactly these features.
 
-#### Circuit Breaker — Custom Implementation (NOT a library)
+**Verified existing capabilities used by v2.0:**
 
-**Decision:** Build a ~30-line `AsyncCircuitBreaker` class instead of using `aiobreaker` or `pybreaker`.
-
-**Why not aiobreaker 1.2.0:**
-- Only 3 releases ever (1.0, 1.1, 1.2) — effectively abandoned
-- Internal state transitions use `threading.Lock` (not asyncio-native)
-- Bug: `timeout_duration=int` crashes with `TypeError: unsupported operand type(s) for +: 'datetime.datetime' and 'int'` — requires `timedelta` (undocumented)
-
-**Why not pybreaker 1.4.1:**
-- `call_async` uses Tornado's `@gen.coroutine` — not compatible with native asyncio
-- No awareness of FastAPI/asyncio patterns
-
-**Custom implementation pattern:**
-```python
-class AsyncCircuitBreaker:
-    """Async circuit breaker for external service calls."""
-    def __init__(self, name: str, fail_max: int = 5, reset_timeout: float = 60.0):
-        self.name = name
-        self.fail_max = fail_max
-        self.reset_timeout = reset_timeout
-        self._failures = 0
-        self._opened_at: float | None = None
-        self._lock = asyncio.Lock()
-
-    @property
-    def is_open(self) -> bool:
-        if self._opened_at is None:
-            return False
-        if time.monotonic() - self._opened_at >= self.reset_timeout:
-            return False  # Half-open: allow one attempt
-        return True
-
-    async def call(self, func, *args, **kwargs):
-        async with self._lock:
-            if self.is_open:
-                raise CircuitOpenError(f"{self.name} circuit is open")
-        try:
-            result = await func(*args, **kwargs)
-            async with self._lock:
-                self._failures = 0
-                self._opened_at = None
-            return result
-        except Exception as e:
-            async with self._lock:
-                self._failures += 1
-                if self._failures >= self.fail_max:
-                    self._opened_at = time.monotonic()
-            raise
-```
-
-**Where to apply:** One breaker per external service:
-- `vci_breaker` — vnstock/VCI API calls
-- `gemini_breaker` — Google Gemini API calls
-- `cafef_breaker` — CafeF scraping calls
-
-#### Dead-Letter Queue — DB Table Pattern
-
-**Decision:** A `dead_letter_operations` PostgreSQL table, not a message queue.
-
-**Why not Redis/RabbitMQ:** Single-user app, APScheduler is in-process. A DB table with `status`, `payload`, `error`, `retry_count`, `next_retry_at` is queryable, persistent, and requires zero infrastructure.
-
-#### Job Run Tracking — DB Table Pattern
-
-**Decision:** A `job_runs` PostgreSQL table for health monitoring.
-
-**Why not Prometheus:** Prometheus requires a scraper + Grafana for visualization. For a personal app, a DB table queried by the existing FastAPI API + rendered by the existing Next.js dashboard is simpler and more integrated.
+| Capability | Already Installed | Version | How Used in v2.0 |
+|---|---|---|---|
+| WebSocket server | `websockets` (via `uvicorn[standard]`) | 16.0 | FastAPI `@app.websocket("/ws/prices")` for real-time price push |
+| File upload | `python-multipart` (via `fastapi[standard]`) | 0.0.26 | `UploadFile` type for CSV broker import endpoint |
+| CSV parsing | Python stdlib `csv` | built-in | `csv.DictReader` for parsing uploaded broker CSV files |
+| Intraday data | `vnstock` | 3.5.1 | `Quote.history(interval='1m')` — VCI supports 1m/5m/15m/30m/1H |
+| Multi-exchange | `vnstock` | 3.5.1 | `Listing.symbols_by_exchange()` returns HSX/HNX/UPCOM tickers |
+| Usage metadata | `google-genai` | 1.73.1 | `response.usage_metadata.{prompt_token_count, candidates_token_count, total_token_count}` |
+| Scheduled jobs | `apscheduler` | 3.11.2 | Interval trigger for intraday polling + cron for ex-date alert check |
+| Telegram messaging | `python-telegram-bot` | 22.7 | Health notifications, ex-date alerts via existing `send_message()` |
 
 ### Frontend: 3 New Dependencies
 
 | Library | Version | Purpose | Why | Confidence |
 |---------|---------|---------|-----|------------|
-| **react-hook-form** | ~7.72 | Form state for trade entry (buy/sell) | shadcn/ui's `<Form>` component is built on top of react-hook-form. Trade entry form needs validation, error display, submit handling. Using this enables shadcn's form primitives directly. | HIGH |
-| **@hookform/resolvers** | ~5.2 | Connects react-hook-form with zod | Bridge between form library and schema validation. Required for `zodResolver()`. | HIGH |
-| **zod** | ~3.24 | Schema validation for forms | Validates trade entry inputs (positive quantity, valid date, price > 0). Pydantic-equivalent for TypeScript. Use zod 3.x — zod 4.x (4.3.6) is very new and `@hookform/resolvers` 5.2 is validated against zod 3.x. | HIGH |
+| **react-day-picker** | ^9.14.0 | Calendar component for event calendar view | shadcn/ui's `<Calendar>` component is built on react-day-picker. Needed for corporate event calendar showing ex-dates, dividend dates, rights issue dates. Supports date range selection, custom day rendering (event dots/badges). | HIGH |
+| **papaparse** | ^5.5.3 | Client-side CSV parsing for broker import preview | Parse broker CSV files in the browser before uploading. Shows preview table of parsed trades, allows column mapping, validates data before server submission. Much better UX than blind upload. TypeScript types via `@types/papaparse`. | HIGH |
+| **@types/papaparse** | ^5.5.2 | TypeScript definitions for papaparse | papaparse is plain JS. Types needed for TS project. | HIGH |
 
-**Why sonner/toast was considered but NOT a separate install:**
-shadcn/ui 4.x's `npx shadcn@latest add sonner` handles the sonner dependency automatically. No explicit `npm install sonner` needed.
+#### Previously Validated But Not Yet Installed
 
-**Why numeral.js NOT recommended:**
-`Intl.NumberFormat('vi-VN')` handles VND formatting natively. No library needed for `1,234,567 ₫`.
+These were approved in v1.x research but never added as direct dependencies. v2.0 forms (trade edit, CSV column mapping) justify installing them now:
+
+| Library | Version | Purpose | Status |
+|---------|---------|---------|--------|
+| **react-hook-form** | ^7.72.1 | Complex form state management | Optional. Current trade form uses plain `useState` and works fine. Only add if trade edit form or CSV mapping form becomes complex enough to justify. |
+| **@hookform/resolvers** | ^5.2.2 | Zod resolver for react-hook-form | Only needed if react-hook-form is added. |
+
+**Decision:** Do NOT pre-install react-hook-form. The existing `useState` pattern works for trade forms (proven in v1.1). Reassess during implementation — if trade edit requires complex validation or CSV column mapping needs dynamic form fields, add then. Avoid speculative dependencies.
 
 ---
 
-## Detailed Integration Points
+## Detailed Integration Points for v2.0
 
-### 1. Corporate Actions → Existing vnstock Pipeline
+### 1. Multi-Market (HNX/UPCOM) — vnstock Already Supports It
 
-**Data source:** `vnstock.Vnstock().stock(symbol, source='VCI').company.events()`
-
-**Returns DataFrame with columns (verified via source inspection):**
-- `eventListCode` — Event type identifier (dividend, split, bonus, rights)
-- `eventTitle` / `en_EventTitle` — Human-readable description
-- `ratio` — Split/bonus ratio
-- `value` — Dividend amount (VND per share) or similar
-- `recordDate` → renamed to `record_date` — Record date for eligibility
-- `exrightDate` → renamed to `exright_date` — Ex-rights date (when price adjusts)
-- `publicDate` → renamed to `public_date`, `issueDate` → renamed to `issue_date`
-
-**Integration:** New `CorporateActionCrawler` follows same pattern as `VnstockCrawler` — sync `Company.events()` call wrapped in `asyncio.to_thread()`. Store in `corporate_actions` table. Trigger price adjustment via job chain after crawl.
-
-**Price adjustment formulas:**
-- **Cash dividend:** `adjusted = price - dividend_per_share`
-- **Stock split N:1:** `adjusted = price / N`
-- **Bonus shares (ratio R):** `adjusted = price / (1 + R)`
-- **Rights issue (ratio R, subscription price P):** `adjusted = (price + R × P) / (1 + R)`
-
-Apply adjustment factors to ALL historical `adjusted_close` values before the `exrightDate`.
-
-### 2. Portfolio P&L → Existing SQLAlchemy Models
-
-**New models follow existing patterns in `app/models/`:**
-
+**Current code already prepared:**
 ```python
-# app/models/trade.py — follows Ticker/DailyPrice model pattern
-class Trade(Base):
-    __tablename__ = "trades"
-    id: Mapped[int]           # PK
-    ticker_id: Mapped[int]    # FK → tickers.id
-    trade_type: Mapped[str]   # 'buy' or 'sell'
-    trade_date: Mapped[date]
-    quantity: Mapped[int]
-    price: Mapped[Decimal]    # Price per share (VND)
-    fees: Mapped[Decimal]     # Transaction fees
-    notes: Mapped[str | None]
-    created_at: Mapped[datetime]
+# vnstock_crawler.py line 23 (already exists)
+_EXCHANGE_MAP = {"HOSE": "HSX", "HNX": "HNX", "UPCOM": "UPCOM"}
 ```
 
-**FIFO cost basis:** Pure Python with `decimal.Decimal`:
+**Ticker model already has exchange field:**
 ```python
-# On sell: dequeue oldest buy lots
-remaining_sell = sell_quantity
-realized_pnl = Decimal(0)
-for lot in sorted(buy_lots, key=lambda l: l.trade_date):
-    if remaining_sell <= 0:
-        break
-    deducted = min(remaining_sell, lot.remaining_quantity)
-    realized_pnl += deducted * (sell_price - lot.price)
-    lot.remaining_quantity -= deducted
-    remaining_sell -= deducted
+# models/ticker.py line 20 (already exists)
+exchange: Mapped[str] = mapped_column(String(10), nullable=False, server_default="HOSE")
 ```
 
-**Unrealized P&L:** `(current_close - avg_cost_basis) × remaining_shares` — current_close from latest `daily_prices` row.
+**Changes needed (all logic, no new deps):**
+1. Extend `fetch_listing()` to iterate all 3 exchanges
+2. Update scheduler to crawl HNX/UPCOM tickers in addition to HOSE
+3. Add exchange filter to API endpoints (query parameter `?exchange=HNX`)
+4. Frontend dropdown filter on market overview
 
-### 3. AI Prompt Improvements → Existing google-genai
+**Ticker count impact:**
+- HOSE: ~400 tickers (current)
+- HNX: ~300+ tickers
+- UPCOM: ~800+ tickers
+- **Total: ~1,500+ tickers** → crawl time increases ~3-4x, need batch optimization
 
-**What changes (no new libraries):**
+### 2. Real-Time WebSocket Price Streaming
 
-1. **Use `system_instruction`** — move role/persona text from prompt body to `system_instruction` param in `GenerateContentConfig`. Already supported but currently unused.
+**Architecture decision: FastAPI native WebSocket (NOT SSE, NOT polling-only)**
 
-2. **Enhanced Pydantic schemas** — add more structured fields:
+**Why WebSocket over SSE:**
+- FastAPI has first-class WebSocket support via Starlette — no additional package
+- `websockets` 16.0 already installed as uvicorn dependency
+- Bidirectional allows clients to subscribe/unsubscribe to specific tickers
+- Better for real-time price data (SSE has reconnection overhead)
+
+**Why NOT pure react-query polling:**
+- Polling at 1-minute intervals creates unnecessary HTTP overhead for many tickers
+- WebSocket push is more efficient when data changes are event-driven
+
+**Backend pattern:**
 ```python
-class TickerTechnicalAnalysis(BaseModel):
-    ticker: str
-    signal: TechnicalSignal
-    strength: int = Field(ge=1, le=10)
-    reasoning: str
-    key_indicators: list[str]  # NEW: which indicators drove the signal
-    risk_level: str            # NEW: low/medium/high
+# Real-time price WebSocket endpoint
+@app.websocket("/ws/prices")
+async def ws_prices(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            # Receive subscription message (e.g., {"subscribe": ["VNM", "FPT"]})
+            data = await websocket.receive_json()
+            # Handle subscription logic...
+    except WebSocketDisconnect:
+        pass
+
+# Background task: poll vnstock intraday + broadcast to connected clients
+class PriceBroadcaster:
+    def __init__(self):
+        self.connections: set[WebSocket] = set()
+        self.subscriptions: dict[WebSocket, set[str]] = {}
 ```
 
-3. **Few-shot examples in prompts** — include 1-2 example outputs to improve consistency.
+**Data source for intraday:** vnstock `Quote(symbol).history(interval='1m')` via `asyncio.to_thread()` — same pattern as existing OHLCV crawl but with 1-minute interval.
 
-4. **Prompt versioning** — store prompt templates as constants with version numbers for A/B comparison.
+**Polling frequency:** APScheduler `IntervalTrigger(minutes=1)` during market hours (9:00-11:30, 13:00-14:45 UTC+7). Outside market hours, no polling.
 
-### 4. Error Recovery → Existing tenacity + Custom Code
+### 3. Portfolio Dividend Tracking
 
-**Layer 1 — Retry (existing tenacity):**
-Already in place on `_call_gemini()`. Extend to:
-- `VnstockCrawler` methods (currently bare try/except in jobs.py)
-- CafeF scraping calls
+**No new packages.** Cross-reference existing data:
 
-**Layer 2 — Circuit breaker (custom, see above):**
-Wrap external service calls. When circuit opens, jobs fail fast instead of waiting for timeouts.
+- `CorporateEvent` table already stores `CASH_DIVIDEND` events with `dividend_amount` and `ex_date`
+- `Lot` table tracks holdings with `buy_date` and `remaining_quantity`
+- **Logic:** For each CASH_DIVIDEND event, check if user held shares of that ticker at the ex_date → compute `dividend_amount × held_quantity`
+- **New DB table:** `dividend_income` — caches computed dividend income per event per holding
+- **API:** New `/api/portfolio/dividends` endpoint returning dividend history + totals
 
-**Layer 3 — Dead-letter (DB table, see above):**
-When a batch/ticker fails after all retries, insert into `dead_letter_operations` with payload. A periodic "retry dead letters" job picks up pending items.
+### 4. Trade Edit/Delete — FIFO Lot Recalculation
 
-### 5. System Health → Existing Stack + job_runs Table
+**No new packages.** Extend existing `PortfolioService`:
 
-**Backend:**
-- New `JobRunService` writes to `job_runs` at job start/end
-- New `/api/system/health` endpoint returns last crawl times, error counts, data freshness, circuit breaker states
-- Existing `app/api/system.py` already has a system router — extend it
+- **DELETE trade:** If BUY trade, remove associated lot. If lot partially consumed by sells, prevent deletion (or cascade). If SELL trade, reverse lot consumption.
+- **EDIT trade:** Effectively DELETE old + CREATE new. Must recalculate all subsequent FIFO lot consumptions.
+- **Complexity warning:** Editing old trades requires replaying all trades after the edited one to recompute lots. This is the most complex portfolio feature.
 
-**Frontend:**
-- New `/dashboard/health` page using existing shadcn Cards + Recharts + Table components
-- Color-coded freshness indicators (green/yellow/red)
+### 5. Broker CSV Import
+
+**Backend: Python stdlib `csv` + `python-multipart` (already installed)**
+
+```python
+@router.post("/portfolio/import-csv")
+async def import_csv(file: UploadFile):
+    content = await file.read()
+    reader = csv.DictReader(io.StringIO(content.decode("utf-8")))
+    # Parse rows, map columns, validate, create trades
+```
+
+**Frontend: `papaparse` for client-side preview**
+
+```typescript
+import Papa from 'papaparse';
+
+Papa.parse(file, {
+    header: true,
+    complete: (results) => {
+        // Show preview table with column mapping UI
+        // User maps: "Mã CK" → symbol, "Số lượng" → quantity, etc.
+    }
+});
+```
+
+**VN broker CSV formats (common patterns):**
+- **VPS/SSI/VNDS/TCBS** typically export: Mã CK, Ngày GD, Loại (Mua/Bán), Số lượng, Giá, Phí
+- Column names vary by broker → need mapping step in UI
+- Date formats vary: DD/MM/YYYY (VN standard) vs YYYY-MM-DD
+
+### 6. Gemini API Usage Tracking
+
+**No new packages.** `google-genai` already returns usage metadata:
+
+```python
+# Already available in response object
+response = await client.aio.models.generate_content(...)
+usage = response.usage_metadata
+# Fields:
+#   usage.prompt_token_count     → int
+#   usage.candidates_token_count → int
+#   usage.total_token_count      → int
+```
+
+**New DB table:** `gemini_usage_log`
+```
+id, job_id, model, prompt_tokens, completion_tokens, total_tokens, created_at
+```
+
+**Dashboard:** Recharts area chart showing daily token usage, RPM tracking (count requests per minute from logs).
+
+### 7. Pipeline Timeline Visualization
+
+**No new packages.** Existing `job_executions` table already stores:
+- `job_id`, `started_at`, `completed_at`, `status`
+
+**Frontend:** Recharts `BarChart` with horizontal bars (job_id on Y-axis, time on X-axis, bar width = duration). Color-code by status (green/yellow/red). This creates a Gantt-like timeline view.
+
+### 8. Event Calendar — react-day-picker
+
+**New frontend dep:** `react-day-picker` ^9.14.0
+
+**Integration with shadcn:**
+```bash
+npx shadcn@latest add calendar   # Installs react-day-picker as dependency
+npx shadcn@latest add popover    # For date picker popovers (if not already added)
+```
+
+**Usage pattern:**
+```typescript
+import { Calendar } from "@/components/ui/calendar";
+
+// Highlight dates with corporate events
+<Calendar
+    modifiers={{ event: eventDates }}
+    modifiersClassNames={{ event: "bg-blue-100 font-bold" }}
+    onDayClick={(day) => showEventsForDay(day)}
+/>
+```
+
+**Data source:** Existing `/api/corporate-events` endpoint filtered by date range.
+
+### 9. Adjusted/Raw Price Toggle
+
+**No new packages.** Already implemented:
+- `DailyPrice` model has `adjusted_close` column
+- `CorporateActionService.adjust_all_tickers()` populates it
+
+**Changes needed:**
+- Add `?adjusted=true` query parameter to price endpoints
+- Frontend toggle switch in chart component
+- When toggled, pass different close series to lightweight-charts
 
 ---
 
@@ -242,19 +275,18 @@ When a batch/ticker fails after all retries, insert into `dead_letter_operations
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Circuit breaker | Custom ~30-line class | aiobreaker 1.2.0 | Only 3 releases, Tornado-legacy internals, `timeout_duration` bug with int |
-| Circuit breaker | Custom ~30-line class | pybreaker 1.4.1 | `call_async` uses Tornado `@gen.coroutine`, not native asyncio |
-| Circuit breaker | Custom ~30-line class | circuitbreaker 2.1.3 | Sync-only, no async support at all |
-| Health monitoring | DB table + custom dashboard | prometheus-client 0.25 + instrumentator 7.1 | Requires Prometheus server + Grafana. Overkill for single-user |
-| Health monitoring | DB table + custom dashboard | Sentry | External SaaS dependency, free tier limited |
-| Dead-letter queue | PostgreSQL table | Redis Streams / RabbitMQ | Requires external infrastructure. DB table is persistent, zero-ops |
-| Form validation | zod 3.24 | zod 4.3 | zod 4.x is very new, `@hookform/resolvers` tested against zod 3.x |
-| Form state | react-hook-form 7.72 | Manual useState | Trade entry needs validation + shadcn Form component requires it |
-| Corp action data | vnstock `Company.events()` | Direct CafeF scraping | vnstock already wraps VCI GraphQL with structured event data |
-| Cost basis method | FIFO | Weighted average / LIFO | FIFO is Vietnam tax standard; simplest to implement |
-| AI improvement | Prompt engineering + system_instruction | Fine-tuning / RAG | Overkill. Better prompts + structured output already available |
-| Number formatting | Intl.NumberFormat | numeral.js 2.0.6 | Native browser API handles VND. Zero extra bytes |
-| Toast notifications | shadcn `add sonner` | react-toastify | sonner is shadcn/ui's native toast solution |
+| Real-time transport | FastAPI native WebSocket | `sse-starlette` 3.3 (SSE) | WebSocket allows client to subscribe/unsubscribe to specific tickers; SSE is unidirectional |
+| Real-time transport | FastAPI native WebSocket | React Query `refetchInterval` (polling) | Polling at 1-min creates N HTTP requests per interval; WebSocket push is 1 connection |
+| CSV parsing (backend) | Python stdlib `csv` | `pandas.read_csv()` | stdlib csv is lighter and sufficient; no need to import pandas just for CSV parsing |
+| CSV parsing (frontend) | `papaparse` 5.5 | Backend-only parsing | No client-side preview; user can't verify column mapping before upload |
+| CSV parsing (frontend) | `papaparse` 5.5 | `csv-parse` (npm) | papaparse has 3x more npm downloads, better browser support, simpler API |
+| Event calendar | `react-day-picker` 9.x (via shadcn) | `@fullcalendar/react` 6.1 | FullCalendar is 300KB+ with complex API. react-day-picker is ~30KB, integrates with shadcn, sufficient for month-view with event dots |
+| Event calendar | `react-day-picker` 9.x | `react-big-calendar` 1.19 | Requires moment.js or date-fns adapter, heavier than needed for event dot display |
+| Form management | Keep `useState` pattern | `react-hook-form` 7.72 | Existing trade form works with useState. Don't add form library speculatively — add when needed |
+| Portfolio performance | Recharts line chart | `lightweight-charts` (TradingView) | lightweight-charts is for financial OHLCV data. Portfolio value is a simple time series — Recharts `<AreaChart>` is more appropriate |
+| Intraday data source | vnstock `Quote.history(interval='1m')` | Direct VCI WebSocket API | VCI may have WebSocket endpoints but they're undocumented, may require auth, and vnstock doesn't wrap them. Polling vnstock is reliable and proven |
+| Health notifications | Extend existing Telegram bot | Separate monitoring (Uptime Robot, etc.) | Already have Telegram infrastructure. Adding external service adds complexity |
+| Gemini tracking | Custom DB table | LangSmith / Weights & Biases | External SaaS. Overkill for personal tracking. DB table + Recharts dashboard is sufficient |
 
 ---
 
@@ -264,6 +296,9 @@ When a batch/ticker fails after all retries, insert into `dead_letter_operations
 
 ```
 # All existing deps remain as-is — NO NEW LINES NEEDED
+# WebSocket: websockets 16.0 already installed (uvicorn[standard] dependency)
+# File upload: python-multipart 0.0.26 already installed (fastapi[standard] dependency)
+# CSV parsing: Python stdlib csv — no install needed
 ```
 
 ### Frontend — 3 New Dependencies
@@ -271,20 +306,22 @@ When a batch/ticker fails after all retries, insert into `dead_letter_operations
 ```bash
 cd frontend
 
-# Form handling (for trade entry)
-npm install react-hook-form @hookform/resolvers zod@3
-
-# Add shadcn form + toast + select components (copy-paste, not npm deps)
-npx shadcn@latest add form
-npx shadcn@latest add sonner
-npx shadcn@latest add select
-npx shadcn@latest add popover
+# Event calendar (react-day-picker is shadcn Calendar dependency)
 npx shadcn@latest add calendar
+npx shadcn@latest add popover
+
+# CSV parsing for broker import preview
+npm install papaparse @types/papaparse
 ```
 
-**Note:** `npx shadcn@latest add form` will auto-install `react-hook-form` and `@hookform/resolvers` as peer deps. The explicit `npm install` is for clarity.
+**Note on react-day-picker:** `npx shadcn@latest add calendar` automatically installs `react-day-picker` as a dependency. No separate `npm install` needed.
 
-**Note:** `zod@3` pins to latest 3.x. Do NOT use zod 4.x yet.
+**Note on zod:** Already present as transitive dependency (via shadcn). If forms need direct zod imports, add as explicit dependency: `npm install zod@3`.
+
+**What NOT to pre-install:**
+- `react-hook-form` / `@hookform/resolvers` — wait until a form is complex enough to justify
+- `sonner` — add via `npx shadcn@latest add sonner` only when toast notifications are built
+- No other new dependencies
 
 ---
 
@@ -292,12 +329,17 @@ npx shadcn@latest add calendar
 
 | Table | Purpose | Key Columns |
 |-------|---------|-------------|
-| `corporate_actions` | Store split/dividend/bonus/rights events | `ticker_id`, `event_type`, `ratio`, `value`, `ex_date`, `record_date` |
-| `trades` | Manual trade entries (buy/sell) | `ticker_id`, `trade_type`, `date`, `quantity`, `price`, `fees` |
-| `trade_lots` | FIFO lot tracking (remaining shares per buy) | `trade_id`, `remaining_quantity` |
-| `dividend_income` | Track dividend payments received | `ticker_id`, `amount`, `ex_date`, `payment_date` |
-| `job_runs` | Job execution history for health monitoring | `job_name`, `status`, `started_at`, `duration`, `error` |
-| `dead_letter_operations` | Failed operations for retry | `operation_type`, `payload`, `error`, `retry_count`, `status` |
+| `gemini_usage_log` | Track Gemini API token consumption per call | `job_id`, `model`, `prompt_tokens`, `completion_tokens`, `total_tokens`, `created_at` |
+| `dividend_income` | Cache computed dividend income for portfolio | `ticker_id`, `corporate_event_id`, `quantity_held`, `income_amount`, `ex_date` |
+| `intraday_prices` | Store latest intraday price snapshots for WebSocket broadcast | `ticker_id`, `price`, `change`, `change_pct`, `volume`, `timestamp` |
+
+**Tables that need migration/modification:**
+| Existing Table | Change | Purpose |
+|---|---|---|
+| `tickers` | Add index on `exchange` column | Filter queries by HNX/UPCOM/HOSE |
+| `corporate_events` | Add `RIGHTS_ISSUE` to event_type values | Rights issue tracking |
+| `trades` | Add `notes` column (nullable text) | Allow broker/source annotation on imported trades |
+| `trades` | Add `source` column (default 'MANUAL') | Distinguish manual entry vs CSV import |
 
 All managed via Alembic migrations (already in stack).
 
@@ -307,13 +349,31 @@ All managed via Alembic migrations (already in stack).
 
 | Tempting Addition | Why Not |
 |---|---|
-| **Celery + Redis** for retry queue | APScheduler + DB dead-letter table is sufficient for single-user |
-| **Prometheus + Grafana** for monitoring | Need separate server/dashboard. DB table + existing Next.js achieves same |
-| **aiobreaker / pybreaker** for circuit breaker | No native asyncio support. Custom class is simpler |
-| **zod 4.x** | Too new, `@hookform/resolvers` not yet validated against it |
-| **Additional AI SDKs** (LangChain) | google-genai already does structured output, system instructions, thinking config |
-| **WebSocket library** for real-time health | Polling with React Query is sufficient for personal health checks |
-| **Redux Toolkit** for portfolio state | zustand (already in stack) handles client state simply |
+| **sse-starlette** for SSE streaming | FastAPI native WebSocket is already available and more capable |
+| **Redis / message queue** for real-time pub/sub | Single user, single server. In-memory `set[WebSocket]` is sufficient |
+| **Celery** for background tasks | APScheduler handles all scheduling. Intraday polling is just an interval trigger |
+| **@fullcalendar/react** for event calendar | 300KB+ overkill. shadcn Calendar (react-day-picker) does month-view with event dots |
+| **react-hook-form** (pre-install) | Current useState works. Add only when a specific form requires it |
+| **D3.js** for pipeline timeline | Recharts horizontal BarChart simulates Gantt adequately |
+| **Socket.IO** | Heavy abstraction over WebSocket. Native WebSocket API in browser + FastAPI is simpler |
+| **polars** for data processing | vnstock outputs pandas DataFrames. Converting adds friction for no gain at ~1500 tickers |
+| **External monitoring** (Sentry, DataDog) | Telegram notifications + DB-backed health dashboard covers personal use |
+
+---
+
+## Scaling Considerations for Multi-Market
+
+Going from ~400 (HOSE) to ~1,500+ tickers affects:
+
+| Concern | Current (400 tickers) | v2.0 (~1,500 tickers) | Mitigation |
+|---|---|---|---|
+| Daily crawl time | ~13 min | ~50+ min | Increase batch size, parallel batches per exchange |
+| Intraday polling | N/A | 1,500 tickers × 1-min = too many | Only poll watched/portfolio tickers (not all 1,500) |
+| DB connections | pool_size=5 | Same (queries are fast) | Monitor pool utilization on health dashboard |
+| AI analysis cost | ~400 Gemini calls | ~1,500 Gemini calls | Only analyze HOSE initially; HNX/UPCOM on-demand |
+| Indicator compute | ~400 tickers × 60 days | ~1,500 × 60 days | Batch compute, parallel processing |
+
+**Key decision:** Crawl ALL tickers for price data (HNX/UPCOM), but only run AI analysis on HOSE + portfolio tickers. HNX/UPCOM AI analysis is on-demand (user requests via dashboard).
 
 ---
 
@@ -321,16 +381,18 @@ All managed via Alembic migrations (already in stack).
 
 | Claim | Source | Confidence |
 |-------|--------|------------|
-| vnstock `Company.events()` returns corporate action data | Inspected source: `vnstock/explorer/vci/company.py` — GraphQL query includes `OrganizationEvents` with `eventListCode`, `ratio`, `value`, `exrightDate` | HIGH |
-| vnstock `Company.dividends()` exists as wrapper | Inspected `vnstock/common/data.py` — delegates to `data_source.dividends()` but VCI source doesn't implement it; events() covers dividends | HIGH |
-| aiobreaker uses Tornado patterns internally | Inspected source: `aiobreaker/state.py` — `call()` checks `isinstance(ret, types.GeneratorType)` | HIGH |
-| aiobreaker `timeout_duration` bug | Tested: `timeout_duration=30` → `TypeError`. Requires `timedelta`. Fixed with `timedelta(seconds=30)` | HIGH |
-| aiobreaker decorator works with asyncio | Tested: `@breaker async def test_func()` works, circuit opens after `fail_max` failures | HIGH |
-| pybreaker `call_async` is Tornado-based | Inspected source: uses `@gen.coroutine` decorator from Tornado | HIGH |
-| google-genai `system_instruction` available | Inspected `GenerateContentConfig.model_fields` — field present, accepts str/Content/parts | HIGH |
-| google-genai `thinking_config` available | Already in use at `ai_analysis_service.py:422`: `ThinkingConfig(thinking_budget=1024)` | HIGH |
-| tenacity 9.1.4 is installed | `pip show tenacity` → Version: 9.1.4 | HIGH |
-| react-hook-form 7.72 is current | `npm view react-hook-form version` → 7.72.1 | HIGH |
-| @hookform/resolvers 5.2 is current | `npm view @hookform/resolvers version` → 5.2.2 | HIGH |
-| zod 3.x vs 4.x compatibility | Training data; zod 4.3.6 on npm but 3.x is mature/stable line | MEDIUM |
-| FIFO is Vietnam tax standard for securities | Training data — common practice in VN brokerage systems | MEDIUM |
+| vnstock supports HNX/UPCOM via VCI | Inspected `vnstock_crawler.py` line 23: `_EXCHANGE_MAP` already includes HNX/UPCOM; VCI `Listing.symbols_by_exchange()` returns all exchanges | HIGH |
+| vnstock supports intraday intervals | Inspected `vnstock/explorer/vci/const.py`: `_INTERVAL_MAP = {'1m': 'ONE_MINUTE', '5m': 'ONE_MINUTE', '15m': 'ONE_MINUTE', ...}` | HIGH |
+| FastAPI has native WebSocket support | Tested: `from starlette.websockets import WebSocket` — available. Starlette 1.0.0 installed | HIGH |
+| websockets 16.0 is installed | `importlib.metadata.version('websockets')` → 16.0. Dependency of `uvicorn[standard]` | HIGH |
+| python-multipart 0.0.26 is installed | `importlib.metadata.version('python-multipart')` → 0.0.26. Dependency of `fastapi[standard]` | HIGH |
+| google-genai returns usage_metadata | Inspected `types.GenerateContentResponseUsageMetadata` — fields: `prompt_token_count`, `candidates_token_count`, `total_token_count` (+ 8 more) | HIGH |
+| Ticker model has exchange field | Inspected `app/models/ticker.py` line 20: `exchange: Mapped[str] = mapped_column(String(10), ..., server_default="HOSE")` | HIGH |
+| DailyPrice has adjusted_close | CorporateActionService already computes and stores `adjusted_close` | HIGH |
+| react-day-picker 9.14.0 is current | `npm view react-day-picker version` → 9.14.0 | HIGH |
+| papaparse 5.5.3 is current | `npm view papaparse version` → 5.5.3 | HIGH |
+| @types/papaparse 5.5.2 is current | `npm view @types/papaparse version` → 5.5.2 | HIGH |
+| react-hook-form 7.72.1 is current | `npm view react-hook-form version` → 7.72.1 | HIGH |
+| @hookform/resolvers 5.2.2 is current | `npm view @hookform/resolvers version` → 5.2.2 | HIGH |
+| shadcn Calendar uses react-day-picker | shadcn docs; Calendar component source wraps react-day-picker | HIGH |
+| @fullcalendar/react size ~300KB | Training data — FullCalendar is a heavy library | MEDIUM |

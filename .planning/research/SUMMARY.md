@@ -1,201 +1,186 @@
 # Project Research Summary
 
 **Project:** Holo — Stock Intelligence Platform
-**Domain:** Vietnamese stock market intelligence (HOSE) — reliability hardening & portfolio tracking (v1.1)
-**Researched:** 2026-04-16
+**Domain:** VN Stock Intelligence Platform — v2.0 Multi-Market, Real-Time, Portfolio & Health Expansion
+**Researched:** 2026-04-17
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Holo v1.1 adds four capability areas to an already-functional stock intelligence platform: corporate actions handling (price adjustments for splits/dividends), portfolio tracking (trade entry, FIFO cost basis, P&L), error resilience (circuit breakers, dead-letter retry, job tracking), and system health observability. The critical discovery from stack research is that **zero new backend libraries are needed** — the existing stack (FastAPI + SQLAlchemy + tenacity + google-genai + vnstock 3.5.1) already covers every v1.1 requirement. vnstock's `Company.events()` endpoint provides corporate action data (splits, dividends, bonus shares, rights issues) with structured fields, eliminating the need for fragile Vietnamese-language scraping. Only 3 small frontend dependencies are added (react-hook-form, @hookform/resolvers, zod@3) for trade entry forms.
+Holo v2.0 is a feature expansion of a well-structured monolith (FastAPI + PostgreSQL + Next.js) that already has strong foundations from v1.0/v1.1. The critical finding across all research is that **the existing stack covers every v2.0 backend feature with zero new Python packages** — only 3 frontend packages are needed (react-day-picker, papaparse, @types/papaparse). vnstock 3.5.1 already supports HNX/UPCOM exchanges, FastAPI already has WebSocket support via Starlette, and google-genai already exposes usage metadata. This is purely an engineering expansion, not a technology pivot. The codebase's existing patterns (async sessions, circuit breakers, job chaining, FIFO lot tracking) are extensible to all v2.0 features.
 
-The recommended approach is to build **corporate actions first, then portfolio tracking**, because portfolio P&L accuracy depends on adjusted prices. Error resilience infrastructure (circuit breakers, job run tracking, dead-letter queue) should be built as a foundation layer before adding new features that exercise external APIs. AI prompt improvements are independent and can be parallelized with any phase. The architecture extends the existing single-process FastAPI pattern with 4 new service classes and 6 new database tables — no infrastructure changes, no new external services.
+The recommended approach is a 5-phase build order driven by dependency chains: (1) Multi-market foundation first — expanding from 400 to ~950 active tickers is prerequisite for everything else; (2) Portfolio enhancements — trade edit/delete with FIFO-safe lot replay, dividend tracking, performance/allocation charts; (3) Corporate action enhancements — rights issues, ex-date alerts, event calendar, adjusted price toggle; (4) Health & monitoring — Gemini usage tracking, pipeline timeline, Telegram health notifications; (5) WebSocket real-time streaming last — highest complexity, lowest dependency on other features. This order respects both data dependencies and risk gradients.
 
-The top risks are: (1) **corporate action price adjustments cascading incorrectly** — adjusting `adjusted_close` without recomputing downstream indicators and AI analyses creates internally inconsistent data; (2) **FIFO cost basis with partial sells** — developers who skip explicit lot tracking will produce wrong P&L numbers that are hard to debug; (3) **retry logic breaking APScheduler job chaining** — the existing `EVENT_JOB_EXECUTED` listener is fragile and retry/circuit-breaker patterns must work *within* job functions, not around them. All three risks have clear prevention strategies documented in detail.
+The top risks are: **crawl pipeline explosion** (3.75× ticker growth without architectural redesign will starve DB pool and blow the 30-minute pipeline window), **FIFO lot corruption** on trade edit/delete (current append-only model has no audit trail for lot consumption reversals), and **WebSocket complexity being underestimated** (no free VN market WebSocket exists — "real-time" is actually 30-second polling dressed as push). All three have concrete prevention strategies documented in PITFALLS.md and must be addressed in the phase where they first appear, not deferred.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack is remarkably complete for v1.1. No new backend dependencies. The only additions are 3 frontend form libraries needed because shadcn/ui's `<Form>` component is built on react-hook-form. Custom implementations are preferred over libraries for circuit breaker (aiobreaker is Tornado-legacy, pybreaker lacks native asyncio), dead-letter queue (PostgreSQL table beats Redis/RabbitMQ for single-user), and health monitoring (DB table + dashboard beats Prometheus/Grafana).
+The v2.0 stack is the v1.1 stack with 3 frontend additions. Zero backend changes to `requirements.txt`. This restraint is the strongest signal from research — every feature was validated against existing dependencies before considering alternatives.
 
-**Core technologies (no changes):**
-- **vnstock 3.5.1**: `Company.events()` returns corporate action data (eventListCode, ratio, value, exrightDate) — no new data source needed
-- **FastAPI + SQLAlchemy 2.0 + Alembic**: 6 new tables via standard migrations, 4 new service classes following existing patterns
-- **tenacity 9.1.4**: Already on `_call_gemini()` — extend to all external API calls (vnstock, CafeF)
-- **google-genai**: `system_instruction` param available but unused — key AI improvement with zero new deps
-- **Custom AsyncCircuitBreaker (~30 lines)**: One singleton per external service (VCI, Gemini, CafeF)
+**Core technologies (unchanged, extended use):**
+- **vnstock 3.5.1**: Multi-market crawling — `Listing.symbols_by_exchange()` returns all exchanges; `Quote(symbol)` is exchange-agnostic for OHLCV; supports 1m/5m/15m/30m intraday intervals via VCI
+- **FastAPI + Starlette**: WebSocket server — native `@app.websocket()` decorator, zero additional deps; `python-multipart` already installed for file uploads
+- **google-genai 1.73**: Usage tracking — `response.usage_metadata` returns `prompt_token_count`, `candidates_token_count`, `total_token_count`
+- **APScheduler 3.11**: New interval trigger for market-hours realtime polling (30s); new cron for health checks (16:30) and ex-date alerts
+- **SQLAlchemy 2.0 + Alembic 1.18**: 2 new tables (`dividend_incomes`, `api_usage`), 3-4 column additions, 2 new indexes
+- **Recharts 3.x**: Performance area chart, allocation pie chart, pipeline timeline bar chart — all already installed
+- **Python stdlib csv**: Backend broker CSV parsing — no pandas needed
 
-**New frontend additions (3 only):**
-- **react-hook-form ~7.72** + **@hookform/resolvers ~5.2** + **zod@3**: Trade entry form validation. Use zod 3.x — zod 4.x is too new for @hookform/resolvers compatibility.
+**New frontend dependencies (3 total):**
+- **react-day-picker ^9.14.0**: Calendar component via shadcn's `<Calendar>` — for corporate event calendar view
+- **papaparse ^5.5.3**: Client-side CSV parsing for broker import preview with column mapping
+- **@types/papaparse ^5.5.2**: TypeScript definitions for papaparse
 
-**Explicitly NOT adding:** Celery, Redis, Prometheus, Grafana, aiobreaker, pybreaker, LangChain, numeral.js, zod 4.x, WebSockets for health.
+**Explicitly rejected:** Redis/message broker, Celery, Socket.IO, FullCalendar, D3.js, pandas for CSV, react-hook-form (add only when needed), separate crawlers per exchange, portfolio snapshot tables.
 
 ### Expected Features
 
-See [FEATURES.md](./FEATURES.md) for full landscape with complexity ratings.
-
 **Must have (table stakes):**
-- Corporate actions crawl from VCI + storage in DB (splits, dividends, bonus, rights)
-- Historical price adjustment via cumulative adjustment factors on `adjusted_close`
-- Manual trade entry (buy/sell) via dashboard form and Telegram commands
-- FIFO cost basis with explicit lot tracking + realized/unrealized P&L
-- Holdings view with current market value and P&L percentages
-- AI prompt improvements: system_instruction, few-shot examples, scoring rubric, price context in technical prompts
-- Job execution logging for all scheduler jobs
-- Data freshness indicators + basic health dashboard page
+- Exchange filter on dashboard (MKT-02) — 1700 tickers unfiltered is unusable
+- Trade edit/delete (PORT-11) — no edit for manual entry errors = user frustration
+- Adjusted/raw price toggle (CORP-09) — platform computes `adjusted_close` but never shows it
+- Telegram health alerts on errors (HEALTH-10) — stale data silently degrades without proactive alerting
+- Ex-date alerts for held positions (CORP-07) — platform tracks events + portfolio but doesn't connect them
 
 **Should have (differentiators):**
-- Dividend income tracking (VN dividends yield 3-8%, significant for total return)
-- Position-aware AI alerts (elevate priority for held tickers)
-- Portfolio P&L on Telegram (`/portfolio`, `/pnl`, daily P&L notification)
-- Dead-letter queue with automatic retry for failed operations
-- Corporate action Telegram alerts (upcoming ex-dates)
-- Adjusted vs raw price toggle on candlestick chart
+- Multi-market HNX/UPCOM crawling (MKT-01) — ~1300 additional tickers; covers entire VN stock market
+- WebSocket real-time streaming (RT-01/02) — intraday visibility during market hours via polling-to-push
+- Dividend income tracking (PORT-08) — actual cash returns, not just capital gains
+- Portfolio performance chart (PORT-09) — visual P&L over time; most compelling portfolio view
+- Broker CSV import (PORT-12) — bulk import from VN broker exports (SSI, VNDirect, TCBS, VCBS)
+- Gemini API usage tracking (HEALTH-08) — free-tier visibility to avoid surprise throttling at 3× ticker count
+- Pipeline execution timeline (HEALTH-09) — Gantt-style visualization of daily job chain
 
-**Defer (v2+):**
-- Portfolio import from CSV/Excel — premature for ~20-50 trades
-- Event calendar on dashboard — nice but not critical
-- Sector-relative AI context — higher complexity
-- Gemini API usage tracker — nice-to-have
-- Broker API integration — VN broker APIs not standardized
+**Defer to v3+:**
+- Stock dividend lot adjustment (STOCK_DIVIDEND increasing lot share count) — complex FIFO impact
+- Historical WebSocket data replay — low value for personal use
+- More than 4 broker CSV formats — start with 1, expand later
+- VN-Index benchmark overlay on performance chart — nice-to-have
+- Automatic rights issue exercise recording — requires user intent modeling
+- Real-time portfolio P&L recalculation from WebSocket prices — complexity/value ratio too high
 
 ### Architecture Approach
 
-v1.1 extends the existing single-process FastAPI architecture with a new **resilience layer** (circuit breakers + extended retry) and 4 new domain services, all communicating through the existing SQLAlchemy session pattern. No infrastructure changes — same PostgreSQL on Aiven, same APScheduler in-process, same Telegram long-poll. The key architectural addition is treating error recovery as a cross-cutting concern with module-level circuit breaker singletons and a job-wrapping pattern for health tracking. See [ARCHITECTURE.md](./ARCHITECTURE.md) for full diagrams and data flows.
+v2.0 features integrate into the existing monolith without architectural changes. The codebase has clear separation (crawlers → services → API → frontend) and the two genuinely new architectural elements are: (1) a WebSocket endpoint in FastAPI with an in-memory `ConnectionManager` for price broadcasting, and (2) a CSV file upload/parsing pipeline. Everything else extends existing service methods, adds new models, or chains new jobs onto the existing scheduler pipeline. The job chain extends from `daily_price_crawl → [indicators → AI → ...]` to include `→ [corporate_action_check → dividend_income_compute → ex_date_alerts]` plus new standalone jobs: `daily_health_check` (cron 16:30) and `realtime_price_poll` (interval 30s, market hours only).
 
-**Major components (new):**
-1. **CorporateActionService** — Crawl VCI events, store, compute adjustment factors, apply to `adjusted_close`, trigger indicator recompute
-2. **PortfolioService** — Trade CRUD, FIFO lot management, realized/unrealized P&L, holdings aggregation
-3. **JobRunService** — Wrap all scheduler jobs with start/complete/fail tracking for health monitoring
-4. **DeadLetterService** — Store failed operations for periodic retry with backoff
-5. **ResilienceLayer** — Module-level `AsyncCircuitBreaker` singletons (vci_breaker, gemini_breaker, cafef_breaker) + extended tenacity retry decorators
-6. **6 new DB tables** — corporate_actions, trades, trade_lots, dividend_income, job_runs, dead_letter_operations
-
-**Key patterns to follow:**
-- Service-per-domain with own DB session (existing pattern)
-- Circuit breakers as module-level singletons (NOT per-request)
-- Job wrapping for automatic health tracking
-- `asyncio.to_thread()` for all vnstock sync calls (existing pattern)
-- P&L computed in backend, NOT frontend
-
-**Anti-patterns to avoid:**
-- Adjusting raw `close` column (only modify `adjusted_close`)
-- Computing FIFO in JavaScript
-- Creating circuit breakers per request (defeats state tracking)
-- Blocking vnstock calls in async context without `to_thread()`
+**Major components:**
+1. **Ticker/Crawl Pipeline** — Extended to loop over HOSE/HNX/UPCOM; split per-exchange jobs for parallelism; cap at ~950 active tickers
+2. **Portfolio Service** — Extended with `sell_allocations` audit table, lot replay, dividend income computation, performance history, CSV import service
+3. **WebSocket Layer** — New `realtime_service.py` + `api/websocket.py`; in-memory `ConnectionManager`; APScheduler interval trigger polls vnstock every 30s during market hours for watchlist tickers only
+4. **Health/Monitoring** — New `api_usage` model + service; pipeline timeline from `job_executions` with `pipeline_run_id`; Telegram notification aggregation with cooldowns
+5. **Corporate Actions** — Extended with `RIGHTS_ISSUE` type, alert-driven (not auto-exercise), ex-date alert scheduler, event calendar API with indexed queries
 
 ### Critical Pitfalls
 
-See [PITFALLS.md](./PITFALLS.md) for full analysis with warning signs and recovery strategies.
+1. **Crawl pipeline explosion (Pitfall 1)** — 3.75× ticker growth = ~87 min daily crawl; DB pool starvation; pipeline won't finish before daily summary. **Avoid by:** Split crawl jobs per exchange, cap at top N per exchange (~950 total), per-exchange circuit breakers, session-per-batch (not per-crawl), push daily summary to 17:00+.
 
-1. **Corporate action cascade breaks indicators & AI** — Adjusting `adjusted_close` without recomputing indicators/AI creates inconsistent data. **Prevent:** Trigger targeted recompute pipeline per affected ticker after adjustment. NEVER modify raw OHLC columns.
+2. **FIFO lot corruption on trade edit/delete (Pitfall 2)** — Current append-only model has no `sell_allocations` audit trail; editing consumed BUY trades corrupts all downstream P&L. **Avoid by:** Add `sell_allocations` table recording lot consumption, implement `replay_lots(ticker_id)` function, soft-delete trades, validate after replay.
 
-2. **FIFO with partial sells needs explicit lot tracking** — Computing P&L as `(sell - avg_buy) * qty` is average cost, not FIFO. Partial sells that split lots, sells spanning multiple lots, and stock splits modifying lot quantities all break naive implementations. **Prevent:** Model lots explicitly with `remaining_quantity`. Build `replay_lots()` utility from day one.
+3. **WebSocket misconception (Pitfall 3)** — No free VN market WebSocket exists; "real-time" is 30-second HTTP polling via vnstock wrapped in WS push. Event loop contention with APScheduler + Telegram polling. **Avoid by:** Watchlist-only scope (max 10-20 tickers), separate market-hours poller from EOD pipeline, explicit thread pool cap, heartbeat with timeout for connection cleanup.
 
-3. **Retry/circuit-breaker breaks APScheduler job chaining** — The `EVENT_JOB_EXECUTED` listener only sees success/failure. Tenacity retrying at the scheduler level causes the listener to fire on first failure, breaking the chain even if retry succeeds. Circuit breakers that swallow exceptions cause chains to continue on stale data. **Prevent:** Keep retry INSIDE job functions. Return result dicts with status fields. Never wrap job functions with tenacity at the scheduler level.
+4. **Dividend tracking on historical holdings (Pitfall 4)** — `Lot.remaining_quantity` is current state only; can't query "what did I hold on date X?" **Avoid by:** Build `get_holdings_at_date()` function replaying trades to target date; separate `dividend_payments` table (NOT in trades table); never model dividends as trades.
 
-4. **VN market ex-date vs record-date confusion (T+2 settlement)** — HOSE uses T+2 settlement; ex-date is 2 trading days before record date. Using the wrong date shifts price adjustments by 1-2 days. **Prevent:** Use ex-date (not record date) for price adjustment. Validate by comparing adjusted charts against CafeF/TradingView.
-
-5. **DB connection pool exhaustion** — Current pool is `pool_size=5, max_overflow=3` (8 max) with Aiven's ~20-25 connection limit. v1.1 adds health polling, portfolio queries, P&L computation, daily snapshots — all new session consumers. **Prevent:** Cache health checks for 60s, pre-compute P&L into snapshots table, monitor pool metrics before adding features, set `pool_timeout=10` for fast failure.
+5. **Broker CSV format chaos (Pitfall 5)** — VN brokers have wildly different date formats, number formats, column names, side encoding, symbol variations. **Avoid by:** Start with ONE broker, per-broker parser pattern, dry-run preview before commit, import batch tracking for undo, symbol normalization (strip .HM/.VN suffixes).
 
 ## Implications for Roadmap
 
-Based on research, the dependency chain is clear: **resilience infrastructure → corporate actions → portfolio tracking**, with AI improvements and health dashboard as parallel workstreams.
+Based on combined research, suggested 5-phase structure:
 
-### Phase 1: Resilience Foundation
-**Rationale:** Every subsequent feature exercises external APIs or creates new scheduled jobs. Building the resilience layer first means all new code is born reliable rather than retrofitted.
-**Delivers:** Circuit breaker module, extended retry decorators, job_runs table + JobRunService wrapper, dead_letter_operations table + DeadLetterService, periodic retry job.
-**Addresses:** Error recovery table stakes (granular retry, dead letter, job logging, graceful degradation)
-**Avoids:** Pitfall 3 (retry breaking chain) — design the resilience layer to work WITHIN job functions from the start. Pitfall 6 (pool exhaustion) — add pool metrics monitoring in this phase.
+### Phase 1: Multi-Market Foundation
+**Rationale:** Expanding the ticker universe from 400 to ~950 is the prerequisite for everything downstream — exchange filters, WebSocket scope, AI budget management, and CSV import all depend on multi-exchange data being available. This phase must redesign the crawl pipeline architecture BEFORE adding exchanges.
+**Delivers:** HNX/UPCOM tickers in database, exchange filter on all API endpoints and dashboard UI, per-exchange crawl jobs with independent circuit breakers, exchange-indexed queries.
+**Addresses:** MKT-01 (Multi-market crawling), MKT-02 (Exchange filter UI)
+**Avoids:** Pitfall 1 (crawl time explosion) — split crawl jobs per exchange, cap UPCOM at top 200-300; Pitfall 11 (backend filtering needed) — add SQL-level exchange filter; Pitfall 16 (vnstock compatibility) — validate HNX/UPCOM data source first.
+**Migration:** Add index on `tickers.exchange` column.
 
-### Phase 2: Corporate Actions
-**Rationale:** Portfolio P&L requires adjusted prices. AI analysis quality improves with adjusted prices. This is the data foundation everything else builds on.
-**Delivers:** corporate_actions table, CorporateActionCrawler (vnstock Company.events()), price adjustment engine with cumulative factors, targeted indicator recompute trigger, scheduled weekly crawl job.
-**Addresses:** All corporate action table stakes (fetch, store, cash dividend, stock dividend, split, historical adjustment)
-**Avoids:** Pitfall 1 (cascade to indicators/AI) — build recompute trigger as part of the adjustment pipeline, not as an afterthought. Pitfall 4 (ex-date confusion) — use VCI's `exrightDate` directly, validate against known historical events.
+### Phase 2: Portfolio Enhancements
+**Rationale:** Portfolio features are the highest user-facing value and have the most intricate data model changes. Trade edit/delete requires `sell_allocations` audit infrastructure that CSV import and dividend tracking both depend on. Build the FIFO replay foundation first, then layer features on top.
+**Delivers:** Trade edit/delete with FIFO-safe lot replay, portfolio allocation pie chart (by ticker/sector), portfolio performance line chart, broker CSV import (1 broker format initially), dividend income tracking with historical holdings computation.
+**Addresses:** PORT-11 (Trade edit/delete), PORT-10 (Allocation chart), PORT-09 (Performance chart), PORT-12 (CSV import), PORT-08 (Dividend tracking)
+**Avoids:** Pitfall 2 (FIFO corruption) — build sell_allocations + replay before edit/delete; Pitfall 4 (record-date holdings) — build get_holdings_at_date() before dividend logic; Pitfall 5 (CSV chaos) — one broker format, dry-run preview, batch tracking; Pitfall 12 (retroactive computation) — compute on-demand for single user; Pitfall 13 (missing sector) — refactor holdings query to JOIN Ticker.
+**Migration:** Add `sell_allocations` table, `dividend_incomes` table, `trades.notes` column, `trades.source` column.
 
-### Phase 3: Portfolio Core
-**Rationale:** With adjusted prices in place and resilience infrastructure ready, portfolio tracking can produce accurate P&L from day one.
-**Delivers:** trades + trade_lots tables, PortfolioService (FIFO lot management, P&L calculation), trade entry API endpoints, holdings aggregation, portfolio summary, trade history. Unify watchlist to DB-backed (prerequisite for position-aware features).
-**Addresses:** All portfolio table stakes (trade entry, FIFO, realized/unrealized P&L, holdings view, portfolio summary, trade history)
-**Avoids:** Pitfall 2 (FIFO lot tracking) — explicit lot model with `remaining_quantity` from day one. Pitfall 7 (dual watchlist) — migrate to DB-backed watchlist as first step.
+### Phase 3: Corporate Actions Enhancements
+**Rationale:** Independent of multi-market data — builds on existing v1.1 corporate action infrastructure. Low-to-medium complexity features that connect existing data in new ways (events → portfolio → alerts).
+**Delivers:** Rights issue tracking (alert-driven, no auto-exercise), ex-date Telegram alerts for held positions, event calendar view (list grouped by week), adjusted/raw price toggle on candlestick chart.
+**Addresses:** CORP-06 (Rights issues), CORP-07 (Ex-date alerts), CORP-08 (Event calendar), CORP-09 (Adjusted/raw toggle)
+**Avoids:** Pitfall 6 (rights exercise modeling) — keep simple: track event + alert, user manually /buy; Pitfall 7 (indicator mismatch) — hide indicators in adjusted mode; Pitfall 14 (late ex-date alerts) — morning alert check + post-crawl check; Pitfall 15 (unindexed ex_date) — add index in migration.
+**Migration:** Add `exercise_price`, `subscription_deadline` to `corporate_events`; add `RIGHTS_ISSUE` event type; add index on `corporate_events.ex_date`.
 
-### Phase 4: AI Prompt Improvements
-**Rationale:** Independent of other features — can be developed in parallel. Low effort, high impact improvements to existing AI pipeline.
-**Delivers:** system_instruction separation, few-shot examples, scoring rubric with anchors, price context in technical prompts, prompt versioning, per-ticker validation in batch responses.
-**Addresses:** All AI prompt table stakes + key differentiators (structured output retry, temperature tuning)
-**Avoids:** Pitfall 5 (schema drift) — implement per-ticker validation and prompt versioning before changing any prompt content.
+### Phase 4: Health & Monitoring Enhancements
+**Rationale:** With 3× ticker count and extended pipeline, observability becomes critical. Gemini usage tracking prevents surprise throttling. Pipeline timeline provides debugging visibility. Health notifications close the loop on proactive monitoring. Best built after the expanded system is running to observe real behavior.
+**Delivers:** Gemini API usage tracking dashboard (tokens, RPM, daily budget), pipeline execution timeline (Gantt-style), Telegram health notifications with dedup and cooldowns.
+**Addresses:** HEALTH-08 (Gemini usage tracking), HEALTH-09 (Pipeline timeline), HEALTH-10 (Telegram health alerts)
+**Avoids:** Pitfall 8 (no pipeline run ID) — add `pipeline_run_id` to job_executions schema, pass through chain; Pitfall 9 (notification spam) — cooldown per category, aggregate pipeline failures, priority levels; Pitfall 10 (request counting vs token tracking) — intercept `usage_metadata` from Gemini SDK responses.
+**Migration:** Add `api_usage` table; add `pipeline_run_id` column to `job_executions`.
 
-### Phase 5: System Health Dashboard
-**Rationale:** With job_runs table populated (from Phase 1) and corporate action + portfolio jobs running, there's meaningful health data to display.
-**Delivers:** `/api/system/health` endpoint (data freshness, error counts, circuit breaker states, pool metrics), frontend `/dashboard/health` page with status cards + error rate chart + job history table.
-**Addresses:** All health dashboard table stakes (freshness, last crawl status, error rate, pool status, health page)
-**Avoids:** Pitfall 6 (pool exhaustion) — health checks use cached results (60s staleTime), not live DB queries per poll.
-
-### Phase 6: Telegram Portfolio + Polish
-**Rationale:** Frontend portfolio views and Telegram commands are the consumption layer — build last when the backend is solid and tested.
-**Delivers:** `/buy`, `/sell`, `/portfolio`, `/pnl`, `/trades` Telegram commands, daily P&L notification, dashboard portfolio page (holdings table, P&L chart, allocation pie chart), dividend income tracking, corporate action Telegram alerts, position-aware AI alerts.
-**Addresses:** Telegram portfolio table stakes + differentiators (dividend tracking, position-aware alerts, portfolio charts)
-**Avoids:** Performance traps — pre-compute P&L in snapshots table, batch Telegram queries to avoid N+1, respect 4096-char message limit with top-5 truncation.
+### Phase 5: Real-Time WebSocket Streaming
+**Rationale:** Highest complexity, most architecturally novel, lowest dependency on other v2.0 features. Build last when the rest of the system is stable. This is the only feature introducing a fundamentally new data flow (polling → in-memory broadcast → persistent connections).
+**Delivers:** FastAPI WebSocket endpoint for price streaming, APScheduler market-hours polling (30s interval), frontend WebSocket client with auto-reconnect, lightweight-charts real-time candle updates.
+**Addresses:** RT-01 (WebSocket server), RT-02 (Frontend real-time chart)
+**Avoids:** Pitfall 3 (event loop contention) — watchlist-only scope (max 10-20 tickers), separate poller from EOD pipeline, thread pool cap, heartbeat cleanup; VCI rate limit — max 20 req/min guest, register for 60 RPM key.
+**Migration:** Add `intraday_prices` table (or use in-memory only).
 
 ### Phase Ordering Rationale
 
-- **Resilience before features:** Building circuit breakers and job tracking first means all new crawlers and services are automatically resilient and monitored. Retrofitting reliability is harder and error-prone.
-- **Corporate actions before portfolio:** The dependency is hard — portfolio P&L on a stock that had a 2:1 split is 50% wrong without adjusted prices. FIFO lot quantities must also adjust for splits.
-- **AI improvements in parallel:** No dependency on other phases. Can be developed alongside Phase 2 or 3 without conflicts.
-- **Health dashboard after job tracking:** The dashboard is a read-only view of data produced by Phase 1's job_runs table. Building it too early means an empty dashboard.
-- **Telegram last:** It's a thin layer over backend services. Building it prematurely means reworking handlers when service APIs change.
+- **Dependency chain:** MKT-01 is foundational → Portfolio features need all tickers → Corp actions are independent but benefit from multi-market → Health monitors the expanded system → WebSocket is standalone
+- **Risk gradient:** Phase 1 has moderate risk (vnstock compatibility unknown for HNX/UPCOM). Phase 2 has highest data-model risk (FIFO replay). Phase 5 has highest architectural risk (new data flow pattern). Ordering by ascending architectural novelty.
+- **Value delivery:** Each phase delivers usable features independently. Phase 1 alone makes the dashboard cover all VN exchanges. Phase 2 alone makes portfolio management robust.
+- **Pitfall avoidance:** The most dangerous compound effect (Pitfall 1 + 3 + DB pool exhaustion) is mitigated by never building multi-market and WebSocket in the same phase.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 2 (Corporate Actions):** VCI `eventListCode` values need mapping to our enum — may require inspecting actual API responses for real tickers. Cumulative adjustment factor computation is mathematically tricky (newest-to-oldest ordering). Recommend `/gsd-research-phase` to validate with real VCI data.
-- **Phase 3 (Portfolio Core):** FIFO lot management edge cases (partial sells spanning lots, corporate action lot adjustments, sell-all then rebuy scenarios). Watchlist migration from localStorage to DB needs careful handling to preserve existing user data. Recommend `/gsd-research-phase` for lot management data model.
+- **Phase 1 (Multi-Market):** Needs live validation that vnstock VCI source returns data for HNX/UPCOM tickers before committing to architecture. Test `Quote("PVS").history()` and `Quote("BSR").history()` against VCI.
+- **Phase 2 (Portfolio — CSV Import):** Broker CSV format details are MEDIUM confidence based on domain knowledge, not verified exports. Need actual CSV samples from at least 1 broker before building parsers.
+- **Phase 5 (WebSocket):** VCI rate limits for sub-minute polling need live verification. vnstock's freemium model may impose new restrictions.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1 (Resilience):** Circuit breaker and retry patterns are well-documented. Custom implementation is straightforward.
-- **Phase 4 (AI Prompts):** Prompt engineering improvements — iterate and test, no deep research needed.
-- **Phase 5 (Health Dashboard):** Standard CRUD + charts. Existing patterns from v1.0 dashboard apply directly.
-- **Phase 6 (Telegram Portfolio):** Follows existing Telegram handler patterns from v1.0.
+- **Phase 3 (Corporate Actions):** Rights issue modeling, ex-date alerts, and adjusted price toggle are well-documented VN market concepts. Standard CRUD + scheduler patterns.
+- **Phase 4 (Health/Monitoring):** Gemini usage extraction is well-documented in SDK. Pipeline timeline is standard query + frontend rendering. Telegram notification patterns are already proven in codebase.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | All claims verified via pip/npm version checks and source code inspection. vnstock `Company.events()` confirmed via source inspection. Circuit breaker library limitations confirmed via testing. |
-| Features | **HIGH** | Feature landscape grounded in codebase analysis + VN market domain knowledge. Dependency chain clearly mapped. Complexity estimates based on existing code patterns. |
-| Architecture | **HIGH** | Extensions follow established v1.0 patterns (service-per-domain, async sessions, job chaining). No new architectural paradigms introduced. |
-| Pitfalls | **HIGH** | All pitfalls reference specific code lines (manager.py, database.py, store.ts, daily_price.py). VN market specifics (T+2, tick sizes, HOSE hours) are standard domain knowledge. |
+| Stack | HIGH | All recommendations verified against installed packages, source code, and SDK documentation. Zero speculative dependencies. |
+| Features | HIGH | All features mapped to existing codebase components with verified API/model support. VN broker CSV formats are MEDIUM (need actual samples). VNDirect rights issue API type is LOW (needs live verification). |
+| Architecture | HIGH | All integration points verified via direct source code analysis. 14 features mapped to specific files to modify/create. Build order validated against dependency graph. |
+| Pitfalls | HIGH | 16 pitfalls identified from actual code patterns — FIFO model limitations, DB pool constraints, pipeline timing, vnstock rate limits. All grounded in 9,400+ LOC analysis, not theoretical. |
 
-**Overall confidence:** **HIGH** — Research is grounded in actual codebase inspection and verified library capabilities, not theoretical patterns. The v1.1 scope is well-bounded (no new infrastructure, no new external services).
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **VCI `eventListCode` mapping:** Exact event type codes from VCI GraphQL need validation against real API responses. Research identified the fields exist but didn't enumerate all possible code values. Address during Phase 2 planning by fetching events for a few known tickers with recent corporate actions.
-- **FIFO lot adjustment for corporate actions:** When a 2:1 split occurs, existing lots must double quantity and halve cost-per-share. The interaction between corporate actions and lot tracking needs explicit test cases. Address during Phase 3 planning.
-- **HOSE holiday calendar:** Health monitoring needs to distinguish holidays from crawl failures. No authoritative API for HOSE holiday schedule exists. Address with heuristic: if vnstock returns empty for ALL tickers, treat as holiday.
-- **vnstock freemium risk:** vnstock's `vnai` telemetry dependency signals possible commercial direction. Monitor changelogs. Fallback: reduce to top-100 tickers or call VCI API directly. Not blocking for v1.1 but needs ongoing awareness.
-- **Watchlist migration:** Moving dashboard watchlist from localStorage to DB requires a one-time migration path for existing data. Needs design during Phase 3 planning.
+- **vnstock HNX/UPCOM compatibility:** Must be validated with live API calls before Phase 1 implementation begins. If VCI doesn't support HNX/UPCOM, may need SSI source (different rate limits, response format).
+- **VN broker CSV samples:** Need actual export files from at least SSI or VNDirect to validate parser assumptions. Current format knowledge is domain inference (MEDIUM confidence).
+- **VNDirect rights issue API type:** The event type for rights issues (`RIGHTS` vs `STOCKRIGHTS`) is unknown. Needs live API inspection. Fallback: CafeF scraping.
+- **Gemini free-tier limits post-expansion:** 1500 RPD is documented but may change. With ~950 tickers × 4 analysis types, budget is tight. Need monitoring from Phase 1 onward.
+- **Performance chart computation approach:** Architecture research recommends on-demand computation (single user, <20 holdings = fast). Pitfalls research suggests snapshot table for reliability. **Recommendation:** Start on-demand; add snapshot only if response time exceeds 3 seconds.
+- **vnstock freemium model evolution:** Pinned at 3.5.1 but future versions may add authentication or restrict volume. Monitor changelog.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- vnstock 3.5.1 source code — `vnstock.explorer.vci.company` Company.events() returns OrganizationEvents with eventListCode, ratio, value, exrightDate
-- Existing codebase — all backend modules (main.py, database.py, config.py, scheduler/manager.py, jobs.py, all models/services/crawlers/handlers)
-- Library version verification — `pip index versions` and `npm view` for all recommended packages
-- aiobreaker/pybreaker source inspection — confirmed Tornado-legacy patterns and asyncio incompatibility
-- google-genai SDK — confirmed system_instruction, thinking_config, response_schema support via field inspection
+- Direct codebase analysis — all backend/frontend files (models, services, crawlers, scheduler, API, components)
+- vnstock 3.5.1 source — `Listing.symbols_by_exchange()`, `Quote(symbol)`, `_EXCHANGE_MAP`, `_TIMEFRAME_MAP`, `_INTERVAL_MAP`
+- google-genai SDK — `response.usage_metadata` with `prompt_token_count`, `candidates_token_count`, `total_token_count`
+- FastAPI/Starlette — native WebSocket support, `python-multipart` for file uploads
+- Database schema — all models inspected: `ticker.py`, `daily_price.py`, `trade.py`, `lot.py`, `corporate_event.py`, `job_execution.py`
+- Frontend packages — `package.json` verified: recharts 3.8.1, lightweight-charts 5.1.0, @tanstack/react-query, zustand, date-fns 4.x
 
 ### Secondary (MEDIUM confidence)
-- FIFO as Vietnam standard cost basis method — common practice in VN brokerage systems
-- VN broker commission range 0.15-0.25% — general market knowledge
-- zod 3.x vs 4.x compatibility with @hookform/resolvers — community consensus
+- Gemini free tier limits (15 RPM, 1500 RPD) — from AI Studio docs, may change
+- VN broker CSV formats (SSI, VNDirect, TCBS, VCBS) — domain knowledge, not verified with actual exports
+- react-day-picker 9.14.0 / papaparse 5.5.3 — npm registry version check
 
 ### Tertiary (LOW confidence)
-- TypeScript 6.0 ecosystem readiness — TS 6.0 is very new, ecosystem lag risk
-- vnstock freemium migration timeline — inferred from vnai dependency, no official announcement
+- VNDirect API rights issue event type — inferred from existing crawl types, needs live verification
+- vnstock VCI support for HNX/UPCOM intraday intervals — code suggests support but untested
+- VCI rate limits for sustained high-volume polling — 20 req/min guest documented, enforcement behavior unknown
 
 ---
-*Research completed: 2026-04-16*
+*Research completed: 2026-04-17*
 *Ready for roadmap: yes*
