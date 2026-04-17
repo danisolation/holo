@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
-status: defining_requirements
-stopped_at: Milestone v2.0 started
-last_updated: "2026-04-17T07:44:09.152Z"
-last_activity: 2026-04-17 -- Milestone v2.0 started
+status: ready_to_plan
+stopped_at: Roadmap created for v2.0
+last_updated: "2026-04-17"
+last_activity: 2026-04-17 -- Roadmap created, 5 phases (12-16), 17 requirements mapped
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu HOSE real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** Defining requirements for v2.0
+**Current focus:** Phase 12 — Multi-Market Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 12 of 16 (Multi-Market Foundation)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-17 — Milestone v2.0 started
+Status: Ready to plan
+Last activity: 2026-04-17 — Roadmap created for v2.0
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Shipped Milestones
 
@@ -37,25 +39,36 @@ Last activity: 2026-04-17 — Milestone v2.0 started
 | v1.0 | Holo Stock Intelligence Platform | 5 | 15 | 2026-04-15 |
 | v1.1 | Reliability & Portfolio | 6 | 20 | 2026-04-17 |
 
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0 (v2.0)
+- Average duration: —
+- Total execution time: —
+
+*Updated after each plan completion*
+
 ## Accumulated Context
 
 ### Decisions
 
-All v1.0 decisions archived in PROJECT.md Key Decisions table.
+All v1.0/v1.1 decisions archived in PROJECT.md Key Decisions table.
 
-v1.1 decisions:
-
-- Zero new backend libraries — existing stack covers all requirements
-- Custom AsyncCircuitBreaker (~30 lines) over aiobreaker/pybreaker (Tornado-legacy, no native asyncio)
-- PostgreSQL dead-letter table over Redis/RabbitMQ (single-user, no new infrastructure)
-- Corporate actions before portfolio (hard dependency — P&L accuracy requires adjusted prices)
-- 3 new frontend deps only: react-hook-form + @hookform/resolvers + zod@3 (trade entry forms)
+v2.0 decisions (from research):
+- Zero new backend packages — existing stack covers all v2.0 requirements
+- 3 new frontend deps only: react-day-picker, papaparse, @types/papaparse
+- No free VN WebSocket — RT-01/02 use 30s polling via VCI REST wrapped as WS push
+- Gemini 1500 RPD budget → tiered analysis: HOSE daily, HNX/UPCOM watchlist-only daily, rest on-demand
+- Trade edit/delete needs FIFO lot replay via sell_allocations audit table
+- Dividend tracking uses separate dividend_payments table, not trades
 
 ### Pending Todos
 
-- None.
+None yet.
 
 ### Blockers/Concerns
 
-- vnstock v3.x moving to freemium — monitor for free tier limitations
-- DB connection pool (5+3=8 max) vs Aiven ~20-25 limit — monitor as features add sessions
+- vnstock HNX/UPCOM compatibility needs live validation before Phase 12 implementation
+- Gemini free-tier 1500 RPD budget tight at ~950 tickers — monitor from Phase 12 onward
+- VN broker CSV samples needed for Phase 13 (PORT-12) — actual exports not yet verified
+- DB connection pool (5+3=8 max) vs growing session demand — monitor as features expand

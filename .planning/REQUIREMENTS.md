@@ -80,13 +80,31 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be populated by roadmapper) | | |
+| MKT-01 | Phase 12: Multi-Market Foundation | Pending |
+| MKT-02 | Phase 12: Multi-Market Foundation | Pending |
+| MKT-03 | Phase 12: Multi-Market Foundation | Pending |
+| MKT-04 | Phase 12: Multi-Market Foundation | Pending |
+| PORT-08 | Phase 13: Portfolio Enhancements | Pending |
+| PORT-09 | Phase 13: Portfolio Enhancements | Pending |
+| PORT-10 | Phase 13: Portfolio Enhancements | Pending |
+| PORT-11 | Phase 13: Portfolio Enhancements | Pending |
+| PORT-12 | Phase 13: Portfolio Enhancements | Pending |
+| CORP-06 | Phase 14: Corporate Actions Enhancements | Pending |
+| CORP-07 | Phase 14: Corporate Actions Enhancements | Pending |
+| CORP-08 | Phase 14: Corporate Actions Enhancements | Pending |
+| CORP-09 | Phase 14: Corporate Actions Enhancements | Pending |
+| HEALTH-08 | Phase 15: Health & Monitoring | Pending |
+| HEALTH-09 | Phase 15: Health & Monitoring | Pending |
+| HEALTH-10 | Phase 15: Health & Monitoring | Pending |
+| RT-01 | Phase 16: Real-Time WebSocket | Pending |
+| RT-02 | Phase 16: Real-Time WebSocket | Pending |
+| RT-03 | Phase 16: Real-Time WebSocket | Pending |
 
 **Coverage:**
 - v2.0 requirements: 17 total
-- Mapped to phases: 0
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-17*
-*Last updated: 2026-04-17 after initial definition*
+*Last updated: 2026-04-17 — roadmap traceability complete*

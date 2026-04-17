@@ -7,7 +7,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for 400 HOSE tickers t
 ## Milestones
 
 - ✅ **v1.0 Holo Stock Intelligence Platform** — Phases 1-5 (shipped 2026-04-15)
-- ✅ **v1.1 Reliability & Portfolio** — Phases 6-11 (shipped)
+- ✅ **v1.1 Reliability & Portfolio** — Phases 6-11 (shipped 2026-04-17)
+- 🚧 **v2.0 Full Coverage & Real-Time** — Phases 12-16 (in progress)
 
 ## Phases
 
@@ -24,129 +25,97 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 </details>
 
-### v1.1 Reliability & Portfolio
+<details>
+<summary>✅ v1.1 Reliability & Portfolio (Phases 6-11) — SHIPPED 2026-04-17</summary>
 
-- [x] **Phase 6: Resilience Foundation** — Circuit breakers, job tracking, dead-letter queue, auto-retry (4 plans)
-- [x] **Phase 7: Corporate Actions** — Crawl VNDirect events, adjust historical prices, cascade indicator recompute (3 plans)
-- [x] **Phase 8: Portfolio Core** — Trade entry, FIFO lots, realized/unrealized P&L, portfolio summary (4 plans)
-- [x] **Phase 9: AI Prompt Improvements** — System instruction, few-shot, scoring rubric, temperature tuning (3 plans)
-- [x] **Phase 10: System Health Dashboard** — Health API + frontend page with job status, error rates, manual triggers
-- [x] **Phase 11: Telegram Portfolio** — /buy, /sell, /portfolio, /pnl, daily P&L notification (3 plans)
+- [x] Phase 6: Resilience Foundation (4 plans) — Circuit breakers, job tracking, dead-letter queue, auto-retry
+- [x] Phase 7: Corporate Actions (3 plans) — VNDirect events, adjusted prices, cascade indicator recompute
+- [x] Phase 8: Portfolio Core (4 plans) — Trade entry, FIFO lots, realized/unrealized P&L, summary
+- [x] Phase 9: AI Prompt Improvements (3 plans) — System instruction, few-shot, scoring rubric, temperature tuning
+- [x] Phase 10: System Health Dashboard (3 plans) — Health API + frontend page with job status, error rates, triggers
+- [x] Phase 11: Telegram Portfolio (3 plans) — /buy, /sell, /portfolio, /pnl, daily P&L notification
+
+Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
+
+</details>
+
+### 🚧 v2.0 Full Coverage & Real-Time
+
+- [ ] **Phase 12: Multi-Market Foundation** — HNX/UPCOM crawling, exchange filters, tiered AI analysis
+- [ ] **Phase 13: Portfolio Enhancements** — Dividend tracking, performance/allocation charts, trade edit/delete, CSV import
+- [ ] **Phase 14: Corporate Actions Enhancements** — Rights issues, ex-date alerts, event calendar, adjusted/raw toggle
+- [ ] **Phase 15: Health & Monitoring** — Gemini usage tracking, pipeline timeline, Telegram health alerts
+- [ ] **Phase 16: Real-Time WebSocket** — WebSocket price streaming, 30s polling, market-hours auto-connect
 
 ## Phase Details
 
-### Phase 6: Resilience Foundation
-**Goal**: System recovers gracefully from failures, tracks all job execution, and prevents cascade failures via circuit breakers
-**Depends on**: Phase 5 (v1.0 complete)
-**Requirements**: ERR-01, ERR-02, ERR-03, ERR-04, ERR-05, ERR-06, ERR-07
+### Phase 12: Multi-Market Foundation
+**Goal**: Dashboard and analysis cover all Vietnamese stock exchanges (HOSE, HNX, UPCOM), not just HOSE
+**Depends on**: Phase 11 (v1.1 complete)
+**Requirements**: MKT-01, MKT-02, MKT-03, MKT-04
 **Success Criteria** (what must be TRUE):
-  1. Failed tickers in AI analysis batches are automatically retried once, and remaining tickers proceed regardless of individual failures
-  2. Permanently failed operations appear in a dead letter table with error details, retry count, and timestamps
-  3. External API calls (VCI, Gemini, CafeF) stop after N consecutive failures and auto-resume after cooldown period
-  4. Every scheduled job logs execution start/end, status (success/partial/fail), and result summary to job_executions table
-  5. Complete crawler failure triggers a Telegram notification to the user within minutes
-**Plans**: 4 plans
-
-Plans:
-- [x] 06-01-PLAN.md — Resilience foundation: DB models, migration, circuit breaker, config
-- [x] 06-02-PLAN.md — Services + Telegram failure notifications
-- [x] 06-03-PLAN.md — Circuit breaker integration into crawlers
-- [x] 06-04-PLAN.md — Job function refactoring + resilience test suite
-
-### Phase 7: Corporate Actions
-**Goal**: Historical prices accurately reflect stock splits, dividends, and bonus shares so charts and analysis use correct data
-**Depends on**: Phase 6
-**Requirements**: CORP-01, CORP-02, CORP-03, CORP-04, CORP-05
-**Success Criteria** (what must be TRUE):
-  1. User views historical price charts with adjusted_close values that account for splits, dividends, and bonus shares
-  2. Corporate events are crawled from VCI and stored in database with classified event types (cash dividend, stock dividend, bonus, split)
-  3. New corporate events detected in the daily check trigger automatic price adjustment and indicator recompute for affected tickers
-  4. Each event type (cash dividend, stock dividend, bonus shares, stock split) produces correct adjusted_close values using VN market formulas
-**Plans**: 3 plans
-
-Plans:
-- [x] 07-01-PLAN.md — Foundation: CorporateEvent model, migration 006, vndirect_breaker, config
-- [x] 07-02-PLAN.md — Crawler + Service: VNDirect event crawler, adjustment factor computation
-- [x] 07-03-PLAN.md — Integration: daily job + scheduler chaining + PriceResponse + test suite
-
-### Phase 8: Portfolio Core
-**Goal**: User can track personal trades and see accurate FIFO-based P&L on all positions
-**Depends on**: Phase 7
-**Requirements**: PORT-01, PORT-02, PORT-03, PORT-04, PORT-05, PORT-06, PORT-07
-**Success Criteria** (what must be TRUE):
-  1. User can enter buy and sell trades specifying ticker, quantity, price, date, and fees
-  2. User can view current holdings with quantity, average cost, market value, and per-position P&L
-  3. Cost basis is calculated using FIFO method with explicit lot tracking (first bought = first sold)
-  4. User can see both realized P&L on closed positions and unrealized P&L on open positions using latest market price
-  5. Portfolio summary shows total invested, current market value, and total return percentage; trade history is sortable and filterable
-**Plans**: 4 plans
+  1. User can view OHLCV data and charts for HNX and UPCOM tickers alongside existing HOSE tickers
+  2. User can filter stock lists, market overview, and heatmap by exchange (HOSE/HNX/UPCOM/All)
+  3. HNX and UPCOM tickers are crawled daily on staggered schedules without exceeding the pipeline window or starving the DB pool
+  4. AI analysis runs daily for all HOSE tickers and watchlisted HNX/UPCOM tickers; remaining HNX/UPCOM tickers are analyzed on-demand only
+**Plans**: TBD
 **UI hint**: yes
 
-Plans:
-- [x] 08-01-PLAN.md — Data foundation: Trade + Lot models, migration 007, Pydantic schemas
-- [x] 08-02-PLAN.md — PortfolioService: FIFO lot matching, P&L computation, holdings, summary
-- [x] 08-03-PLAN.md — API endpoints + backend test suite
-- [x] 08-04-PLAN.md — Frontend portfolio page: summary cards, holdings table, trade form, trade history
-
-### Phase 9: AI Prompt Improvements
-**Goal**: AI analysis produces more consistent, accurately calibrated recommendations with structured output reliability
-**Depends on**: Phase 6
-**Requirements**: AI-07, AI-08, AI-09, AI-10, AI-11, AI-12, AI-13
+### Phase 13: Portfolio Enhancements
+**Goal**: Portfolio management supports dividend income, visual analytics, trade corrections, and bulk import
+**Depends on**: Phase 12
+**Requirements**: PORT-08, PORT-09, PORT-10, PORT-11, PORT-12
 **Success Criteria** (what must be TRUE):
-  1. AI prompts use system_instruction for persona separation and include few-shot examples for each analysis type
-  2. Scoring rubric with explicit anchors (1-2 weak through 9-10 very strong) is applied consistently across analysis types
-  3. Technical analysis prompt includes latest close price and price-vs-SMA percentages for grounded quantitative context
-  4. Structured output failures trigger one retry at lower temperature before falling back to JSON parse
-  5. Language usage is consistent per analysis type (English for technical/fundamental, Vietnamese for combined/sentiment) and temperature is tuned per type
-**Plans**: 3 plans
-
-Plans:
-- [x] 09-01-PLAN.md — System instruction separation + scoring rubric + temperature + few-shot + language consistency
-- [x] 09-02-PLAN.md — Technical prompt close price/SMA enhancement + structured output retry
-- [x] 09-03-PLAN.md — Comprehensive test suite for all AI prompt improvements
-
-### Phase 10: System Health Dashboard
-**Goal**: User can monitor system health, data freshness, and error rates from a dedicated dashboard page
-**Depends on**: Phase 6
-**Requirements**: HEALTH-01, HEALTH-02, HEALTH-03, HEALTH-04, HEALTH-05, HEALTH-06, HEALTH-07
-**Success Criteria** (what must be TRUE):
-  1. Health page at `/dashboard/health` shows data freshness per data type with stale data flags and last update timestamps
-  2. Each scheduled job displays color-coded status (green/yellow/red) based on last execution result
-  3. Error rate per job over the last 7 days is visible as a metric or chart
-  4. User can manually trigger crawl, indicator computation, or AI analysis jobs from the health dashboard
-  5. Database connection pool status (active/idle connections) is displayed on the health page
-**Plans**: 3 plans
+  1. User can see dividend income credited to held positions when corporate events have matching record dates
+  2. User can view portfolio total value over time as a line chart showing historical performance
+  3. User can view portfolio allocation as a pie chart broken down by ticker or by sector
+  4. User can edit or delete existing trades with all FIFO lots and P&L automatically recalculated
+  5. User can import trades from a broker CSV file with format preview and dry-run validation before committing
+**Plans**: TBD
 **UI hint**: yes
 
-Plans:
-- [x] 10-01-PLAN.md — Backend health API: Pydantic schemas, HealthService, 6 endpoints (jobs, freshness, errors, pool, trigger, summary)
-- [x] 10-02-PLAN.md — Backend health API test suite (all 6 endpoints)
-- [x] 10-03-PLAN.md — Frontend health dashboard page with status cards, freshness table, error sparklines, pool status, trigger buttons
-
-### Phase 11: Telegram Portfolio
-**Goal**: User can manage portfolio and receive P&L updates directly through Telegram commands
-**Depends on**: Phase 8
-**Requirements**: TBOT-01, TBOT-02, TBOT-03, TBOT-04, TBOT-05, TBOT-06
+### Phase 14: Corporate Actions Enhancements
+**Goal**: Corporate actions system covers rights issues, proactively alerts on ex-dates, and provides calendar and chart views
+**Depends on**: Phase 12
+**Requirements**: CORP-06, CORP-07, CORP-08, CORP-09
 **Success Criteria** (what must be TRUE):
-  1. `/buy <ticker> <qty> <price>` records a buy trade and `/sell <ticker> <qty> <price>` records a sell trade showing realized P&L
-  2. `/portfolio` command displays all current holdings with per-position and total P&L
-  3. `/pnl <ticker>` command shows detailed P&L breakdown with FIFO lot information
-  4. Daily portfolio P&L notification is sent at 16:00 alongside the existing market summary
-  5. Daily summary message highlights owned tickers first with position-specific P&L context
-**Plans**: 3 plans
+  1. Rights issues are tracked from VNDirect with dilution impact displayed on affected portfolio positions
+  2. User receives Telegram alerts before upcoming ex-dates for watchlisted and held tickers
+  3. User can view a corporate events calendar on the dashboard filterable by event type
+  4. User can toggle between adjusted and raw price display on candlestick charts
+**Plans**: TBD
+**UI hint**: yes
 
-Plans:
-- [x] 11-01-PLAN.md — Portfolio commands: get_ticker_pnl service method + formatters + /buy, /sell, /portfolio, /pnl handlers
-- [x] 11-02-PLAN.md — Daily summary integration: portfolio P&L section + owned-ticker sorting in recommendations
-- [x] 11-03-PLAN.md — Test suite: formatter tests, command handler tests, daily summary integration tests
+### Phase 15: Health & Monitoring
+**Goal**: System health monitoring covers API usage budgets, pipeline performance visualization, and proactive Telegram alerts
+**Depends on**: Phase 12
+**Requirements**: HEALTH-08, HEALTH-09, HEALTH-10
+**Success Criteria** (what must be TRUE):
+  1. Health dashboard shows Gemini API usage (tokens consumed, requests made) against free-tier daily limits
+  2. Health dashboard shows pipeline execution timeline with per-step duration as a Gantt-style bar chart
+  3. System sends Telegram notification when health checks detect sustained errors or stale data beyond configured thresholds
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 16: Real-Time WebSocket
+**Goal**: Dashboard displays live price updates during market hours without manual page refresh
+**Depends on**: Phase 12
+**Requirements**: RT-01, RT-02, RT-03
+**Success Criteria** (what must be TRUE):
+  1. Dashboard receives and displays price updates via WebSocket during market hours without manual refresh
+  2. System polls VCI at 30-second intervals for watchlist and portfolio tickers during market hours
+  3. WebSocket connection automatically establishes at market open (9:00 UTC+7) and tears down after market close (14:45 UTC+7)
+**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
+**Execution Order:** Phases 12 → 13 → 14 → 15 → 16
+
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 6. Resilience Foundation | 0/4 | Planning complete | - |
-| 7. Corporate Actions | 3/3 | Complete | - |
-| 8. Portfolio Core | 0/? | Not started | - |
-| 9. AI Prompt Improvements | 0/? | Not started | - |
-| 10. System Health Dashboard | 0/? | Not started | - |
-| 11. Telegram Portfolio | 0/? | Not started | - |
+| 12. Multi-Market Foundation | 0/? | Not started | - |
+| 13. Portfolio Enhancements | 0/? | Not started | - |
+| 14. Corporate Actions Enhancements | 0/? | Not started | - |
+| 15. Health & Monitoring | 0/? | Not started | - |
+| 16. Real-Time WebSocket | 0/? | Not started | - |
