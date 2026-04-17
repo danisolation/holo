@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
 status: executing
-last_updated: "2026-04-17T11:58:55.793Z"
-last_activity: 2026-04-17 -- Phase 13 plan 01 completed
+last_updated: "2026-04-17T12:06:32.304Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 5
-  percent: 56
+  completed_plans: 6
+  percent: 67
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 ## Current Position
 
 Phase: 13-portfolio-enhancements — EXECUTING
-Plan: 2 of 5
-Status: Executing Phase 13
-Last activity: 2026-04-17 -- Phase 13 plan 01 completed
+Plan: 3 of 5
+Status: Ready to execute
+Last activity: 2026-04-17
 
 Progress: [█████░░░░░] 56%
 
@@ -72,6 +72,7 @@ v2.0 decisions (from research):
 - [Phase 12-multi-market-foundation]: AnalyzeNowButton defined inline in ticker detail page — single-use component, tightly coupled to page context
 - [Phase 12-multi-market-foundation]: 60-second cooldown for AnalyzeNow on both success and error to prevent Gemini API spam (T-12-09 mitigation)
 - [Phase 13]: [Phase 13]: Dividend income via CASH_DIVIDEND x lots join on record_date; performance via trade-replay chronological; allocation by ticker/sector with Khac default
+- [Phase 13]: recalculate_lots in-memory lot tracking during trade replay; CSV import_trades accepts PortfolioService parameter to avoid circular deps
 
 ### Pending Todos
 
