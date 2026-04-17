@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
 status: executing
-last_updated: "2026-04-17T10:39:51.012Z"
+last_updated: "2026-04-17T10:54:54.814Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 ## Current Position
 
 Phase: 12 (Multi-Market Foundation) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-17
 
@@ -63,6 +63,9 @@ v2.0 decisions (from research):
 - Trade edit/delete needs FIFO lot replay via sell_allocations audit table
 - Dividend tracking uses separate dividend_payments table, not trades
 - [Phase 12]: EXCHANGE_MAX_TICKERS dict in ticker_service.py (not config.py) — consistent with existing MAX_TICKERS pattern
+- [Phase 12]: Chain triggers from daily_price_crawl_upcom (last exchange) to ensure all data available before indicators
+- [Phase 12]: Daily summary moved to 18:30 to accommodate staggered pipeline
+- [Phase 12]: analyze_all_tickers ticker_filter parameter enables filtered/single-ticker analysis
 
 ### Pending Todos
 

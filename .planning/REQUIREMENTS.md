@@ -10,9 +10,9 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 ### Market Coverage
 
 - [x] **MKT-01**: User can view OHLCV data for HNX and UPCOM tickers alongside existing HOSE tickers
-- [ ] **MKT-02**: User can filter market overview, stock lists, and heatmap by exchange (HOSE/HNX/UPCOM/All)
+- [x] **MKT-02**: User can filter market overview, stock lists, and heatmap by exchange (HOSE/HNX/UPCOM/All)
 - [x] **MKT-03**: System crawls HNX and UPCOM tickers on the same daily schedule as HOSE with staggered execution
-- [ ] **MKT-04**: AI analysis runs on tiered schedule — HOSE fully daily, HNX/UPCOM for watchlisted tickers daily, rest on-demand
+- [x] **MKT-04**: AI analysis runs on tiered schedule — HOSE fully daily, HNX/UPCOM for watchlisted tickers daily, rest on-demand
 
 ### Real-Time
 
@@ -81,9 +81,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | MKT-01 | Phase 12: Multi-Market Foundation | Complete |
-| MKT-02 | Phase 12: Multi-Market Foundation | Pending |
+| MKT-02 | Phase 12: Multi-Market Foundation | Complete |
 | MKT-03 | Phase 12: Multi-Market Foundation | Complete |
-| MKT-04 | Phase 12: Multi-Market Foundation | Pending |
+| MKT-04 | Phase 12: Multi-Market Foundation | Complete |
 | PORT-08 | Phase 13: Portfolio Enhancements | Pending |
 | PORT-09 | Phase 13: Portfolio Enhancements | Pending |
 | PORT-10 | Phase 13: Portfolio Enhancements | Pending |
