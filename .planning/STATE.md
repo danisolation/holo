@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
-status: executing
-last_updated: "2026-04-17T11:01:06.364Z"
+status: verifying
+last_updated: "2026-04-17T11:08:38.426Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 
 Phase: 12 (Multi-Market Foundation) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-17
 
 Progress: [░░░░░░░░░░] 0%
@@ -69,6 +69,8 @@ v2.0 decisions (from research):
 - [Phase 12]: Exchange store named useExchangeStore with zustand persist key holo-exchange-filter
 - [Phase 12]: Exchange CSS custom properties in globals.css for HOSE blue, HNX green, UPCOM orange
 - [Phase 12]: triggerOnDemandAnalysis uses immediate + 5s delayed query invalidation for background task
+- [Phase 12-multi-market-foundation]: AnalyzeNowButton defined inline in ticker detail page — single-use component, tightly coupled to page context
+- [Phase 12-multi-market-foundation]: 60-second cooldown for AnalyzeNow on both success and error to prevent Gemini API spam (T-12-09 mitigation)
 
 ### Pending Todos
 

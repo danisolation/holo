@@ -41,7 +41,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 
 ### 🚧 v2.0 Full Coverage & Real-Time
 
-- [ ] **Phase 12: Multi-Market Foundation** — HNX/UPCOM crawling, exchange filters, tiered AI analysis
+- [x] **Phase 12: Multi-Market Foundation** — HNX/UPCOM crawling, exchange filters, tiered AI analysis (completed 2026-04-17)
 - [ ] **Phase 13: Portfolio Enhancements** — Dividend tracking, performance/allocation charts, trade edit/delete, CSV import
 - [ ] **Phase 14: Corporate Actions Enhancements** — Rights issues, ex-date alerts, event calendar, adjusted/raw toggle
 - [ ] **Phase 15: Health & Monitoring** — Gemini usage tracking, pipeline timeline, Telegram health alerts
@@ -58,13 +58,13 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
   2. User can filter stock lists, market overview, and heatmap by exchange (HOSE/HNX/UPCOM/All)
   3. HNX and UPCOM tickers are crawled daily on staggered schedules without exceeding the pipeline window or starving the DB pool
   4. AI analysis runs daily for all HOSE tickers and watchlisted HNX/UPCOM tickers; remaining HNX/UPCOM tickers are analyzed on-demand only
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md — Backend services + config: exchange-parameterized TickerService, PriceService
 - [x] 12-02-PLAN.md — Backend scheduler + API + AI tiering: staggered crons, exchange API params, tiered analysis
 - [x] 12-03-PLAN.md — Frontend foundation + market overview: types, store, hooks, CSS, ExchangeFilter, heatmap
-- [ ] 12-04-PLAN.md — Frontend pages + on-demand analysis: watchlist, dashboard, ticker detail, AnalyzeNow
+- [x] 12-04-PLAN.md — Frontend pages + on-demand analysis: watchlist, dashboard, ticker detail, AnalyzeNow
 
 **UI hint**: yes
 
@@ -121,7 +121,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 12. Multi-Market Foundation | 3/4 | In Progress|  |
+| 12. Multi-Market Foundation | 4/4 | Complete   | 2026-04-17 |
 | 13. Portfolio Enhancements | 0/? | Not started | - |
 | 14. Corporate Actions Enhancements | 0/? | Not started | - |
 | 15. Health & Monitoring | 0/? | Not started | - |
