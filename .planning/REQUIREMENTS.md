@@ -36,7 +36,7 @@ Requirements for v2.0 milestone. Each maps to roadmap phases.
 
 ### Corporate Actions Enhancements
 
-- [ ] **CORP-06**: System tracks rights issues from VNDirect with dilution impact on existing positions
+- [x] **CORP-06**: System tracks rights issues from VNDirect with dilution impact on existing positions
 - [ ] **CORP-07**: User receives Telegram alerts for upcoming ex-dates on watchlisted and held tickers
 - [ ] **CORP-08**: User can view corporate events calendar on dashboard with filterable event types
 - [ ] **CORP-09**: User can toggle between adjusted and raw price display on candlestick charts
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-10 | Phase 13: Portfolio Enhancements | Complete |
 | PORT-11 | Phase 13: Portfolio Enhancements | Complete |
 | PORT-12 | Phase 13: Portfolio Enhancements | Complete |
-| CORP-06 | Phase 14: Corporate Actions Enhancements | Pending |
+| CORP-06 | Phase 14: Corporate Actions Enhancements | Complete |
 | CORP-07 | Phase 14: Corporate Actions Enhancements | Pending |
 | CORP-08 | Phase 14: Corporate Actions Enhancements | Pending |
 | CORP-09 | Phase 14: Corporate Actions Enhancements | Pending |

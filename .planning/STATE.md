@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Full Coverage & Real-Time
-status: verifying
-last_updated: "2026-04-17T12:36:30.348Z"
-last_activity: 2026-04-17
+status: executing
+last_updated: "2026-04-17T12:53:43.903Z"
+last_activity: 2026-04-17 -- Phase null execution started
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_plans: 13
+  completed_plans: 10
+  percent: 77
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu HOSE real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** Phase 13 — Portfolio Enhancements
+**Current focus:** Phase null
 
 ## Current Position
 
-Phase: 14
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-17
+Phase: null — EXECUTING
+Plan: 1 of ?
+Status: Executing Phase null
+Last activity: 2026-04-17 -- Phase null execution started
 
 Progress: [█████░░░░░] 56%
 
@@ -80,6 +80,8 @@ v2.0 decisions (from research):
 - [Phase 13-portfolio-enhancements]: [Phase 13-05]: Removed useMemo from trade-history columns for action button state setter compatibility
 - [Phase 13-portfolio-enhancements]: [Phase 13-05]: CSVImportDialog default export with embedded DialogTrigger render pattern
 - [Phase 13-portfolio-enhancements]: [Phase 13-05]: Client-side 5MB CSV validation + max-h-360px preview table scroll (T-13-13/14)
+- [Phase 14]: RIGHTS_ISSUE factor returns 1.0 — rights voluntary, no price adjustment
+- [Phase 14]: alert_sent partial index WHERE FALSE for efficient unsent-alert queries
 
 ### Pending Todos
 
