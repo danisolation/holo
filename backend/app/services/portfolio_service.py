@@ -31,11 +31,17 @@ class PortfolioService:
         price: float,
         trade_date: date,
         fees: float = 0,
+        auto_commit: bool = True,
     ) -> dict:
         """Record a BUY or SELL trade.
 
         BUY creates a Trade + Lot. SELL validates available shares,
         consumes lots FIFO, and computes realized P&L.
+
+        Args:
+            auto_commit: If True (default), commit after recording. Set to False
+                for batch operations (e.g., CSV import) where the caller manages
+                the transaction boundary.
         """
         ticker = await self._resolve_ticker(symbol)
         price_dec = Decimal(str(price))
@@ -74,7 +80,10 @@ class PortfolioService:
                 f"(realized P&L: {realized_pnl})"
             )
 
-        await self.session.commit()
+        if auto_commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
 
         return {
             "id": trade.id,

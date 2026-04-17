@@ -232,10 +232,11 @@ class CSVImportService:
         )
 
     async def import_trades(self, content: str, portfolio_service) -> dict:
-        """Parse, validate, and import valid trades.
+        """Parse, validate, and import valid trades atomically.
 
         T-13-05 mitigation: rejects CSV with > 1000 data rows.
-        Calls portfolio_service.record_trade() for each valid row.
+        All trades are imported within a single transaction — if any trade
+        fails, all previously inserted trades in this batch are rolled back.
         Returns {"trades_imported": N, "tickers_recalculated": M}.
         """
         fmt, rows = self.parse_rows(content)
@@ -251,21 +252,29 @@ class CSVImportService:
         trades_imported = 0
         ticker_ids: set[str] = set()
 
-        for row, preview in zip(rows, preview_rows):
-            if preview.status == "error":
-                continue
+        try:
+            for row, preview in zip(rows, preview_rows):
+                if preview.status == "error":
+                    continue
 
-            trade_date = datetime.strptime(row["trade_date"], "%Y-%m-%d").date()
-            await portfolio_service.record_trade(
-                symbol=row["symbol"],
-                side=row["side"],
-                quantity=row["quantity"],
-                price=row["price"],
-                trade_date=trade_date,
-                fees=row.get("fees", 0),
-            )
-            trades_imported += 1
-            ticker_ids.add(row["symbol"])
+                trade_date = datetime.strptime(row["trade_date"], "%Y-%m-%d").date()
+                await portfolio_service.record_trade(
+                    symbol=row["symbol"],
+                    side=row["side"],
+                    quantity=row["quantity"],
+                    price=row["price"],
+                    trade_date=trade_date,
+                    fees=row.get("fees", 0),
+                    auto_commit=False,
+                )
+                trades_imported += 1
+                ticker_ids.add(row["symbol"])
+
+            # Single commit for all trades — atomic
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
 
         return {
             "trades_imported": trades_imported,
