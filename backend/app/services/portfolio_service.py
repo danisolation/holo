@@ -1,0 +1,333 @@
+"""Portfolio service: trade recording, FIFO lot management, P&L computation.
+
+Core business logic for Phase 8 portfolio tracking.
+Per D-08-01/02/03/06/07 from CONTEXT.md.
+"""
+from datetime import date
+from decimal import Decimal
+
+from loguru import logger
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.ticker import Ticker
+from app.models.trade import Trade
+from app.models.lot import Lot
+from app.models.daily_price import DailyPrice
+
+
+class PortfolioService:
+    """Trade recording with FIFO lot tracking and P&L computation."""
+
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def record_trade(
+        self,
+        symbol: str,
+        side: str,
+        quantity: int,
+        price: float,
+        trade_date: date,
+        fees: float = 0,
+    ) -> dict:
+        """Record a BUY or SELL trade.
+
+        BUY creates a Trade + Lot. SELL validates available shares,
+        consumes lots FIFO, and computes realized P&L.
+        """
+        ticker = await self._resolve_ticker(symbol)
+        price_dec = Decimal(str(price))
+        fees_dec = Decimal(str(fees))
+
+        trade = Trade(
+            ticker_id=ticker.id,
+            side=side.upper(),
+            quantity=quantity,
+            price=price_dec,
+            fees=fees_dec,
+            trade_date=trade_date,
+        )
+        self.session.add(trade)
+        await self.session.flush()
+
+        realized_pnl = None
+
+        if side.upper() == "BUY":
+            lot = Lot(
+                trade_id=trade.id,
+                ticker_id=ticker.id,
+                buy_price=price_dec,
+                quantity=quantity,
+                remaining_quantity=quantity,
+                buy_date=trade_date,
+            )
+            self.session.add(lot)
+            logger.info(f"BUY {quantity} {symbol} @ {price} recorded (lot created)")
+        else:
+            realized_pnl = await self._consume_lots_fifo(
+                ticker.id, quantity, price_dec, fees_dec
+            )
+            logger.info(
+                f"SELL {quantity} {symbol} @ {price} recorded "
+                f"(realized P&L: {realized_pnl})"
+            )
+
+        await self.session.commit()
+
+        return {
+            "id": trade.id,
+            "symbol": ticker.symbol,
+            "side": trade.side,
+            "quantity": trade.quantity,
+            "price": float(trade.price),
+            "fees": float(trade.fees),
+            "trade_date": trade.trade_date.isoformat(),
+            "created_at": trade.created_at.isoformat() if trade.created_at else "",
+            "realized_pnl": float(realized_pnl) if realized_pnl is not None else None,
+        }
+
+    async def get_holdings(self) -> list[dict]:
+        """Get current open positions with unrealized P&L."""
+        # Aggregate open lots by ticker
+        stmt = (
+            select(
+                Lot.ticker_id,
+                func.sum(Lot.remaining_quantity).label("total_qty"),
+                (
+                    func.sum(Lot.buy_price * Lot.remaining_quantity)
+                    / func.sum(Lot.remaining_quantity)
+                ).label("avg_cost"),
+                func.sum(Lot.buy_price * Lot.remaining_quantity).label("total_cost"),
+            )
+            .where(Lot.remaining_quantity > 0)
+            .group_by(Lot.ticker_id)
+        )
+        result = await self.session.execute(stmt)
+        rows = result.all()
+
+        if not rows:
+            return []
+
+        holdings = []
+        for row in rows:
+            ticker_id = row.ticker_id
+            total_qty = int(row.total_qty)
+            avg_cost = float(row.avg_cost)
+            total_cost = float(row.total_cost)
+
+            # Get ticker info
+            ticker_result = await self.session.execute(
+                select(Ticker).where(Ticker.id == ticker_id)
+            )
+            ticker = ticker_result.scalar_one_or_none()
+            if not ticker:
+                continue
+
+            # Get latest close price
+            price_result = await self.session.execute(
+                select(DailyPrice.close)
+                .where(DailyPrice.ticker_id == ticker_id)
+                .order_by(DailyPrice.date.desc())
+                .limit(1)
+            )
+            latest_close = price_result.scalar_one_or_none()
+
+            market_price = float(latest_close) if latest_close is not None else None
+            market_value = market_price * total_qty if market_price is not None else None
+            unrealized_pnl = (
+                (market_price - avg_cost) * total_qty
+                if market_price is not None
+                else None
+            )
+            unrealized_pnl_pct = (
+                round(unrealized_pnl / total_cost * 100, 2)
+                if unrealized_pnl is not None and total_cost > 0
+                else None
+            )
+
+            holdings.append(
+                {
+                    "symbol": ticker.symbol,
+                    "name": ticker.name,
+                    "quantity": total_qty,
+                    "avg_cost": round(avg_cost, 2),
+                    "market_price": market_price,
+                    "market_value": round(market_value, 2) if market_value is not None else None,
+                    "total_cost": round(total_cost, 2),
+                    "unrealized_pnl": round(unrealized_pnl, 2) if unrealized_pnl is not None else None,
+                    "unrealized_pnl_pct": unrealized_pnl_pct,
+                }
+            )
+
+        return holdings
+
+    async def get_summary(self) -> dict:
+        """Get aggregated portfolio summary."""
+        # Total invested: sum of price * quantity for all BUY trades
+        buy_stmt = select(
+            func.coalesce(func.sum(Trade.price * Trade.quantity), 0)
+        ).where(Trade.side == "BUY")
+        buy_result = await self.session.execute(buy_stmt)
+        total_invested = float(buy_result.scalar_one())
+
+        # Realized P&L: sell revenue - cost of sold shares - sell fees
+        sell_revenue_stmt = select(
+            func.coalesce(func.sum(Trade.price * Trade.quantity), 0)
+        ).where(Trade.side == "SELL")
+        sell_revenue_result = await self.session.execute(sell_revenue_stmt)
+        sell_revenue = sell_revenue_result.scalar_one()
+
+        sell_fees_stmt = select(
+            func.coalesce(func.sum(Trade.fees), 0)
+        ).where(Trade.side == "SELL")
+        sell_fees_result = await self.session.execute(sell_fees_stmt)
+        sell_fees = sell_fees_result.scalar_one()
+
+        # Cost of consumed lots = buy_price * (quantity - remaining_quantity) for all lots
+        consumed_cost_stmt = select(
+            func.coalesce(
+                func.sum(Lot.buy_price * (Lot.quantity - Lot.remaining_quantity)), 0
+            )
+        )
+        consumed_cost_result = await self.session.execute(consumed_cost_stmt)
+        consumed_cost = consumed_cost_result.scalar_one()
+
+        total_realized_pnl = float(sell_revenue - consumed_cost - sell_fees)
+
+        # Get holdings for unrealized P&L and market value
+        holdings = await self.get_holdings()
+        total_market_value = None
+        total_unrealized_pnl = None
+
+        if holdings:
+            mv_values = [h["market_value"] for h in holdings if h["market_value"] is not None]
+            upnl_values = [h["unrealized_pnl"] for h in holdings if h["unrealized_pnl"] is not None]
+
+            if mv_values:
+                total_market_value = round(sum(mv_values), 2)
+            if upnl_values:
+                total_unrealized_pnl = round(sum(upnl_values), 2)
+
+        total_return_pct = None
+        if total_invested > 0 and total_unrealized_pnl is not None:
+            total_return_pct = round(
+                (total_realized_pnl + total_unrealized_pnl) / total_invested * 100, 2
+            )
+
+        holdings_count = len(holdings)
+
+        return {
+            "total_invested": round(total_invested, 2),
+            "total_market_value": total_market_value,
+            "total_realized_pnl": round(total_realized_pnl, 2),
+            "total_unrealized_pnl": total_unrealized_pnl,
+            "total_return_pct": total_return_pct,
+            "holdings_count": holdings_count,
+        }
+
+    async def get_trades(
+        self,
+        ticker_symbol: str | None = None,
+        side: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict:
+        """Get trade history with optional filtering and pagination."""
+        base = select(Trade, Ticker.symbol).join(
+            Ticker, Trade.ticker_id == Ticker.id
+        )
+
+        if ticker_symbol:
+            base = base.where(Ticker.symbol == ticker_symbol.upper())
+        if side:
+            base = base.where(Trade.side == side.upper())
+
+        # Total count
+        from sqlalchemy import func as sqlfunc
+
+        count_stmt = select(sqlfunc.count()).select_from(base.subquery())
+        count_result = await self.session.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        # Paginated results
+        data_stmt = base.order_by(
+            Trade.trade_date.desc(), Trade.id.desc()
+        ).limit(limit).offset(offset)
+
+        result = await self.session.execute(data_stmt)
+        rows = result.all()
+
+        trades = []
+        for trade, symbol in rows:
+            trades.append(
+                {
+                    "id": trade.id,
+                    "symbol": symbol,
+                    "side": trade.side,
+                    "quantity": trade.quantity,
+                    "price": float(trade.price),
+                    "fees": float(trade.fees),
+                    "trade_date": trade.trade_date.isoformat(),
+                    "created_at": trade.created_at.isoformat() if trade.created_at else "",
+                    "realized_pnl": None,
+                }
+            )
+
+        return {"trades": trades, "total": total}
+
+    # --- Private helpers ---
+
+    async def _resolve_ticker(self, symbol: str) -> Ticker:
+        """Resolve symbol to Ticker object. Raises ValueError if not found."""
+        result = await self.session.execute(
+            select(Ticker).where(Ticker.symbol == symbol.upper())
+        )
+        ticker = result.scalar_one_or_none()
+        if ticker is None:
+            raise ValueError(f"Ticker '{symbol}' not found")
+        return ticker
+
+    async def _validate_sell(self, ticker_id: int, sell_qty: int) -> None:
+        """Validate there are enough shares to sell. Per D-08-06."""
+        result = await self.session.execute(
+            select(func.coalesce(func.sum(Lot.remaining_quantity), 0)).where(
+                Lot.ticker_id == ticker_id, Lot.remaining_quantity > 0
+            )
+        )
+        available = int(result.scalar_one())
+        if sell_qty > available:
+            raise ValueError(
+                f"Cannot sell {sell_qty} shares — only {available} available"
+            )
+
+    async def _consume_lots_fifo(
+        self,
+        ticker_id: int,
+        sell_qty: int,
+        sell_price: Decimal,
+        sell_fees: Decimal,
+    ) -> Decimal:
+        """Consume lots FIFO (oldest first) and compute realized P&L. Per D-08-03."""
+        await self._validate_sell(ticker_id, sell_qty)
+
+        result = await self.session.execute(
+            select(Lot)
+            .where(Lot.ticker_id == ticker_id, Lot.remaining_quantity > 0)
+            .order_by(Lot.buy_date.asc(), Lot.id.asc())
+        )
+        lots = result.scalars().all()
+
+        remaining_sell = sell_qty
+        realized_pnl = Decimal("0")
+
+        for lot in lots:
+            if remaining_sell <= 0:
+                break
+            consumed = min(lot.remaining_quantity, remaining_sell)
+            realized_pnl += (sell_price - lot.buy_price) * consumed
+            lot.remaining_quantity -= consumed
+            remaining_sell -= consumed
+
+        realized_pnl -= sell_fees
+        return realized_pnl
