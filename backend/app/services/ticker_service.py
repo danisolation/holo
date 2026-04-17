@@ -42,7 +42,12 @@ class TickerService:
 
         Returns dict with counts: {synced, deactivated, total}.
         """
-        max_tickers = self.EXCHANGE_MAX_TICKERS.get(exchange, 200)
+        if exchange not in self.EXCHANGE_MAX_TICKERS:
+            raise ValueError(
+                f"Invalid exchange: {exchange}. "
+                f"Must be one of {list(self.EXCHANGE_MAX_TICKERS.keys())}"
+            )
+        max_tickers = self.EXCHANGE_MAX_TICKERS[exchange]
         logger.info(f"Starting ticker list sync for {exchange} (max {max_tickers})...")
 
         # Fetch stock listing for the exchange
