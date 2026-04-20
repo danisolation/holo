@@ -86,7 +86,10 @@ Plans:
   1. User can view pivot-point-based support and resistance levels (S1/S2/R1/R2) for any ticker
   2. User can view Fibonacci retracement levels (23.6%, 38.2%, 50%, 61.8%) calculated from recent swing high/low for any ticker
   3. Support/resistance and Fibonacci levels update daily as part of the indicator pipeline
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 18-01-PLAN.md — Backend: Migration 011 + model + schema + service computation + API + tests
+- [ ] 18-02-PLAN.md — Frontend: IndicatorData type + SupportResistanceCard component + page integration
 **UI hint**: yes
 
 ### Phase 19: AI Trading Signal Pipeline
