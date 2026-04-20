@@ -24,10 +24,12 @@ import {
   AnalysisCard,
   CombinedRecommendationCard,
 } from "@/components/analysis-card";
+import { TradingPlanPanel } from "@/components/trading-plan-panel";
 import {
   usePrices,
   useIndicators,
   useAnalysisSummary,
+  useTradingSignal,
   useTickers,
   useTriggerAnalysis,
 } from "@/lib/hooks";
@@ -130,6 +132,7 @@ export default function TickerDetailPage({
     data: analysisSummary,
     isLoading: analysisLoading,
   } = useAnalysisSummary(upperSymbol);
+  const { data: tradingSignal, isLoading: tradingSignalLoading } = useTradingSignal(upperSymbol);
 
   // Watchlist
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } =
@@ -297,6 +300,15 @@ export default function TickerDetailPage({
       ) : analysisSummary?.combined ? (
         <section>
           <CombinedRecommendationCard analysis={analysisSummary.combined} />
+        </section>
+      ) : null}
+
+      {/* Trading Plan Panel — Phase 20 */}
+      {tradingSignalLoading ? (
+        <Skeleton className="h-[320px] rounded-xl" />
+      ) : tradingSignal ? (
+        <section>
+          <TradingPlanPanel data={tradingSignal} />
         </section>
       ) : null}
 
