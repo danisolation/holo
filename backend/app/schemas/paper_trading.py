@@ -58,3 +58,43 @@ class SimulationConfigUpdateRequest(BaseModel):
     initial_capital: float | None = Field(None, gt=0)
     auto_track_enabled: bool | None = None
     min_confidence_threshold: int | None = Field(None, ge=1, le=10)
+
+
+# --- Analytics Responses (AN-01 through AN-04) ---
+
+class AnalyticsSummaryResponse(BaseModel):
+    """AN-01, AN-02: Overall win rate + total P&L."""
+    total_trades: int
+    wins: int
+    losses: int
+    win_rate: float          # percentage (0-100)
+    total_pnl: float         # VND
+    total_pnl_pct: float     # % of initial capital
+    avg_pnl_per_trade: float # VND
+
+
+class EquityCurvePoint(BaseModel):
+    """AN-03: Single point on equity curve."""
+    date: str
+    daily_pnl: float
+    cumulative_pnl: float
+
+
+class EquityCurveResponse(BaseModel):
+    data: list[EquityCurvePoint]
+    initial_capital: float
+
+
+class DrawdownPeriod(BaseModel):
+    start: str
+    end: str | None = None
+    drawdown_vnd: float
+
+
+class DrawdownResponse(BaseModel):
+    """AN-04: Max drawdown with periods."""
+    max_drawdown_vnd: float
+    max_drawdown_pct: float
+    current_drawdown_vnd: float
+    current_drawdown_pct: float
+    periods: list[DrawdownPeriod]

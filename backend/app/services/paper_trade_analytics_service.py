@@ -5,7 +5,7 @@ Consumed by Phase 24 API router. Session injected via constructor.
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
@@ -203,6 +203,151 @@ class PaperTradeAnalyticsService:
             "initial_capital": float(config.initial_capital),
             "auto_track_enabled": config.auto_track_enabled,
             "min_confidence_threshold": config.min_confidence_threshold,
+        }
+
+    # --- Analytics Methods (AN-01 through AN-04) ---
+
+    async def get_summary(self) -> dict:
+        """AN-01, AN-02: Win rate + total P&L."""
+        result = await self.session.execute(
+            select(
+                func.count().label("total"),
+                func.count().filter(PaperTrade.realized_pnl > 0).label("wins"),
+                func.sum(PaperTrade.realized_pnl).label("total_pnl"),
+            ).where(PaperTrade.status.in_(CLOSED_STATUSES))
+        )
+        row = result.one()
+        total = row.total or 0
+        wins = row.wins or 0
+        total_pnl = float(row.total_pnl or 0)
+        win_rate = round(wins / total * 100, 2) if total > 0 else 0.0
+        avg_pnl = round(total_pnl / total, 2) if total > 0 else 0.0
+
+        # AN-02: P&L as % of initial capital
+        config_result = await self.session.execute(
+            select(SimulationConfig.initial_capital).where(SimulationConfig.id == 1)
+        )
+        initial_capital = float(config_result.scalar_one())
+        total_pnl_pct = round(total_pnl / initial_capital * 100, 2) if initial_capital > 0 else 0.0
+
+        return {
+            "total_trades": total,
+            "wins": wins,
+            "losses": total - wins,
+            "win_rate": win_rate,
+            "total_pnl": round(total_pnl, 2),
+            "total_pnl_pct": total_pnl_pct,
+            "avg_pnl_per_trade": avg_pnl,
+        }
+
+    async def get_equity_curve(self) -> dict:
+        """AN-03: Equity curve — cumulative P&L by closed_date."""
+        result = await self.session.execute(
+            select(
+                PaperTrade.closed_date,
+                func.sum(PaperTrade.realized_pnl).label("daily_pnl"),
+            )
+            .where(
+                PaperTrade.status.in_(CLOSED_STATUSES),
+                PaperTrade.closed_date.isnot(None),
+            )
+            .group_by(PaperTrade.closed_date)
+            .order_by(PaperTrade.closed_date)
+        )
+        rows = result.all()
+
+        cumulative = 0.0
+        curve = []
+        for row in rows:
+            daily = float(row.daily_pnl or 0)
+            cumulative += daily
+            curve.append({
+                "date": row.closed_date.isoformat(),
+                "daily_pnl": round(daily, 2),
+                "cumulative_pnl": round(cumulative, 2),
+            })
+
+        # Get initial capital for response
+        config_result = await self.session.execute(
+            select(SimulationConfig.initial_capital).where(SimulationConfig.id == 1)
+        )
+        initial_capital = float(config_result.scalar_one())
+
+        return {"data": curve, "initial_capital": initial_capital}
+
+    async def get_drawdown(self) -> dict:
+        """AN-04: Max drawdown from equity curve."""
+        equity_data = await self.get_equity_curve()
+        curve = equity_data["data"]
+
+        if not curve:
+            return {
+                "max_drawdown_vnd": 0, "max_drawdown_pct": 0,
+                "current_drawdown_vnd": 0, "current_drawdown_pct": 0,
+                "periods": [],
+            }
+
+        initial_capital = equity_data["initial_capital"]
+        peak = 0.0
+        max_dd_vnd = 0.0
+        max_dd_pct = 0.0
+
+        for point in curve:
+            value = point["cumulative_pnl"]
+            if value > peak:
+                peak = value
+            else:
+                dd = value - peak
+                if dd < max_dd_vnd:
+                    max_dd_vnd = dd
+                    equity_at_peak = initial_capital + peak
+                    max_dd_pct = round(dd / equity_at_peak * 100, 2) if equity_at_peak > 0 else 0.0
+
+        # Current drawdown
+        current_value = curve[-1]["cumulative_pnl"] if curve else 0
+        current_dd = current_value - peak
+        current_dd_pct = 0.0
+        if current_dd < 0 and (initial_capital + peak) > 0:
+            current_dd_pct = round(current_dd / (initial_capital + peak) * 100, 2)
+
+        # Build drawdown periods by tracking peak-to-trough-to-recovery
+        dd_periods: list[dict] = []
+        peak2 = 0.0
+        dd_start2 = None
+        trough_val = 0.0
+        for point in curve:
+            value = point["cumulative_pnl"]
+            if value >= peak2:
+                if dd_start2 is not None:
+                    dd_periods.append({
+                        "start": dd_start2,
+                        "end": point["date"],
+                        "drawdown_vnd": round(trough_val - peak2, 2),
+                    })
+                peak2 = value
+                dd_start2 = None
+                trough_val = value
+            else:
+                if dd_start2 is None:
+                    dd_start2 = point["date"]
+                    trough_val = value
+                elif value < trough_val:
+                    trough_val = value
+
+        # If still in drawdown at end, add open period
+        if dd_start2 is not None:
+            dd_periods.append({
+                "start": dd_start2,
+                "end": None,
+                "drawdown_vnd": round(trough_val - peak2, 2),
+            })
+
+        return {
+            "max_drawdown_vnd": round(max_dd_vnd, 2),
+            "max_drawdown_pct": max_dd_pct,
+            "current_drawdown_vnd": round(current_dd, 2) if current_dd < 0 else 0,
+            "current_drawdown_pct": current_dd_pct if current_dd < 0 else 0,
+            "periods": dd_periods[-5:],  # Last 5 drawdown periods
         }
 
     # --- Helpers ---

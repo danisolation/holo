@@ -12,6 +12,11 @@ from app.schemas.paper_trading import (
     PaperTradeListResponse,
     SimulationConfigResponse,
     SimulationConfigUpdateRequest,
+    AnalyticsSummaryResponse,
+    EquityCurveResponse,
+    EquityCurvePoint,
+    DrawdownResponse,
+    DrawdownPeriod,
 )
 
 router = APIRouter(prefix="/paper-trading", tags=["paper-trading"])
@@ -86,3 +91,41 @@ async def update_config(config: SimulationConfigUpdateRequest):
             raise HTTPException(status_code=400, detail="No fields to update")
         result = await service.update_config(update_data)
         return SimulationConfigResponse(**result)
+
+
+# --- Analytics Endpoints ---
+
+@router.get("/analytics/summary", response_model=AnalyticsSummaryResponse)
+async def get_analytics_summary():
+    """AN-01, AN-02: Win rate + total P&L."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_summary()
+        return AnalyticsSummaryResponse(**result)
+
+
+@router.get("/analytics/equity-curve", response_model=EquityCurveResponse)
+async def get_equity_curve():
+    """AN-03: Equity curve time-series."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_equity_curve()
+        return EquityCurveResponse(
+            data=[EquityCurvePoint(**p) for p in result["data"]],
+            initial_capital=result["initial_capital"],
+        )
+
+
+@router.get("/analytics/drawdown", response_model=DrawdownResponse)
+async def get_drawdown():
+    """AN-04: Max drawdown with periods."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_drawdown()
+        return DrawdownResponse(
+            max_drawdown_vnd=result["max_drawdown_vnd"],
+            max_drawdown_pct=result["max_drawdown_pct"],
+            current_drawdown_vnd=result["current_drawdown_vnd"],
+            current_drawdown_pct=result["current_drawdown_pct"],
+            periods=[DrawdownPeriod(**p) for p in result["periods"]],
+        )
