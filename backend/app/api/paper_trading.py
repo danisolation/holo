@@ -22,6 +22,10 @@ from app.schemas.paper_trading import (
     RiskRewardResponse,
     ProfitFactorResponse,
     SectorAnalysisItem,
+    StreakResponse,
+    TimeframeComparisonItem,
+    PeriodicSummaryItem,
+    CalendarDataPoint,
 )
 
 router = APIRouter(prefix="/paper-trading", tags=["paper-trading"])
@@ -180,3 +184,43 @@ async def get_sector_analysis():
         service = PaperTradeAnalyticsService(session)
         result = await service.get_sector_analysis()
         return [SectorAnalysisItem(**item) for item in result]
+
+
+# --- Phase 26: Additional Analytics Endpoints ---
+
+@router.get("/analytics/streaks", response_model=StreakResponse)
+async def get_streaks():
+    """UI-03: Win/loss streak tracking."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_streaks()
+        return StreakResponse(**result)
+
+
+@router.get("/analytics/timeframe", response_model=list[TimeframeComparisonItem])
+async def get_timeframe_comparison():
+    """UI-04: Swing vs Position performance comparison."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_timeframe_comparison()
+        return [TimeframeComparisonItem(**item) for item in result]
+
+
+@router.get("/analytics/periodic", response_model=list[PeriodicSummaryItem])
+async def get_periodic_summary(
+    period: str = Query("weekly", pattern="^(weekly|monthly)$"),
+):
+    """UI-06: Weekly or monthly performance summary."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_periodic_summary(period)
+        return [PeriodicSummaryItem(**item) for item in result]
+
+
+@router.get("/analytics/calendar", response_model=list[CalendarDataPoint])
+async def get_calendar_data():
+    """UI-02: Daily P&L aggregates for calendar heatmap."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_calendar_data()
+        return [CalendarDataPoint(**item) for item in result]

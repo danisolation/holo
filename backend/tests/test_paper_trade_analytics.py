@@ -15,6 +15,10 @@ from app.schemas.paper_trading import (
     RiskRewardResponse,
     ProfitFactorResponse,
     SectorAnalysisItem,
+    StreakResponse,
+    TimeframeComparisonItem,
+    PeriodicSummaryItem,
+    CalendarDataPoint,
 )
 
 
@@ -278,3 +282,87 @@ class TestSectorAnalysisSchema:
             win_rate=33.33, total_pnl=-100000, avg_pnl=-33333,
         )
         assert item.sector == "Unknown"
+
+
+# --- Phase 26: Streak Computation + New Schema Tests ---
+
+class TestStreakComputation:
+    """UI-03: Streak algorithm (pure Python — no DB)."""
+
+    def _compute_streaks(self, pnl_sequence: list[float]) -> dict:
+        """Replicate streak logic for testing."""
+        current_win = 0; current_loss = 0; max_win = 0; max_loss = 0
+        for pnl in pnl_sequence:
+            if pnl > 0:
+                current_win += 1; current_loss = 0
+                max_win = max(max_win, current_win)
+            else:
+                current_loss += 1; current_win = 0
+                max_loss = max(max_loss, current_loss)
+        return {
+            "current_win_streak": current_win, "current_loss_streak": current_loss,
+            "longest_win_streak": max_win, "longest_loss_streak": max_loss,
+            "total_trades": len(pnl_sequence),
+        }
+
+    def test_alternating_wins_losses(self):
+        result = self._compute_streaks([100, -50, 200, -30, 150])
+        assert result["longest_win_streak"] == 1
+        assert result["longest_loss_streak"] == 1
+        assert result["current_win_streak"] == 1  # ends on win
+
+    def test_all_wins(self):
+        result = self._compute_streaks([100, 200, 300, 400])
+        assert result["longest_win_streak"] == 4
+        assert result["current_win_streak"] == 4
+        assert result["longest_loss_streak"] == 0
+
+    def test_all_losses(self):
+        result = self._compute_streaks([-100, -200, -300])
+        assert result["longest_loss_streak"] == 3
+        assert result["current_loss_streak"] == 3
+        assert result["longest_win_streak"] == 0
+
+    def test_empty(self):
+        result = self._compute_streaks([])
+        assert result == {"current_win_streak": 0, "current_loss_streak": 0,
+                          "longest_win_streak": 0, "longest_loss_streak": 0,
+                          "total_trades": 0}
+
+    def test_streak_ending_on_loss(self):
+        result = self._compute_streaks([100, 200, 300, -50, -60])
+        assert result["longest_win_streak"] == 3
+        assert result["current_loss_streak"] == 2
+        assert result["current_win_streak"] == 0
+
+
+class TestStreakSchema:
+    def test_valid(self):
+        s = StreakResponse(current_win_streak=3, current_loss_streak=0,
+                           longest_win_streak=5, longest_loss_streak=2, total_trades=20)
+        assert s.longest_win_streak == 5
+
+
+class TestTimeframeSchema:
+    def test_valid(self):
+        t = TimeframeComparisonItem(timeframe="swing", total_trades=10,
+                                     wins=6, losses=4, win_rate=60.0,
+                                     total_pnl=5000000, avg_pnl=500000)
+        assert t.timeframe == "swing"
+
+
+class TestPeriodicSchema:
+    def test_valid(self):
+        p = PeriodicSummaryItem(period="2025-W03", total_trades=5,
+                                 wins=3, losses=2, win_rate=60.0,
+                                 total_pnl=1500000, avg_rr=2.5)
+        assert p.period == "2025-W03"
+
+
+class TestCalendarSchema:
+    def test_valid(self):
+        c = CalendarDataPoint(date="2025-01-15", daily_pnl=500000, trade_count=3)
+        assert c.trade_count == 3
+    def test_loss_day(self):
+        c = CalendarDataPoint(date="2025-01-16", daily_pnl=-200000, trade_count=1)
+        assert c.daily_pnl < 0

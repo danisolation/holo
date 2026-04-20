@@ -5,7 +5,8 @@ Consumed by Phase 24 API router. Session injected via constructor.
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select, func, desc, case
+from sqlalchemy import select, func, desc, case, String
+from sqlalchemy.sql.expression import extract
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
@@ -525,6 +526,135 @@ class PaperTradeAnalyticsService:
                 "win_rate": round((row.wins or 0) / row.total * 100, 2) if row.total > 0 else 0,
                 "total_pnl": round(float(row.total_pnl or 0), 2),
                 "avg_pnl": round(float(row.avg_pnl or 0), 2),
+            }
+            for row in result.all()
+        ]
+
+    # --- Phase 26: Additional Analytics (UI-02 through UI-06) ---
+
+    async def get_streaks(self) -> dict:
+        """UI-03: Win/loss streak tracking.
+
+        Iterates closed trades ordered by (closed_date, id) ASC,
+        counts consecutive win/loss runs per-trade.
+        """
+        result = await self.session.execute(
+            select(PaperTrade.realized_pnl)
+            .where(PaperTrade.status.in_(CLOSED_STATUSES))
+            .order_by(PaperTrade.closed_date, PaperTrade.id)
+        )
+        rows = result.all()
+
+        current_win = 0
+        current_loss = 0
+        max_win = 0
+        max_loss = 0
+
+        for row in rows:
+            pnl = float(row.realized_pnl or 0)
+            if pnl > 0:
+                current_win += 1
+                current_loss = 0
+                max_win = max(max_win, current_win)
+            else:
+                current_loss += 1
+                current_win = 0
+                max_loss = max(max_loss, current_loss)
+
+        return {
+            "current_win_streak": current_win,
+            "current_loss_streak": current_loss,
+            "longest_win_streak": max_win,
+            "longest_loss_streak": max_loss,
+            "total_trades": len(rows),
+        }
+
+    async def get_timeframe_comparison(self) -> list[dict]:
+        """UI-04: Performance by timeframe (swing vs position)."""
+        result = await self.session.execute(
+            select(
+                PaperTrade.timeframe,
+                func.count().label("total"),
+                func.count().filter(PaperTrade.realized_pnl > 0).label("wins"),
+                func.sum(PaperTrade.realized_pnl).label("total_pnl"),
+                func.avg(PaperTrade.realized_pnl).label("avg_pnl"),
+            )
+            .where(PaperTrade.status.in_(CLOSED_STATUSES))
+            .group_by(PaperTrade.timeframe)
+        )
+        return [
+            {
+                "timeframe": row.timeframe,
+                "total_trades": row.total,
+                "wins": row.wins or 0,
+                "losses": row.total - (row.wins or 0),
+                "win_rate": round((row.wins or 0) / row.total * 100, 2) if row.total > 0 else 0,
+                "total_pnl": round(float(row.total_pnl or 0), 2),
+                "avg_pnl": round(float(row.avg_pnl or 0), 2),
+            }
+            for row in result.all()
+        ]
+
+    async def get_periodic_summary(self, period: str = "weekly") -> list[dict]:
+        """UI-06: Weekly or monthly performance summary."""
+        if period == "weekly":
+            period_expr = func.concat(
+                extract("isoyear", PaperTrade.closed_date).cast(String),
+                "-W",
+                func.lpad(extract("week", PaperTrade.closed_date).cast(String), 2, "0"),
+            )
+        else:
+            period_expr = func.to_char(PaperTrade.closed_date, "YYYY-MM")
+
+        result = await self.session.execute(
+            select(
+                period_expr.label("period"),
+                func.count().label("total"),
+                func.count().filter(PaperTrade.realized_pnl > 0).label("wins"),
+                func.sum(PaperTrade.realized_pnl).label("total_pnl"),
+                func.avg(PaperTrade.risk_reward_ratio).label("avg_rr"),
+            )
+            .where(
+                PaperTrade.status.in_(CLOSED_STATUSES),
+                PaperTrade.closed_date.isnot(None),
+            )
+            .group_by(period_expr)
+            .order_by(desc(period_expr))
+            .limit(12)
+        )
+        return [
+            {
+                "period": row.period,
+                "total_trades": row.total,
+                "wins": row.wins or 0,
+                "losses": row.total - (row.wins or 0),
+                "win_rate": round((row.wins or 0) / row.total * 100, 2) if row.total > 0 else 0,
+                "total_pnl": round(float(row.total_pnl or 0), 2),
+                "avg_rr": round(float(row.avg_rr or 0), 2),
+            }
+            for row in result.all()
+        ]
+
+    async def get_calendar_data(self) -> list[dict]:
+        """UI-02: Daily P&L aggregates for calendar heatmap."""
+        result = await self.session.execute(
+            select(
+                PaperTrade.closed_date,
+                func.sum(PaperTrade.realized_pnl).label("daily_pnl"),
+                func.count().label("trade_count"),
+            )
+            .where(
+                PaperTrade.status.in_(CLOSED_STATUSES),
+                PaperTrade.closed_date.isnot(None),
+            )
+            .group_by(PaperTrade.closed_date)
+            .order_by(PaperTrade.closed_date)
+        )
+        return [
+            {
+                "date": row.closed_date.isoformat(),
+                "daily_pnl": round(float(row.daily_pnl or 0), 2),
+                "trade_count": row.trade_count,
             }
             for row in result.all()
         ]

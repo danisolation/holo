@@ -149,3 +149,43 @@ class SectorAnalysisItem(BaseModel):
     win_rate: float
     total_pnl: float
     avg_pnl: float
+
+
+# --- Phase 26: Additional Analytics Schemas ---
+
+class StreakResponse(BaseModel):
+    """UI-03: Win/loss streak tracking."""
+    current_win_streak: int
+    current_loss_streak: int
+    longest_win_streak: int
+    longest_loss_streak: int
+    total_trades: int
+
+
+class TimeframeComparisonItem(BaseModel):
+    """UI-04: Performance for one timeframe (swing or position)."""
+    timeframe: str
+    total_trades: int
+    wins: int
+    losses: int
+    win_rate: float
+    total_pnl: float
+    avg_pnl: float
+
+
+class PeriodicSummaryItem(BaseModel):
+    """UI-06: Performance for one period (week or month)."""
+    period: str        # "2025-W03" or "2025-01"
+    total_trades: int
+    wins: int
+    losses: int
+    win_rate: float
+    total_pnl: float
+    avg_rr: float
+
+
+class CalendarDataPoint(BaseModel):
+    """UI-02: Daily P&L aggregate for calendar heatmap."""
+    date: str          # "YYYY-MM-DD"
+    daily_pnl: float
+    trade_count: int
