@@ -72,7 +72,10 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
   2. User can view ADX (Average Directional Index) value for any ticker, indicating trend strength on a 0-100 scale
   3. User can view Stochastic oscillator (%K/%D) values for any ticker, indicating overbought/oversold conditions
   4. New indicators compute daily as part of the existing indicator pipeline without extending the pipeline window beyond current limits
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 17-01-PLAN.md — Backend: Tests + DB migration + indicator computation + API
+- [ ] 17-02-PLAN.md — Frontend: shadcn Accordion + 3 new chart components
 **UI hint**: yes
 
 ### Phase 18: Support & Resistance Levels
