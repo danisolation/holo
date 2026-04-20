@@ -5,7 +5,6 @@ import {
   createChart,
   LineSeries,
   HistogramSeries,
-  type IChartApi,
 } from "lightweight-charts";
 import type { IndicatorData } from "@/lib/api";
 import {
@@ -545,6 +544,8 @@ export function IndicatorChart({ indicatorData }: IndicatorChartProps) {
             <span className="text-[#22C55E]">+DI</span>
             {" · "}
             <span className="text-[#EF4444]">-DI</span>
+            {" · "}
+            <span className="text-muted-foreground">25 xu hướng mạnh</span>
           </span>
         </AccordionTrigger>
         <AccordionContent>
@@ -559,6 +560,8 @@ export function IndicatorChart({ indicatorData }: IndicatorChartProps) {
             <span className="text-[#EC4899]">%K</span>
             {" · "}
             <span className="text-[#818CF8]">%D</span>
+            {" · "}
+            <span className="text-muted-foreground">80 quá mua · 20 quá bán</span>
           </span>
         </AccordionTrigger>
         <AccordionContent>

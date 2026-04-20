@@ -145,7 +145,7 @@ class TestComputeForTicker:
         mock_session = AsyncMock()
         # Return only 10 rows
         mock_result = MagicMock()
-        mock_result.fetchall.return_value = [(f"2024-01-{i:02d}", 100.0 + i) for i in range(1, 11)]
+        mock_result.fetchall.return_value = [(f"2024-01-{i:02d}", 100.0 + i, 105.0 + i, 95.0 + i) for i in range(1, 11)]
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         svc = IndicatorService(mock_session)
