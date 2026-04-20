@@ -32,6 +32,7 @@ async def list_trades(
     status: str | None = Query(None, description="Filter: pending, active, partial_tp, closed_tp2, closed_sl, closed_timeout, closed_manual"),
     direction: str | None = Query(None, pattern="^(long|bearish)$", description="Filter by direction"),
     timeframe: str | None = Query(None, pattern="^(swing|position)$", description="Filter by timeframe"),
+    symbol: str | None = Query(None, description="Filter by ticker symbol"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
@@ -40,7 +41,7 @@ async def list_trades(
         service = PaperTradeAnalyticsService(session)
         result = await service.list_trades(
             status=status, direction=direction, timeframe=timeframe,
-            limit=limit, offset=offset,
+            symbol=symbol, limit=limit, offset=offset,
         )
         return PaperTradeListResponse(
             trades=[PaperTradeResponse(**t) for t in result["trades"]],

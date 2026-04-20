@@ -579,3 +579,98 @@ export async function fetchGeminiUsage(days: number = 7): Promise<GeminiUsageRes
 export async function fetchPipelineTimeline(days: number = 7): Promise<PipelineTimelineResponse> {
   return apiFetch<PipelineTimelineResponse>(`/health/pipeline-timeline?days=${days}`);
 }
+
+// --- Paper Trading Types (Phase 25) ---
+
+export interface PaperTradeResponse {
+  id: number;
+  symbol: string;
+  direction: "long" | "bearish";
+  status: string;
+  entry_price: number;
+  stop_loss: number;
+  take_profit_1: number;
+  take_profit_2: number;
+  adjusted_stop_loss: number | null;
+  quantity: number;
+  closed_quantity: number;
+  realized_pnl: number | null;
+  realized_pnl_pct: number | null;
+  exit_price: number | null;
+  partial_exit_price: number | null;
+  signal_date: string;
+  entry_date: string | null;
+  closed_date: string | null;
+  confidence: number;
+  timeframe: string;
+  position_size_pct: number;
+  risk_reward_ratio: number;
+  created_at: string;
+}
+
+export interface PaperTradeListResponse {
+  trades: PaperTradeResponse[];
+  total: number;
+}
+
+export interface SimulationConfigResponse {
+  initial_capital: number;
+  auto_track_enabled: boolean;
+  min_confidence_threshold: number;
+}
+
+export interface SimulationConfigUpdateRequest {
+  initial_capital?: number;
+  auto_track_enabled?: boolean;
+  min_confidence_threshold?: number;
+}
+
+export interface AnalyticsSummaryResponse {
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  avg_pnl_per_trade: number;
+}
+
+// --- Paper Trading Fetch Functions (Phase 25) ---
+
+export async function fetchPaperTrades(params?: {
+  status?: string;
+  direction?: string;
+  timeframe?: string;
+  symbol?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<PaperTradeListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.status) searchParams.set("status", params.status);
+  if (params?.direction) searchParams.set("direction", params.direction);
+  if (params?.timeframe) searchParams.set("timeframe", params.timeframe);
+  if (params?.symbol) searchParams.set("symbol", params.symbol);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+  if (params?.offset) searchParams.set("offset", String(params.offset));
+  const qs = searchParams.toString();
+  return apiFetch<PaperTradeListResponse>(`/paper-trading/trades${qs ? `?${qs}` : ""}`);
+}
+
+export async function closePaperTrade(tradeId: number): Promise<PaperTradeResponse> {
+  return apiFetch<PaperTradeResponse>(`/paper-trading/trades/${tradeId}/close`, { method: "POST" });
+}
+
+export async function fetchPaperConfig(): Promise<SimulationConfigResponse> {
+  return apiFetch<SimulationConfigResponse>("/paper-trading/config");
+}
+
+export async function updatePaperConfig(data: SimulationConfigUpdateRequest): Promise<SimulationConfigResponse> {
+  return apiFetch<SimulationConfigResponse>("/paper-trading/config", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchPaperAnalyticsSummary(): Promise<AnalyticsSummaryResponse> {
+  return apiFetch<AnalyticsSummaryResponse>("/paper-trading/analytics/summary");
+}

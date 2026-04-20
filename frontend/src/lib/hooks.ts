@@ -30,6 +30,12 @@ import {
   fetchCorporateEvents,
   fetchGeminiUsage,
   fetchPipelineTimeline,
+  fetchPaperTrades,
+  closePaperTrade,
+  fetchPaperConfig,
+  updatePaperConfig,
+  fetchPaperAnalyticsSummary,
+  type SimulationConfigUpdateRequest,
 } from "@/lib/api";
 
 /**
@@ -316,5 +322,60 @@ export function useTradingSignal(symbol: string | undefined) {
     queryFn: () => fetchTradingSignal(symbol!),
     enabled: !!symbol,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// --- Paper Trading Hooks (Phase 25) ---
+
+export function usePaperTrades(params?: {
+  status?: string;
+  direction?: string;
+  timeframe?: string;
+  symbol?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return useQuery({
+    queryKey: ["paper-trades", params],
+    queryFn: () => fetchPaperTrades(params),
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperConfig() {
+  return useQuery({
+    queryKey: ["paper-config"],
+    queryFn: fetchPaperConfig,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePaperAnalyticsSummary() {
+  return useQuery({
+    queryKey: ["paper-analytics-summary"],
+    queryFn: fetchPaperAnalyticsSummary,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useUpdatePaperConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SimulationConfigUpdateRequest) => updatePaperConfig(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["paper-config"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-trades"] });
+    },
+  });
+}
+
+export function useClosePaperTrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tradeId: number) => closePaperTrade(tradeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["paper-trades"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-analytics-summary"] });
+    },
   });
 }

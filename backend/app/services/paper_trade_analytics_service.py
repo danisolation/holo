@@ -38,7 +38,8 @@ class PaperTradeAnalyticsService:
     # --- Trade CRUD ---
     async def list_trades(
         self, status: str | None = None, direction: str | None = None,
-        timeframe: str | None = None, limit: int = 50, offset: int = 0,
+        timeframe: str | None = None, symbol: str | None = None,
+        limit: int = 50, offset: int = 0,
     ) -> dict:
         query = select(PaperTrade).join(Ticker, PaperTrade.ticker_id == Ticker.id)
         count_query = select(func.count(PaperTrade.id))
@@ -52,6 +53,11 @@ class PaperTradeAnalyticsService:
         if timeframe:
             query = query.where(PaperTrade.timeframe == timeframe)
             count_query = count_query.where(PaperTrade.timeframe == timeframe)
+        if symbol:
+            query = query.where(Ticker.symbol == symbol.upper())
+            count_query = count_query.join(
+                Ticker, PaperTrade.ticker_id == Ticker.id
+            ).where(Ticker.symbol == symbol.upper())
 
         total_result = await self.session.execute(count_query)
         total = total_result.scalar()
