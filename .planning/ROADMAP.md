@@ -57,7 +57,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 
 - [x] **Phase 17: Enhanced Technical Indicators** — ATR, ADX, Stochastic computation + display (completed 2026-04-20)
 - [x] **Phase 18: Support & Resistance Levels** — Pivot points, Fibonacci retracements (completed 2026-04-20)
-- [ ] **Phase 19: AI Trading Signal Pipeline** — Dual-direction schema, Gemini prompt, batch processing
+- [ ] **Phase 19: AI Trading Signal Pipeline** — Dual-direction schema, Gemini prompt, batch processing (3 plans)
 - [ ] **Phase 20: Trading Plan Dashboard Panel** — Trading plan component on ticker detail page
 - [ ] **Phase 21: Chart Price Line Overlays** — Entry/SL/TP lines on candlestick chart
 
@@ -102,7 +102,11 @@ Plans:
   3. Each signal includes risk/reward ratio, position sizing (% of portfolio), and timeframe recommendation (swing or position)
   4. Each signal includes Vietnamese-language rationale explaining the trading logic for each direction
   5. Batch processing respects Gemini 15 RPM rate limit with reduced batch size (~15 tickers) and completes within the daily pipeline window
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 19-01-PLAN.md — Schema contracts + DB migration + config settings
+- [ ] 19-02-PLAN.md — Service core: Gemini extension + context/prompt + validation
+- [ ] 19-03-PLAN.md — Pipeline wiring: scheduler job + API endpoints
 
 ### Phase 20: Trading Plan Dashboard Panel
 **Goal**: Trading plans are displayed in a dedicated panel on the ticker detail page with full LONG and BEARISH analysis
@@ -134,6 +138,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 17. Enhanced Technical Indicators | 2/2 | Complete   | 2026-04-20 |
 | 18. Support & Resistance Levels | 2/2 | Complete   | 2026-04-20 |
-| 19. AI Trading Signal Pipeline | 0/0 | Not started | - |
+| 19. AI Trading Signal Pipeline | 0/3 | Not started | - |
 | 20. Trading Plan Dashboard Panel | 0/0 | Not started | - |
 | 21. Chart Price Line Overlays | 0/0 | Not started | - |
