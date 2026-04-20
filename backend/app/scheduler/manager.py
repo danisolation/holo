@@ -113,6 +113,15 @@ def _on_job_executed(event: events.JobExecutionEvent):
             replace_existing=True,
             misfire_grace_time=3600,
         )
+        # Phase 23: Position monitor (parallel with indicator_compute, alerts, corp actions)
+        from app.scheduler.jobs import paper_position_monitor
+        logger.info("Chaining: daily_price_crawl_upcom → paper_position_monitor")
+        scheduler.add_job(
+            paper_position_monitor,
+            id="paper_position_monitor_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
     elif event.job_id == "daily_corporate_action_check_triggered":
         # Chain: corporate_action_check → exdate_alert_check (CORP-07)
         from app.scheduler.jobs import daily_exdate_alert_check

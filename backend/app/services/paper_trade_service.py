@@ -158,3 +158,97 @@ def apply_partial_tp(trade, tp1_price: Decimal) -> None:
     trade.closed_quantity = half_qty
     trade.partial_exit_price = tp1_price
     trade.adjusted_stop_loss = trade.entry_price  # Breakeven
+
+
+# --- Position Evaluation (PT-04, PT-06) ---
+
+TIMEOUT_TRADING_DAYS: dict[str, int] = {
+    "swing": 15,
+    "position": 60,
+}
+
+
+def evaluate_long_position(
+    status: "TradeStatus",
+    effective_sl: "Decimal",
+    take_profit_1: "Decimal",
+    take_profit_2: "Decimal",
+    bar_open: "Decimal",
+    bar_high: "Decimal",
+    bar_low: "Decimal",
+) -> tuple["TradeStatus | None", "Decimal | None"]:
+    """Evaluate a LONG position against today's OHLCV bar.
+
+    Priority: SL FIRST (conservative/ambiguous bar rule per CONTEXT.md).
+    Gap-through: if open already past SL/TP, fill at open price.
+
+    Returns (new_status, exit_price) or (None, None) if no transition.
+    """
+    # Gap-through SL at open
+    if bar_open <= effective_sl:
+        return TradeStatus.CLOSED_SL, bar_open
+
+    # SL check (ALWAYS first — ambiguous bar rule)
+    if bar_low <= effective_sl:
+        return TradeStatus.CLOSED_SL, effective_sl
+
+    # TP2 check (only if PARTIAL_TP state)
+    if status == TradeStatus.PARTIAL_TP:
+        if bar_open >= take_profit_2:
+            return TradeStatus.CLOSED_TP2, bar_open  # Gap-through TP2
+        if bar_high >= take_profit_2:
+            return TradeStatus.CLOSED_TP2, take_profit_2
+
+    # TP1 check (only if ACTIVE state)
+    if status == TradeStatus.ACTIVE:
+        if bar_open >= take_profit_1:
+            return TradeStatus.PARTIAL_TP, bar_open  # Gap-through TP1
+        if bar_high >= take_profit_1:
+            return TradeStatus.PARTIAL_TP, take_profit_1
+
+    return None, None
+
+
+def evaluate_bearish_position(
+    status: "TradeStatus",
+    effective_sl: "Decimal",
+    take_profit_1: "Decimal",
+    take_profit_2: "Decimal",
+    bar_open: "Decimal",
+    bar_high: "Decimal",
+    bar_low: "Decimal",
+) -> tuple["TradeStatus | None", "Decimal | None"]:
+    """Evaluate a BEARISH position against today's OHLCV bar.
+
+    BEARISH inverts all comparisons:
+    - SL is ABOVE entry → hit when high >= SL (price rises against us)
+    - TP is BELOW entry → hit when low <= TP (price drops in our favor)
+
+    Priority: SL FIRST (conservative/ambiguous bar rule per CONTEXT.md).
+    Gap-through: if open already past SL/TP, fill at open price.
+
+    Returns (new_status, exit_price) or (None, None) if no transition.
+    """
+    # Gap-through SL at open (price opens above SL)
+    if bar_open >= effective_sl:
+        return TradeStatus.CLOSED_SL, bar_open
+
+    # SL check (ALWAYS first — ambiguous bar rule)
+    if bar_high >= effective_sl:
+        return TradeStatus.CLOSED_SL, effective_sl
+
+    # TP2 check (only if PARTIAL_TP state) — price drops to TP2
+    if status == TradeStatus.PARTIAL_TP:
+        if bar_open <= take_profit_2:
+            return TradeStatus.CLOSED_TP2, bar_open  # Gap-through TP2
+        if bar_low <= take_profit_2:
+            return TradeStatus.CLOSED_TP2, take_profit_2
+
+    # TP1 check (only if ACTIVE state) — price drops to TP1
+    if status == TradeStatus.ACTIVE:
+        if bar_open <= take_profit_1:
+            return TradeStatus.PARTIAL_TP, bar_open  # Gap-through TP1
+        if bar_low <= take_profit_1:
+            return TradeStatus.PARTIAL_TP, take_profit_1
+
+    return None, None

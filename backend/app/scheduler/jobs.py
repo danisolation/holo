@@ -889,3 +889,163 @@ async def paper_trade_auto_track():
             await session.commit()
             logger.error(f"=== PAPER TRADE AUTO-TRACK FAILED: {e} ===")
             # Never raises — per "never-raises" pattern (like daily_signal_alert_check)
+
+
+async def paper_position_monitor():
+    """Daily position monitoring: activate PENDING, check SL/TP/timeout for open trades.
+
+    Chained after daily_price_crawl_upcom (parallel with indicator_compute).
+    PT-04: Check SL/TP/timeout against daily OHLCV.
+    PT-06: PENDING → ACTIVE at D+1 open price (no lookahead bias).
+    Uses batch queries (2 total) to respect Aiven pool constraint (pool_size=5, max_overflow=3).
+    """
+    from sqlalchemy import select, func
+
+    from app.models.paper_trade import PaperTrade, TradeStatus, TradeDirection
+    from app.models.daily_price import DailyPrice
+    from app.services.paper_trade_service import (
+        evaluate_long_position, evaluate_bearish_position,
+        apply_partial_tp, calculate_pnl, TIMEOUT_TRADING_DAYS,
+    )
+
+    logger.info("=== PAPER POSITION MONITOR START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("paper_position_monitor")
+        try:
+            today = date.today()
+
+            # Query 1: All open positions (batch)
+            stmt_positions = select(PaperTrade).where(
+                PaperTrade.status.in_([
+                    TradeStatus.PENDING,
+                    TradeStatus.ACTIVE,
+                    TradeStatus.PARTIAL_TP,
+                ])
+            )
+            positions = (await session.execute(stmt_positions)).scalars().all()
+
+            if not positions:
+                await job_svc.complete(execution, status="success",
+                    result_summary={"checked": 0, "activated": 0, "closed": 0, "partial_tp": 0})
+                await session.commit()
+                logger.info("=== PAPER POSITION MONITOR COMPLETE: no open positions ===")
+                return
+
+            # Query 2: Today's prices for all tickers with open positions (batch)
+            ticker_ids = list({p.ticker_id for p in positions})
+            stmt_prices = select(DailyPrice).where(
+                DailyPrice.ticker_id.in_(ticker_ids),
+                DailyPrice.date == today,
+            )
+            prices = (await session.execute(stmt_prices)).scalars().all()
+            price_map = {p.ticker_id: p for p in prices}  # O(1) lookup
+
+            activated = 0
+            closed = 0
+            partial_tp = 0
+            skipped = 0
+
+            for trade in positions:
+                bar = price_map.get(trade.ticker_id)
+                if not bar:
+                    skipped += 1  # No OHLCV data (holiday/suspended)
+                    continue
+
+                # --- PENDING activation (PT-06) ---
+                if trade.status == TradeStatus.PENDING:
+                    # Activate at D+1 open: signal_date is D, today is D+1 (or later)
+                    if bar.date > trade.signal_date:
+                        trade.status = TradeStatus.ACTIVE
+                        trade.entry_price = bar.open  # Overwrite with actual fill
+                        trade.entry_date = bar.date
+                        activated += 1
+                    continue  # Don't evaluate newly activated trades same day
+
+                # --- Active/Partial_TP evaluation ---
+                # Determine evaluation function by direction
+                if trade.direction == TradeDirection.LONG:
+                    new_status, exit_price = evaluate_long_position(
+                        status=trade.status,
+                        effective_sl=trade.effective_stop_loss,
+                        take_profit_1=trade.take_profit_1,
+                        take_profit_2=trade.take_profit_2,
+                        bar_open=bar.open,
+                        bar_high=bar.high,
+                        bar_low=bar.low,
+                    )
+                else:  # BEARISH
+                    new_status, exit_price = evaluate_bearish_position(
+                        status=trade.status,
+                        effective_sl=trade.effective_stop_loss,
+                        take_profit_1=trade.take_profit_1,
+                        take_profit_2=trade.take_profit_2,
+                        bar_open=bar.open,
+                        bar_high=bar.high,
+                        bar_low=bar.low,
+                    )
+
+                if new_status == TradeStatus.PARTIAL_TP:
+                    # Apply partial TP using Phase 22 service
+                    apply_partial_tp(trade, exit_price)
+                    partial_tp += 1
+                elif new_status is not None:
+                    # Final close (SL, TP2)
+                    trade.status = new_status
+                    trade.exit_price = exit_price
+                    trade.closed_date = today
+                    pnl, pnl_pct = calculate_pnl(
+                        direction=trade.direction.value,
+                        entry_price=trade.entry_price,
+                        quantity=trade.quantity,
+                        partial_exit_price=trade.partial_exit_price,
+                        closed_quantity=trade.closed_quantity,
+                        exit_price=exit_price,
+                    )
+                    trade.realized_pnl = pnl
+                    trade.realized_pnl_pct = pnl_pct
+                    closed += 1
+                else:
+                    # No SL/TP hit — check timeout
+                    max_days = TIMEOUT_TRADING_DAYS.get(trade.timeframe, 60)
+                    if trade.entry_date:
+                        # Count trading days from daily_prices for this ticker
+                        timeout_stmt = select(func.count()).select_from(DailyPrice).where(
+                            DailyPrice.ticker_id == trade.ticker_id,
+                            DailyPrice.date > trade.entry_date,
+                            DailyPrice.date <= today,
+                        )
+                        trading_days = (await session.execute(timeout_stmt)).scalar() or 0
+                        if trading_days >= max_days:
+                            trade.status = TradeStatus.CLOSED_TIMEOUT
+                            trade.exit_price = bar.close  # Market close price
+                            trade.closed_date = today
+                            pnl, pnl_pct = calculate_pnl(
+                                direction=trade.direction.value,
+                                entry_price=trade.entry_price,
+                                quantity=trade.quantity,
+                                partial_exit_price=trade.partial_exit_price,
+                                closed_quantity=trade.closed_quantity,
+                                exit_price=bar.close,
+                            )
+                            trade.realized_pnl = pnl
+                            trade.realized_pnl_pct = pnl_pct
+                            closed += 1
+
+            summary = {
+                "checked": len(positions),
+                "activated": activated,
+                "closed": closed,
+                "partial_tp": partial_tp,
+                "skipped": skipped,
+            }
+            await job_svc.complete(execution, status="success", result_summary=summary)
+            await session.commit()
+            logger.info(f"=== PAPER POSITION MONITOR COMPLETE: {summary} ===")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== PAPER POSITION MONITOR FAILED: {e} ===")
+            raise
