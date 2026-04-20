@@ -461,22 +461,22 @@ def upgrade() -> None:
 | A4 | Numeric(14,2) is sufficient for realized_pnl (max ~99 trillion VND) | Pattern 1: PaperTrade model | Very low — personal portfolio won't approach this limit |
 | A5 | Half quantity at TP1 should also round to 100-lot boundary | Code Examples: apply_partial_tp | Medium — if total qty is 200, half is exactly 100 (clean). But 300 → 100 closes, 200 remains. Need to decide: round half up or down to nearest 100 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Half-quantity lot rounding at partial TP**
    - What we know: Total quantity is always 100-lot rounded. When 50% closes at TP1, half might not be 100-lot clean (e.g., 300 shares → 150 → rounds to 100)
    - What's unclear: Should we round DOWN to nearest 100 (conservative, close less) or UP (close more)?
-   - Recommendation: Round DOWN — matches conservative principle (SL wins on ambiguous bars). If only 100 shares total, close all at TP1 (special case)
+   - RESOLVED: Round DOWN — matches conservative principle (SL wins on ambiguous bars). If only 100 shares total, close all at TP1 (special case). Implemented in Plan 22-02 `apply_partial_tp`.
 
 2. **BEARISH trade P&L semantics**
    - What we know: VN has no short selling. BEARISH tracks prediction accuracy per STATE.md
    - What's unclear: Should BEARISH P&L be synthetic (as if shorted) or just track "would have avoided loss"?
-   - Recommendation: Use synthetic short P&L (entry - exit) for consistent analytics. STATE.md says "BEARISH tracks prediction accuracy, not synthetic short P&L" but for P&L calculation purposes, a directional calculation is needed to produce a meaningful number. Track it as prediction accuracy with inverted math.
+   - RESOLVED: Use synthetic short P&L (entry - exit) for consistent analytics. Directional calculation needed for meaningful number. Implemented in Plan 22-02 `calculate_pnl`.
 
 3. **paper_trades.ai_analysis_id nullable for manual follows**
    - What we know: PT-09 (Phase 24) allows manual follow with custom entry/SL/TP
    - What's unclear: Should this field be nullable now or wait for Phase 24?
-   - Recommendation: Make it nullable now — avoids a migration later and costs nothing
+   - RESOLVED: Make it nullable now — avoids a migration later and costs nothing. Implemented in Plan 22-01.
 
 ## Validation Architecture
 
