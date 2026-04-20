@@ -104,7 +104,10 @@ Plans:
   3. Trades exceeding their timeframe (swing: 15 trading days, position: 60 trading days) auto-close at market close price
   4. PENDING trades activate at next trading day's open price (D+1 open entry) — no lookahead bias
   5. Score=0 invalid signals are excluded from auto-tracking with deduplication preventing retries
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — Auto-track signals job: creates PENDING paper trades from valid AI signals with dedup
+- [ ] 23-02-PLAN.md — Position monitor job: daily SL/TP/timeout evaluation, PENDING activation, BEARISH support
 
 ### Phase 24: API & Analytics Engine
 **Goal**: Users can query paper trading data and analytics through a complete REST API that measures AI signal quality
@@ -149,7 +152,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 22. Paper Trade Foundation | 2/2 | ✅ Complete | 2025-07-18 |
-| 23. Position Monitoring & Auto-Track | 0/TBD | Not started | - |
+| 23. Position Monitoring & Auto-Track | 0/2 | Not started | - |
 | 24. API & Analytics Engine | 0/TBD | Not started | - |
 | 25. Dashboard Structure & Trade Management | 0/TBD | Not started | - |
 | 26. Analytics Visualization & Calendar | 0/TBD | Not started | - |
