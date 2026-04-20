@@ -13,6 +13,7 @@ Resilience pattern per CONTEXT.md decisions:
   complete failure raises (chain breaks)
 """
 from datetime import date
+from decimal import Decimal
 
 from loguru import logger
 
@@ -761,3 +762,130 @@ async def realtime_heartbeat():
     from app.ws.prices import connection_manager
 
     await connection_manager.send_heartbeat()
+
+
+async def paper_trade_auto_track():
+    """Auto-create paper trades from today's valid trading signals.
+
+    Chained after daily_trading_signal_triggered (parallel with signal_alert_check).
+    PT-01: Every valid signal (score > 0) → PENDING paper trade.
+    PT-08: Score=0 excluded; dedup by ai_analysis_id prevents duplicates.
+    Never raises — auto-track failure must not break the pipeline.
+    """
+    from sqlalchemy import select
+
+    from app.models.paper_trade import PaperTrade, TradeStatus, TradeDirection
+    from app.models.simulation_config import SimulationConfig
+    from app.models.ai_analysis import AIAnalysis, AnalysisType
+    from app.schemas.analysis import TickerTradingSignal
+    from app.services.paper_trade_service import calculate_position_size
+
+    logger.info("=== PAPER TRADE AUTO-TRACK START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("paper_trade_auto_track")
+        try:
+            # 1. Check if auto-track is enabled
+            config = await session.get(SimulationConfig, 1)
+            if not config or not config.auto_track_enabled:
+                await job_svc.complete(execution, status="skipped",
+                    result_summary={"reason": "auto_track_disabled"})
+                await session.commit()
+                logger.info("=== PAPER TRADE AUTO-TRACK SKIPPED (disabled) ===")
+                return
+
+            # 2. Query today's valid trading signals (score > 0)
+            today = date.today()
+            stmt = select(AIAnalysis).where(
+                AIAnalysis.analysis_type == AnalysisType.TRADING_SIGNAL,
+                AIAnalysis.analysis_date == today,
+                AIAnalysis.score > 0,
+            )
+            signals = (await session.execute(stmt)).scalars().all()
+
+            if not signals:
+                await job_svc.complete(execution, status="success",
+                    result_summary={"created": 0, "skipped": 0, "signals_total": 0})
+                await session.commit()
+                logger.info("=== PAPER TRADE AUTO-TRACK COMPLETE: no signals ===")
+                return
+
+            # 3. Dedup: get already-tracked analysis IDs
+            existing_stmt = select(PaperTrade.ai_analysis_id).where(
+                PaperTrade.ai_analysis_id.in_([s.id for s in signals])
+            )
+            existing_ids = set(
+                (await session.execute(existing_stmt)).scalars().all()
+            )
+
+            # 4. Create paper trades for untracked signals
+            created = 0
+            skipped = 0
+            for analysis in signals:
+                if analysis.id in existing_ids:
+                    skipped += 1
+                    continue
+
+                # Parse raw_response → TickerTradingSignal
+                try:
+                    signal_data = TickerTradingSignal.model_validate(analysis.raw_response)
+                except Exception as parse_err:
+                    logger.warning(f"Failed to parse signal for analysis {analysis.id}: {parse_err}")
+                    skipped += 1
+                    continue
+
+                # Determine direction + extract plan
+                direction = signal_data.recommended_direction.value
+                dir_analysis = (signal_data.long_analysis if direction == "long"
+                               else signal_data.bearish_analysis)
+
+                # Filter by min_confidence_threshold
+                if dir_analysis.confidence < config.min_confidence_threshold:
+                    skipped += 1
+                    continue
+
+                plan = dir_analysis.trading_plan
+                entry_price = Decimal(str(plan.entry_price))
+
+                # Position sizing using Phase 22 service
+                quantity = calculate_position_size(
+                    capital=config.initial_capital,
+                    allocation_pct=plan.position_size_pct,
+                    entry_price=entry_price,
+                )
+                if quantity == 0:
+                    skipped += 1
+                    continue
+
+                trade = PaperTrade(
+                    ticker_id=analysis.ticker_id,
+                    ai_analysis_id=analysis.id,
+                    direction=TradeDirection(direction),
+                    status=TradeStatus.PENDING,
+                    entry_price=entry_price,
+                    stop_loss=Decimal(str(plan.stop_loss)),
+                    take_profit_1=Decimal(str(plan.take_profit_1)),
+                    take_profit_2=Decimal(str(plan.take_profit_2)),
+                    quantity=quantity,
+                    signal_date=today,
+                    confidence=dir_analysis.confidence,
+                    timeframe=plan.timeframe.value,
+                    position_size_pct=plan.position_size_pct,
+                    risk_reward_ratio=plan.risk_reward_ratio,
+                )
+                session.add(trade)
+                created += 1
+
+            summary = {"created": created, "skipped": skipped, "signals_total": len(signals)}
+            await job_svc.complete(execution, status="success", result_summary=summary)
+            await session.commit()
+            logger.info(f"=== PAPER TRADE AUTO-TRACK COMPLETE: {summary} ===")
+
+        except Exception as e:
+            await job_svc.complete(
+                execution, status="partial",
+                result_summary={"error": str(e)[:200]},
+            )
+            await session.commit()
+            logger.error(f"=== PAPER TRADE AUTO-TRACK FAILED: {e} ===")
+            # Never raises — per "never-raises" pattern (like daily_signal_alert_check)

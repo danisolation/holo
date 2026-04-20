@@ -47,6 +47,8 @@ _JOB_NAMES = {
     "health_alert_check": "Health Alert Check",
     "realtime_price_poll": "Real-Time Price Poll",
     "realtime_heartbeat": "Real-Time Heartbeat",
+    "paper_trade_auto_track_triggered": "Paper Trade Auto-Track",
+    "paper_position_monitor_triggered": "Paper Position Monitor",
 }
 
 
@@ -183,6 +185,15 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_hnx_upcom_analysis,
             id="daily_hnx_upcom_analysis_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+        # Phase 23: Paper trade auto-tracking (parallel with signal alerts)
+        from app.scheduler.jobs import paper_trade_auto_track
+        logger.info("Chaining: daily_trading_signal → paper_trade_auto_track")
+        scheduler.add_job(
+            paper_trade_auto_track,
+            id="paper_trade_auto_track_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
