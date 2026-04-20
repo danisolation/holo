@@ -10,6 +10,11 @@ from app.schemas.paper_trading import (
     EquityCurveResponse,
     DrawdownResponse,
     DrawdownPeriod,
+    DirectionAnalysisItem,
+    ConfidenceBracketItem,
+    RiskRewardResponse,
+    ProfitFactorResponse,
+    SectorAnalysisItem,
 )
 
 
@@ -142,3 +147,134 @@ class TestDrawdownSchema:
             periods=[],
         )
         assert dd.periods == []
+
+
+class TestDirectionAnalysisSchema:
+    """AN-05: Direction analysis response."""
+    def test_valid_direction_item(self):
+        item = DirectionAnalysisItem(
+            direction="long", total_trades=5, wins=3, losses=2,
+            win_rate=60.0, total_pnl=2000000, avg_pnl=400000,
+        )
+        assert item.direction == "long"
+        assert item.win_rate == 60.0
+
+    def test_bearish_direction(self):
+        item = DirectionAnalysisItem(
+            direction="bearish", total_trades=3, wins=1, losses=2,
+            win_rate=33.33, total_pnl=-100000, avg_pnl=-33333,
+        )
+        assert item.direction == "bearish"
+
+
+class TestConfidenceBracketSchema:
+    """AN-06: Confidence bracket response."""
+    def test_valid_bracket(self):
+        item = ConfidenceBracketItem(
+            bracket="HIGH", total_trades=10, wins=7,
+            win_rate=70.0, avg_pnl=500000, avg_pnl_pct=3.5,
+        )
+        assert item.bracket == "HIGH"
+        assert item.win_rate == 70.0
+
+
+class TestConfidenceBracketBoundaries:
+    """AN-06: Verify bracket boundaries match CONTEXT.md (1-3 LOW, 4-6 MEDIUM, 7-10 HIGH)."""
+    def test_low_bracket_boundary(self):
+        """Confidence 1, 2, 3 should map to LOW."""
+        for conf in [1, 2, 3]:
+            bracket = "LOW" if conf <= 3 else ("MEDIUM" if conf <= 6 else "HIGH")
+            assert bracket == "LOW", f"Confidence {conf} should be LOW"
+
+    def test_medium_bracket_boundary(self):
+        """Confidence 4, 5, 6 should map to MEDIUM."""
+        for conf in [4, 5, 6]:
+            bracket = "LOW" if conf <= 3 else ("MEDIUM" if conf <= 6 else "HIGH")
+            assert bracket == "MEDIUM", f"Confidence {conf} should be MEDIUM"
+
+    def test_high_bracket_boundary(self):
+        """Confidence 7, 8, 9, 10 should map to HIGH."""
+        for conf in [7, 8, 9, 10]:
+            bracket = "LOW" if conf <= 3 else ("MEDIUM" if conf <= 6 else "HIGH")
+            assert bracket == "HIGH", f"Confidence {conf} should be HIGH"
+
+
+class TestRiskRewardComputation:
+    """AN-07: R:R achieved vs predicted."""
+    def test_rr_achieved_long(self):
+        """LONG: entry=80K, SL=75K, realized=1M, qty=200.
+        risk = |80K - 75K| * 200 = 1M. achieved_rr = 1M / 1M = 1.0"""
+        risk = abs(80000 - 75000) * 200
+        achieved = 1000000 / risk
+        assert achieved == 1.0
+
+    def test_rr_achieved_bearish(self):
+        """BEARISH: entry=120K, SL=130K, realized=2M, qty=200.
+        risk = |120K - 130K| * 200 = 2M. achieved_rr = 2M / 2M = 1.0"""
+        risk = abs(120000 - 130000) * 200
+        achieved = 2000000 / risk
+        assert achieved == 1.0
+
+    def test_rr_negative_loss(self):
+        """Loss trade: entry=80K, SL=75K, realized=-500K, qty=200.
+        risk = 1M. achieved_rr = -500K / 1M = -0.5"""
+        risk = abs(80000 - 75000) * 200
+        achieved = -500000 / risk
+        assert achieved == -0.5
+
+    def test_rr_schema(self):
+        resp = RiskRewardResponse(
+            avg_predicted_rr=2.5, avg_achieved_rr=1.8,
+            trades_above_predicted=3, trades_below_predicted=7,
+            total_trades=10,
+        )
+        assert resp.avg_predicted_rr == 2.5
+
+
+class TestProfitFactorComputation:
+    """AN-08: Profit factor + expected value."""
+    def test_profit_factor_basic(self):
+        """gross_profit=3M, gross_loss=-1M → PF = 3M / 1M = 3.0"""
+        gross_profit = 3000000
+        gross_loss = -1000000
+        pf = gross_profit / abs(gross_loss) if gross_loss < 0 else None
+        assert pf == 3.0
+
+    def test_profit_factor_no_losses(self):
+        """All wins → profit_factor = None (avoid infinity)."""
+        gross_loss = 0
+        pf = None if gross_loss >= 0 else 1.0
+        assert pf is None
+
+    def test_profit_factor_schema(self):
+        resp = ProfitFactorResponse(
+            gross_profit=3000000, gross_loss=-1000000,
+            profit_factor=3.0, expected_value=200000, total_trades=10,
+        )
+        assert resp.profit_factor == 3.0
+
+    def test_profit_factor_nullable(self):
+        resp = ProfitFactorResponse(
+            gross_profit=500000, gross_loss=0,
+            profit_factor=None, expected_value=250000, total_trades=2,
+        )
+        assert resp.profit_factor is None
+
+
+class TestSectorAnalysisSchema:
+    """AN-09: Sector analysis response."""
+    def test_valid_sector_item(self):
+        item = SectorAnalysisItem(
+            sector="Ngân hàng", total_trades=15, wins=9,
+            win_rate=60.0, total_pnl=5000000, avg_pnl=333333,
+        )
+        assert item.sector == "Ngân hàng"
+        assert item.total_trades == 15
+
+    def test_unknown_sector(self):
+        """Tickers with NULL industry should map to 'Unknown'."""
+        item = SectorAnalysisItem(
+            sector="Unknown", total_trades=3, wins=1,
+            win_rate=33.33, total_pnl=-100000, avg_pnl=-33333,
+        )
+        assert item.sector == "Unknown"

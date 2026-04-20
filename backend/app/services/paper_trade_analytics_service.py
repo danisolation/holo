@@ -350,6 +350,179 @@ class PaperTradeAnalyticsService:
             "periods": dd_periods[-5:],  # Last 5 drawdown periods
         }
 
+    # --- Breakdown Analytics (AN-05 through AN-09) ---
+
+    async def get_direction_analysis(self) -> list[dict]:
+        """AN-05: LONG vs BEARISH performance comparison."""
+        result = await self.session.execute(
+            select(
+                PaperTrade.direction,
+                func.count().label("total"),
+                func.count().filter(PaperTrade.realized_pnl > 0).label("wins"),
+                func.sum(PaperTrade.realized_pnl).label("total_pnl"),
+                func.avg(PaperTrade.realized_pnl).label("avg_pnl"),
+            )
+            .where(PaperTrade.status.in_(CLOSED_STATUSES))
+            .group_by(PaperTrade.direction)
+        )
+        return [
+            {
+                "direction": row.direction.value,
+                "total_trades": row.total,
+                "wins": row.wins or 0,
+                "losses": row.total - (row.wins or 0),
+                "win_rate": round((row.wins or 0) / row.total * 100, 2) if row.total > 0 else 0,
+                "total_pnl": round(float(row.total_pnl or 0), 2),
+                "avg_pnl": round(float(row.avg_pnl or 0), 2),
+            }
+            for row in result.all()
+        ]
+
+    async def get_confidence_analysis(self) -> list[dict]:
+        """AN-06: Performance by confidence bracket (LOW 1-3, MEDIUM 4-6, HIGH 7-10)."""
+        bracket_expr = case(
+            (PaperTrade.confidence <= 3, "LOW"),
+            (PaperTrade.confidence <= 6, "MEDIUM"),
+            else_="HIGH",
+        )
+        result = await self.session.execute(
+            select(
+                bracket_expr.label("bracket"),
+                func.count().label("total"),
+                func.count().filter(PaperTrade.realized_pnl > 0).label("wins"),
+                func.avg(PaperTrade.realized_pnl).label("avg_pnl"),
+                func.avg(PaperTrade.realized_pnl_pct).label("avg_pnl_pct"),
+            )
+            .where(PaperTrade.status.in_(CLOSED_STATUSES))
+            .group_by(bracket_expr)
+        )
+        return [
+            {
+                "bracket": row.bracket,
+                "total_trades": row.total,
+                "wins": row.wins or 0,
+                "win_rate": round((row.wins or 0) / row.total * 100, 2) if row.total > 0 else 0,
+                "avg_pnl": round(float(row.avg_pnl or 0), 2),
+                "avg_pnl_pct": round(float(row.avg_pnl_pct or 0), 2),
+            }
+            for row in result.all()
+        ]
+
+    async def get_risk_reward(self) -> dict:
+        """AN-07: R:R achieved vs predicted.
+
+        achieved R:R = realized_pnl / (abs(entry_price - stop_loss) * quantity)
+        Uses abs() for both LONG and BEARISH directions.
+        """
+        result = await self.session.execute(
+            select(
+                PaperTrade.realized_pnl,
+                PaperTrade.entry_price,
+                PaperTrade.stop_loss,
+                PaperTrade.quantity,
+                PaperTrade.risk_reward_ratio,
+            ).where(
+                PaperTrade.status.in_(CLOSED_STATUSES),
+                PaperTrade.realized_pnl.isnot(None),
+            )
+        )
+        rows = result.all()
+
+        if not rows:
+            return {
+                "avg_predicted_rr": 0, "avg_achieved_rr": 0,
+                "trades_above_predicted": 0, "trades_below_predicted": 0,
+                "total_trades": 0,
+            }
+
+        predicted_rrs = []
+        achieved_rrs = []
+        above = 0
+        below = 0
+
+        for row in rows:
+            risk = abs(float(row.entry_price) - float(row.stop_loss)) * row.quantity
+            if risk > 0:
+                achieved = float(row.realized_pnl) / risk
+            else:
+                achieved = 0.0
+
+            predicted = row.risk_reward_ratio or 0.0
+            predicted_rrs.append(predicted)
+            achieved_rrs.append(achieved)
+
+            if achieved >= predicted:
+                above += 1
+            else:
+                below += 1
+
+        avg_predicted = round(sum(predicted_rrs) / len(predicted_rrs), 2) if predicted_rrs else 0
+        avg_achieved = round(sum(achieved_rrs) / len(achieved_rrs), 2) if achieved_rrs else 0
+
+        return {
+            "avg_predicted_rr": avg_predicted,
+            "avg_achieved_rr": avg_achieved,
+            "trades_above_predicted": above,
+            "trades_below_predicted": below,
+            "total_trades": len(rows),
+        }
+
+    async def get_profit_factor(self) -> dict:
+        """AN-08: Profit factor (gross_profit / abs(gross_loss)) + expected value."""
+        result = await self.session.execute(
+            select(
+                func.sum(PaperTrade.realized_pnl).filter(PaperTrade.realized_pnl > 0).label("gross_profit"),
+                func.sum(PaperTrade.realized_pnl).filter(PaperTrade.realized_pnl <= 0).label("gross_loss"),
+                func.avg(PaperTrade.realized_pnl).label("expected_value"),
+                func.count().label("total"),
+            ).where(PaperTrade.status.in_(CLOSED_STATUSES))
+        )
+        row = result.one()
+        gross_profit = float(row.gross_profit or 0)
+        gross_loss = float(row.gross_loss or 0)
+        total = row.total or 0
+
+        # Profit factor = gross_profit / |gross_loss|. None if no losses (avoid infinity).
+        if gross_loss < 0:
+            profit_factor = round(gross_profit / abs(gross_loss), 2)
+        else:
+            profit_factor = None  # No losing trades — infinite factor
+
+        return {
+            "gross_profit": round(gross_profit, 2),
+            "gross_loss": round(gross_loss, 2),
+            "profit_factor": profit_factor,
+            "expected_value": round(float(row.expected_value or 0), 2),
+            "total_trades": total,
+        }
+
+    async def get_sector_analysis(self) -> list[dict]:
+        """AN-09: Performance by industry sector. JOIN tickers for industry field."""
+        result = await self.session.execute(
+            select(
+                func.coalesce(Ticker.industry, "Unknown").label("sector"),
+                func.count().label("total"),
+                func.count().filter(PaperTrade.realized_pnl > 0).label("wins"),
+                func.sum(PaperTrade.realized_pnl).label("total_pnl"),
+                func.avg(PaperTrade.realized_pnl).label("avg_pnl"),
+            )
+            .join(Ticker, PaperTrade.ticker_id == Ticker.id)
+            .where(PaperTrade.status.in_(CLOSED_STATUSES))
+            .group_by(func.coalesce(Ticker.industry, "Unknown"))
+            .order_by(func.count().desc())
+        )
+        return [
+            {
+                "sector": row.sector,
+                "total_trades": row.total,
+                "wins": row.wins or 0,
+                "win_rate": round((row.wins or 0) / row.total * 100, 2) if row.total > 0 else 0,
+                "total_pnl": round(float(row.total_pnl or 0), 2),
+                "avg_pnl": round(float(row.avg_pnl or 0), 2),
+            }
+            for row in result.all()
+        ]
+
     # --- Helpers ---
     @staticmethod
     def _trade_to_dict(trade: PaperTrade, symbol: str) -> dict:

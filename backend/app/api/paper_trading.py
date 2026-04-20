@@ -17,6 +17,11 @@ from app.schemas.paper_trading import (
     EquityCurvePoint,
     DrawdownResponse,
     DrawdownPeriod,
+    DirectionAnalysisItem,
+    ConfidenceBracketItem,
+    RiskRewardResponse,
+    ProfitFactorResponse,
+    SectorAnalysisItem,
 )
 
 router = APIRouter(prefix="/paper-trading", tags=["paper-trading"])
@@ -129,3 +134,48 @@ async def get_drawdown():
             current_drawdown_pct=result["current_drawdown_pct"],
             periods=[DrawdownPeriod(**p) for p in result["periods"]],
         )
+
+
+@router.get("/analytics/direction", response_model=list[DirectionAnalysisItem])
+async def get_direction_analysis():
+    """AN-05: LONG vs BEARISH performance comparison."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_direction_analysis()
+        return [DirectionAnalysisItem(**item) for item in result]
+
+
+@router.get("/analytics/confidence", response_model=list[ConfidenceBracketItem])
+async def get_confidence_analysis():
+    """AN-06: Performance by confidence bracket (LOW/MEDIUM/HIGH)."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_confidence_analysis()
+        return [ConfidenceBracketItem(**item) for item in result]
+
+
+@router.get("/analytics/risk-reward", response_model=RiskRewardResponse)
+async def get_risk_reward():
+    """AN-07: R:R achieved vs predicted."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_risk_reward()
+        return RiskRewardResponse(**result)
+
+
+@router.get("/analytics/profit-factor", response_model=ProfitFactorResponse)
+async def get_profit_factor():
+    """AN-08: Profit factor + expected value per trade."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_profit_factor()
+        return ProfitFactorResponse(**result)
+
+
+@router.get("/analytics/sector", response_model=list[SectorAnalysisItem])
+async def get_sector_analysis():
+    """AN-09: Performance by industry sector."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_sector_analysis()
+        return [SectorAnalysisItem(**item) for item in result]

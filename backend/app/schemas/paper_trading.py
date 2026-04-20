@@ -98,3 +98,54 @@ class DrawdownResponse(BaseModel):
     current_drawdown_vnd: float
     current_drawdown_pct: float
     periods: list[DrawdownPeriod]
+
+
+# --- Breakdown Analytics Responses (AN-05 through AN-09) ---
+
+class DirectionAnalysisItem(BaseModel):
+    """AN-05: Performance for one direction (LONG or BEARISH)."""
+    direction: str
+    total_trades: int
+    wins: int
+    losses: int
+    win_rate: float
+    total_pnl: float
+    avg_pnl: float
+
+
+class ConfidenceBracketItem(BaseModel):
+    """AN-06: Performance for one confidence bracket."""
+    bracket: str   # "LOW", "MEDIUM", "HIGH"
+    total_trades: int
+    wins: int
+    win_rate: float
+    avg_pnl: float
+    avg_pnl_pct: float
+
+
+class RiskRewardResponse(BaseModel):
+    """AN-07: R:R achieved vs predicted."""
+    avg_predicted_rr: float   # from signal's risk_reward_ratio
+    avg_achieved_rr: float    # actual P&L / risk
+    trades_above_predicted: int
+    trades_below_predicted: int
+    total_trades: int
+
+
+class ProfitFactorResponse(BaseModel):
+    """AN-08: Profit factor + expected value."""
+    gross_profit: float
+    gross_loss: float
+    profit_factor: float | None  # None if gross_loss == 0
+    expected_value: float         # avg P&L per trade
+    total_trades: int
+
+
+class SectorAnalysisItem(BaseModel):
+    """AN-09: Performance by industry sector."""
+    sector: str
+    total_trades: int
+    wins: int
+    win_rate: float
+    total_pnl: float
+    avg_pnl: float
