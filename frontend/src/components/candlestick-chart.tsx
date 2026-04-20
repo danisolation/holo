@@ -8,8 +8,6 @@ import {
   HistogramSeries,
   LineStyle,
   type IChartApi,
-  type ISeriesApi,
-  type SeriesType,
 } from "lightweight-charts";
 import type { PriceData, IndicatorData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -357,9 +355,11 @@ export function CandlestickChart({
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-0.5" style={{ borderTop: "1px dashed #42a5f5" }} /> TP1
           </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-0.5" style={{ borderTop: "1px dashed #7e57c2" }} /> TP2
-          </span>
+          {Math.abs(tradingPlan.take_profit_2 - tradingPlan.take_profit_1) > 1 && (
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-0.5" style={{ borderTop: "1px dashed #7e57c2" }} /> TP2
+            </span>
+          )}
         </div>
       )}
 
