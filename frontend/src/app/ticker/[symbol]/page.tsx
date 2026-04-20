@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -134,6 +134,21 @@ export default function TickerDetailPage({
   } = useAnalysisSummary(upperSymbol);
   const { data: tradingSignal, isLoading: tradingSignalLoading } = useTradingSignal(upperSymbol);
 
+  // Derive recommended direction's trading plan for chart overlay
+  const tradingPlanForChart = useMemo(() => {
+    if (!tradingSignal) return undefined;
+    const analysis = tradingSignal.recommended_direction === "long"
+      ? tradingSignal.long_analysis
+      : tradingSignal.bearish_analysis;
+    if (analysis.confidence === 0) return undefined;
+    return {
+      entry_price: analysis.trading_plan.entry_price,
+      stop_loss: analysis.trading_plan.stop_loss,
+      take_profit_1: analysis.trading_plan.take_profit_1,
+      take_profit_2: analysis.trading_plan.take_profit_2,
+    };
+  }, [tradingSignal]);
+
   // Watchlist
   const { addToWatchlist, removeFromWatchlist, isInWatchlist } =
     useWatchlistStore();
@@ -257,6 +272,7 @@ export default function TickerDetailPage({
             indicatorData={indicatorData ?? undefined}
             adjusted={adjusted}
             onAdjustedChange={setAdjusted}
+            tradingPlan={tradingPlanForChart}
           />
         ) : null}
       </section>
