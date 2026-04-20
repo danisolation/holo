@@ -3,6 +3,7 @@
 import { LineChart } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PTOverviewTab } from "@/components/paper-trading/pt-overview-tab";
+import { PTTradesTable } from "@/components/paper-trading/pt-trades-table";
 
 export default function PaperTradingPage() {
   return (
@@ -33,9 +34,7 @@ export default function PaperTradingPage() {
         </TabsContent>
 
         <TabsContent value="trades">
-          <div className="py-8 text-center text-muted-foreground text-sm">
-            Đang tải bảng lệnh...
-          </div>
+          <PTTradesTable />
         </TabsContent>
 
         <TabsContent value="analytics">
