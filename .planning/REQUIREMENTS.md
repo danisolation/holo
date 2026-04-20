@@ -31,7 +31,7 @@
 
 ### Advanced Analytics & UI (UI)
 
-- [ ] **UI-01**: Dashboard page riêng cho paper trading với các tab: Overview, Trades, Analytics, Calendar, Settings
+- [x] **UI-01**: Dashboard page riêng cho paper trading với các tab: Overview, Trades, Analytics, Calendar, Settings
 - [ ] **UI-02**: Calendar heatmap (GitHub-style) — xanh ngày thắng, đỏ ngày thua, intensity theo magnitude
 - [ ] **UI-03**: Streak tracking — hiển thị chuỗi thắng/thua hiện tại và dài nhất, cảnh báo khi streak thua >5
 - [ ] **UI-04**: Phân tích theo timeframe (swing vs position) — so sánh win rate
@@ -79,7 +79,7 @@
 | AN-07 | Phase 24 | Complete |
 | AN-08 | Phase 24 | Complete |
 | AN-09 | Phase 24 | Complete |
-| UI-01 | Phase 25 | Pending |
+| UI-01 | Phase 25 | Complete |
 | UI-02 | Phase 26 | Pending |
 | UI-03 | Phase 26 | Pending |
 | UI-04 | Phase 26 | Pending |
