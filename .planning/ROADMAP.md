@@ -105,7 +105,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 19-01-PLAN.md — Schema contracts + DB migration + config settings
-- [ ] 19-02-PLAN.md — Service core: Gemini extension + context/prompt + validation
+- [x] 19-02-PLAN.md — Service core: Gemini extension + context/prompt + validation
 - [ ] 19-03-PLAN.md — Pipeline wiring: scheduler job + API endpoints
 
 ### Phase 20: Trading Plan Dashboard Panel
@@ -138,6 +138,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 17. Enhanced Technical Indicators | 2/2 | Complete   | 2026-04-20 |
 | 18. Support & Resistance Levels | 2/2 | Complete   | 2026-04-20 |
-| 19. AI Trading Signal Pipeline | 1/3 | In Progress|  |
+| 19. AI Trading Signal Pipeline | 2/3 | In Progress|  |
 | 20. Trading Plan Dashboard Panel | 0/0 | Not started | - |
 | 21. Chart Price Line Overlays | 0/0 | Not started | - |
