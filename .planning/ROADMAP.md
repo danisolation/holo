@@ -55,7 +55,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 
 ### 🚧 v3.0 Smart Trading Signals
 
-- [ ] **Phase 17: Enhanced Technical Indicators** — ATR, ADX, Stochastic computation + display
+- [x] **Phase 17: Enhanced Technical Indicators** — ATR, ADX, Stochastic computation + display (completed 2026-04-20)
 - [ ] **Phase 18: Support & Resistance Levels** — Pivot points, Fibonacci retracements
 - [ ] **Phase 19: AI Trading Signal Pipeline** — Dual-direction schema, Gemini prompt, batch processing
 - [ ] **Phase 20: Trading Plan Dashboard Panel** — Trading plan component on ticker detail page
@@ -74,7 +74,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
   4. New indicators compute daily as part of the existing indicator pipeline without extending the pipeline window beyond current limits
 **Plans**: 2 plans
 Plans:
-- [ ] 17-01-PLAN.md — Backend: Tests + DB migration + indicator computation + API
+- [x] 17-01-PLAN.md — Backend: Tests + DB migration + indicator computation + API
 - [x] 17-02-PLAN.md — Frontend: shadcn Accordion + 3 new chart components
 **UI hint**: yes
 
@@ -129,7 +129,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 17. Enhanced Technical Indicators | 1/2 | In Progress|  |
+| 17. Enhanced Technical Indicators | 2/2 | Complete   | 2026-04-20 |
 | 18. Support & Resistance Levels | 0/0 | Not started | - |
 | 19. AI Trading Signal Pipeline | 0/0 | Not started | - |
 | 20. Trading Plan Dashboard Panel | 0/0 | Not started | - |

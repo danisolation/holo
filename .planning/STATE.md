@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Smart Trading Signals
-status: Roadmap created, awaiting `/gsd-plan-phase 17`
-last_updated: "2026-04-20T03:25:50.084Z"
-last_activity: 2026-04-20 — Roadmap created for v3.0
+status: executing
+last_updated: "2026-04-20T03:27:57.304Z"
+last_activity: 2026-04-20 — Plan 17-01 Backend completed (tests + migration + indicators + API)
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 ## Current Position
 
-Phase: 17 (Enhanced Technical Indicators) — not started
-Plan: —
-Status: Roadmap created, awaiting `/gsd-plan-phase 17`
-Last activity: 2026-04-20 — Roadmap created for v3.0
+Phase: 17 (Enhanced Technical Indicators) — Plan 01 complete
+Plan: 01 of 2 (Backend complete, Frontend next)
+Status: Executing Phase 17 — Plan 01 done
+Last activity: 2026-04-20 — Plan 17-01 Backend completed (tests + migration + indicators + API)
 
 ```
-[░░░░░░░░░░░░░░░░░░░░] 0% (0/5 phases)
+[██████████░░░░░░░░░░] 50% (1/2 plans in phase 17)
 ```
 
 ## Shipped Milestones
@@ -45,9 +45,13 @@ Last activity: 2026-04-20 — Roadmap created for v3.0
 
 **Velocity:**
 
-- Total plans completed: 0 (v3.0)
-- Average duration: —
-- Total execution time: —
+- Total plans completed: 1 (v3.0)
+- Average duration: 4.1m
+- Total execution time: 4.1m
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 17 | 01 | 4.1m | 3 | 6 |
 
 *Updated after each plan completion*
 
@@ -66,6 +70,8 @@ All v1.0/v1.1/v2.0 decisions archived in PROJECT.md Key Decisions table.
 - Gemini batch size reduced to ~15 tickers for trading signals (5th analysis type) to manage token budget
 - Pre-computed S/R levels fed to Gemini prompt to prevent hallucinated price targets
 - [Phase 17-enhanced-technical-indicators]: Adapted shadcn Accordion from radix API to base-ui API (multiple prop instead of type=multiple)
+- [Phase 17]: ATR/ADX/+DI/-DI 0.0 warm-up replaced with NaN via .replace() — prevents misleading flat lines on charts
+- [Phase 17]: _compute_indicators extended to 3-arg (close, high, low) — backwards incompatible, all callers updated
 
 ### Pending Todos
 
