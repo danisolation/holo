@@ -10,6 +10,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v1.1 Reliability & Portfolio** — Phases 6-11 (shipped 2026-04-17)
 - ✅ **v2.0 Full Coverage & Real-Time** — Phases 12-16 (shipped 2026-04-17)
 - ✅ **v3.0 Smart Trading Signals** — Phases 17-21 (shipped 2026-04-20)
+- 🚧 **v4.0 Paper Trading & Signal Verification** — Phases 22-26 (in progress)
 
 ## Phases
 
@@ -65,3 +66,87 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 Full details: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
 
 </details>
+
+### 🚧 v4.0 Paper Trading & Signal Verification (In Progress)
+
+**Milestone Goal:** Kiểm chứng chất lượng tư vấn AI bằng giả lập trading — mọi signal thành lệnh ảo có thể đo lường.
+
+- [ ] **Phase 22: Paper Trade Foundation** - PaperTrade model, state machine, P&L calculation, SimulationConfig
+- [ ] **Phase 23: Position Monitoring & Auto-Track** - Scheduler jobs for auto-tracking signals and daily TP/SL/timeout checks
+- [ ] **Phase 24: API & Analytics Engine** - REST API with full analytics computation and manual follow
+- [ ] **Phase 25: Dashboard Structure & Trade Management** - Paper trading page, trade list, settings, signal outcome history
+- [ ] **Phase 26: Analytics Visualization & Calendar** - Calendar heatmap, streaks, timeframe comparison, performance summaries
+
+## Phase Details
+
+### Phase 22: Paper Trade Foundation
+**Goal**: Paper trade data model with correct state machine and P&L calculation exists and is verified by unit tests
+**Depends on**: Phase 21 (v3.0 trading signals must exist to track)
+**Requirements**: PT-02, PT-03, PT-05, PT-07
+**Success Criteria** (what must be TRUE):
+  1. PaperTrade records can be created with all required fields (symbol, direction, entry, SL, TP1, TP2, status, sizing) and persisted via Alembic migration
+  2. State transitions follow correct lifecycle: PENDING → ACTIVE → PARTIAL_TP → CLOSED with no invalid transitions possible
+  3. P&L calculation correctly handles partial TP scenarios (50% closed at TP1, remaining 50% at TP2/SL/timeout) in both VND and percentage
+  4. Position sizing rounds to 100-share lots based on configurable virtual capital and AI-recommended allocation
+  5. SimulationConfig allows setting initial capital, auto-track toggle, and minimum confidence threshold
+**Plans**: TBD
+
+### Phase 23: Position Monitoring & Auto-Track
+**Goal**: System automatically creates paper trades from valid signals and monitors positions daily for TP/SL/timeout hits
+**Depends on**: Phase 22
+**Requirements**: PT-01, PT-04, PT-06, PT-08
+**Success Criteria** (what must be TRUE):
+  1. Every valid AI signal (score > 0) automatically generates a corresponding paper trade within the same scheduler cycle
+  2. Scheduler checks all open positions against daily OHLCV after price crawl completes — SL takes priority on ambiguous bars where both SL and TP breach
+  3. Trades exceeding their timeframe (swing: 15 trading days, position: 60 trading days) auto-close at market close price
+  4. PENDING trades activate at next trading day's open price (D+1 open entry) — no lookahead bias
+  5. Score=0 invalid signals are excluded from auto-tracking with deduplication preventing retries
+**Plans**: TBD
+
+### Phase 24: API & Analytics Engine
+**Goal**: Users can query paper trading data and analytics through a complete REST API that measures AI signal quality
+**Depends on**: Phase 23
+**Requirements**: PT-09, AN-01, AN-02, AN-03, AN-04, AN-05, AN-06, AN-07, AN-08, AN-09
+**Success Criteria** (what must be TRUE):
+  1. User can retrieve overall win rate, total realized P&L (VND + % vs initial capital), and equity curve time-series data
+  2. User can compare signal performance by direction (LONG vs BEARISH), AI confidence bracket (LOW/MEDIUM/HIGH), and sector
+  3. User can see R:R achieved vs predicted, profit factor (gross profit / gross loss), and expected value per trade
+  4. User can manually follow a signal with customized entry/SL/TP to create a new paper trade via API
+  5. Max drawdown (% and VND) is computed from equity curve with drawdown periods identified
+**Plans**: TBD
+
+### Phase 25: Dashboard Structure & Trade Management
+**Goal**: Users can view and manage paper trades through a dedicated dashboard with trade listing, settings, and signal outcome history
+**Depends on**: Phase 24
+**Requirements**: UI-01, UI-05, UI-07, UI-08
+**Success Criteria** (what must be TRUE):
+  1. A dedicated paper trading page exists at `/dashboard/paper-trading` with organized tabs (Overview, Trades, Analytics, Calendar, Settings)
+  2. User can view a sortable/filterable trade list showing symbol, direction, entry, exit, P&L, status, and AI score
+  3. User can configure simulation settings (initial capital, auto-track on/off, min confidence threshold) via a form that persists to backend
+  4. User can see the 10 most recent signal outcomes (✅/❌) on each ticker's detail page
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 26: Analytics Visualization & Calendar
+**Goal**: Users can visualize trading performance patterns through charts, calendar heatmap, streak indicators, and periodic summaries
+**Depends on**: Phase 25
+**Requirements**: UI-02, UI-03, UI-04, UI-06
+**Success Criteria** (what must be TRUE):
+  1. GitHub-style calendar heatmap displays daily P&L with green (win) / red (loss) coloring, intensity proportional to magnitude
+  2. Current and longest win/loss streaks are prominently displayed, with visual warning when loss streak exceeds 5
+  3. Swing vs position timeframe performance can be compared side-by-side (win rate, avg P&L per timeframe)
+  4. Weekly and monthly performance summary tables show win rate, P&L, trade count, and average R:R for each period
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress
+
+**Execution Order:** Phases 22 → 23 → 24 → 25 → 26
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 22. Paper Trade Foundation | 0/TBD | Not started | - |
+| 23. Position Monitoring & Auto-Track | 0/TBD | Not started | - |
+| 24. API & Analytics Engine | 0/TBD | Not started | - |
+| 25. Dashboard Structure & Trade Management | 0/TBD | Not started | - |
+| 26. Analytics Visualization & Calendar | 0/TBD | Not started | - |

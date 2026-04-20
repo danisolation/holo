@@ -61,37 +61,37 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PT-01 | — | Pending |
-| PT-02 | — | Pending |
-| PT-03 | — | Pending |
-| PT-04 | — | Pending |
-| PT-05 | — | Pending |
-| PT-06 | — | Pending |
-| PT-07 | — | Pending |
-| PT-08 | — | Pending |
-| PT-09 | — | Pending |
-| AN-01 | — | Pending |
-| AN-02 | — | Pending |
-| AN-03 | — | Pending |
-| AN-04 | — | Pending |
-| AN-05 | — | Pending |
-| AN-06 | — | Pending |
-| AN-07 | — | Pending |
-| AN-08 | — | Pending |
-| AN-09 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
-| UI-06 | — | Pending |
-| UI-07 | — | Pending |
-| UI-08 | — | Pending |
+| PT-01 | Phase 23 | Pending |
+| PT-02 | Phase 22 | Pending |
+| PT-03 | Phase 22 | Pending |
+| PT-04 | Phase 23 | Pending |
+| PT-05 | Phase 22 | Pending |
+| PT-06 | Phase 23 | Pending |
+| PT-07 | Phase 22 | Pending |
+| PT-08 | Phase 23 | Pending |
+| PT-09 | Phase 24 | Pending |
+| AN-01 | Phase 24 | Pending |
+| AN-02 | Phase 24 | Pending |
+| AN-03 | Phase 24 | Pending |
+| AN-04 | Phase 24 | Pending |
+| AN-05 | Phase 24 | Pending |
+| AN-06 | Phase 24 | Pending |
+| AN-07 | Phase 24 | Pending |
+| AN-08 | Phase 24 | Pending |
+| AN-09 | Phase 24 | Pending |
+| UI-01 | Phase 25 | Pending |
+| UI-02 | Phase 26 | Pending |
+| UI-03 | Phase 26 | Pending |
+| UI-04 | Phase 26 | Pending |
+| UI-05 | Phase 25 | Pending |
+| UI-06 | Phase 26 | Pending |
+| UI-07 | Phase 25 | Pending |
+| UI-08 | Phase 25 | Pending |
 
 **Coverage:**
 - v4.0 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- Mapped to phases: 26 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-20*
