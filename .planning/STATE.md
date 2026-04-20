@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Paper Trading & Signal Verification
-status: ready_to_plan
-last_updated: "2026-04-21T00:00:00.000Z"
-last_activity: 2026-04-21
+status: executing
+last_updated: "2026-04-20T08:12:34.376Z"
+last_activity: 2026-04-20 — Completed 23-01 auto-track scheduler job
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 ## Current Position
 
-Phase: 22 of 26 (Paper Trade Foundation)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-04-21 — Roadmap created for v4.0
+Phase: 23 of 26 (Position Monitoring & Auto-Track)
+Plan: 1 of 2
+Status: Executing
+Last activity: 2026-04-20 — Completed 23-01 auto-track scheduler job
 
 ```
-[░░░░░░░░░░░░░░░░░░░░] 0%
+[██░░░░░░░░░░░░░░░░░░] 10%
 ```
 
 ## Shipped Milestones
@@ -48,7 +48,7 @@ Last activity: 2026-04-21 — Roadmap created for v4.0
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
-| — | — | — | — | — |
+| 23 | 01 | 2 min | 1 | 3 |
 
 *Updated after each plan completion*
 
@@ -59,6 +59,7 @@ Last activity: 2026-04-21 — Roadmap created for v4.0
 All v1.0–v3.0 decisions archived in PROJECT.md Key Decisions table.
 
 **v4.0 roadmap decisions:**
+
 - 5 phases derived from 26 requirements across 3 categories (PT, AN, UI)
 - Phase ordering follows research: Foundation → Scheduler → API → Dashboard → Visualization
 - Entry fill at D+1 open (not same-day close) — prevents lookahead bias
@@ -67,6 +68,7 @@ All v1.0–v3.0 decisions archived in PROJECT.md Key Decisions table.
 - Batch position queries to respect Aiven pool (pool_size=5, max_overflow=3)
 - Calendar heatmap via react-activity-calendar npm package (only new frontend dep)
 - BEARISH tracks prediction accuracy, not synthetic short P&L (VN no retail short)
+- [Phase 23]: Auto-track chains after daily_trading_signal_triggered parallel with alert/hnx jobs; never-raises pattern
 
 ### Pending Todos
 
