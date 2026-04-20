@@ -246,7 +246,8 @@ class AIAnalysisService:
 
         Args:
             analysis_type: 'technical', 'fundamental', 'sentiment', 'combined',
-                           'both' (tech+fund only for backward compat), or 'all' (all 4 types)
+                           'trading_signal', 'both' (tech+fund only for backward compat),
+                           or 'all' (all 5 types)
             ticker_filter: Optional dict of {symbol: ticker_id} to analyze only specific tickers.
                           When provided, bypasses get_ticker_id_map() call.
 
@@ -272,6 +273,9 @@ class AIAnalysisService:
 
             if analysis_type in ("combined", "all"):
                 results["combined"] = await self.run_combined_analysis(ticker_filter=ticker_filter)
+
+            if analysis_type in ("trading_signal", "all"):
+                results["trading_signal"] = await self.run_trading_signal_analysis(ticker_filter=ticker_filter)
 
             return results
 
@@ -434,6 +438,45 @@ class AIAnalysisService:
             batch_analyzer=self._analyze_combined_batch,
         )
 
+    async def run_trading_signal_analysis(self, ticker_filter: dict[str, int] | None = None) -> dict:
+        """Trading signal analysis for all tickers.
+
+        Phase 19: Generates dual-direction (LONG + BEARISH) trading plans.
+        Uses reduced batch size (15) and increased token budgets.
+        Post-validates signals against price/ATR bounds.
+
+        Returns: {success: int, failed: int, failed_symbols: list[str]}
+        """
+        if ticker_filter is not None:
+            ticker_map = ticker_filter
+        else:
+            ticker_svc = TickerService(self.session)
+            ticker_map = await ticker_svc.get_ticker_id_map()
+
+        logger.info(f"Starting trading signal analysis for {len(ticker_map)} tickers")
+
+        # Gather context (includes ATR for post-validation)
+        ticker_data: dict[str, dict] = {}
+        ticker_ids: dict[str, int] = {}
+
+        for symbol, tid in ticker_map.items():
+            ctx = await self._get_trading_signal_context(tid, symbol)
+            if ctx:
+                ticker_data[symbol] = ctx
+                ticker_ids[symbol] = tid
+
+        logger.info(f"Trading signal context gathered: {len(ticker_data)}/{len(ticker_map)} tickers have data")
+
+        if not ticker_data:
+            return {"success": 0, "failed": 0, "failed_symbols": []}
+
+        # Run batched analysis with reduced batch size
+        return await self._run_batched_analysis(
+            ticker_data, ticker_ids, AnalysisType.TRADING_SIGNAL,
+            self._analyze_trading_signal_batch,
+            batch_size_override=settings.trading_signal_batch_size,
+        )
+
     async def analyze_watchlisted_tickers(
         self, exchanges: list[str], max_extra: int = 50
     ) -> dict:
@@ -496,7 +539,7 @@ class AIAnalysisService:
         Used by the 'Analyze now' endpoint for HNX/UPCOM tickers
         not in the daily schedule.
 
-        Acquires the Gemini lock once for all 4 analysis types to avoid
+        Acquires the Gemini lock once for all 5 analysis types to avoid
         starvation — without this, the daily pipeline (400+ tickers) could
         grab the lock between each type, delaying on-demand results for hours.
         """
@@ -509,6 +552,7 @@ class AIAnalysisService:
                 ("fundamental", self.run_fundamental_analysis),
                 ("sentiment", self.run_sentiment_analysis),
                 ("combined", self.run_combined_analysis),
+                ("trading_signal", self.run_trading_signal_analysis),  # Phase 19
             ]:
                 try:
                     results[analysis_type] = await runner(ticker_filter=ticker_filter)
@@ -879,6 +923,49 @@ class AIAnalysisService:
                 result = CombinedBatchResponse.model_validate(data)
             except Exception as e:
                 logger.error(f"Manual parse also failed: {e}")
+        return result
+
+    async def _analyze_trading_signal_batch(
+        self, ticker_data: dict[str, dict]
+    ) -> TradingSignalBatchResponse | None:
+        """Analyze a batch of tickers for dual-direction trading signals.
+
+        Phase 19: Uses increased token budgets (32768 output, 2048 thinking).
+        Follows same retry pattern as existing batch analyzers.
+        """
+        prompt = self._build_trading_signal_prompt(ticker_data)
+        temp = ANALYSIS_TEMPERATURES[AnalysisType.TRADING_SIGNAL]
+        sys_instr = TRADING_SIGNAL_SYSTEM_INSTRUCTION
+
+        response = await self._call_gemini(
+            prompt, TradingSignalBatchResponse, temp, sys_instr,
+            max_output_tokens=settings.trading_signal_max_tokens,
+            thinking_budget=settings.trading_signal_thinking_budget,
+        )
+        if response.usage_metadata:
+            logger.debug(
+                f"Gemini trading_signal tokens: {response.usage_metadata.total_token_count}"
+            )
+        await self._record_usage("trading_signal", len(ticker_data), response)
+        result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("response.parsed is None, retrying at temperature=0.05")
+            response = await self._call_gemini(
+                prompt, TradingSignalBatchResponse, 0.05, sys_instr,
+                max_output_tokens=settings.trading_signal_max_tokens,
+                thinking_budget=settings.trading_signal_thinking_budget,
+            )
+            result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("Low-temp retry also failed, falling back to manual JSON parse")
+            try:
+                data = json.loads(response.text)
+                result = TradingSignalBatchResponse.model_validate(data)
+            except Exception as e:
+                logger.error(f"Manual parse also failed: {e}")
+                logger.debug(f"Raw response text: {response.text[:500]}")
         return result
 
     # ------------------------------------------------------------------
