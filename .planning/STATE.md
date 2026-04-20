@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Smart Trading Signals
 status: verifying
-last_updated: "2026-04-20T04:40:43.153Z"
+last_updated: "2026-04-20T05:06:53.246Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 6
-  percent: 86
+  total_plans: 9
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State
@@ -58,6 +58,7 @@ Last activity: 2026-04-20
 | Phase 19 P01 | 4.1m | 2 tasks | 6 files |
 | Phase 19 P02 | 6.7m | 2 tasks | 2 files |
 | Phase 19 P03 | 4.2m | 2 tasks | 5 files |
+| Phase 20 P01 | 2.7m | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,7 @@ All v1.0/v1.1/v2.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 19]: batch_size_override param on _run_batched_analysis prevents shared state mutation across analysis types
 - [Phase 19]: _validate_trading_signal as module-level pure function for direct test imports without async setup
 - [Phase 19]: Chain order: combined → trading_signal → signal_alerts + hnx_upcom (trading signal inserted before alerts)
+- [Phase 20]: raw_response: dict | None = None backward-compat extension; fetchTradingSignal extracts raw_response→TickerTradingSignal; 5-min staleTime for trading signal hook
 
 ### Pending Todos
 
