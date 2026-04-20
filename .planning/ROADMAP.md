@@ -148,7 +148,10 @@ Plans:
   2. Current and longest win/loss streaks are prominently displayed, with visual warning when loss streak exceeds 5
   3. Swing vs position timeframe performance can be compared side-by-side (win rate, avg P&L per timeframe)
   4. Weekly and monthly performance summary tables show win rate, P&L, trade count, and average R:R for each period
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 26-01-PLAN.md — Backend analytics endpoints (streaks, timeframe, periodic, calendar) + frontend types/hooks/API
+- [ ] 26-02-PLAN.md — Analytics tab (equity chart, streaks, comparisons) + Calendar tab (heatmap, periodic tables)
 **UI hint**: yes
 
 ## Progress
