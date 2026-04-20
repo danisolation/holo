@@ -75,7 +75,7 @@ Full details: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
 - [x] **Phase 23: Position Monitoring & Auto-Track** - Scheduler jobs for auto-tracking signals and daily TP/SL/timeout checks (completed 2026-04-20)
 - [x] **Phase 24: API & Analytics Engine** - REST API with full analytics computation and manual follow (completed 2026-04-20)
 - [x] **Phase 25: Dashboard Structure & Trade Management** - Paper trading page, trade list, settings, signal outcome history (completed 2026-04-20)
-- [ ] **Phase 26: Analytics Visualization & Calendar** - Calendar heatmap, streaks, timeframe comparison, performance summaries
+- [x] **Phase 26: Analytics Visualization & Calendar** - Calendar heatmap, streaks, timeframe comparison, performance summaries (completed 2025-07-20)
 
 ## Phase Details
 
@@ -151,7 +151,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 26-01-PLAN.md — Backend analytics endpoints (streaks, timeframe, periodic, calendar) + frontend types/hooks/API
-- [ ] 26-02-PLAN.md — Analytics tab (equity chart, streaks, comparisons) + Calendar tab (heatmap, periodic tables)
+- [x] 26-02-PLAN.md — Analytics tab (equity chart, streaks, comparisons) + Calendar tab (heatmap, periodic tables)
 **UI hint**: yes
 
 ## Progress
@@ -164,4 +164,4 @@ Plans:
 | 23. Position Monitoring & Auto-Track | 2/2 | Complete   | 2026-04-20 |
 | 24. API & Analytics Engine | 2/2 | Complete   | 2026-04-20 |
 | 25. Dashboard Structure & Trade Management | 2/2 | Complete   | 2026-04-20 |
-| 26. Analytics Visualization & Calendar | 1/2 | In Progress|  |
+| 26. Analytics Visualization & Calendar | 2/2 | ✅ Complete | 2025-07-20 |
