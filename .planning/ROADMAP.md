@@ -89,7 +89,10 @@ Full details: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
   3. P&L calculation correctly handles partial TP scenarios (50% closed at TP1, remaining 50% at TP2/SL/timeout) in both VND and percentage
   4. Position sizing rounds to 100-share lots based on configurable virtual capital and AI-recommended allocation
   5. SimulationConfig allows setting initial capital, auto-track toggle, and minimum confidence threshold
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 22-01-PLAN.md — Data layer: PaperTrade + SimulationConfig models, Alembic migration 013, model tests
+- [ ] 22-02-PLAN.md — Business logic: state machine, P&L calculation, position sizing service + TDD tests
 
 ### Phase 23: Position Monitoring & Auto-Track
 **Goal**: System automatically creates paper trades from valid signals and monitors positions daily for TP/SL/timeout hits
@@ -145,7 +148,7 @@ Full details: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 22. Paper Trade Foundation | 0/TBD | Not started | - |
+| 22. Paper Trade Foundation | 0/2 | Not started | - |
 | 23. Position Monitoring & Auto-Track | 0/TBD | Not started | - |
 | 24. API & Analytics Engine | 0/TBD | Not started | - |
 | 25. Dashboard Structure & Trade Management | 0/TBD | Not started | - |
