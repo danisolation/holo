@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Smart Trading Signals
-status: verifying
-last_updated: "2026-04-20T06:05:15.748Z"
+milestone: v4.0
+milestone_name: Paper Trading & Signal Verification
+status: planning
+last_updated: "2026-04-20T06:44:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 10
-  completed_plans: 9
-  percent: 90
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** v3.0 Smart Trading Signals — roadmap created, ready for phase planning
+**Current focus:** v4.0 Paper Trading & Signal Verification — defining requirements
 
 ## Current Position
 
-Phase: 17 (Enhanced Technical Indicators) — Plan 01 complete
-Plan: 2 of 2 (Backend complete, Frontend next)
-Status: Phase complete — ready for verification
-Last activity: 2026-04-20
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-20 — Milestone v4.0 started
 
 ```
 [██████████░░░░░░░░░░] 50% (1/2 plans in phase 17)
@@ -40,14 +40,13 @@ Last activity: 2026-04-20
 | v1.0 | Holo Stock Intelligence Platform | 5 | 15 | 2026-04-15 |
 | v1.1 | Reliability & Portfolio | 6 | 20 | 2026-04-17 |
 | v2.0 | Full Coverage & Real-Time | 5 | 18 | 2026-04-17 |
+| v3.0 | Smart Trading Signals | 5 | 10 | 2026-04-20 |
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 1 (v3.0)
-- Average duration: 4.1m
-- Total execution time: 4.1m
+(Reset for v4.0)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
