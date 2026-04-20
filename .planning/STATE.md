@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Paper Trading & Signal Verification
-status: executing
-last_updated: "2026-04-20T08:18:26.625Z"
+status: verifying
+last_updated: "2026-04-20T08:39:37.085Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 2
+  total_plans: 6
+  completed_plans: 3
   percent: 50
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 Phase: 23 of 26 (Position Monitoring & Auto-Track)
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-20
 
 ```
@@ -52,6 +52,7 @@ Last activity: 2026-04-20
 
 *Updated after each plan completion*
 | Phase 23 P02 | 3 min | 1 tasks | 4 files |
+| Phase 24 P01 | 3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ All v1.0–v3.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 23]: Auto-track chains after daily_trading_signal_triggered parallel with alert/hnx jobs; never-raises pattern
 - [Phase 23]: SL checked FIRST on every bar — ambiguous bars resolve to SL (conservative fill assumption)
 - [Phase 23]: Gap-through fills at open price, not SL/TP level; timeout uses trading day count from daily_prices
+- [Phase 24]: POST /trades/follow placed before GET /trades/{trade_id} to avoid FastAPI path conflict
+- [Phase 24]: 12 schema validation tests (no DB mocks) — Pydantic input constraints verified directly
 
 ### Pending Todos
 

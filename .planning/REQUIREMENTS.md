@@ -15,7 +15,7 @@
 - [x] **PT-06**: Scheduler job kiểm tra TP/SL hàng ngày sau khi crawl giá — SL ưu tiên khi cùng bar chạm cả SL và TP
 - [ ] **PT-07**: Tính P&L mỗi lệnh (VND + %) bao gồm partial TP — entry tại open ngày D+1 (tránh lookahead bias)
 - [x] **PT-08**: Loại bỏ signal score=0 (invalid) khỏi auto-track
-- [ ] **PT-09**: User có thể manual follow signal với nút "Follow" — tùy chỉnh entry/SL/TP trước khi mở lệnh ảo
+- [x] **PT-09**: User có thể manual follow signal với nút "Follow" — tùy chỉnh entry/SL/TP trước khi mở lệnh ảo
 
 ### Core Analytics (AN)
 
@@ -69,7 +69,7 @@
 | PT-06 | Phase 23 | Complete |
 | PT-07 | Phase 22 | Pending |
 | PT-08 | Phase 23 | Complete |
-| PT-09 | Phase 24 | Pending |
+| PT-09 | Phase 24 | Complete |
 | AN-01 | Phase 24 | Pending |
 | AN-02 | Phase 24 | Pending |
 | AN-03 | Phase 24 | Pending |

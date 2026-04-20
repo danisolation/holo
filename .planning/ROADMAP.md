@@ -119,9 +119,9 @@ Plans:
   3. User can see R:R achieved vs predicted, profit factor (gross profit / gross loss), and expected value per trade
   4. User can manually follow a signal with customized entry/SL/TP to create a new paper trade via API
   5. Max drawdown (% and VND) is computed from equity curve with drawdown periods identified
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 24-01-PLAN.md — Trade CRUD API + manual follow (PT-09) + config endpoints with Pydantic schemas and service layer
+- [x] 24-01-PLAN.md — Trade CRUD API + manual follow (PT-09) + config endpoints with Pydantic schemas and service layer
 - [ ] 24-02-PLAN.md — Analytics engine: summary, equity curve, drawdown, direction, confidence, R:R, profit factor, sector (AN-01–AN-09)
 
 ### Phase 25: Dashboard Structure & Trade Management
@@ -156,6 +156,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 22. Paper Trade Foundation | 2/2 | ✅ Complete | 2025-07-18 |
 | 23. Position Monitoring & Auto-Track | 2/2 | Complete   | 2026-04-20 |
-| 24. API & Analytics Engine | 0/2 | Not started | - |
+| 24. API & Analytics Engine | 1/2 | In Progress|  |
 | 25. Dashboard Structure & Trade Management | 0/TBD | Not started | - |
 | 26. Analytics Visualization & Calendar | 0/TBD | Not started | - |
