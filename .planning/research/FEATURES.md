@@ -1,616 +1,409 @@
-# Feature Landscape — v3.0 Smart Trading Signals
+# Feature Landscape — v4.0 Paper Trading & Signal Verification
 
-**Domain:** Stock Intelligence Platform — Dual-Direction Trading Plans with Full Entry/Exit Strategy
+**Domain:** Paper trading simulation + AI signal quality analytics for Vietnamese stock intelligence platform
 **Researched:** 2026-04-21
-**Confidence:** HIGH (codebase analysis) / MEDIUM (VN market short-selling rules — domain knowledge, not verified against 2026 regulations)
+**Confidence:** HIGH (well-established domain patterns + full codebase analysis of existing signal infrastructure)
 
-**Context:** v1.0–v2.0 shipped with: 800+ tickers across HOSE/HNX/UPCOM, 12 technical indicators + Gemini AI scoring (technical/fundamental/sentiment/combined), CafeF news, mua/bán/giữ recommendations with confidence 1-10 and Vietnamese explanation, Telegram bot alerts, Next.js dashboard with candlestick charts + indicator overlays, portfolio tracking with FIFO P&L, real-time WebSocket price streaming. This research covers ONLY v3.0 NEW features: upgrading from simple buy/sell/hold to **full trading plans with dual-direction LONG/SHORT analysis**.
+**Context:** v3.0 shipped with dual-direction trading signals (LONG/BEARISH), each with `entry_price`, `stop_loss`, `take_profit_1`, `take_profit_2`, `risk_reward_ratio`, `position_size_pct`, `timeframe` (swing/position). Signals stored in `ai_analyses.raw_response` JSONB with `TickerTradingSignal` schema. Existing portfolio has real `Trade`/`Lot` models with FIFO P&L. This research covers ONLY v4.0 new features: **paper trading simulation that auto-tracks AI signals and analytics that verify AI quality**.
 
 ---
 
-## Vietnamese Stock Market Rules Affecting Trading Plans
+## Core Insight: This Is a Verification System, Not a Trading Simulator
 
-These rules **directly constrain** what trading plan features are possible and how they must be designed. Every feature below was evaluated against these constraints.
+The primary purpose is **measuring AI quality** — "Are Holo's trading signals actually profitable?" A generic paper trading simulator lets users practice trading. This system has a different goal: every AI signal becomes a testable prediction with a measurable outcome. The analytics answer: "Should I trust confidence=8 signals? Are LONG signals better than BEARISH? Does sector matter?"
 
-### Price Band Limits (Biên độ dao giá)
-| Exchange | Daily Limit | Impact on Trading Plans |
-|----------|-------------|------------------------|
-| HOSE | ±7% from reference price | Stop-loss and take-profit CANNOT exceed ±7% in a single day. Multi-day TP targets are valid but intraday SL may not trigger if price hits floor/ceiling |
-| HNX | ±10% from reference price | Wider bands = more room for intraday targets |
-| UPCOM | ±15% from reference price | Widest bands, but lowest liquidity |
-
-**Implication:** Trading plan targets must be labeled as "multi-session targets" when they exceed the daily price band. A stop-loss at -10% on HOSE requires 2+ sessions to hit — the system must warn the user that SL is NOT guaranteed intraday.
-
-### Settlement Rules (T+2)
-- **All exchanges:** T+2 settlement (as of VSD regulation, effective from 2022)
-- Buy on Monday → shares settle on Wednesday → can sell from Wednesday
-- **Implication for SHORT direction:** Even if a bearish signal fires, an investor who just bought cannot exit for 2 trading days. The trading plan's "SHORT" scenario must be framed as "AVOID BUYING" or "THOÁT (exit existing position)" — not as "short sell"
-
-### Trading Sessions
-| Session | Time (ICT) | Notes |
-|---------|-----------|-------|
-| ATO (Mở cửa) | 9:00–9:15 | Opening auction — volatile, not ideal for limit entries |
-| Continuous 1 | 9:15–11:30 | Main morning session |
-| Lunch break | 11:30–13:00 | No trading |
-| Continuous 2 | 13:00–14:30 | Afternoon session |
-| ATC (Đóng cửa) | 14:30–14:45 | Closing auction |
-
-**Implication:** Timeframe recommendation must account for these sessions. "Scalp" is essentially impossible with T+2. Swing (days-weeks) and Position (weeks-months) are the realistic timeframes.
-
-### Short Selling Reality in Vietnam
-- Securities Borrowing and Lending (SBL) exists since 2017, but **extremely limited**:
-  - Very few securities are eligible (typically only top-30 large caps)
-  - Very few brokers offer SBL to retail (TCBS, SSI partially)
-  - Retail participation is negligible — most VN traders have never short-sold
-  - Margin interest for SBL: ~10-14% annually
-- **Critical design decision:** The "SHORT" direction in dual-analysis does NOT mean "short sell." It means:
-  1. **For non-holders:** "Tránh mua — avoid entry, wait for lower prices"
-  2. **For holders:** "Thoát — exit/reduce position at these levels"
-  3. **Bearish scenario awareness:** "If price drops, these are the key levels"
-
-### Lot Size
-- Minimum order: 100 shares on HOSE/HNX (odd lots possible on some brokers at worse pricing)
-- **Implication for position sizing:** Must round to nearest 100 shares
-
-### Margin Trading
-- Maximum ratio: typically 50% (broker-dependent)
-- Margin call: ~130% maintenance ratio
-- Force sell: ~120%
-- **Implication:** Position sizing calculator should assume cash account by default, with optional margin toggle
+This distinction drives every feature decision below. Features that measure AI quality are table stakes. Features that only serve "practice trading" are differentiators or anti-features.
 
 ---
 
 ## Table Stakes
 
-Features that ANY trading plan feature must include. Missing these = the upgrade from mua/bán/giữ feels incomplete or amateurish.
+Features that are **essential** for a paper trading + signal verification system to be useful. Missing any of these = the feature feels broken or pointless.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| **Entry price/zone** | "Mua" without a price is useless — every trading plan needs a specific entry | MEDIUM | Gemini must output specific VND price or price range based on support levels and latest close. Must reference actual price data, not hallucinate numbers |
-| **Stop-loss level** | Core risk management — any platform suggesting trades without SL is irresponsible | MEDIUM | Must be below entry for LONG, above entry for SHORT-awareness. Must warn when SL exceeds daily price band (±7% HOSE) |
-| **Take-profit target (T1)** | Minimum one exit target to complete the plan | MEDIUM | At least one TP level. Based on resistance levels, Fibonacci, or round-number psychology |
-| **Risk/reward ratio** | Traders evaluate plans by R:R — standard metric | LOW | Pure calculation: `(TP - Entry) / (Entry - SL)`. Display as "1:X" format. Minimum threshold: highlight R:R < 1:1.5 as unfavorable |
-| **Preferred direction** | Must explicitly state LONG or SHORT (tránh mua) preference | LOW | Replaces current mua/bán/giữ with richer signal. Maps to: LONG=mua, SHORT=tránh/thoát, NEUTRAL=giữ/chờ |
-| **Direction confidence** | Existing system has confidence 1-10; must carry forward | LOW | Reuse existing confidence rubric. Split into LONG confidence + SHORT confidence, not just one number |
-| **Vietnamese reasoning** | Existing combined analysis has Vietnamese explanation; trading plan must too | LOW | Extend current pattern. Reasoning should explain WHY these specific levels, not just repeat numbers |
-| **Timeframe recommendation** | "Buy" without "hold for how long" is incomplete | LOW | Enum: swing (2-10 ngày), position (2-8 tuần), trung_han (2-6 tháng). No "scalp" — T+2 makes it impractical |
-| **Trading plan panel on ticker detail** | Natural location — user is already viewing the ticker | MEDIUM | New component below existing CombinedRecommendationCard. Must show both LONG and SHORT scenarios side by side |
-| **Gemini structured output schema** | Existing Pydantic schema pattern must extend to trading plan | MEDIUM | New `TradingPlanResponse` Pydantic model with nested LONG/SHORT plans. Uses existing `response_schema` pattern in `_call_gemini()` |
+### Paper Trading Engine
 
-## Differentiators
+| Feature | Why Essential | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **Auto-track all AI signals as virtual trades** | Core purpose — every signal becomes a testable prediction. Without this, verification requires manual tracking | MEDIUM | `ai_analyses` table (raw_response JSONB), scheduler job chain | On each daily signal generation, create a `paper_trade` record for the recommended direction. Entry at `entry_price`, SL/TP from signal. This is the backbone of the entire system |
+| **Virtual trade lifecycle: OPEN → partial close → CLOSED** | Signals have TP1 and TP2 — a trade must track partial exits, not just binary win/loss | MEDIUM | Daily price crawl data | States: `OPEN`, `PARTIAL_TP1` (50% closed at TP1), `CLOSED_TP2`, `CLOSED_SL`, `CLOSED_TIMEOUT`, `CLOSED_MANUAL`. State machine driven by daily price checks |
+| **Partial TP logic: 50% at TP1, move SL to breakeven** | The existing signal schema has TP1 + TP2 specifically for staged exits — not using them wastes the signal design | MEDIUM | Virtual trade lifecycle | When price hits TP1: close 50% of position, move SL to entry_price (breakeven). Remaining 50% targets TP2 with zero-risk profile. This is the standard institutional approach |
+| **Timeout: close at market price when timeframe expires** | Signals have timeframe (swing=3-15 days, position=weeks+). Without timeout, stale trades accumulate forever and pollute analytics | LOW | `timeframe` field from signal, daily price data | Swing: auto-close after 15 trading days. Position: auto-close after 60 trading days. Close at that day's close price. Record as `CLOSED_TIMEOUT` |
+| **Configurable virtual capital** | Position sizing uses `position_size_pct` — needs a capital base to calculate share count. Also needed for drawdown/equity curve | LOW | Settings/config | Default: 1,000,000,000 VND (1 billion — realistic VN retail). Stored in settings table or config. Round position to 100-share lots per VN exchange rules |
+| **Daily price check job for TP/SL monitoring** | Signals fire once, but TP/SL may hit days later. Must check daily close against all open paper trades | MEDIUM | Daily price crawl, scheduler chain | New scheduler job chained after `daily_price_crawl`. For each open paper trade, check: did today's high ≥ TP1/TP2? Did today's low ≤ SL? Priority: SL checked first (conservative — assumes worst case in same candle) |
+| **Win/loss classification** | Binary outcome per trade is the minimum viable metric | LOW | Trade lifecycle | WIN: hit TP1 or TP2. LOSS: hit SL. TIMEOUT: neither hit within timeframe. Partial: hit TP1 but SL'd on remainder (net depends on math) |
+| **Basic P&L per trade** | "This signal made/lost X VND" — without per-trade P&L, analytics are meaningless | LOW | Entry price, exit price(s), position size | For partial TP: P&L = (TP1 - entry) × 50% shares + (exit2 - entry) × 50% shares. Track in VND and as % of entry |
 
-Features that elevate from "has a trading plan" to "has a **good** trading plan."
+### Signal Verification Analytics
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| **Multiple take-profit targets (T1, T2, T3)** | Professional plans have staged exits — "take 50% at T1, 30% at T2, hold 20% to T3" | LOW | Just 3 price fields in Pydantic schema. Partial profit-taking percentages as Gemini output |
-| **Position sizing calculator** | Answers "How many shares should I buy?" based on risk tolerance + account size | MEDIUM | User inputs account size + risk % (e.g., 2%). Formula: `shares = (account × risk%) / (entry - SL)`. Round to 100-share lots. Display as VND amount + share count |
-| **Key levels overlay on chart** | Visualize entry/SL/TP directly on the candlestick chart | MEDIUM | lightweight-charts supports `addPriceLine()` — horizontal lines at entry (blue), SL (red), TP (green). Most impactful visual feature |
-| **Price-band-aware warnings** | Alert when SL/TP exceeds daily price band limit | LOW | If `abs(target - reference) / reference > band_limit`, show warning: "⚠️ Mức này vượt biên độ ngày, cần ≥2 phiên" |
-| **Trade plan invalidation conditions** | When to CANCEL the plan (not just SL) — e.g., "Plan invalid if price closes below X" | LOW | Gemini outputs an `invalidation` text field describing conditions that void the thesis |
-| **Telegram trading plan alert** | Enhanced Telegram signal with full entry/SL/TP instead of just mua/bán/giữ | LOW | Extend existing `signal_change()` formatter. New format includes price levels |
-| **Dual-direction side-by-side display** | Show LONG and SHORT scenarios simultaneously so trader sees both perspectives | MEDIUM | Two-column layout on desktop, stacked on mobile. Green card (LONG) + Red card (SHORT) with preferred direction highlighted |
-| **Historical plan tracking** | "Did the last plan's TP hit? Was SL triggered?" — track plan outcomes | HIGH | Requires comparing past plan's entry/SL/TP with subsequent price data. Adds credibility but complex to implement correctly |
-
-## Anti-Features
-
-Features to explicitly NOT build. Each has a concrete reason tied to VN market reality.
-
-| Anti-Feature | Why Requested | Why Problematic | Alternative |
-|--------------|---------------|-----------------|-------------|
-| **Short selling execution guidance** | "Dual-direction means I can short sell" | Short selling barely exists in VN retail — SBL covers <30 stocks, <5% of brokers offer it, regulatory barriers | Frame SHORT as "avoid/exit/wait" with specific levels. Label clearly: "Kịch bản giảm giá (không phải bán khống)" |
-| **Auto-trade / order placement** | "If the plan says buy at X, place the order for me" | Legal risk (unlicensed advisory), financial risk (slippage, gaps), already explicitly out of scope | Trading plan is informational only. Clear disclaimer: "Chỉ mang tính tham khảo, không phải khuyến nghị đầu tư" |
-| **ML price prediction for targets** | "Use machine learning to predict exact entry/SL/TP" | Creates false precision. ML predictions for VN stocks lack sufficient training data and market-making dynamics differ from US/EU markets | Gemini qualitative analysis based on technical levels (support/resistance) + fundamentals. Honest about uncertainty |
-| **Real-time scalp signals** | "Give me intraday buy/sell signals" | T+2 settlement makes true scalping impractical. 30s polling latency too high for scalp timing. Creates gambling behavior | Minimum timeframe = swing (2-10 days). System explicitly doesn't support intraday trading signals |
-| **Guaranteed R:R claims** | "This trade has 1:3 R:R guaranteed" | R:R is a *plan*, not a guarantee. Stop-loss can gap through. Price bands prevent intraday SL execution beyond ±7% | Display R:R as "Tỷ lệ lợi nhuận/rủi ro dự kiến" (expected), never "guaranteed" |
-| **Backtesting engine for plans** | "Show me how past plans would have performed" | Backtesting is a separate product — requires survivorship bias handling, transaction cost modeling, slippage simulation. Massive scope | Simple "plan outcome" tracking: after plan date, check if TP1/SL was hit first. Binary outcome, not full backtest |
-| **Options/derivatives strategies** | "Add covered call or put strategies" | VN derivatives market is limited to VN30 index futures + covered warrants. Retail options trading doesn't exist | Stay focused on stock trading plans only. No derivative integration |
-| **Personalized risk profiles** | "Different plans for aggressive vs conservative traders" | Single user, adds complexity. Gemini would need multiple prompts per ticker × profile | Single plan with configurable position sizing. User adjusts risk% in calculator (1% conservative, 3% aggressive) |
+| Feature | Why Essential | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| **Overall win rate** | The single most important metric: "What % of AI signals are profitable?" Without this, the entire system has no point | LOW | Closed paper trades | `win_count / total_closed_count × 100`. Display prominently. A win rate below 40% means signals need tuning; above 55% is strong for any system |
+| **Total P&L (realized)** | "Am I net positive or negative following all AI signals?" — the ultimate AI quality metric | LOW | Per-trade P&L summed | Cumulative VND profit/loss across all closed paper trades. Displayed as both absolute VND and % of initial capital |
+| **Win rate by direction (LONG vs BEARISH)** | AI may be better at spotting uptrends than downtrends (or vice versa). Must know which direction to trust | LOW | Paper trades with direction field | Separate win rates for LONG and BEARISH signals. In VN bull market, LONG likely outperforms. If BEARISH win rate is terrible, user knows to ignore bearish signals |
+| **Average R:R achieved vs predicted** | AI predicts R:R (stored in signal). Actual R:R may differ wildly. This gap measures signal precision | MEDIUM | Predicted R:R from signal, actual entry/exit prices | Predicted R:R from `risk_reward_ratio` field. Actual R:R = actual profit / actual risk taken. If predicted=2.5 but actual=0.8, AI is overestimating targets |
+| **Equity curve** | Visual representation of cumulative P&L over time — the most intuitive way to assess if the system is profitable and consistent | MEDIUM | Time-series of trade closings and P&L | X-axis: date. Y-axis: cumulative P&L (starting from initial capital). A rising curve = working system. A declining curve = broken signals. Use Recharts (already in stack) |
+| **Max drawdown** | "What was the worst peak-to-trough decline?" — critical for understanding risk even if overall P&L is positive | MEDIUM | Equity curve data | Calculate from equity curve: max(peak - trough) / peak. Display as % and absolute VND. A system with 60% win rate but 40% drawdown is dangerous |
+| **AI score correlation: high vs low confidence performance** | The unique value proposition of this system. "Do confidence=8-10 signals outperform confidence=3-5?" If no correlation, the scoring system is broken | MEDIUM | AI confidence scores (1-10) from signal, trade outcomes | Bucket trades by AI confidence: LOW (1-4), MEDIUM (5-7), HIGH (8-10). Compare win rates and avg P&L per bucket. If HIGH confidence doesn't outperform, the entire AI scoring needs recalibration |
+| **Telegram notifications on TP/SL hits** | Existing Telegram bot is the primary alert channel. Paper trade events are just as important as real alerts — user needs to know "Signal X just hit TP1" to build trust in the system | LOW | Telegram bot, paper trade lifecycle | Reuse existing `AlertService` pattern. Message: "🎯 [SYMBOL] LONG hit TP1 @ 25,400 (+3.2%). SL moved to breakeven." or "🔴 [SYMBOL] BEARISH hit SL @ 48,200 (-2.1%)" |
 
 ---
 
-## Detailed Feature Specifications
+## Differentiators
 
-### SIGNAL-01: Dual-Direction Analysis (LONG + SHORT)
+Features that elevate from "tracks signals" to "powerful AI quality dashboard." Not expected, but significantly increase insight.
 
-**Current state (what changes):**
-- Current: `CombinedBatchResponse` → `recommendation: mua/ban/giu`, `confidence: 1-10`, `explanation: str`
-- New: For each ticker, Gemini produces BOTH a LONG thesis and a SHORT thesis, then recommends the preferred direction
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| **Sector analysis** | "AI is great at banking stocks but terrible at real estate" — identifies blind spots in the AI model | MEDIUM | `tickers.sector` field (already exists), closed paper trades | Group win rate and P&L by sector. Bar chart or table. May reveal that AI prompt context is insufficient for certain sectors (e.g., doesn't understand commodity cycles for steel stocks) |
+| **Manual paper trade (follow a signal)** | Auto-track captures ALL signals, but user may want to selectively follow specific ones with custom entry/SL/TP | MEDIUM | Paper trade engine, signal data | "Follow" button on trading plan panel. Creates a separate manual paper trade linked to the signal but with user-adjustable entry/SL/TP. Tracks independently. Answers: "Am I better at picking which signals to follow than the AI's own confidence score?" |
+| **Calendar heatmap** | Visual pattern recognition: "Are Mondays profitable? Is end-of-month bad?" | MEDIUM | Trade outcomes by date | GitHub-style heatmap grid: rows=weekdays, columns=weeks. Green=profitable day, red=losing day, intensity=magnitude. Uses Recharts or custom SVG. Reveals temporal patterns in AI quality (e.g., signals after earnings season may be stronger) |
+| **Streak tracking** | "Current: 5 wins in a row" / "Worst streak: 8 consecutive losses" — gamification + risk awareness | LOW | Ordered trade outcomes | Win streaks, loss streaks, current streak. Displayed as badges/counters. Losing streaks >5 should trigger a visual warning ("AI may be in a weak phase — consider reducing position sizes") |
+| **Analysis by timeframe** | "Are swing signals more accurate than position signals?" | LOW | `timeframe` field from signal | Compare win rate: swing vs position. If swing is significantly better, user should weight short-term signals more heavily |
+| **Signal outcome history on ticker detail page** | When viewing a ticker, see past signals and whether they hit TP or SL — "LONG signal on Apr 15: TP1 hit ✅, TP2 missed ❌" | MEDIUM | Paper trades linked to tickers, trading plan panel component | Integrates into existing ticker detail page below trading plan panel. List of past 10 signals with outcome icons. Builds confidence: "This ticker's signals are usually accurate" |
+| **Monthly/weekly performance summary** | Aggregated performance periods — "This week: 7 wins, 3 losses, +2.1M VND" | LOW | Time-bucketed trade outcomes | Table with rows per week/month. Columns: win rate, P&L, trade count, avg R:R. Useful for spotting trends over time |
+| **Drawdown visualization on equity curve** | Shade the drawdown periods on the equity curve chart — visually shows pain periods | LOW | Equity curve + drawdown calculation | Red shading between peak and trough on the Recharts equity curve. Makes risk visceral, not just a number |
+| **Profit factor** | `gross_profit / gross_loss` — more nuanced than win rate because it accounts for magnitude | LOW | Per-trade P&L data | Profit factor > 1.5 is solid. > 2.0 is excellent. Combined with win rate, gives complete picture: high win rate + low profit factor = many small wins with rare large losses |
+| **Expected value per trade** | `(win_rate × avg_win) - (loss_rate × avg_loss)` — the single number that tells if the system has edge | LOW | Win/loss stats | Positive EV = system has edge. Display in VND. This is the most sophisticated single metric for signal quality |
 
-**Dual-direction output structure:**
-```python
-class DirectionPlan(BaseModel):
-    """One direction's trading plan."""
-    direction: Literal["long", "short"]
-    conviction: int = Field(ge=1, le=10)
-    entry_price: float = Field(description="Recommended entry price in VND")
-    stop_loss: float = Field(description="Stop-loss price in VND")
-    take_profit_1: float = Field(description="First take-profit target in VND")
-    take_profit_2: float | None = Field(description="Second take-profit target")
-    take_profit_3: float | None = Field(description="Third take-profit target")
-    timeframe: Literal["swing", "position", "trung_han"]
-    reasoning: str = Field(description="Vietnamese explanation, 2-3 sentences")
-    invalidation: str = Field(description="Condition invalidating this plan, 1 sentence Vietnamese")
+---
 
-class TickerTradingPlan(BaseModel):
-    """Complete dual-direction trading plan for one ticker."""
-    ticker: str
-    preferred_direction: Literal["long", "short", "neutral"]
-    long_plan: DirectionPlan
-    short_plan: DirectionPlan
-    risk_reward_ratio: float = Field(description="R:R for preferred direction")
-    key_support: float = Field(description="Key support level in VND")
-    key_resistance: float = Field(description="Key resistance level in VND")
-    summary: str = Field(description="Vietnamese overall summary, max 100 words")
+## Anti-Features
 
-class TradingPlanBatchResponse(BaseModel):
-    """Batch response for trading plan analysis."""
-    plans: list[TickerTradingPlan]
-```
+Features to explicitly NOT build. Each has a specific reason tied to this system's purpose (AI verification, not general trading practice).
 
-**What "SHORT" means in VN context (critical framing):**
-- LONG plan: "Kịch bản TĂNG — nếu giá tăng, đây là điểm mua và chốt lời"
-- SHORT plan: "Kịch bản GIẢM — nếu giá giảm, đây là mức cần thoát/tránh mua"
-- SHORT.entry_price = "Level where bearish thesis confirms" (not "price to short sell at")
-- SHORT.stop_loss = "Level where bearish thesis is wrong (price goes up instead)"
-- SHORT.take_profit = "Level where price might find support (potential re-entry for longs)"
-
-**Dependencies:** Existing combined analysis pipeline (AI-04), technical context gathering (_get_technical_context), fundamental context, sentiment context.
-
-### SIGNAL-02: Gemini Prompt Restructure for Trading Plans
-
-**Current prompt flow:**
-1. `COMBINED_SYSTEM_INSTRUCTION` → "Bạn là chuyên gia tư vấn đầu tư chứng khoán Việt Nam"
-2. `COMBINED_FEW_SHOT` → Example with mua/ban/giu output
-3. `_build_combined_prompt()` → Feeds tech/fund/sent scores per ticker
-4. `CombinedBatchResponse` → Validates output
-
-**New prompt flow (replaces combined analysis):**
-1. New `TRADING_PLAN_SYSTEM_INSTRUCTION` — senior trading advisor persona, outputs both LONG and SHORT plans with specific VND prices
-2. New `TRADING_PLAN_FEW_SHOT` — example with dual-direction output including entry/SL/TP in VND
-3. Extended context gathering: include latest_close, recent high/low, support/resistance from BB and MAs, volume context
-4. `TradingPlanBatchResponse` — Pydantic structured output
-
-**System instruction design:**
-```
-Bạn là chuyên gia giao dịch chứng khoán Việt Nam (HOSE/HNX/UPCOM). 
-Cho mỗi mã, phân tích CẢ HAI kịch bản TĂNG và GIẢM:
-
-LONG (Tăng): entry price, stop-loss, take-profit targets cụ thể bằng VND
-SHORT (Giảm): mức giá xác nhận xu hướng giảm, mức thoát lỗ, mức hỗ trợ tiềm năng
-
-Quy tắc:
-- Entry/SL/TP phải dựa trên dữ liệu kỹ thuật (hỗ trợ, kháng cự, MA, BB)
-- Lưu ý biên độ ngày: HOSE ±7%, HNX ±10%, UPCOM ±15%
-- SHORT không phải bán khống — là kịch bản để TRÁNH MUA hoặc THOÁT vị thế
-- Timeframe: swing (2-10 ngày), position (2-8 tuần), trung_han (2-6 tháng)
-- Risk/reward ratio tối thiểu 1:1.5 cho preferred direction
-```
-
-**Few-shot example design:**
-```
---- VNM ---
-Giá hiện tại: 82,000 VND
-Kỹ thuật: signal=buy, strength=7
-Cơ bản: health=good, score=8
-Tâm lý: sentiment=positive, score=7
-SMA(20): 80,500 | SMA(50): 78,000 | BB Upper: 85,000 | BB Lower: 79,000
-RSI: 52.1 (neutral) | MACD: bullish crossover
-High 20D: 84,500 | Low 20D: 78,500
-
-Output:
-{
-  "ticker": "VNM",
-  "preferred_direction": "long",
-  "long_plan": {
-    "direction": "long",
-    "conviction": 7,
-    "entry_price": 81000,
-    "stop_loss": 78000,
-    "take_profit_1": 85000,
-    "take_profit_2": 88000,
-    "take_profit_3": null,
-    "timeframe": "swing",
-    "reasoning": "RSI tăng từ vùng trung tính với MACD vừa cắt lên. Giá trên tất cả MA chính...",
-    "invalidation": "Kế hoạch không còn hiệu lực nếu giá đóng cửa dưới SMA(50) = 78,000"
-  },
-  "short_plan": { ... },
-  "risk_reward_ratio": 1.33,
-  "key_support": 78000,
-  "key_resistance": 85000,
-  "summary": "Xu hướng tăng ngắn hạn với momentum tích cực..."
-}
-```
-
-**Token budget impact:**
-- Current combined analysis: ~100-150 tokens output per ticker
-- Trading plan: ~400-600 tokens output per ticker (3-4× more)
-- At batch_size=25: output goes from ~3,750 to ~15,000 tokens per batch
-- **Mitigation:** Reduce batch_size to 10-15 for trading plan analysis, OR run trading plan as a SEPARATE analysis type (not replacing combined, but extending it)
-- Gemini 2.5-flash-lite max_output_tokens=16384 — sufficient for 15 tickers × 600 tokens
-
-**Dependencies:** Existing Gemini call infrastructure (`_call_gemini`, `_run_batched_analysis`), existing context gatherers, Pydantic response_schema pattern.
-
-### SIGNAL-03: Extended Context for Price-Level Targets
-
-**Current technical context (from `_get_technical_context`):**
-- RSI(14) last 5 days, RSI zone
-- MACD line/signal/histogram last 5 days, crossover state
-- SMA(20/50/200), EMA(12/26), BB(upper/middle/lower)
-- Latest close price, price vs SMA percentages
-
-**Additional context needed for entry/SL/TP generation:**
-```python
-# New fields to add to technical context
-{
-    "high_20d": float,        # 20-day high (resistance proxy)
-    "low_20d": float,         # 20-day low (support proxy)
-    "high_52w": float,        # 52-week high
-    "low_52w": float,         # 52-week low
-    "avg_volume_20d": float,  # Average volume (for conviction)
-    "latest_volume": float,   # Today's volume vs average
-    "atr_14": float,          # Average True Range for volatility-based SL
-    "exchange": str,          # For price band awareness (HOSE=7%, HNX=10%, UPCOM=15%)
-    "price_band_pct": float,  # Specific band for this exchange
-}
-```
-
-**ATR for stop-loss sizing:**
-- ATR(14) = Average True Range over 14 days
-- Common SL formula: `entry - 1.5 × ATR` (for LONG), `entry + 1.5 × ATR` (for SHORT awareness)
-- `ta` library already installed — `AverageTrueRange(high, low, close, window=14)`
-- New column in `technical_indicators` table: `atr_14`
-
-**20-day high/low from daily_prices:**
-```python
-# Query last 20 trading days
-high_20d = max(close values over last 20 days)
-low_20d = min(close values over last 20 days)
-# Already have DailyPrice data — just need to query it
-```
-
-**Dependencies:** `ta` library (already installed), `daily_prices` table, `technical_indicators` table (needs ATR column via Alembic migration).
-
-### SIGNAL-04: Trading Plan Dashboard Panel
-
-**Current ticker detail page layout:**
-1. Ticker header (name, exchange, price, watchlist toggle)
-2. Candlestick chart section
-3. Indicator charts section (RSI, MACD)
-4. Separator
-5. CombinedRecommendationCard (mua/bán/giữ + confidence + reasoning)
-6. Analysis cards grid (technical, fundamental, sentiment)
-
-**New layout — add Trading Plan panel:**
-1. Ticker header *(unchanged)*
-2. Candlestick chart with key level overlays (entry/SL/TP lines) ← **enhanced**
-3. Indicator charts *(unchanged)*
-4. Separator
-5. **NEW: TradingPlanCard** — prominent dual-direction panel replacing CombinedRecommendationCard
-6. Analysis cards grid *(unchanged, still shows technical/fundamental/sentiment)*
-
-**TradingPlanCard component design:**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 📊 KẾ HOẠCH GIAO DỊCH — VNM            ← Swing (2-10 ngày) │
-│                                                             │
-│  ★ HƯỚNG GỢI Ý: LONG (MUA)  ●●●●●●●○○○  7/10              │
-│  "Xu hướng tăng ngắn hạn với momentum tích cực từ MACD..."  │
-│                                                             │
-│ ┌──────── LONG (Tăng) ────────┐ ┌──────── SHORT (Giảm) ─────┐│
-│ │ Conviction: ●●●●●●●○○○ 7   │ │ Conviction: ●●●○○○○○○○ 3  ││
-│ │                             │ │                            ││
-│ │ 🟢 Entry:    81,000 VND     │ │ 🔴 Entry:    78,000 VND    ││
-│ │ 🔴 Stop-Loss: 78,000 VND   │ │ 🟢 Stop-Loss: 82,000 VND  ││
-│ │ 🎯 TP1:      85,000 VND    │ │ 🎯 TP1:      75,000 VND   ││
-│ │ 🎯 TP2:      88,000 VND    │ │ 🎯 TP2:      72,000 VND   ││
-│ │ R:R:         1:1.3          │ │ R:R:         1:1.5         ││
-│ │                             │ │                            ││
-│ │ "RSI tăng từ vùng trung    │ │ "Nếu giá phá vỡ SMA50,   ││
-│ │  tính, MACD cắt lên..."    │ │  xu hướng giảm xác nhận.."││
-│ │                             │ │                            ││
-│ │ ⚠️ Hủy nếu: Giá đóng cửa  │ │ ⚠️ Hủy nếu: Giá vượt      ││
-│ │ dưới SMA(50) = 78,000      │ │ BB Upper = 85,000          ││
-│ └─────────────────────────────┘ └────────────────────────────┘│
-│                                                             │
-│ 📐 Hỗ trợ: 78,000 | Kháng cự: 85,000                       │
-│ 📅 Cập nhật: 2026-04-21 | gemini-2.5-flash-lite             │
-│                                                             │
-│ ⚠️ Chỉ mang tính tham khảo, không phải khuyến nghị đầu tư    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Key design decisions:**
-- **Two-column on desktop, stacked on mobile** — use Tailwind `grid grid-cols-1 md:grid-cols-2`
-- **Preferred direction highlighted** — border-2 on the preferred side, muted on the other
-- **Color coding:** Green border for LONG card, Red border for SHORT card
-- **Always show both** — even when one direction has low conviction. This is the point of dual-direction analysis
-- **Disclaimer required** — Vietnamese regulatory context requires advisory disclaimer
-
-**Dependencies:** Existing ticker detail page, existing Card/Badge shadcn components, trading plan API endpoint.
-
-### SIGNAL-05: Position Sizing Calculator
-
-**Formula:**
-```
-risk_amount = account_size × risk_percentage
-price_risk = entry_price - stop_loss_price  (for LONG)
-raw_shares = risk_amount / price_risk
-position_shares = floor(raw_shares / 100) × 100  # Round to VN lot size
-position_value = position_shares × entry_price
-```
-
-**Example:**
-```
-Account: 100,000,000 VND
-Risk: 2% → risk_amount = 2,000,000 VND
-Entry: 81,000 VND, SL: 78,000 VND → price_risk = 3,000 VND
-raw_shares = 2,000,000 / 3,000 = 666.67
-position_shares = 600 (rounded to nearest 100)
-position_value = 600 × 81,000 = 48,600,000 VND (48.6% of account)
-```
-
-**UI component:**
-```
-┌─────────────────────────────────────┐
-│ 💰 TÍNH VỊ THẾ                      │
-│                                     │
-│ Vốn tài khoản: [___100,000,000___] VND │
-│ % Rủi ro/lệnh: [___2%___]           │
-│                                     │
-│ → Rủi ro tối đa: 2,000,000 VND      │
-│ → Số lượng: 600 cổ phiếu             │
-│ → Giá trị lệnh: 48,600,000 VND      │
-│ → % Tài khoản: 48.6%                │
-│                                     │
-│ ⚠️ Chưa tính phí giao dịch (~0.35%) │
-└─────────────────────────────────────┘
-```
-
-**Implementation:**
-- **Frontend-only calculation** — no backend needed. Uses entry_price and stop_loss from trading plan response
-- **localStorage for account size** — persist across sessions (single user, same pattern as watchlist)
-- **Default risk%: 2%** — industry standard. Adjustable 0.5%-5% with slider
-- **VN broker fee note:** Standard ~0.15% buy + 0.15% sell + 0.1% tax on sell = ~0.35% round-trip
-
-**Dependencies:** Trading plan data (entry_price, stop_loss from SIGNAL-01).
-
-### SIGNAL-06: Key Levels on Chart
-
-**lightweight-charts PriceLine API:**
-```typescript
-// Already available — lightweight-charts supports price lines natively
-const entryLine = candleSeries.createPriceLine({
-    price: 81000,
-    color: '#2962FF',
-    lineWidth: 1,
-    lineStyle: LineStyle.Dashed,
-    axisLabelVisible: true,
-    title: 'Entry 81,000',
-});
-
-const slLine = candleSeries.createPriceLine({
-    price: 78000,
-    color: '#ef5350',
-    lineWidth: 1,
-    lineStyle: LineStyle.Dashed,
-    axisLabelVisible: true,
-    title: 'SL 78,000',
-});
-
-const tp1Line = candleSeries.createPriceLine({
-    price: 85000,
-    color: '#26a69a',
-    lineWidth: 1,
-    lineStyle: LineStyle.Dashed,
-    axisLabelVisible: true,
-    title: 'TP1 85,000',
-});
-```
-
-**Implementation:**
-- Read trading plan data from API (entry, SL, TP1, TP2, TP3, support, resistance)
-- Create price lines for the **preferred direction only** (avoid visual clutter)
-- Toggle: "Hiện mức giá kế hoạch" checkbox to show/hide lines
-- Color scheme: Blue=Entry, Red=SL, Green=TP, Gray dashed=Support/Resistance
-- Lines auto-remove when trading plan data refreshes
-
-**Dependencies:** Existing CandlestickChart component, trading plan API data, lightweight-charts (already installed).
-
-### SIGNAL-07: Telegram Trading Plan Alert
-
-**Current signal change alert format:**
-```
-📡 THAY ĐỔI TÍN HIỆU
-
-VNM: mua → BÁN 📉
-💪 Độ tin cậy: 7/10
-Lý do ngắn gọn...
-```
-
-**Enhanced trading plan alert format:**
-```
-📊 KẾ HOẠCH GIAO DỊCH — VNM
-
-★ LONG (MUA) | Tin cậy: 7/10 | Swing
-
-🟢 Entry:     81,000 VND
-🔴 Stop-Loss: 78,000 VND (-3.7%)
-🎯 TP1:       85,000 VND (+4.9%)
-🎯 TP2:       88,000 VND (+8.6%)
-📐 R:R:       1:1.3
-
-💰 Vị thế: 600 CP (48.6M VND @ 2% risk)
-
-📝 RSI tăng từ vùng trung tính với MACD cắt lên.
-   Giá trên tất cả MA chính, momentum tích cực.
-
-⚠️ Hủy nếu: Giá đóng cửa dưới SMA(50) = 78,000
-
-⚠️ Tham khảo, không phải khuyến nghị đầu tư
-```
-
-**Trigger conditions (when to send):**
-1. **Direction change:** preferred_direction changed from yesterday (mua→thoát, thoát→mua)
-2. **Significant level change:** entry/SL/TP moved >3% from previous plan
-3. **New high-conviction plan:** conviction ≥ 8 for preferred direction (strong opportunity)
-4. **Plan invalidation:** Price hit the invalidation condition of yesterday's plan
-
-**Implementation:** Extend existing `AlertService.check_signal_changes()` to compare trading plan fields instead of just `combined.signal`.
-
-**Dependencies:** Existing Telegram bot, MessageFormatter, AlertService.
-
-### SIGNAL-08: New AnalysisType and Database Storage
-
-**Option A: New analysis_type enum value**
-- Add `TRADING_PLAN = "trading_plan"` to `AnalysisType` enum
-- Store in existing `ai_analyses` table with `signal = preferred_direction`, `score = conviction`, `reasoning = summary`
-- Full structured plan in `raw_response` JSONB column
-- **Pro:** Minimal schema change, leverages existing query patterns
-- **Con:** JSONB for primary data is harder to query/index
-
-**Option B: New dedicated table**
-- New `trading_plans` table with dedicated columns for entry, SL, TP1, TP2, TP3, etc.
-- **Pro:** Queryable, indexable, type-safe
-- **Con:** More migration work, new service methods
-
-**Recommendation: Option A** because:
-1. Single-user platform — no need for complex queries across trading plans
-2. `raw_response` JSONB already exists and is populated for all analysis types
-3. Frontend reads the full plan from API anyway — just return the JSONB as-is
-4. Avoids migration complexity and table proliferation
-5. Existing `_store_analysis()` method works with zero changes
-6. Alembic migration: just add `'trading_plan'` to the PostgreSQL `analysis_type` enum
-
-**Dependencies:** Existing `ai_analyses` table and `_store_analysis()` method.
+| Anti-Feature | Why Someone Might Want It | Why Avoid | What to Do Instead |
+|--------------|--------------------------|-----------|-------------------|
+| **Slippage/commission simulation** | "Real trades have fees and slippage" | Adds complexity for marginal accuracy gain. This is a signal verification tool, not a P&L predictor. VN brokerage fees (~0.15-0.25%) are noise compared to TP/SL magnitudes (3-10%). Slippage modeling needs order book data we don't have | Ignore fees in paper trades. Note in UI: "Paper P&L does not include transaction costs (~0.2%)" |
+| **Limit/market order types** | "I want to simulate placing a limit order" | Order type simulation requires tick-by-tick data and order book depth. We have daily OHLCV only. Adds massive complexity for no insight into AI quality | All paper entries execute at signal's `entry_price` on the day the close price crosses it (or next open if gap). Simple and sufficient |
+| **Manual position sizing override for auto-tracked trades** | "I want to simulate putting more money on high-conviction signals" | Auto-track must be uniform to measure AI quality fairly. If user over-weights favorites, the analytics no longer reflect signal quality — they reflect user judgment | Keep auto-track at fixed position sizing from AI recommendation. Manual paper trades (differentiator above) allow custom sizing for user-judgment testing |
+| **Short selling simulation** | "BEARISH signals should simulate short positions" | VN retail cannot short sell (see v3.0 research). Simulating shorts creates a false picture — user can't replicate these trades with real money. Pollutes analytics with unrealizable returns | BEARISH signals track "exit existing position" or "avoided loss by not buying." BEARISH P&L = theoretical loss avoided if user held, NOT short-sale profit |
+| **Portfolio rebalancing / allocation optimization** | "Automatically adjust virtual portfolio weights" | This is a portfolio management feature, not a signal verification feature. Scope creep into robo-advisor territory | Virtual capital is simple: each signal gets `position_size_pct` of remaining capital. No rebalancing logic |
+| **Backtesting on historical signals** | "Run paper trading on last 6 months of signals" | Explicitly out of scope per PROJECT.md. Backtesting requires careful handling of survivorship bias, look-ahead bias, and is a separate product. Historical signals may have been generated with different prompts/models | Only track forward — signals generated from today onward. Clean and unbiased |
+| **Real-time paper trade updates via WebSocket** | "Show me paper trade P&L updating live with 30s price polling" | Adds significant complexity (WebSocket price events → check every open paper trade → broadcast updates). Daily price check is sufficient for swing/position timeframes (3-60 day holding periods) | Daily close-based TP/SL check. Intraday monitoring is false precision for swing/position trades anyway |
+| **Multiple virtual accounts / strategies** | "Compare aggressive vs conservative" | Single user, single AI model. Multiple accounts add UI complexity and split analytics. The AI itself doesn't have strategy variants | One virtual account tracks all signals uniformly. User can filter analytics by confidence level to simulate "only follow high-conviction" |
 
 ---
 
 ## Feature Dependencies
 
 ```
-Existing Analysis Pipeline (AI-01..13, schemas/analysis.py)
-    ├──→ SIGNAL-01: Dual-Direction Analysis (extends combined analysis)
-    │       ├──→ SIGNAL-02: Gemini Prompt Restructure (new prompt + schema)
-    │       │       └──→ SIGNAL-03: Extended Context (ATR, 20d high/low)
-    │       ├──→ SIGNAL-04: Dashboard Trading Plan Panel (displays plan)
-    │       │       └──→ SIGNAL-06: Key Levels on Chart (overlays on existing chart)
-    │       ├──→ SIGNAL-05: Position Sizing Calculator (uses entry/SL from plan)
-    │       ├──→ SIGNAL-07: Telegram Trading Plan Alert (enhanced format)
-    │       └──→ SIGNAL-08: Database Storage (new enum value + JSONB)
-    │
-    └──→ SIGNAL-03 depends on:
-            └──→ ATR indicator computation (new column in technical_indicators)
+FOUNDATION (must build first):
+  paper_trades table + model
+    → auto-track job (creates paper trades from signals)
+    → daily TP/SL check job (updates paper trade status)
+      → partial TP logic (50% at TP1, SL→breakeven)
+      → timeout logic (close after timeframe expires)
 
-SIGNAL-05 (Position Sizing) is frontend-only, no backend dependency beyond plan data
-SIGNAL-06 (Chart Overlays) depends on SIGNAL-04 (panel must exist to provide data)
+ANALYTICS (requires closed trades):
+  trade lifecycle (OPEN → CLOSED)
+    → win rate calculation
+    → per-trade P&L
+      → total P&L
+      → equity curve
+        → max drawdown
+        → drawdown visualization
+      → profit factor
+      → expected value
+    → win rate by direction
+    → avg R:R achieved vs predicted
+    → AI score correlation
+
+NOTIFICATIONS (parallel with analytics):
+  daily TP/SL check
+    → Telegram TP/SL notifications (reuse AlertService pattern)
+
+ADVANCED ANALYTICS (requires base analytics):
+  base analytics
+    → sector analysis (needs enough trades per sector)
+    → calendar heatmap (needs date-indexed outcomes)
+    → streak tracking (needs ordered outcomes)
+    → timeframe analysis (needs both swing and position trades)
+
+MANUAL PAPER TRADING (independent branch):
+  paper_trades table + model
+    → manual follow API endpoint
+    → "Follow" button on trading plan panel
+
+DASHBOARD (requires all analytics):
+  all analytics computations
+    → paper trading dashboard page
+    → signal outcome history on ticker detail
 ```
-
-### Critical Path
-
-```
-Phase 1: Backend Foundation
-  SIGNAL-08 (DB enum) → SIGNAL-03 (ATR + context) → SIGNAL-02 (prompt) → SIGNAL-01 (dual-direction)
-
-Phase 2: Frontend Display
-  SIGNAL-04 (trading plan panel) → SIGNAL-06 (chart overlays) + SIGNAL-05 (position sizing)
-
-Phase 3: Notifications
-  SIGNAL-07 (Telegram alert)
-```
-
-**Why this order:**
-1. DB migration (SIGNAL-08) must happen first — schema foundation
-2. ATR computation (SIGNAL-03) feeds into Gemini prompts — must exist before prompts generate targets
-3. Gemini prompt (SIGNAL-02) + dual-direction logic (SIGNAL-01) are the core backend work
-4. Frontend display (SIGNAL-04/05/06) can only start after API returns plan data
-5. Telegram (SIGNAL-07) is last because it depends on plan data AND stable format
 
 ---
 
-## Gemini API Budget Impact
+## Detailed Feature Specifications
 
-| Metric | Current (combined) | After v3.0 (trading plan) | Impact |
-|--------|-------------------|--------------------------|--------|
-| Output tokens per ticker | ~100-150 | ~400-600 | 3-4× increase |
-| Batch size (at max_output=16384) | 25 tickers | 10-15 tickers | 1.7-2.5× more batches |
-| Total batches for 400 HOSE tickers | 16 batches | 27-40 batches | 1.7-2.5× more API calls |
-| Time (at 4s delay between batches) | ~64s | ~108-160s | +1-1.5 min |
-| RPD impact (trading_plan only) | ~16 RPD | ~27-40 RPD | Manageable within 1500 RPD |
+### PT-01: Paper Trade Data Model
 
-**Recommendation:** Run trading plan as a **5th analysis type** (alongside technical, fundamental, sentiment, combined) rather than replacing combined. This preserves backward compatibility and allows independent scheduling.
+**New table: `paper_trades`**
 
-**Alternative:** Run trading plan ONLY for watchlisted tickers + top movers (not all 800+). Most tickers don't need full trading plans — only the ones the user is actively watching.
+```
+paper_trades:
+  id: BigInteger PK
+  signal_id: BigInteger FK → ai_analyses.id  (the signal that triggered this trade)
+  ticker_id: Integer FK → tickers.id
+  direction: Enum('long', 'bearish')
+  source: Enum('auto', 'manual')  -- auto-tracked vs user-followed
+
+  # Entry
+  entry_price: Numeric(12,2)  -- from signal's entry_price
+  entry_date: Date  -- date signal was generated
+  quantity: Integer  -- calculated from virtual capital + position_size_pct, rounded to 100-lot
+  position_value: Numeric(15,2)  -- entry_price × quantity
+
+  # Targets (from signal)
+  stop_loss: Numeric(12,2)
+  stop_loss_current: Numeric(12,2)  -- may change after TP1 hit (moves to breakeven)
+  take_profit_1: Numeric(12,2)
+  take_profit_2: Numeric(12,2)
+  ai_confidence: Integer  -- copied from signal for analytics
+
+  # Status
+  status: Enum('open', 'partial_tp1', 'closed_tp1_only', 'closed_tp2', 'closed_sl', 'closed_timeout', 'closed_manual')
+  
+  # Partial close tracking
+  tp1_hit_date: Date | null
+  tp1_hit_price: Numeric(12,2) | null
+  tp1_pnl: Numeric(15,2) | null  -- P&L on the 50% closed at TP1
+
+  # Final close
+  exit_date: Date | null
+  exit_price: Numeric(12,2) | null
+  exit_reason: String  -- 'tp1', 'tp2', 'sl', 'timeout', 'manual'
+  
+  # Computed P&L
+  realized_pnl: Numeric(15,2) | null  -- total P&L including partial closes
+  realized_pnl_pct: Numeric(8,4) | null  -- % return
+  predicted_rr: Numeric(6,2)  -- from signal's risk_reward_ratio
+  actual_rr: Numeric(6,2) | null  -- computed on close
+
+  # Metadata
+  timeframe_days: Integer  -- max days before timeout (swing=15, position=60)
+  created_at: Timestamp
+  updated_at: Timestamp
+```
+
+**Key design decisions:**
+- `stop_loss_current` separate from `stop_loss` (original) because it changes after TP1 hit
+- `ai_confidence` denormalized from signal for fast analytics queries (avoids joining ai_analyses + parsing JSONB)
+- `source` enum distinguishes auto-tracked from manual — critical for comparing "AI picks all" vs "user cherry-picks"
+- No FIFO lots needed — paper trades are simple position tracking, not tax accounting
+
+### PT-02: Auto-Track Job
+
+**Scheduler integration:** New job `daily_paper_trade_create` chained after `daily_trading_signal_analysis` via existing `EVENT_JOB_EXECUTED` pattern.
+
+**Logic:**
+1. Query today's `ai_analyses` where `analysis_type = 'trading_signal'`
+2. For each signal, extract `recommended_direction` from `raw_response` JSONB
+3. Get the recommended direction's `TradingPlanDetail` (entry, SL, TP1, TP2)
+4. Calculate quantity: `virtual_capital × position_size_pct / 100 / entry_price`, round down to nearest 100
+5. Insert `paper_trade` with status='open'
+6. Skip if paper trade already exists for this signal_id (idempotency)
+
+**Edge cases:**
+- Signal with `score=0` (failed validation): skip — don't track known-bad signals
+- Insufficient virtual capital: skip with warning log (shouldn't happen with reasonable sizing)
+- Signal already has paper trade (re-run protection): upsert with ON CONFLICT DO NOTHING
+
+### PT-03: Daily TP/SL Check Job
+
+**Scheduler integration:** New job `daily_paper_trade_check` chained after `daily_price_crawl` (needs latest prices).
+
+**Logic for each open paper trade:**
+1. Get today's OHLCV for the ticker
+2. **SL check first** (conservative — assume worst case):
+   - LONG: if `low ≤ stop_loss_current` → SL hit
+   - BEARISH: if `high ≥ stop_loss_current` → SL hit (for bearish, SL is above entry)
+3. **TP1 check** (if status='open'):
+   - LONG: if `high ≥ take_profit_1` → TP1 hit
+   - BEARISH: if `low ≤ take_profit_1` → TP1 hit
+4. **TP2 check** (if status='partial_tp1'):
+   - LONG: if `high ≥ take_profit_2` → TP2 hit
+   - BEARISH: if `low ≤ take_profit_2` → TP2 hit
+5. **Timeout check**: if `(today - entry_date).business_days > timeframe_days` → timeout
+
+**SL-first priority rationale:** On a volatile day, both SL and TP could be within the candle range. Checking SL first is the conservative assumption (price hit SL before TP). This is standard practice in paper trading systems and avoids overly optimistic results.
+
+**On TP1 hit:**
+- Close 50% of position at TP1 price
+- Record `tp1_pnl`
+- Set `stop_loss_current = entry_price` (breakeven)
+- Update status → `partial_tp1`
+
+**On TP2 hit:**
+- Close remaining 50% at TP2 price
+- Calculate total `realized_pnl = tp1_pnl + tp2_pnl`
+- Update status → `closed_tp2`
+
+**On SL hit:**
+- If status='open': close 100% at SL → `closed_sl`
+- If status='partial_tp1': close remaining 50% at SL (but SL is now breakeven, so remainder P&L ≈ 0) → `closed_sl`
+
+**On timeout:**
+- Close remaining position at today's close price
+- Calculate P&L at close price
+- Update status → `closed_timeout`
+
+### PT-04: BEARISH Direction Handling
+
+**Critical VN market consideration:** BEARISH signals cannot be short-sold. Two possible interpretations for paper trading:
+
+**Recommended approach — "Avoided Loss" tracking:**
+- BEARISH paper trade entry = the signal's entry_price (the level the AI says confirms bearish thesis)
+- If price drops from entry to TP1 → BEARISH signal was correct → record as WIN with theoretical P&L
+- Track as "loss the user would have incurred by buying" → useful for measuring AI's bearish prediction accuracy
+- Display differently in UI: "⚠️ Lệnh giả lập — xu hướng giảm (không phải bán khống)"
+
+**Why this works:** The goal is measuring AI quality, not simulating real trades. If the AI says "bearish, price will drop from 25,000 to 23,500" and it does, that's a correct prediction regardless of whether user can profit from it. The analytics answer: "AI correctly identified 65% of bearish scenarios" — valuable for knowing when to avoid buying.
+
+### PT-05: Virtual Capital Management
+
+**Settings:**
+```python
+# In Settings class or new paper_trading_settings table
+paper_trading_capital: int = 1_000_000_000  # 1 billion VND
+paper_trading_max_positions: int = 20  # max concurrent open paper trades
+paper_trading_auto_track: bool = True  # can be disabled
+```
+
+**Capital tracking:**
+- Start with initial capital
+- On new trade: deduct `position_value` from available capital
+- On close: add back `position_value + realized_pnl`
+- Track `available_capital` and `invested_capital` separately
+- If available capital < minimum position value (e.g., 10M VND), skip auto-tracking with log
+
+### PT-06: Analytics Computation
+
+**Analytics should be computed on-demand, not pre-aggregated** — the dataset is small (maybe 5-20 signals/day × 30 days = 150-600 trades). SQL queries with proper indexes are instant.
+
+**Core metrics (SQL-computable):**
+```sql
+-- Win rate
+SELECT 
+  COUNT(*) FILTER (WHERE realized_pnl > 0) AS wins,
+  COUNT(*) FILTER (WHERE realized_pnl <= 0) AS losses,
+  COUNT(*) AS total
+FROM paper_trades WHERE status != 'open';
+
+-- By direction
+SELECT direction, 
+  COUNT(*) FILTER (WHERE realized_pnl > 0)::float / COUNT(*) AS win_rate
+FROM paper_trades WHERE status != 'open'
+GROUP BY direction;
+
+-- AI score correlation
+SELECT 
+  CASE WHEN ai_confidence <= 4 THEN 'low'
+       WHEN ai_confidence <= 7 THEN 'medium'
+       ELSE 'high' END AS confidence_bucket,
+  AVG(realized_pnl_pct) AS avg_return,
+  COUNT(*) FILTER (WHERE realized_pnl > 0)::float / COUNT(*) AS win_rate
+FROM paper_trades WHERE status != 'open'
+GROUP BY 1;
+```
+
+**Equity curve:** Requires ordered time-series — query all closed trades ordered by exit_date, compute running sum of realized_pnl.
+
+**Max drawdown:** Computed from equity curve in Python — iterate through equity values, track peak, compute max (peak - current) / peak.
+
+### PT-07: Dashboard Page
+
+**New route: `/dashboard/paper-trading`**
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────┐
+│  PAPER TRADING ANALYTICS                         │
+│                                                  │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐│
+│  │Win Rate │ │Total P&L│ │Drawdown │ │Trades  ││
+│  │  62.3%  │ │+45.2M   │ │ -8.1%   │ │  127   ││
+│  └─────────┘ └─────────┘ └─────────┘ └────────┘│
+│                                                  │
+│  ┌──────────────────────────────────────────────┐│
+│  │ Equity Curve (Recharts AreaChart)            ││
+│  │ [chart with drawdown shading]                 ││
+│  └──────────────────────────────────────────────┘│
+│                                                  │
+│  ┌──────────────────┐ ┌─────────────────────────┐│
+│  │ AI Score vs       │ │ Direction Analysis      ││
+│  │ Performance       │ │ LONG: 68% | BEAR: 51%  ││
+│  │ [bar chart]       │ │ [comparison bars]       ││
+│  └──────────────────┘ └─────────────────────────┘│
+│                                                  │
+│  ┌──────────────────┐ ┌─────────────────────────┐│
+│  │ Calendar Heatmap │ │ Sector Performance      ││
+│  │ [green/red grid]  │ │ [horizontal bar chart]  ││
+│  └──────────────────┘ └─────────────────────────┘│
+│                                                  │
+│  ┌──────────────────────────────────────────────┐│
+│  │ Recent Paper Trades (table)                   ││
+│  │ Symbol | Dir | Entry | Exit | P&L | Status    ││
+│  └──────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## VN Market Constraints on Paper Trading
+
+These constraints from v3.0 research carry forward and affect paper trading design:
+
+| Constraint | Impact on Paper Trading |
+|------------|------------------------|
+| **±7% HOSE daily price band** | SL/TP beyond band cannot trigger intraday. Paper trade check uses daily OHLCV which already accounts for this (high/low are within band). No special handling needed |
+| **T+2 settlement** | Irrelevant for paper trading — no real settlement. But timeframe minimum stays at swing (3+ days) per signal design |
+| **100-share lot size** | Virtual position quantity must round to nearest 100. `quantity = floor(capital × pct / 100 / entry_price / 100) × 100` |
+| **No short selling for retail** | BEARISH paper trades are theoretical tracking, not real short positions. Clearly labeled in UI |
+| **Market hours 9:00-14:45** | Paper trade checks run on daily close (after market). No intraday checks needed for swing/position trades |
 
 ---
 
 ## MVP Recommendation
 
-### Launch With (v3.0 MVP)
+**Phase 1 (Minimum viable paper trading):**
+1. Paper trade data model + migration
+2. Auto-track job (creates paper trades from daily signals)
+3. Daily TP/SL check job with partial TP logic
+4. Basic API endpoints: list paper trades, get summary stats
+5. Telegram notifications on TP/SL hits
 
-- [x] **SIGNAL-08: Database enum migration** — foundation, trivial
-- [x] **SIGNAL-03: ATR computation + extended context** — data prerequisite
-- [x] **SIGNAL-02: Gemini prompt restructure** — core intelligence
-- [x] **SIGNAL-01: Dual-direction analysis** — the headline feature
-- [x] **SIGNAL-04: Trading plan panel** — the headline UI
-- [x] **SIGNAL-05: Position sizing calculator** — immediate practical value, frontend-only
+**Phase 2 (Core analytics dashboard):**
+1. Win rate, total P&L, trade count summary cards
+2. Equity curve chart
+3. Max drawdown calculation
+4. Win rate by direction (LONG vs BEARISH)
+5. AI confidence correlation chart
+6. Paper trading dashboard page
 
-### Add After Validation (v3.x)
+**Phase 3 (Advanced analytics + manual trading):**
+1. Sector analysis
+2. Calendar heatmap
+3. Streak tracking
+4. Manual "follow signal" feature
+5. Signal outcome history on ticker detail page
+6. Profit factor, expected value
 
-- [ ] **SIGNAL-06: Key levels on chart** — high-impact visual, but validate data quality first
-- [ ] **SIGNAL-07: Telegram trading plan alert** — only after plan quality is proven stable
-- [ ] **Historical plan tracking** — track outcomes to build confidence in plan quality
+**Defer entirely:**
+- Slippage/commission: adds false precision for verification purpose
+- Real-time paper P&L: daily check is sufficient for swing/position trades
+- Historical backtesting: explicitly out of scope
+- Multiple virtual accounts: single-user, one account is sufficient
 
-### Future Consideration (v4+)
-
-- [ ] **Sector-relative analysis** — compare plan vs sector momentum
-- [ ] **Plan quality scoring** — automated tracking of TP/SL hit rates over time
-- [ ] **Multi-timeframe plans** — same ticker, different plans for swing vs position
-- [ ] **VN-Index correlation warning** — "Plan may be invalid in broad market selloff"
-
----
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Risk | Priority |
-|---------|-----------|-------------------|------|----------|
-| SIGNAL-01: Dual-direction analysis | HIGH | HIGH | MED (Gemini output quality) | P1 |
-| SIGNAL-02: Gemini prompt restructure | HIGH | MED | MED (prompt engineering iteration) | P1 |
-| SIGNAL-03: Extended context (ATR) | MED | LOW | LOW | P1 |
-| SIGNAL-04: Trading plan panel | HIGH | MED | LOW | P1 |
-| SIGNAL-05: Position sizing calc | HIGH | LOW | LOW | P1 |
-| SIGNAL-06: Chart level overlays | MED | LOW | LOW | P2 |
-| SIGNAL-07: Telegram alert | MED | LOW | LOW | P2 |
-| SIGNAL-08: DB migration | LOW (invisible) | LOW | LOW | P1 (prerequisite) |
-| Historical plan tracking | MED | HIGH | MED (data comparison logic) | P3 |
-| Multiple TP targets (T1/T2/T3) | MED | LOW | LOW | P1 (built into schema) |
-| Price band warnings | MED | LOW | LOW | P1 (built into panel) |
-| Trade invalidation conditions | MED | LOW | LOW | P1 (built into schema) |
+**Rationale for this ordering:**
+- Phase 1 creates data (must exist before analytics are possible)
+- Phase 2 uses that data (needs ~2 weeks of trades to be meaningful)
+- Phase 3 adds depth (needs larger dataset to show statistical patterns)
+- Each phase is independently valuable — Phase 1 alone already answers "did the signal hit TP or SL?"
 
 ---
 
 ## Sources
 
-| Finding | Source | Confidence |
-|---------|--------|------------|
-| HOSE ±7%, HNX ±10%, UPCOM ±15% price band limits | VN stock market domain knowledge (established since HOSE founding 2000) | HIGH — these are foundational exchange rules, stable for 20+ years |
-| T+2 settlement across all VN exchanges | VSD regulation effective ~2022, replacing T+3 for HOSE | HIGH — well-established regulation |
-| Short selling extremely limited in VN retail | SBL framework exists but <5% broker participation | MEDIUM — domain knowledge, not verified against 2026 regulatory changes |
-| Trading sessions: ATO 9:00-9:15, Continuous 9:15-11:30, 13:00-14:30, ATC 14:30-14:45 | Standard HOSE/HNX trading hours | HIGH — stable schedule |
-| Lot size 100 shares minimum | Exchange regulation for HOSE/HNX | HIGH |
-| Existing AIAnalysis model has `raw_response JSONB` column | Direct inspection of `models/ai_analysis.py` line 50 | HIGH |
-| Existing AnalysisType enum: TECHNICAL, FUNDAMENTAL, SENTIMENT, COMBINED | Direct inspection of `models/ai_analysis.py` lines 19-24 | HIGH |
-| Existing Gemini structured output uses Pydantic response_schema | Direct inspection of `schemas/analysis.py` and `ai_analysis_service.py` line 633 | HIGH |
-| `ta` library already installed with ATR support (`ta.volatility.AverageTrueRange`) | `ta` is in requirements.txt; ATR is a standard volatility indicator in the library | HIGH |
-| lightweight-charts supports `createPriceLine()` for horizontal overlays | lightweight-charts API documentation (standard feature since v3) | HIGH |
-| Gemini max_output_tokens currently set to 16384 | Direct inspection of `ai_analysis_service.py` line 635 | HIGH |
-| Existing batch_size = 25, delay = 4.0s between batches | Direct inspection of `config.py` lines 57-58 | HIGH |
-| CombinedRecommendationCard is a prominent component on ticker detail | Direct inspection of `ticker/[symbol]/page.tsx` lines 282-286 | HIGH |
-| MessageFormatter.signal_change() handles signal alerts | Direct inspection of `telegram/formatter.py` lines 158-166 | HIGH |
-| Vietnamese broker fee ~0.15% buy + 0.15% sell + 0.1% tax | VN stock market standard fee structure | MEDIUM — varies by broker tier |
-| Gemini 2.5-flash-lite thinking_budget set to 1024 | Direct inspection of `ai_analysis_service.py` lines 624-625 | HIGH |
-
----
-*Feature research for: v3.0 Smart Trading Signals — Holo Stock Intelligence Platform*
-*Researched: 2026-04-21*
+- **Codebase analysis** (HIGH confidence): Full review of `ai_analyses` model, `TradingPlanDetail`/`DirectionAnalysis`/`TickerTradingSignal` schemas, `Trade`/`Lot` models, scheduler job chaining, `AlertService` notification pattern, `realtime_price_service` market hours logic, frontend components (`trading-plan-panel.tsx`, `performance-chart.tsx`, `holdings-table.tsx`)
+- **VN market rules** (HIGH confidence): Carried forward from v3.0 research — ±7% HOSE band, T+2, 100-lot minimum, no retail short selling
+- **Paper trading domain patterns** (HIGH confidence — training data): SL-first priority, partial TP with breakeven move, timeframe-based timeout, equity curve + drawdown calculation, profit factor, expected value formulas — these are industry-standard practices used by every paper trading platform (TradingView, Thinkorswim, Interactive Brokers paper mode)
+- **Signal verification analytics** (HIGH confidence — training data): AI score correlation analysis, direction-specific performance, sector decomposition — standard patterns for evaluating trading system quality from quantitative finance literature
