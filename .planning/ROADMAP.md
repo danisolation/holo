@@ -150,7 +150,7 @@ Plans:
   4. Weekly and monthly performance summary tables show win rate, P&L, trade count, and average R:R for each period
 **Plans**: 2 plans
 Plans:
-- [ ] 26-01-PLAN.md — Backend analytics endpoints (streaks, timeframe, periodic, calendar) + frontend types/hooks/API
+- [x] 26-01-PLAN.md — Backend analytics endpoints (streaks, timeframe, periodic, calendar) + frontend types/hooks/API
 - [ ] 26-02-PLAN.md — Analytics tab (equity chart, streaks, comparisons) + Calendar tab (heatmap, periodic tables)
 **UI hint**: yes
 
@@ -164,4 +164,4 @@ Plans:
 | 23. Position Monitoring & Auto-Track | 2/2 | Complete   | 2026-04-20 |
 | 24. API & Analytics Engine | 2/2 | Complete   | 2026-04-20 |
 | 25. Dashboard Structure & Trade Management | 2/2 | Complete   | 2026-04-20 |
-| 26. Analytics Visualization & Calendar | 0/TBD | Not started | - |
+| 26. Analytics Visualization & Calendar | 1/2 | In Progress|  |

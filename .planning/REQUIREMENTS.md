@@ -32,11 +32,11 @@
 ### Advanced Analytics & UI (UI)
 
 - [x] **UI-01**: Dashboard page riêng cho paper trading với các tab: Overview, Trades, Analytics, Calendar, Settings
-- [ ] **UI-02**: Calendar heatmap (GitHub-style) — xanh ngày thắng, đỏ ngày thua, intensity theo magnitude
-- [ ] **UI-03**: Streak tracking — hiển thị chuỗi thắng/thua hiện tại và dài nhất, cảnh báo khi streak thua >5
-- [ ] **UI-04**: Phân tích theo timeframe (swing vs position) — so sánh win rate
+- [x] **UI-02**: Calendar heatmap (GitHub-style) — xanh ngày thắng, đỏ ngày thua, intensity theo magnitude
+- [x] **UI-03**: Streak tracking — hiển thị chuỗi thắng/thua hiện tại và dài nhất, cảnh báo khi streak thua >5
+- [x] **UI-04**: Phân tích theo timeframe (swing vs position) — so sánh win rate
 - [x] **UI-05**: Signal outcome history trên ticker detail page — 10 signal gần nhất với icon kết quả (✅/❌)
-- [ ] **UI-06**: Weekly/monthly performance summary table — win rate, P&L, trade count, avg R:R theo tuần/tháng
+- [x] **UI-06**: Weekly/monthly performance summary table — win rate, P&L, trade count, avg R:R theo tuần/tháng
 - [x] **UI-07**: Trade list table (sortable, filterable) — symbol, direction, entry, exit, P&L, status, AI score
 - [x] **UI-08**: Settings form — cấu hình vốn ban đầu, auto-track on/off, min confidence threshold
 
@@ -80,11 +80,11 @@
 | AN-08 | Phase 24 | Complete |
 | AN-09 | Phase 24 | Complete |
 | UI-01 | Phase 25 | Complete |
-| UI-02 | Phase 26 | Pending |
-| UI-03 | Phase 26 | Pending |
-| UI-04 | Phase 26 | Pending |
+| UI-02 | Phase 26 | Complete |
+| UI-03 | Phase 26 | Complete |
+| UI-04 | Phase 26 | Complete |
 | UI-05 | Phase 25 | Complete |
-| UI-06 | Phase 26 | Pending |
+| UI-06 | Phase 26 | Complete |
 | UI-07 | Phase 25 | Complete |
 | UI-08 | Phase 25 | Complete |
 
