@@ -163,6 +163,7 @@ class AnalysisResultResponse(BaseModel):
     score: int
     reasoning: str
     model_version: str
+    raw_response: dict | None = None  # Phase 20: full structured data for trading signals
 
 
 class AnalysisTriggerResponse(BaseModel):

@@ -360,6 +360,7 @@ async def get_trading_signal(symbol: str):
             score=analysis.score,
             reasoning=analysis.reasoning,
             model_version=analysis.model_version,
+            raw_response=analysis.raw_response,  # Phase 20: expose full TickerTradingSignal JSONB
         )
 
 
