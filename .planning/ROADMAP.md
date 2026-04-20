@@ -59,7 +59,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 - [x] **Phase 18: Support & Resistance Levels** — Pivot points, Fibonacci retracements (completed 2026-04-20)
 - [x] **Phase 19: AI Trading Signal Pipeline** — Dual-direction schema, Gemini prompt, batch processing (3 plans) (completed 2026-04-20)
 - [x] **Phase 20: Trading Plan Dashboard Panel** — Trading plan component on ticker detail page (completed 2026-04-20)
-- [ ] **Phase 21: Chart Price Line Overlays** — Entry/SL/TP lines on candlestick chart
+- [x] **Phase 21: Chart Price Line Overlays** — Entry/SL/TP lines on candlestick chart (completed 2026-04-20)
 
 ## Phase Details
 
@@ -132,7 +132,7 @@ Plans:
   3. Price lines update automatically when the user navigates between tickers or when new trading signals are generated
 **Plans**: 1 plan
 Plans:
-- [ ] 21-01-PLAN.md — Price line overlays on candlestick chart + page data flow
+- [x] 21-01-PLAN.md — Price line overlays on candlestick chart + page data flow
 **UI hint**: yes
 
 ## Progress
@@ -145,4 +145,4 @@ Plans:
 | 18. Support & Resistance Levels | 2/2 | Complete   | 2026-04-20 |
 | 19. AI Trading Signal Pipeline | 3/3 | Complete   | 2026-04-20 |
 | 20. Trading Plan Dashboard Panel | 2/2 | Complete   | 2026-04-20 |
-| 21. Chart Price Line Overlays | 0/0 | Not started | - |
+| 21. Chart Price Line Overlays | 1/1 | Complete   | 2026-04-20 |

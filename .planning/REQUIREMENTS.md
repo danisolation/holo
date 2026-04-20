@@ -27,7 +27,7 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 ### Dashboard Display
 
 - [x] **DISP-01**: User can view a Trading Plan panel on the ticker detail page showing full LONG and BEARISH analysis
-- [ ] **DISP-02**: User can see entry/stop-loss/take-profit price lines overlaid on the candlestick chart
+- [x] **DISP-02**: User can see entry/stop-loss/take-profit price lines overlaid on the candlestick chart
 
 ## Future Requirements
 
@@ -72,7 +72,7 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 | PLAN-05 | Phase 19 | Complete |
 | PLAN-06 | Phase 19 | Complete |
 | DISP-01 | Phase 20 | Complete |
-| DISP-02 | Phase 21 | Pending |
+| DISP-02 | Phase 21 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total
