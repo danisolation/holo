@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, patch, MagicMock
 class TestComputeIndicators:
     """Test the pure computation function (no DB needed)."""
 
-    def test_returns_18_indicators(self):
-        """_compute_indicators must return exactly 18 named indicator Series."""
+    def test_returns_27_indicators(self):
+        """_compute_indicators must return exactly 27 named indicator Series."""
         from app.services.indicator_service import IndicatorService
         svc = IndicatorService.__new__(IndicatorService)
         close = pd.Series([float(i + 10) for i in range(300)])
@@ -22,6 +22,10 @@ class TestComputeIndicators:
             "bb_upper", "bb_middle", "bb_lower",
             "atr_14", "adx_14", "plus_di_14", "minus_di_14",
             "stoch_k_14", "stoch_d_14",
+            # Phase 18: Support & Resistance
+            "pivot_point", "support_1", "support_2",
+            "resistance_1", "resistance_2",
+            "fib_236", "fib_382", "fib_500", "fib_618",
         }
         assert set(result.keys()) == expected_keys
 
@@ -115,7 +119,68 @@ class TestComputeIndicators:
         low = close - 2.0
         result = svc._compute_indicators(close, high, low)
         assert isinstance(result, dict)
-        assert len(result) == 18
+        assert len(result) == 27
+
+    def test_pivot_point_uses_previous_day(self):
+        """Pivot point at index 1 uses previous day's H/L/C; index 0 is NaN."""
+        from app.services.indicator_service import IndicatorService
+        svc = IndicatorService.__new__(IndicatorService)
+        close = pd.Series([100.0 + i * 10.0 for i in range(300)])
+        high = close + 5.0
+        low = close - 5.0
+        result = svc._compute_indicators(close, high, low)
+        # Index 0: no prior day → NaN
+        assert pd.isna(result["pivot_point"].iloc[0])
+        # Index 1: PP = (high[0] + low[0] + close[0]) / 3 = (105 + 95 + 100) / 3 = 100.0
+        assert result["pivot_point"].iloc[1] == pytest.approx(100.0)
+
+    def test_pivot_support_resistance_formulas(self):
+        """Classic pivot S1/R1/S2/R2 formulas verified at index 1."""
+        from app.services.indicator_service import IndicatorService
+        svc = IndicatorService.__new__(IndicatorService)
+        close = pd.Series([100.0 + i * 10.0 for i in range(300)])
+        high = close + 5.0
+        low = close - 5.0
+        result = svc._compute_indicators(close, high, low)
+        # At index 1: prev_high=105, prev_low=95, prev_close=100
+        # PP = (105+95+100)/3 = 100.0
+        # S1 = 2*PP - prev_high = 200 - 105 = 95.0
+        # R1 = 2*PP - prev_low  = 200 - 95  = 105.0
+        # S2 = PP - (prev_high - prev_low) = 100 - 10 = 90.0
+        # R2 = PP + (prev_high - prev_low) = 100 + 10 = 110.0
+        assert result["support_1"].iloc[1] == pytest.approx(95.0)
+        assert result["resistance_1"].iloc[1] == pytest.approx(105.0)
+        assert result["support_2"].iloc[1] == pytest.approx(90.0)
+        assert result["resistance_2"].iloc[1] == pytest.approx(110.0)
+
+    def test_fibonacci_20day_warmup(self):
+        """Fibonacci levels are NaN for first 19 rows (rolling(20) needs 19 prior)."""
+        from app.services.indicator_service import IndicatorService
+        svc = IndicatorService.__new__(IndicatorService)
+        close = pd.Series([float(i + 10) for i in range(300)])
+        high = close + 2.0
+        low = close - 2.0
+        result = svc._compute_indicators(close, high, low)
+        # Index 18 (19th row): only 19 data points → NaN
+        assert pd.isna(result["fib_236"].iloc[18])
+        # Index 19 (20th row): rolling(20) has exactly 20 values → should have value
+        assert not pd.isna(result["fib_236"].iloc[19])
+
+    def test_fibonacci_level_ordering(self):
+        """For non-NaN rows, fib_236 < fib_382 < fib_500 < fib_618."""
+        from app.services.indicator_service import IndicatorService
+        svc = IndicatorService.__new__(IndicatorService)
+        close = pd.Series([float(i + 10) for i in range(300)])
+        high = close + 2.0
+        low = close - 2.0
+        result = svc._compute_indicators(close, high, low)
+        # Check at row 19+ where Fibonacci levels exist
+        for idx in [19, 50, 100, 200]:
+            f236 = result["fib_236"].iloc[idx]
+            f382 = result["fib_382"].iloc[idx]
+            f500 = result["fib_500"].iloc[idx]
+            f618 = result["fib_618"].iloc[idx]
+            assert f236 < f382 < f500 < f618, f"Fibonacci ordering violated at index {idx}"
 
 
 class TestSafeDecimal:

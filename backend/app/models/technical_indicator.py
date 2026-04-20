@@ -57,6 +57,19 @@ class TechnicalIndicator(Base):
     stoch_k_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
     stoch_d_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
 
+    # Phase 18: Classic Pivot Points (S/R)
+    pivot_point: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    support_1: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    support_2: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    resistance_1: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    resistance_2: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+
+    # Phase 18: Fibonacci Retracement Levels
+    fib_236: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    fib_382: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    fib_500: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    fib_618: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
