@@ -1,5 +1,16 @@
 # Milestones
 
+## v3.0 Smart Trading Signals (Shipped: 2026-04-20)
+
+**Phases completed:** 5 phases, 10 plans, 12 tasks
+
+**Key accomplishments:**
+
+- Commit:
+- Commit:
+
+---
+
 ## v2.0 Full Coverage & Real-Time (Shipped: 2026-04-20)
 
 **Phases completed:** 5 phases, 18 plans, 18 tasks
