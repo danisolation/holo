@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Paper Trading & Signal Verification
 status: executing
-last_updated: "2026-04-20T08:12:34.376Z"
-last_activity: 2026-04-20 — Completed 23-01 auto-track scheduler job
+last_updated: "2026-04-20T08:18:26.625Z"
+last_activity: 2026-04-20
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 23 of 26 (Position Monitoring & Auto-Track)
-Plan: 1 of 2
-Status: Executing
-Last activity: 2026-04-20 — Completed 23-01 auto-track scheduler job
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-20
 
 ```
 [██░░░░░░░░░░░░░░░░░░] 10%
@@ -51,6 +51,7 @@ Last activity: 2026-04-20 — Completed 23-01 auto-track scheduler job
 | 23 | 01 | 2 min | 1 | 3 |
 
 *Updated after each plan completion*
+| Phase 23 P02 | 3 min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ All v1.0–v3.0 decisions archived in PROJECT.md Key Decisions table.
 - Calendar heatmap via react-activity-calendar npm package (only new frontend dep)
 - BEARISH tracks prediction accuracy, not synthetic short P&L (VN no retail short)
 - [Phase 23]: Auto-track chains after daily_trading_signal_triggered parallel with alert/hnx jobs; never-raises pattern
+- [Phase 23]: SL checked FIRST on every bar — ambiguous bars resolve to SL (conservative fill assumption)
+- [Phase 23]: Gap-through fills at open price, not SL/TP level; timeout uses trading day count from daily_prices
 
 ### Pending Todos
 
