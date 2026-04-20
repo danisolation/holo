@@ -60,24 +60,24 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIG-01 | — | Pending |
-| SIG-02 | — | Pending |
-| SIG-03 | — | Pending |
-| SIG-04 | — | Pending |
-| SIG-05 | — | Pending |
-| PLAN-01 | — | Pending |
-| PLAN-02 | — | Pending |
-| PLAN-03 | — | Pending |
-| PLAN-04 | — | Pending |
-| PLAN-05 | — | Pending |
-| PLAN-06 | — | Pending |
-| DISP-01 | — | Pending |
-| DISP-02 | — | Pending |
+| SIG-01 | Phase 17 | Pending |
+| SIG-02 | Phase 17 | Pending |
+| SIG-03 | Phase 17 | Pending |
+| SIG-04 | Phase 18 | Pending |
+| SIG-05 | Phase 18 | Pending |
+| PLAN-01 | Phase 19 | Pending |
+| PLAN-02 | Phase 19 | Pending |
+| PLAN-03 | Phase 19 | Pending |
+| PLAN-04 | Phase 19 | Pending |
+| PLAN-05 | Phase 19 | Pending |
+| PLAN-06 | Phase 19 | Pending |
+| DISP-01 | Phase 20 | Pending |
+| DISP-02 | Phase 21 | Pending |
 
 **Coverage:**
 - v1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-20*
