@@ -75,7 +75,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 **Plans**: 2 plans
 Plans:
 - [ ] 17-01-PLAN.md — Backend: Tests + DB migration + indicator computation + API
-- [ ] 17-02-PLAN.md — Frontend: shadcn Accordion + 3 new chart components
+- [x] 17-02-PLAN.md — Frontend: shadcn Accordion + 3 new chart components
 **UI hint**: yes
 
 ### Phase 18: Support & Resistance Levels
@@ -129,7 +129,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 17. Enhanced Technical Indicators | 0/0 | Not started | - |
+| 17. Enhanced Technical Indicators | 1/2 | In Progress|  |
 | 18. Support & Resistance Levels | 0/0 | Not started | - |
 | 19. AI Trading Signal Pipeline | 0/0 | Not started | - |
 | 20. Trading Plan Dashboard Panel | 0/0 | Not started | - |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Smart Trading Signals
-status: roadmap_created
-last_updated: "2026-04-20T03:00:00.000Z"
-last_activity: 2026-04-20
+status: Roadmap created, awaiting `/gsd-plan-phase 17`
+last_updated: "2026-04-20T03:25:50.084Z"
+last_activity: 2026-04-20 — Roadmap created for v3.0
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 50
 ---
 
 # Project State
@@ -58,12 +58,14 @@ Last activity: 2026-04-20 — Roadmap created for v3.0
 All v1.0/v1.1/v2.0 decisions archived in PROJECT.md Key Decisions table.
 
 **v3.0 roadmap decisions:**
+
 - 5 phases derived from 13 requirements across 3 categories (SIG, PLAN, DISP)
 - Phase ordering follows research: Indicators → S/R → Pipeline → Panel → Overlay
 - BEARISH (not SHORT) framing for VN market where retail short selling is unavailable
 - Swing/position timeframes only — no scalp due to T+2.5 settlement
 - Gemini batch size reduced to ~15 tickers for trading signals (5th analysis type) to manage token budget
 - Pre-computed S/R levels fed to Gemini prompt to prevent hallucinated price targets
+- [Phase 17-enhanced-technical-indicators]: Adapted shadcn Accordion from radix API to base-ui API (multiple prop instead of type=multiple)
 
 ### Pending Todos
 

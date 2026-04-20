@@ -9,9 +9,9 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 
 ### Signal Foundation
 
-- [ ] **SIG-01**: User can view ATR (Average True Range) indicator value for any ticker
-- [ ] **SIG-02**: User can view ADX (trend strength) indicator value for any ticker
-- [ ] **SIG-03**: User can view Stochastic oscillator value for any ticker
+- [x] **SIG-01**: User can view ATR (Average True Range) indicator value for any ticker
+- [x] **SIG-02**: User can view ADX (trend strength) indicator value for any ticker
+- [x] **SIG-03**: User can view Stochastic oscillator value for any ticker
 - [ ] **SIG-04**: User can view support/resistance levels (pivot points) for any ticker
 - [ ] **SIG-05**: User can view Fibonacci retracement levels for any ticker
 
@@ -60,9 +60,9 @@ Requirements for v3.0 release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIG-01 | Phase 17 | Pending |
-| SIG-02 | Phase 17 | Pending |
-| SIG-03 | Phase 17 | Pending |
+| SIG-01 | Phase 17 | Complete |
+| SIG-02 | Phase 17 | Complete |
+| SIG-03 | Phase 17 | Complete |
 | SIG-04 | Phase 18 | Pending |
 | SIG-05 | Phase 18 | Pending |
 | PLAN-01 | Phase 19 | Pending |
