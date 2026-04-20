@@ -440,10 +440,51 @@ async def daily_combined_analysis():
             raise
 
 
+async def daily_trading_signal_analysis():
+    """Run Gemini trading signal analysis with DLQ.
+
+    Phase 19: Generates dual-direction (LONG + BEARISH) trading plans.
+    Triggered after daily_combined_analysis via job chaining.
+    Requires GEMINI_API_KEY to be set.
+    """
+    logger.info("=== DAILY TRADING SIGNAL ANALYSIS START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_trading_signal_analysis")
+        try:
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            results = await service.analyze_all_tickers(analysis_type="trading_signal")
+
+            result = _sum_ai_results(results)
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_trading_signal_analysis", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY TRADING SIGNAL ANALYSIS COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete trading signal analysis failure")
+
+        except ValueError as e:
+            await job_svc.complete(execution, status="skipped", result_summary={"reason": str(e)})
+            await session.commit()
+            logger.warning(f"=== DAILY TRADING SIGNAL ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY TRADING SIGNAL ANALYSIS FAILED: {e} ===")
+            raise
+
+
 async def daily_signal_alert_check():
     """Check watched tickers for signal changes and send Telegram alerts.
 
-    Triggered after daily_combined_analysis via job chaining.
+    Triggered after daily_trading_signal_analysis via job chaining.
     Never raises — alert failure must not break the pipeline (D-3.4).
     """
     logger.info("=== DAILY SIGNAL ALERT CHECK START ===")
