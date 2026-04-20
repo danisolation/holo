@@ -48,7 +48,7 @@ Exceptions: none — follows existing ticker detail page spacing (`space-y-6` se
 | Role | Size | Weight | Line Height | Font | Usage in this phase |
 |------|------|--------|-------------|------|---------------------|
 | Body | 14px | 400 (regular) | 1.5 (leading-relaxed) | Geist Sans | Vietnamese rationale text |
-| Label | 12px | 500 (medium) | 1.4 | Geist Sans | Row labels ("Giá vào", "Cắt lỗ", etc.) |
+| Label | 12px | 400 (regular) | 1.4 | Geist Sans | Row labels ("Giá vào", "Cắt lỗ", etc.) |
 | Heading | 18px | 600 (semibold) | 1.2 | Geist Sans | Panel title "Kế Hoạch Giao Dịch" |
 | Caption | 10px | 600 (semibold) | 1.2 | Geist Sans | Column subheadings ("LONG", "XU HƯỚNG GIẢM"), uppercase tracking-wider |
 | Mono | 14px | 600 (semibold) | 1.0 | Geist Mono | Price values, R:R ratio, percentages |
