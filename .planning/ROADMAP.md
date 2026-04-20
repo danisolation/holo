@@ -130,7 +130,9 @@ Plans:
   1. User can see entry price, stop-loss, and take-profit as distinct colored horizontal lines overlaid on the candlestick chart
   2. Price lines are visually distinguishable with different colors and labels (e.g., green entry, red stop-loss, blue take-profit)
   3. Price lines update automatically when the user navigates between tickers or when new trading signals are generated
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 21-01-PLAN.md — Price line overlays on candlestick chart + page data flow
 **UI hint**: yes
 
 ## Progress
