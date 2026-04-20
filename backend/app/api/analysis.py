@@ -227,6 +227,13 @@ async def get_ticker_indicators(symbol: str, limit: int = 5):
                 bb_upper=float(row.bb_upper) if row.bb_upper is not None else None,
                 bb_middle=float(row.bb_middle) if row.bb_middle is not None else None,
                 bb_lower=float(row.bb_lower) if row.bb_lower is not None else None,
+                # Phase 17: new indicators
+                atr_14=float(row.atr_14) if row.atr_14 is not None else None,
+                adx_14=float(row.adx_14) if row.adx_14 is not None else None,
+                plus_di_14=float(row.plus_di_14) if row.plus_di_14 is not None else None,
+                minus_di_14=float(row.minus_di_14) if row.minus_di_14 is not None else None,
+                stoch_k_14=float(row.stoch_k_14) if row.stoch_k_14 is not None else None,
+                stoch_d_14=float(row.stoch_d_14) if row.stoch_d_14 is not None else None,
             )
             for row in rows
         ]

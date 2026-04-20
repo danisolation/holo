@@ -141,6 +141,13 @@ class IndicatorResponse(BaseModel):
     bb_upper: float | None = None
     bb_middle: float | None = None
     bb_lower: float | None = None
+    # Phase 17: Volatility, Trend Strength, Momentum
+    atr_14: float | None = None
+    adx_14: float | None = None
+    plus_di_14: float | None = None
+    minus_di_14: float | None = None
+    stoch_k_14: float | None = None
+    stoch_d_14: float | None = None
 
 
 class SummaryResponse(BaseModel):
