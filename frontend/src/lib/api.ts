@@ -36,6 +36,13 @@ export interface IndicatorData {
   bb_upper: number | null;
   bb_middle: number | null;
   bb_lower: number | null;
+  // Phase 17: Volatility, Trend Strength, Momentum
+  atr_14: number | null;
+  adx_14: number | null;
+  plus_di_14: number | null;
+  minus_di_14: number | null;
+  stoch_k_14: number | null;
+  stoch_d_14: number | null;
 }
 
 export interface AnalysisResult {
