@@ -1,5 +1,15 @@
 # Milestones
 
+## v2.0 Full Coverage & Real-Time (Shipped: 2026-04-20)
+
+**Phases completed:** 5 phases, 18 plans, 18 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v1.0 Holo Stock Intelligence Platform (Shipped: 2026-04-15)
 
 **Phases completed:** 5 phases, 15 plans
