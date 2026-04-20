@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { ExchangeBadge } from "@/components/exchange-badge";
 import { CandlestickChart } from "@/components/candlestick-chart";
 import { IndicatorChart } from "@/components/indicator-chart";
+import { SupportResistanceCard } from "@/components/support-resistance-card";
 import {
   AnalysisCard,
   CombinedRecommendationCard,
@@ -270,6 +271,20 @@ export default function TickerDetailPage({
         ) : (
           <div className="text-sm text-muted-foreground">
             Không có dữ liệu chỉ báo
+          </div>
+        )}
+      </section>
+
+      {/* Support & Resistance Levels */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Hỗ trợ & Kháng cự</h2>
+        {indicatorsLoading ? (
+          <Skeleton className="h-[220px] rounded-xl" />
+        ) : indicatorData ? (
+          <SupportResistanceCard indicatorData={indicatorData} />
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            Không có dữ liệu hỗ trợ & kháng cự
           </div>
         )}
       </section>
