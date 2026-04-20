@@ -22,6 +22,7 @@ class AnalysisType(str, enum.Enum):
     FUNDAMENTAL = "fundamental"
     SENTIMENT = "sentiment"  # Phase 3 — included now for forward compatibility
     COMBINED = "combined"    # Phase 3 — holistic mua/bán/giữ recommendation
+    TRADING_SIGNAL = "trading_signal"  # Phase 19 — dual-direction trading plan
 
 
 class AIAnalysis(Base):

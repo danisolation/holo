@@ -85,5 +85,10 @@ class Settings(BaseSettings):
     realtime_poll_interval: int = 30  # seconds between VCI price polls
     realtime_max_symbols: int = 50  # max symbols per poll request
 
+    # Trading Signal Pipeline (Phase 19)
+    trading_signal_batch_size: int = 15    # Reduced from 25 — larger output per ticker
+    trading_signal_thinking_budget: int = 2048  # Doubled from 1024 — complex dual-direction reasoning
+    trading_signal_max_tokens: int = 32768     # Doubled from 16384 — ~300 tokens/ticker × 15 tickers
+
 
 settings = Settings()

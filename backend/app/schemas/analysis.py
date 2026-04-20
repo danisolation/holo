@@ -106,6 +106,52 @@ class CombinedBatchResponse(BaseModel):
     analyses: list[TickerCombinedAnalysis]
 
 
+# --- Trading Signal Schemas (Phase 19) ---
+
+class Direction(str, Enum):
+    """Trading signal direction. BEARISH = bearish outlook (NOT literal short-selling per VN market)."""
+    LONG = "long"
+    BEARISH = "bearish"
+
+
+class Timeframe(str, Enum):
+    """Trading timeframe. NO intraday/scalp — VN T+2.5 settlement."""
+    SWING = "swing"        # 3-15 days
+    POSITION = "position"  # weeks+
+
+
+class TradingPlanDetail(BaseModel):
+    """Concrete entry/SL/TP targets for one direction."""
+    entry_price: float
+    stop_loss: float
+    take_profit_1: float
+    take_profit_2: float
+    risk_reward_ratio: float = Field(ge=0.5)
+    position_size_pct: int = Field(ge=1, le=100)
+    timeframe: Timeframe
+
+
+class DirectionAnalysis(BaseModel):
+    """Analysis for one direction (LONG or BEARISH)."""
+    direction: Direction
+    confidence: int = Field(ge=1, le=10)
+    trading_plan: TradingPlanDetail
+    reasoning: str = Field(description="Vietnamese explanation, max 300 chars")
+
+
+class TickerTradingSignal(BaseModel):
+    """Dual-direction trading signal for one ticker."""
+    ticker: str
+    recommended_direction: Direction
+    long_analysis: DirectionAnalysis
+    bearish_analysis: DirectionAnalysis
+
+
+class TradingSignalBatchResponse(BaseModel):
+    """Batch response for trading signal analysis."""
+    signals: list[TickerTradingSignal]
+
+
 # --- API Response Schemas ---
 
 class AnalysisResultResponse(BaseModel):
