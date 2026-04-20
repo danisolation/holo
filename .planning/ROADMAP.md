@@ -10,7 +10,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v1.1 Reliability & Portfolio** — Phases 6-11 (shipped 2026-04-17)
 - ✅ **v2.0 Full Coverage & Real-Time** — Phases 12-16 (shipped 2026-04-17)
 - ✅ **v3.0 Smart Trading Signals** — Phases 17-21 (shipped 2026-04-20)
-- 🚧 **v4.0 Paper Trading & Signal Verification** — Phases 22-26 (in progress)
+- ✅ **v4.0 Paper Trading & Signal Verification** — Phases 22-26 (shipped)
 
 ## Phases
 
@@ -67,7 +67,7 @@ Full details: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
 
 </details>
 
-### 🚧 v4.0 Paper Trading & Signal Verification (In Progress)
+### ✅ v4.0 Paper Trading & Signal Verification (Shipped)
 
 **Milestone Goal:** Kiểm chứng chất lượng tư vấn AI bằng giả lập trading — mọi signal thành lệnh ảo có thể đo lường.
 

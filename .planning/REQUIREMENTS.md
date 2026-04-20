@@ -8,12 +8,12 @@
 ### Paper Trading Engine (PT)
 
 - [x] **PT-01**: Hệ thống tự động tạo paper trade cho mỗi AI trading signal (LONG/BEARISH) với entry/SL/TP từ signal
-- [ ] **PT-02**: Paper trade có lifecycle đầy đủ: PENDING → ACTIVE → PARTIAL_TP → CLOSED (TP2/SL/TIMEOUT)
-- [ ] **PT-03**: Khi giá chạm TP1, tự động chốt 50% vị thế và dời SL về entry (breakeven)
+- [x] **PT-02**: Paper trade có lifecycle đầy đủ: PENDING → ACTIVE → PARTIAL_TP → CLOSED (TP2/SL/TIMEOUT)
+- [x] **PT-03**: Khi giá chạm TP1, tự động chốt 50% vị thế và dời SL về entry (breakeven)
 - [x] **PT-04**: Khi hết timeframe (swing: 15 ngày, position: 60 ngày), tự động đóng lệnh theo giá close
-- [ ] **PT-05**: Vốn giả lập tùy chỉnh, position sizing theo AI recommendation, round 100-share lots
+- [x] **PT-05**: Vốn giả lập tùy chỉnh, position sizing theo AI recommendation, round 100-share lots
 - [x] **PT-06**: Scheduler job kiểm tra TP/SL hàng ngày sau khi crawl giá — SL ưu tiên khi cùng bar chạm cả SL và TP
-- [ ] **PT-07**: Tính P&L mỗi lệnh (VND + %) bao gồm partial TP — entry tại open ngày D+1 (tránh lookahead bias)
+- [x] **PT-07**: Tính P&L mỗi lệnh (VND + %) bao gồm partial TP — entry tại open ngày D+1 (tránh lookahead bias)
 - [x] **PT-08**: Loại bỏ signal score=0 (invalid) khỏi auto-track
 - [x] **PT-09**: User có thể manual follow signal với nút "Follow" — tùy chỉnh entry/SL/TP trước khi mở lệnh ảo
 
@@ -62,12 +62,12 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PT-01 | Phase 23 | Complete |
-| PT-02 | Phase 22 | Pending |
-| PT-03 | Phase 22 | Pending |
+| PT-02 | Phase 22 | Complete |
+| PT-03 | Phase 22 | Complete |
 | PT-04 | Phase 23 | Complete |
-| PT-05 | Phase 22 | Pending |
+| PT-05 | Phase 22 | Complete |
 | PT-06 | Phase 23 | Complete |
-| PT-07 | Phase 22 | Pending |
+| PT-07 | Phase 22 | Complete |
 | PT-08 | Phase 23 | Complete |
 | PT-09 | Phase 24 | Complete |
 | AN-01 | Phase 24 | Complete |

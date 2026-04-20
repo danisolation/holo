@@ -325,7 +325,7 @@ export default function TickerDetailPage({
         <Skeleton className="h-[320px] rounded-xl" />
       ) : tradingSignal ? (
         <section>
-          <TradingPlanPanel data={tradingSignal} />
+          <TradingPlanPanel data={tradingSignal} symbol={upperSymbol} />
         </section>
       ) : null}
 

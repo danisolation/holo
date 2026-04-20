@@ -35,6 +35,8 @@ import {
   fetchPaperConfig,
   updatePaperConfig,
   fetchPaperAnalyticsSummary,
+  createManualFollow,
+  type ManualFollowRequest,
   type SimulationConfigUpdateRequest,
   fetchPaperEquityCurve,
   fetchPaperDrawdown,
@@ -384,6 +386,17 @@ export function useClosePaperTrade() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (tradeId: number) => closePaperTrade(tradeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["paper-trades"] });
+      queryClient.invalidateQueries({ queryKey: ["paper-analytics-summary"] });
+    },
+  });
+}
+
+export function useCreateManualFollow() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ManualFollowRequest) => createManualFollow(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["paper-trades"] });
       queryClient.invalidateQueries({ queryKey: ["paper-analytics-summary"] });

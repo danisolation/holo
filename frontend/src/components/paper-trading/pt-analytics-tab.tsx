@@ -8,6 +8,7 @@ import {
   usePaperConfidence,
   usePaperRiskReward,
   usePaperProfitFactor,
+  usePaperSector,
 } from "@/lib/hooks";
 import { PTEquityChart } from "./pt-equity-chart";
 import { PTStreakCards } from "./pt-streak-cards";
@@ -249,6 +250,78 @@ function RiskRewardCard() {
   );
 }
 
+/* ---------- Sector Analysis (AN-09) ---------- */
+
+function SectorCard() {
+  const { data, isLoading } = usePaperSector();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">
+          Phân tích theo ngành
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-32 w-full rounded-lg" />
+        ) : !data?.length ? (
+          <p className="text-sm text-muted-foreground">Chưa có dữ liệu.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="text-left py-2 font-medium">Ngành</th>
+                  <th className="text-right py-2 font-medium">Lệnh</th>
+                  <th className="text-right py-2 font-medium">Win Rate</th>
+                  <th className="text-right py-2 font-medium">Tổng P&L</th>
+                  <th className="text-right py-2 font-medium">TB P&L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((item) => (
+                  <tr
+                    key={item.sector}
+                    className="border-b last:border-0"
+                  >
+                    <td className="py-2 font-medium">{item.sector}</td>
+                    <td className="py-2 text-right">{item.total_trades}</td>
+                    <td className="py-2 text-right">
+                      <Badge
+                        variant={item.win_rate >= 50 ? "default" : "destructive"}
+                        className="text-xs"
+                      >
+                        {item.win_rate.toFixed(1)}%
+                      </Badge>
+                    </td>
+                    <td
+                      className={`py-2 text-right font-mono ${
+                        item.total_pnl >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"
+                      }`}
+                    >
+                      {item.total_pnl >= 0 ? "+" : ""}
+                      {formatVND(item.total_pnl)}
+                    </td>
+                    <td
+                      className={`py-2 text-right font-mono ${
+                        item.avg_pnl >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"
+                      }`}
+                    >
+                      {item.avg_pnl >= 0 ? "+" : ""}
+                      {formatVND(item.avg_pnl)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ---------- Analytics Tab Container ---------- */
 
 export function PTAnalyticsTab() {
@@ -269,7 +342,10 @@ export function PTAnalyticsTab() {
       {/* 4. Timeframe comparison — full width */}
       <PTTimeframeCompare />
 
-      {/* 5. Profit Factor + R:R */}
+      {/* 5. Sector analysis — full width (AN-09) */}
+      <SectorCard />
+
+      {/* 6. Profit Factor + R:R */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ProfitFactorCard />
         <RiskRewardCard />

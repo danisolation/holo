@@ -675,6 +675,25 @@ export async function fetchPaperAnalyticsSummary(): Promise<AnalyticsSummaryResp
   return apiFetch<AnalyticsSummaryResponse>("/paper-trading/analytics/summary");
 }
 
+export interface ManualFollowRequest {
+  symbol: string;
+  direction: "long" | "bearish";
+  entry_price: number;
+  stop_loss: number;
+  take_profit_1: number;
+  take_profit_2: number;
+  timeframe: "swing" | "position";
+  confidence: number;
+  position_size_pct: number;
+}
+
+export async function createManualFollow(data: ManualFollowRequest): Promise<PaperTradeResponse> {
+  return apiFetch<PaperTradeResponse>("/paper-trading/trades/follow", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 // --- Paper Trading Analytics Types (Phase 26) ---
 
 export interface EquityCurvePoint {
