@@ -148,6 +148,16 @@ class IndicatorResponse(BaseModel):
     minus_di_14: float | None = None
     stoch_k_14: float | None = None
     stoch_d_14: float | None = None
+    # Phase 18: Support & Resistance
+    pivot_point: float | None = None
+    support_1: float | None = None
+    support_2: float | None = None
+    resistance_1: float | None = None
+    resistance_2: float | None = None
+    fib_236: float | None = None
+    fib_382: float | None = None
+    fib_500: float | None = None
+    fib_618: float | None = None
 
 
 class SummaryResponse(BaseModel):

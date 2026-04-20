@@ -234,6 +234,16 @@ async def get_ticker_indicators(symbol: str, limit: int = 5):
                 minus_di_14=float(row.minus_di_14) if row.minus_di_14 is not None else None,
                 stoch_k_14=float(row.stoch_k_14) if row.stoch_k_14 is not None else None,
                 stoch_d_14=float(row.stoch_d_14) if row.stoch_d_14 is not None else None,
+                # Phase 18: Support & Resistance
+                pivot_point=float(row.pivot_point) if row.pivot_point is not None else None,
+                support_1=float(row.support_1) if row.support_1 is not None else None,
+                support_2=float(row.support_2) if row.support_2 is not None else None,
+                resistance_1=float(row.resistance_1) if row.resistance_1 is not None else None,
+                resistance_2=float(row.resistance_2) if row.resistance_2 is not None else None,
+                fib_236=float(row.fib_236) if row.fib_236 is not None else None,
+                fib_382=float(row.fib_382) if row.fib_382 is not None else None,
+                fib_500=float(row.fib_500) if row.fib_500 is not None else None,
+                fib_618=float(row.fib_618) if row.fib_618 is not None else None,
             )
             for row in rows
         ]

@@ -92,7 +92,7 @@ class IndicatorService:
         df["high"] = df["high"].astype(float)
         df["low"] = df["low"].astype(float)
 
-        # Compute all 18 indicators
+        # Compute all 27 indicators
         indicators = self._compute_indicators(df["close"], df["high"], df["low"])
 
         # Find last computed date to only store new rows (incremental)
@@ -131,8 +131,10 @@ class IndicatorService:
         return len(bulk_rows)
 
     def _compute_indicators(self, close: pd.Series, high: pd.Series, low: pd.Series) -> dict[str, pd.Series]:
-        """Pure computation — all 18 indicators from close/high/low prices.
+        """Pure computation — all 27 indicators from close/high/low prices.
 
+        Computes RSI, MACD, SMA, EMA, BB, ATR, ADX, Stochastic (18 from ta library)
+        plus Pivot Points and Fibonacci Retracement levels (9 from Phase 18).
         Uses fillna=False so NaN stays as NaN (stored as NULL in PostgreSQL).
         Instantiates each ta class once for efficiency.
         """
@@ -156,7 +158,7 @@ class IndicatorService:
             high=high, low=low, close=close, window=14, smooth_window=3, fillna=False
         )
 
-        return {
+        indicators = {
             "rsi_14": rsi.rsi(),
             "macd_line": macd.macd(),
             "macd_signal": macd.macd_signal(),
@@ -181,6 +183,50 @@ class IndicatorService:
             # Stochastic already produces NaN during warm-up (correct behavior)
             "stoch_k_14": stoch.stoch(),
             "stoch_d_14": stoch.stoch_signal(),
+        }
+
+        # Phase 18: Support & Resistance levels
+        sr = self._compute_support_resistance(close, high, low)
+        indicators.update(sr)
+
+        return indicators
+
+    def _compute_support_resistance(self, close: pd.Series, high: pd.Series, low: pd.Series) -> dict[str, pd.Series]:
+        """Compute pivot points (Classic) and Fibonacci retracement levels.
+
+        Pivot Points use previous day's H/L/C via shift(1).
+        Fibonacci uses 20-day rolling window for swing high/low.
+        Returns dict with 9 named Series.
+        """
+        # Classic (Floor) Pivot Points — use previous day's values
+        prev_high = high.shift(1)
+        prev_low = low.shift(1)
+        prev_close = close.shift(1)
+        pp = (prev_high + prev_low + prev_close) / 3
+        s1 = 2 * pp - prev_high
+        r1 = 2 * pp - prev_low
+        s2 = pp - (prev_high - prev_low)
+        r2 = pp + (prev_high - prev_low)
+
+        # Fibonacci Retracement — 20-day rolling window
+        swing_high = high.rolling(20).max()
+        swing_low = low.rolling(20).min()
+        fib_range = swing_high - swing_low
+        fib_236 = swing_low + fib_range * 0.236
+        fib_382 = swing_low + fib_range * 0.382
+        fib_500 = swing_low + fib_range * 0.5
+        fib_618 = swing_low + fib_range * 0.618
+
+        return {
+            "pivot_point": pp,
+            "support_1": s1,
+            "support_2": s2,
+            "resistance_1": r1,
+            "resistance_2": r2,
+            "fib_236": fib_236,
+            "fib_382": fib_382,
+            "fib_500": fib_500,
+            "fib_618": fib_618,
         }
 
     async def _get_last_computed_date(self, ticker_id: int) -> date | None:
