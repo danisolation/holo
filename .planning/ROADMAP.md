@@ -133,7 +133,10 @@ Plans:
   2. User can view a sortable/filterable trade list showing symbol, direction, entry, exit, P&L, status, and AI score
   3. User can configure simulation settings (initial capital, auto-track on/off, min confidence threshold) via a form that persists to backend
   4. User can see the 10 most recent signal outcomes (✅/❌) on each ticker's detail page
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 25-01-PLAN.md — Backend symbol filter + frontend types/hooks/API + dashboard page with tabs + overview tab
+- [ ] 25-02-PLAN.md — Trade table (UI-07) + settings form (UI-08) + signal outcome history on ticker page (UI-05)
 **UI hint**: yes
 
 ### Phase 26: Analytics Visualization & Calendar
@@ -157,5 +160,5 @@ Plans:
 | 22. Paper Trade Foundation | 2/2 | ✅ Complete | 2025-07-18 |
 | 23. Position Monitoring & Auto-Track | 2/2 | Complete   | 2026-04-20 |
 | 24. API & Analytics Engine | 2/2 | Complete   | 2026-04-20 |
-| 25. Dashboard Structure & Trade Management | 0/TBD | Not started | - |
+| 25. Dashboard Structure & Trade Management | 0/2 | Not started | - |
 | 26. Analytics Visualization & Calendar | 0/TBD | Not started | - |
