@@ -20,5 +20,7 @@ from app.models.corporate_event import CorporateEvent  # noqa: E402
 from app.models.trade import Trade  # noqa: E402
 from app.models.lot import Lot  # noqa: E402
 from app.models.gemini_usage import GeminiUsage  # noqa: E402
+from app.models.paper_trade import PaperTrade, TradeStatus, TradeDirection  # noqa: E402
+from app.models.simulation_config import SimulationConfig  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot", "GeminiUsage"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot", "GeminiUsage", "PaperTrade", "TradeStatus", "TradeDirection", "SimulationConfig"]
