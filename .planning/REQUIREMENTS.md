@@ -19,15 +19,15 @@
 
 ### Core Analytics (AN)
 
-- [ ] **AN-01**: Hiển thị overall win rate (% lệnh thắng trên tổng lệnh đã đóng)
-- [ ] **AN-02**: Hiển thị tổng P&L (realized VND + % so với vốn ban đầu)
-- [ ] **AN-03**: Equity curve chart — đường cong lợi nhuận tích lũy theo thời gian (Recharts AreaChart)
-- [ ] **AN-04**: Max drawdown (% và VND) với drawdown shading trên equity curve
-- [ ] **AN-05**: Win rate theo direction (LONG vs BEARISH riêng biệt)
-- [ ] **AN-06**: AI score correlation — so sánh hiệu suất theo nhóm confidence (LOW 1-4, MEDIUM 5-7, HIGH 8-10)
-- [ ] **AN-07**: Average R:R achieved vs R:R predicted từ signal — đo độ chính xác mục tiêu AI
-- [ ] **AN-08**: Profit factor (gross profit / gross loss) và Expected Value per trade
-- [ ] **AN-09**: Phân tích theo ngành (sector) — win rate và P&L mỗi ngành, chart bar/table
+- [x] **AN-01**: Hiển thị overall win rate (% lệnh thắng trên tổng lệnh đã đóng)
+- [x] **AN-02**: Hiển thị tổng P&L (realized VND + % so với vốn ban đầu)
+- [x] **AN-03**: Equity curve chart — đường cong lợi nhuận tích lũy theo thời gian (Recharts AreaChart)
+- [x] **AN-04**: Max drawdown (% và VND) với drawdown shading trên equity curve
+- [x] **AN-05**: Win rate theo direction (LONG vs BEARISH riêng biệt)
+- [x] **AN-06**: AI score correlation — so sánh hiệu suất theo nhóm confidence (LOW 1-4, MEDIUM 5-7, HIGH 8-10)
+- [x] **AN-07**: Average R:R achieved vs R:R predicted từ signal — đo độ chính xác mục tiêu AI
+- [x] **AN-08**: Profit factor (gross profit / gross loss) và Expected Value per trade
+- [x] **AN-09**: Phân tích theo ngành (sector) — win rate và P&L mỗi ngành, chart bar/table
 
 ### Advanced Analytics & UI (UI)
 
@@ -70,15 +70,15 @@
 | PT-07 | Phase 22 | Pending |
 | PT-08 | Phase 23 | Complete |
 | PT-09 | Phase 24 | Complete |
-| AN-01 | Phase 24 | Pending |
-| AN-02 | Phase 24 | Pending |
-| AN-03 | Phase 24 | Pending |
-| AN-04 | Phase 24 | Pending |
-| AN-05 | Phase 24 | Pending |
-| AN-06 | Phase 24 | Pending |
-| AN-07 | Phase 24 | Pending |
-| AN-08 | Phase 24 | Pending |
-| AN-09 | Phase 24 | Pending |
+| AN-01 | Phase 24 | Complete |
+| AN-02 | Phase 24 | Complete |
+| AN-03 | Phase 24 | Complete |
+| AN-04 | Phase 24 | Complete |
+| AN-05 | Phase 24 | Complete |
+| AN-06 | Phase 24 | Complete |
+| AN-07 | Phase 24 | Complete |
+| AN-08 | Phase 24 | Complete |
+| AN-09 | Phase 24 | Complete |
 | UI-01 | Phase 25 | Pending |
 | UI-02 | Phase 26 | Pending |
 | UI-03 | Phase 26 | Pending |

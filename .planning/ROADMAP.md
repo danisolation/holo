@@ -73,7 +73,7 @@ Full details: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
 
 - [x] **Phase 22: Paper Trade Foundation** - PaperTrade model, state machine, P&L calculation, SimulationConfig
 - [x] **Phase 23: Position Monitoring & Auto-Track** - Scheduler jobs for auto-tracking signals and daily TP/SL/timeout checks (completed 2026-04-20)
-- [ ] **Phase 24: API & Analytics Engine** - REST API with full analytics computation and manual follow
+- [x] **Phase 24: API & Analytics Engine** - REST API with full analytics computation and manual follow (completed 2026-04-20)
 - [ ] **Phase 25: Dashboard Structure & Trade Management** - Paper trading page, trade list, settings, signal outcome history
 - [ ] **Phase 26: Analytics Visualization & Calendar** - Calendar heatmap, streaks, timeframe comparison, performance summaries
 
@@ -119,10 +119,10 @@ Plans:
   3. User can see R:R achieved vs predicted, profit factor (gross profit / gross loss), and expected value per trade
   4. User can manually follow a signal with customized entry/SL/TP to create a new paper trade via API
   5. Max drawdown (% and VND) is computed from equity curve with drawdown periods identified
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 24-01-PLAN.md — Trade CRUD API + manual follow (PT-09) + config endpoints with Pydantic schemas and service layer
-- [ ] 24-02-PLAN.md — Analytics engine: summary, equity curve, drawdown, direction, confidence, R:R, profit factor, sector (AN-01–AN-09)
+- [x] 24-02-PLAN.md — Analytics engine: summary, equity curve, drawdown, direction, confidence, R:R, profit factor, sector (AN-01–AN-09)
 
 ### Phase 25: Dashboard Structure & Trade Management
 **Goal**: Users can view and manage paper trades through a dedicated dashboard with trade listing, settings, and signal outcome history
@@ -156,6 +156,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 22. Paper Trade Foundation | 2/2 | ✅ Complete | 2025-07-18 |
 | 23. Position Monitoring & Auto-Track | 2/2 | Complete   | 2026-04-20 |
-| 24. API & Analytics Engine | 1/2 | In Progress|  |
+| 24. API & Analytics Engine | 2/2 | Complete   | 2026-04-20 |
 | 25. Dashboard Structure & Trade Management | 0/TBD | Not started | - |
 | 26. Analytics Visualization & Calendar | 0/TBD | Not started | - |

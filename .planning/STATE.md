@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Paper Trading & Signal Verification
 status: verifying
-last_updated: "2026-04-20T08:39:37.085Z"
+last_updated: "2026-04-20T08:53:56.043Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 3
-  percent: 50
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State
@@ -53,6 +53,7 @@ Last activity: 2026-04-20
 *Updated after each plan completion*
 | Phase 23 P02 | 3 min | 1 tasks | 4 files |
 | Phase 24 P01 | 3 min | 2 tasks | 5 files |
+| Phase 24 P02 | 5 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,10 @@ All v1.0–v3.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 23]: Gap-through fills at open price, not SL/TP level; timeout uses trading day count from daily_prices
 - [Phase 24]: POST /trades/follow placed before GET /trades/{trade_id} to avoid FastAPI path conflict
 - [Phase 24]: 12 schema validation tests (no DB mocks) — Pydantic input constraints verified directly
+- [Phase 24]: Confidence brackets: 1-3 LOW, 4-6 MEDIUM, 7-10 HIGH per CONTEXT.md
+- [Phase 24]: R:R uses abs(entry-SL)*qty for risk — handles both LONG and BEARISH via abs()
+- [Phase 24]: Profit factor returns None (not infinity) when gross_loss==0
+- [Phase 24]: Sector analysis: coalesce(Ticker.industry, 'Unknown') for NULL industries
 
 ### Pending Todos
 
