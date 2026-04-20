@@ -24,6 +24,7 @@ const NAV_LINKS = [
   { href: "/watchlist", label: "Danh mục" },
   { href: "/dashboard", label: "Bảng điều khiển" },
   { href: "/dashboard/portfolio", label: "Đầu tư" },
+  { href: "/dashboard/paper-trading", label: "Paper Trading" },
   { href: "/dashboard/corporate-events", label: "Sự kiện" },
   { href: "/dashboard/health", label: "Hệ thống" },
 ];
