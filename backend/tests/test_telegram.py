@@ -244,8 +244,8 @@ class TestSchedulerChaining:
         scheduler.remove_all_jobs()
         scheduler._listeners = []
 
-    def test_combined_chains_to_signal_alerts(self):
-        """After combined analysis completes, signal alert check should be triggered."""
+    def test_combined_chains_to_trading_signal(self):
+        """After combined analysis completes, trading signal analysis should be triggered (Phase 19)."""
         from app.scheduler.manager import _on_job_executed
         from apscheduler import events as aps_events
 
@@ -255,10 +255,26 @@ class TestSchedulerChaining:
 
         with patch("app.scheduler.manager.scheduler") as mock_scheduler:
             _on_job_executed(mock_event)
-            # Verify add_job was called with signal alert check
+            # Verify add_job was called with trading signal analysis
+            calls = mock_scheduler.add_job.call_args_list
+            job_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in calls]
+            assert "daily_trading_signal_triggered" in job_ids
+
+    def test_trading_signal_chains_to_signal_alerts(self):
+        """After trading signal analysis completes, signal alert check + hnx_upcom should trigger (Phase 19)."""
+        from app.scheduler.manager import _on_job_executed
+        from apscheduler import events as aps_events
+
+        mock_event = MagicMock(spec=aps_events.JobExecutionEvent)
+        mock_event.exception = None
+        mock_event.job_id = "daily_trading_signal_triggered"
+
+        with patch("app.scheduler.manager.scheduler") as mock_scheduler:
+            _on_job_executed(mock_event)
             calls = mock_scheduler.add_job.call_args_list
             job_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in calls]
             assert "daily_signal_alert_check_triggered" in job_ids
+            assert "daily_hnx_upcom_analysis_triggered" in job_ids
 
     def test_price_crawl_chains_to_both_indicators_and_price_alerts(self):
         """After UPCOM price crawl (last exchange), both indicator compute AND price alert check should trigger."""
