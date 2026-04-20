@@ -116,7 +116,10 @@ Plans:
   1. User can view a Trading Plan panel on the ticker detail page showing LONG and BEARISH analysis side-by-side
   2. Panel displays entry/SL/TP targets, risk/reward ratio, timeframe, and position sizing for the recommended direction
   3. Panel shows Vietnamese rationale text and color-coded confidence indicators for each direction
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 20-01-PLAN.md — Backend API extension + frontend data layer (types, fetch, hook)
+- [ ] 20-02-PLAN.md — TradingPlanPanel component + ticker page integration
 **UI hint**: yes
 
 ### Phase 21: Chart Price Line Overlays
@@ -139,5 +142,5 @@ Plans:
 | 17. Enhanced Technical Indicators | 2/2 | Complete   | 2026-04-20 |
 | 18. Support & Resistance Levels | 2/2 | Complete   | 2026-04-20 |
 | 19. AI Trading Signal Pipeline | 3/3 | Complete   | 2026-04-20 |
-| 20. Trading Plan Dashboard Panel | 0/0 | Not started | - |
+| 20. Trading Plan Dashboard Panel | 0/2 | Not started | - |
 | 21. Chart Price Line Overlays | 0/0 | Not started | - |
