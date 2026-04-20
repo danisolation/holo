@@ -5,6 +5,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PTOverviewTab } from "@/components/paper-trading/pt-overview-tab";
 import { PTTradesTable } from "@/components/paper-trading/pt-trades-table";
 import { PTSettingsForm } from "@/components/paper-trading/pt-settings-form";
+import { PTAnalyticsTab } from "@/components/paper-trading/pt-analytics-tab";
+import { PTCalendarTab } from "@/components/paper-trading/pt-calendar-tab";
 
 export default function PaperTradingPage() {
   return (
@@ -25,8 +27,8 @@ export default function PaperTradingPage() {
         <TabsList>
           <TabsTrigger value="overview">Tổng quan</TabsTrigger>
           <TabsTrigger value="trades">Lệnh</TabsTrigger>
-          <TabsTrigger value="analytics" disabled>Phân tích</TabsTrigger>
-          <TabsTrigger value="calendar" disabled>Lịch</TabsTrigger>
+          <TabsTrigger value="analytics">Phân tích</TabsTrigger>
+          <TabsTrigger value="calendar">Lịch</TabsTrigger>
           <TabsTrigger value="settings">Cài đặt</TabsTrigger>
         </TabsList>
 
@@ -39,15 +41,11 @@ export default function PaperTradingPage() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <div className="py-8 text-center text-muted-foreground text-sm">
-            Sắp có — Phase 26
-          </div>
+          <PTAnalyticsTab />
         </TabsContent>
 
         <TabsContent value="calendar">
-          <div className="py-8 text-center text-muted-foreground text-sm">
-            Sắp có — Phase 26
-          </div>
+          <PTCalendarTab />
         </TabsContent>
 
         <TabsContent value="settings">
