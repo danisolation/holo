@@ -88,7 +88,7 @@ Plans:
   3. Support/resistance and Fibonacci levels update daily as part of the indicator pipeline
 **Plans**: 2 plans
 Plans:
-- [ ] 18-01-PLAN.md — Backend: Migration 011 + model + schema + service computation + API + tests
+- [x] 18-01-PLAN.md — Backend: Migration 011 + model + schema + service computation + API + tests
 - [ ] 18-02-PLAN.md — Frontend: IndicatorData type + SupportResistanceCard component + page integration
 **UI hint**: yes
 
@@ -133,7 +133,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 17. Enhanced Technical Indicators | 2/2 | Complete   | 2026-04-20 |
-| 18. Support & Resistance Levels | 0/0 | Not started | - |
+| 18. Support & Resistance Levels | 1/2 | In Progress|  |
 | 19. AI Trading Signal Pipeline | 0/0 | Not started | - |
 | 20. Trading Plan Dashboard Panel | 0/0 | Not started | - |
 | 21. Chart Price Line Overlays | 0/0 | Not started | - |

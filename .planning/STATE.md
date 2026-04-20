@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Smart Trading Signals
 status: executing
-last_updated: "2026-04-20T03:27:57.304Z"
-last_activity: 2026-04-20 — Plan 17-01 Backend completed (tests + migration + indicators + API)
+last_updated: "2026-04-20T03:55:43.834Z"
+last_activity: 2026-04-20
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_plans: 4
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 17 (Enhanced Technical Indicators) — Plan 01 complete
-Plan: 01 of 2 (Backend complete, Frontend next)
-Status: Executing Phase 17 — Plan 01 done
-Last activity: 2026-04-20 — Plan 17-01 Backend completed (tests + migration + indicators + API)
+Plan: 2 of 2 (Backend complete, Frontend next)
+Status: Ready to execute
+Last activity: 2026-04-20
 
 ```
 [██████████░░░░░░░░░░] 50% (1/2 plans in phase 17)
@@ -54,6 +54,7 @@ Last activity: 2026-04-20 — Plan 17-01 Backend completed (tests + migration + 
 | 17 | 01 | 4.1m | 3 | 6 |
 
 *Updated after each plan completion*
+| Phase 18 P01 | 3.7m | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ All v1.0/v1.1/v2.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 17-enhanced-technical-indicators]: Adapted shadcn Accordion from radix API to base-ui API (multiple prop instead of type=multiple)
 - [Phase 17]: ATR/ADX/+DI/-DI 0.0 warm-up replaced with NaN via .replace() — prevents misleading flat lines on charts
 - [Phase 17]: _compute_indicators extended to 3-arg (close, high, low) — backwards incompatible, all callers updated
+- [Phase 18]: Classic pivot formula with shift(1) for previous-day H/L/C; 20-day rolling for Fibonacci swing
+- [Phase 18]: 9 new Numeric(12,4) nullable columns, pure pandas ops — no new dependencies
 
 ### Pending Todos
 
