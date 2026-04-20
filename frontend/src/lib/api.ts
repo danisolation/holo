@@ -43,6 +43,16 @@ export interface IndicatorData {
   minus_di_14: number | null;
   stoch_k_14: number | null;
   stoch_d_14: number | null;
+  // Phase 18: Support & Resistance Levels
+  pivot_point: number | null;
+  support_1: number | null;
+  support_2: number | null;
+  resistance_1: number | null;
+  resistance_2: number | null;
+  fib_236: number | null;
+  fib_382: number | null;
+  fib_500: number | null;
+  fib_618: number | null;
 }
 
 export interface AnalysisResult {
