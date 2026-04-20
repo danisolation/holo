@@ -45,6 +45,18 @@ class TechnicalIndicator(Base):
     bb_middle: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
     bb_lower: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
 
+    # Volatility — ATR(14)
+    atr_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+
+    # Trend — ADX(14) with Directional Indicators
+    adx_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    plus_di_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    minus_di_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+
+    # Momentum — Stochastic(14, 3)
+    stoch_k_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    stoch_d_14: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )

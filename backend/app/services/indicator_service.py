@@ -1,7 +1,8 @@
 """Technical indicator computation and storage service.
 
-Computes RSI(14), MACD(12,26,9), SMA(20/50/200), EMA(12/26), BB(20,2)
-using the ta library. Stores results in technical_indicators table.
+Computes RSI(14), MACD(12,26,9), SMA(20/50/200), EMA(12/26), BB(20,2),
+ATR(14), ADX(14) with +DI/-DI, Stochastic(14,3) using the ta library.
+Stores results in technical_indicators table.
 
 Key decisions (from CONTEXT.md):
 - Compute for most recent 60 days per run (settings.indicator_compute_days)
@@ -18,9 +19,9 @@ from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ta.momentum import RSIIndicator
-from ta.trend import MACD, SMAIndicator, EMAIndicator
-from ta.volatility import BollingerBands
+from ta.momentum import RSIIndicator, StochasticOscillator
+from ta.trend import MACD, SMAIndicator, EMAIndicator, ADXIndicator
+from ta.volatility import BollingerBands, AverageTrueRange
 
 from app.config import settings
 from app.models.daily_price import DailyPrice
@@ -76,7 +77,7 @@ class IndicatorService:
         """Compute indicators for a single ticker. Returns rows stored."""
         # Fetch price history ordered by date ASC
         result = await self.session.execute(
-            select(DailyPrice.date, DailyPrice.close)
+            select(DailyPrice.date, DailyPrice.close, DailyPrice.high, DailyPrice.low)
             .where(DailyPrice.ticker_id == ticker_id)
             .order_by(DailyPrice.date)
         )
@@ -86,11 +87,13 @@ class IndicatorService:
             logger.warning(f"{symbol}: Only {len(rows)} price rows, need ≥20 for indicators — skipping")
             return 0
 
-        df = pd.DataFrame(rows, columns=["date", "close"])
+        df = pd.DataFrame(rows, columns=["date", "close", "high", "low"])
         df["close"] = df["close"].astype(float)
+        df["high"] = df["high"].astype(float)
+        df["low"] = df["low"].astype(float)
 
-        # Compute all 12 indicators
-        indicators = self._compute_indicators(df["close"])
+        # Compute all 18 indicators
+        indicators = self._compute_indicators(df["close"], df["high"], df["low"])
 
         # Find last computed date to only store new rows (incremental)
         last_computed = await self._get_last_computed_date(ticker_id)
@@ -127,8 +130,8 @@ class IndicatorService:
         await self.session.execute(stmt)
         return len(bulk_rows)
 
-    def _compute_indicators(self, close: pd.Series) -> dict[str, pd.Series]:
-        """Pure computation — all 12 indicators from close prices.
+    def _compute_indicators(self, close: pd.Series, high: pd.Series, low: pd.Series) -> dict[str, pd.Series]:
+        """Pure computation — all 18 indicators from close/high/low prices.
 
         Uses fillna=False so NaN stays as NaN (stored as NULL in PostgreSQL).
         Instantiates each ta class once for efficiency.
@@ -141,6 +144,17 @@ class IndicatorService:
         ema12 = EMAIndicator(close=close, window=12, fillna=False)
         ema26 = EMAIndicator(close=close, window=26, fillna=False)
         bb = BollingerBands(close=close, window=20, window_dev=2, fillna=False)
+
+        # Volatility — ATR(14) [Phase 17]
+        atr = AverageTrueRange(high=high, low=low, close=close, window=14, fillna=False)
+
+        # Trend — ADX(14) with +DI/-DI [Phase 17]
+        adx_ind = ADXIndicator(high=high, low=low, close=close, window=14, fillna=False)
+
+        # Momentum — Stochastic(14, 3) [Phase 17]
+        stoch = StochasticOscillator(
+            high=high, low=low, close=close, window=14, smooth_window=3, fillna=False
+        )
 
         return {
             "rsi_14": rsi.rsi(),
@@ -155,6 +169,18 @@ class IndicatorService:
             "bb_upper": bb.bollinger_hband(),
             "bb_middle": bb.bollinger_mavg(),
             "bb_lower": bb.bollinger_lband(),
+            # Volatility — ATR(14) [Phase 17]
+            # ATR produces 0.0 during warm-up — replace with NaN for NULL storage
+            "atr_14": atr.average_true_range().replace(0.0, float('nan')),
+            # Trend — ADX(14) [Phase 17]
+            # ADX/+DI/-DI produce 0.0 during warm-up — replace with NaN
+            "adx_14": adx_ind.adx().replace(0.0, float('nan')),
+            "plus_di_14": adx_ind.adx_pos().replace(0.0, float('nan')),
+            "minus_di_14": adx_ind.adx_neg().replace(0.0, float('nan')),
+            # Momentum — Stochastic(14, 3) [Phase 17]
+            # Stochastic already produces NaN during warm-up (correct behavior)
+            "stoch_k_14": stoch.stoch(),
+            "stoch_d_14": stoch.stoch_signal(),
         }
 
     async def _get_last_computed_date(self, ticker_id: int) -> date | None:
