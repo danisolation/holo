@@ -6,6 +6,7 @@ import {
   CandlestickSeries,
   LineSeries,
   HistogramSeries,
+  LineStyle,
   type IChartApi,
   type ISeriesApi,
   type SeriesType,
@@ -22,11 +23,19 @@ const TIME_RANGES = [
   { label: "2N", days: 730 },
 ] as const;
 
+interface TradingPlanOverlay {
+  entry_price: number;
+  stop_loss: number;
+  take_profit_1: number;
+  take_profit_2: number;
+}
+
 interface CandlestickChartProps {
   priceData: PriceData[];
   indicatorData?: IndicatorData[];
   adjusted?: boolean;
   onAdjustedChange?: (adjusted: boolean) => void;
+  tradingPlan?: TradingPlanOverlay;
 }
 
 export function CandlestickChart({
@@ -34,6 +43,7 @@ export function CandlestickChart({
   indicatorData,
   adjusted,
   onAdjustedChange,
+  tradingPlan,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -210,6 +220,48 @@ export function CandlestickChart({
       }
     }
 
+    // Trading plan price lines
+    if (tradingPlan) {
+      candleSeries.createPriceLine({
+        price: tradingPlan.entry_price,
+        color: '#26a69a',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'Entry',
+      });
+
+      candleSeries.createPriceLine({
+        price: tradingPlan.stop_loss,
+        color: '#ef5350',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'SL',
+      });
+
+      candleSeries.createPriceLine({
+        price: tradingPlan.take_profit_1,
+        color: '#42a5f5',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: 'TP1',
+      });
+
+      // Only show TP2 if meaningfully different from TP1
+      if (Math.abs(tradingPlan.take_profit_2 - tradingPlan.take_profit_1) > 1) {
+        candleSeries.createPriceLine({
+          price: tradingPlan.take_profit_2,
+          color: '#7e57c2',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'TP2',
+        });
+      }
+    }
+
     // Fit content
     chart.timeScale().fitContent();
 
@@ -227,7 +279,7 @@ export function CandlestickChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [filteredPrices, filteredIndicators]);
+  }, [filteredPrices, filteredIndicators, tradingPlan]);
 
   if (priceData.length === 0) {
     return (
@@ -292,6 +344,24 @@ export function CandlestickChart({
           <span className="inline-block w-3 h-0.5 bg-gray-400 opacity-50" style={{ borderTop: "1px dashed" }} /> BB
         </span>
       </div>
+
+      {/* Price Line Legend */}
+      {tradingPlan && (
+        <div className="flex items-center gap-4 text-xs">
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-0.5" style={{ borderTop: "1px dashed #26a69a" }} /> Entry
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-0.5" style={{ borderTop: "1px dashed #ef5350" }} /> SL
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-0.5" style={{ borderTop: "1px dashed #42a5f5" }} /> TP1
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-0.5" style={{ borderTop: "1px dashed #7e57c2" }} /> TP2
+          </span>
+        </div>
+      )}
 
       {/* Chart container */}
       <div ref={containerRef} className="rounded-xl overflow-hidden" />
