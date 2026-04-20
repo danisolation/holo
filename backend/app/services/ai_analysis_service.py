@@ -67,6 +67,7 @@ ANALYSIS_TEMPERATURES: dict[AnalysisType, float] = {
     AnalysisType.FUNDAMENTAL: 0.2,
     AnalysisType.SENTIMENT: 0.3,
     AnalysisType.COMBINED: 0.2,
+    AnalysisType.TRADING_SIGNAL: 0.2,  # Phase 19 — same as combined (balanced creativity)
 }
 
 # System instructions (D-09-01, D-09-03, D-09-05)
