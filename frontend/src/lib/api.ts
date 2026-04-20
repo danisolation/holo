@@ -71,6 +71,33 @@ export interface AnalysisSummary {
   fundamental?: AnalysisResult;
   sentiment?: AnalysisResult;
   combined?: AnalysisResult;
+  trading_signal?: AnalysisResult;  // Phase 20
+}
+
+// --- Phase 20: Trading Plan Types ---
+
+export interface TradingPlanDetail {
+  entry_price: number;
+  stop_loss: number;
+  take_profit_1: number;
+  take_profit_2: number;
+  risk_reward_ratio: number;
+  position_size_pct: number;
+  timeframe: "swing" | "position";
+}
+
+export interface DirectionAnalysis {
+  direction: "long" | "bearish";
+  confidence: number;           // 1-10
+  trading_plan: TradingPlanDetail;
+  reasoning: string;            // Vietnamese text
+}
+
+export interface TickerTradingSignal {
+  ticker: string;
+  recommended_direction: "long" | "bearish";
+  long_analysis: DirectionAnalysis;
+  bearish_analysis: DirectionAnalysis;
 }
 
 // --- API Error ---
@@ -138,6 +165,20 @@ export async function fetchAnalysisSummary(
   return apiFetch<AnalysisSummary>(
     `/analysis/${encodeURIComponent(symbol)}/summary`,
   );
+}
+
+export async function fetchTradingSignal(
+  symbol: string,
+): Promise<TickerTradingSignal | null> {
+  try {
+    const result = await apiFetch<
+      AnalysisResult & { raw_response?: TickerTradingSignal }
+    >(`/analysis/${encodeURIComponent(symbol)}/trading-signal`);
+    return result.raw_response ?? null;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
 }
 
 // --- Market Overview (heatmap data) ---

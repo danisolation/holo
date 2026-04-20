@@ -6,6 +6,7 @@ import {
   fetchPrices,
   fetchIndicators,
   fetchAnalysisSummary,
+  fetchTradingSignal,
   fetchMarketOverview,
   triggerOnDemandAnalysis,
   fetchHoldings,
@@ -304,5 +305,16 @@ export function usePipelineTimeline(days: number = 7) {
     queryFn: () => fetchPipelineTimeline(days),
     staleTime: 60 * 1000,
     refetchInterval: 120 * 1000,
+  });
+}
+
+// --- Trading Signal Hook (Phase 20) ---
+
+export function useTradingSignal(symbol: string | undefined) {
+  return useQuery({
+    queryKey: ["trading-signal", symbol],
+    queryFn: () => fetchTradingSignal(symbol!),
+    enabled: !!symbol,
+    staleTime: 5 * 60 * 1000,
   });
 }

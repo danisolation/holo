@@ -156,7 +156,7 @@ function getSignalConfig(signal: string) {
 }
 
 /** Score bar visualization (1-10 scale) */
-function ScoreBar({ score }: { score: number }) {
+export function ScoreBar({ score }: { score: number }) {
   const pct = Math.min(100, Math.max(0, (score / 10) * 100));
   const color =
     score >= 7 ? "bg-[#26a69a]" : score >= 4 ? "bg-yellow-500" : "bg-[#ef5350]";
