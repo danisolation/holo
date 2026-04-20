@@ -181,6 +181,29 @@ async def trigger_combined_analysis(background_tasks: BackgroundTasks):
     )
 
 
+@router.post("/trigger/trading-signal", response_model=AnalysisTriggerResponse)
+async def trigger_trading_signal_analysis(background_tasks: BackgroundTasks):
+    """Manually trigger trading signal analysis for all tickers (runs in background).
+
+    Phase 19: Generates dual-direction LONG + BEARISH trading plans via Gemini.
+    """
+    async def _run():
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            try:
+                service = AIAnalysisService(session)
+                result = await service.analyze_all_tickers(analysis_type="trading_signal")
+                logger.info(f"Manual trading signal analysis complete: {result}")
+            except ValueError as e:
+                logger.error(f"Trading signal analysis failed: {e}")
+
+    background_tasks.add_task(_run)
+    return AnalysisTriggerResponse(
+        message="Trading signal analysis triggered in background",
+        triggered=True,
+    )
+
+
 # --- Result Endpoints ---
 
 @router.get("/{symbol}/indicators", response_model=list[IndicatorResponse])
@@ -317,6 +340,29 @@ async def get_combined_analysis(symbol: str):
         )
 
 
+@router.get("/{symbol}/trading-signal", response_model=AnalysisResultResponse)
+async def get_trading_signal(symbol: str):
+    """Get latest AI trading signal analysis for a ticker.
+
+    Phase 19: Returns dual-direction (LONG/BEARISH) trading plan.
+    The raw_response JSONB contains full TickerTradingSignal data.
+    signal field = recommended direction ('long' or 'bearish', or 'invalid')
+    score field = confidence of recommended direction (0-10, 0 = validation failed)
+    """
+    async with async_session() as session:
+        ticker = await _get_ticker_by_symbol(session, symbol)
+        analysis = await _get_latest_analysis(session, ticker.id, AnalysisType.TRADING_SIGNAL)
+        return AnalysisResultResponse(
+            ticker_symbol=symbol.upper(),
+            analysis_type="trading_signal",
+            analysis_date=analysis.analysis_date.isoformat(),
+            signal=analysis.signal,
+            score=analysis.score,
+            reasoning=analysis.reasoning,
+            model_version=analysis.model_version,
+        )
+
+
 @router.get("/{symbol}/summary", response_model=SummaryResponse)
 async def get_analysis_summary(symbol: str):
     """Get full analysis summary for a ticker (all 4 dimensions).
@@ -330,7 +376,8 @@ async def get_analysis_summary(symbol: str):
         summary_data: dict = {"ticker_symbol": symbol.upper()}
 
         for analysis_type in [AnalysisType.TECHNICAL, AnalysisType.FUNDAMENTAL,
-                              AnalysisType.SENTIMENT, AnalysisType.COMBINED]:
+                              AnalysisType.SENTIMENT, AnalysisType.COMBINED,
+                              AnalysisType.TRADING_SIGNAL]:  # Phase 19
             result = await session.execute(
                 select(AIAnalysis)
                 .where(

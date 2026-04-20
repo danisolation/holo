@@ -213,3 +213,4 @@ class SummaryResponse(BaseModel):
     fundamental: AnalysisResultResponse | None = None
     sentiment: AnalysisResultResponse | None = None
     combined: AnalysisResultResponse | None = None
+    trading_signal: AnalysisResultResponse | None = None  # Phase 19
