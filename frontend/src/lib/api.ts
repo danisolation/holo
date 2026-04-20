@@ -674,3 +674,148 @@ export async function updatePaperConfig(data: SimulationConfigUpdateRequest): Pr
 export async function fetchPaperAnalyticsSummary(): Promise<AnalyticsSummaryResponse> {
   return apiFetch<AnalyticsSummaryResponse>("/paper-trading/analytics/summary");
 }
+
+// --- Paper Trading Analytics Types (Phase 26) ---
+
+export interface EquityCurvePoint {
+  date: string;
+  daily_pnl: number;
+  cumulative_pnl: number;
+}
+
+export interface EquityCurveResponse {
+  data: EquityCurvePoint[];
+  initial_capital: number;
+}
+
+export interface DrawdownPeriod {
+  start: string;
+  end: string | null;
+  drawdown_vnd: number;
+}
+
+export interface DrawdownResponse {
+  max_drawdown_vnd: number;
+  max_drawdown_pct: number;
+  current_drawdown_vnd: number;
+  current_drawdown_pct: number;
+  periods: DrawdownPeriod[];
+}
+
+export interface DirectionAnalysisItem {
+  direction: string;
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl: number;
+  avg_pnl: number;
+}
+
+export interface ConfidenceBracketItem {
+  bracket: string;
+  total_trades: number;
+  wins: number;
+  win_rate: number;
+  avg_pnl: number;
+  avg_pnl_pct: number;
+}
+
+export interface RiskRewardResponse {
+  avg_predicted_rr: number;
+  avg_achieved_rr: number;
+  trades_above_predicted: number;
+  trades_below_predicted: number;
+  total_trades: number;
+}
+
+export interface ProfitFactorResponse {
+  gross_profit: number;
+  gross_loss: number;
+  profit_factor: number | null;
+  expected_value: number;
+  total_trades: number;
+}
+
+export interface SectorAnalysisItem {
+  sector: string;
+  total_trades: number;
+  wins: number;
+  win_rate: number;
+  total_pnl: number;
+  avg_pnl: number;
+}
+
+// New Phase 26 endpoints
+export interface StreakResponse {
+  current_win_streak: number;
+  current_loss_streak: number;
+  longest_win_streak: number;
+  longest_loss_streak: number;
+  total_trades: number;
+}
+
+export interface TimeframeComparisonItem {
+  timeframe: string;
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl: number;
+  avg_pnl: number;
+}
+
+export interface PeriodicSummaryItem {
+  period: string;
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl: number;
+  avg_rr: number;
+}
+
+export interface CalendarDataPoint {
+  date: string;
+  daily_pnl: number;
+  trade_count: number;
+}
+
+// --- Paper Trading Analytics Fetch Functions (Phase 26) ---
+
+// Existing Phase 24 endpoints (types added above)
+export async function fetchPaperEquityCurve(): Promise<EquityCurveResponse> {
+  return apiFetch<EquityCurveResponse>("/paper-trading/analytics/equity-curve");
+}
+export async function fetchPaperDrawdown(): Promise<DrawdownResponse> {
+  return apiFetch<DrawdownResponse>("/paper-trading/analytics/drawdown");
+}
+export async function fetchPaperDirection(): Promise<DirectionAnalysisItem[]> {
+  return apiFetch<DirectionAnalysisItem[]>("/paper-trading/analytics/direction");
+}
+export async function fetchPaperConfidence(): Promise<ConfidenceBracketItem[]> {
+  return apiFetch<ConfidenceBracketItem[]>("/paper-trading/analytics/confidence");
+}
+export async function fetchPaperRiskReward(): Promise<RiskRewardResponse> {
+  return apiFetch<RiskRewardResponse>("/paper-trading/analytics/risk-reward");
+}
+export async function fetchPaperProfitFactor(): Promise<ProfitFactorResponse> {
+  return apiFetch<ProfitFactorResponse>("/paper-trading/analytics/profit-factor");
+}
+export async function fetchPaperSector(): Promise<SectorAnalysisItem[]> {
+  return apiFetch<SectorAnalysisItem[]>("/paper-trading/analytics/sector");
+}
+
+// New Phase 26 endpoints
+export async function fetchPaperStreaks(): Promise<StreakResponse> {
+  return apiFetch<StreakResponse>("/paper-trading/analytics/streaks");
+}
+export async function fetchPaperTimeframe(): Promise<TimeframeComparisonItem[]> {
+  return apiFetch<TimeframeComparisonItem[]>("/paper-trading/analytics/timeframe");
+}
+export async function fetchPaperPeriodic(period: "weekly" | "monthly" = "weekly"): Promise<PeriodicSummaryItem[]> {
+  return apiFetch<PeriodicSummaryItem[]>(`/paper-trading/analytics/periodic?period=${period}`);
+}
+export async function fetchPaperCalendar(): Promise<CalendarDataPoint[]> {
+  return apiFetch<CalendarDataPoint[]>("/paper-trading/analytics/calendar");
+}

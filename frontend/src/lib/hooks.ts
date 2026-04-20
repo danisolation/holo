@@ -36,6 +36,17 @@ import {
   updatePaperConfig,
   fetchPaperAnalyticsSummary,
   type SimulationConfigUpdateRequest,
+  fetchPaperEquityCurve,
+  fetchPaperDrawdown,
+  fetchPaperDirection,
+  fetchPaperConfidence,
+  fetchPaperRiskReward,
+  fetchPaperProfitFactor,
+  fetchPaperSector,
+  fetchPaperStreaks,
+  fetchPaperTimeframe,
+  fetchPaperPeriodic,
+  fetchPaperCalendar,
 } from "@/lib/api";
 
 /**
@@ -377,5 +388,95 @@ export function useClosePaperTrade() {
       queryClient.invalidateQueries({ queryKey: ["paper-trades"] });
       queryClient.invalidateQueries({ queryKey: ["paper-analytics-summary"] });
     },
+  });
+}
+
+// --- Paper Trading Analytics Hooks (Phase 26) ---
+
+export function usePaperEquityCurve() {
+  return useQuery({
+    queryKey: ["paper-analytics-equity-curve"],
+    queryFn: fetchPaperEquityCurve,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperDrawdown() {
+  return useQuery({
+    queryKey: ["paper-analytics-drawdown"],
+    queryFn: fetchPaperDrawdown,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperDirection() {
+  return useQuery({
+    queryKey: ["paper-analytics-direction"],
+    queryFn: fetchPaperDirection,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperConfidence() {
+  return useQuery({
+    queryKey: ["paper-analytics-confidence"],
+    queryFn: fetchPaperConfidence,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperRiskReward() {
+  return useQuery({
+    queryKey: ["paper-analytics-risk-reward"],
+    queryFn: fetchPaperRiskReward,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperProfitFactor() {
+  return useQuery({
+    queryKey: ["paper-analytics-profit-factor"],
+    queryFn: fetchPaperProfitFactor,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperSector() {
+  return useQuery({
+    queryKey: ["paper-analytics-sector"],
+    queryFn: fetchPaperSector,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperStreaks() {
+  return useQuery({
+    queryKey: ["paper-analytics-streaks"],
+    queryFn: fetchPaperStreaks,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperTimeframe() {
+  return useQuery({
+    queryKey: ["paper-analytics-timeframe"],
+    queryFn: fetchPaperTimeframe,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperPeriodic(period: "weekly" | "monthly" = "weekly") {
+  return useQuery({
+    queryKey: ["paper-analytics-periodic", period],
+    queryFn: () => fetchPaperPeriodic(period),
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function usePaperCalendar() {
+  return useQuery({
+    queryKey: ["paper-analytics-calendar"],
+    queryFn: fetchPaperCalendar,
+    staleTime: 1 * 60 * 1000,
   });
 }
