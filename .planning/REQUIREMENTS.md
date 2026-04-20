@@ -35,10 +35,10 @@
 - [ ] **UI-02**: Calendar heatmap (GitHub-style) — xanh ngày thắng, đỏ ngày thua, intensity theo magnitude
 - [ ] **UI-03**: Streak tracking — hiển thị chuỗi thắng/thua hiện tại và dài nhất, cảnh báo khi streak thua >5
 - [ ] **UI-04**: Phân tích theo timeframe (swing vs position) — so sánh win rate
-- [ ] **UI-05**: Signal outcome history trên ticker detail page — 10 signal gần nhất với icon kết quả (✅/❌)
+- [x] **UI-05**: Signal outcome history trên ticker detail page — 10 signal gần nhất với icon kết quả (✅/❌)
 - [ ] **UI-06**: Weekly/monthly performance summary table — win rate, P&L, trade count, avg R:R theo tuần/tháng
-- [ ] **UI-07**: Trade list table (sortable, filterable) — symbol, direction, entry, exit, P&L, status, AI score
-- [ ] **UI-08**: Settings form — cấu hình vốn ban đầu, auto-track on/off, min confidence threshold
+- [x] **UI-07**: Trade list table (sortable, filterable) — symbol, direction, entry, exit, P&L, status, AI score
+- [x] **UI-08**: Settings form — cấu hình vốn ban đầu, auto-track on/off, min confidence threshold
 
 ## Future Requirements
 
@@ -83,10 +83,10 @@
 | UI-02 | Phase 26 | Pending |
 | UI-03 | Phase 26 | Pending |
 | UI-04 | Phase 26 | Pending |
-| UI-05 | Phase 25 | Pending |
+| UI-05 | Phase 25 | Complete |
 | UI-06 | Phase 26 | Pending |
-| UI-07 | Phase 25 | Pending |
-| UI-08 | Phase 25 | Pending |
+| UI-07 | Phase 25 | Complete |
+| UI-08 | Phase 25 | Complete |
 
 **Coverage:**
 - v4.0 requirements: 26 total

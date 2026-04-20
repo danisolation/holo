@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Paper Trading & Signal Verification
-status: executing
-last_updated: "2026-04-20T09:15:48.390Z"
+status: verifying
+last_updated: "2026-04-20T09:21:47.958Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 5
-  percent: 63
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 Phase: 25 of 26 (Dashboard Structure & Trade Management)
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-20
 
 ```
@@ -55,6 +55,7 @@ Last activity: 2026-04-20
 | Phase 24 P01 | 3 min | 2 tasks | 5 files |
 | Phase 24 P02 | 5 min | 2 tasks | 4 files |
 | Phase 25 P01 | 3 min | 2 tasks | 7 files |
+| Phase 25 P02 | 3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ All v1.0–v3.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 24]: Profit factor returns None (not infinity) when gross_loss==0
 - [Phase 24]: Sector analysis: coalesce(Ticker.industry, 'Unknown') for NULL industries
 - [Phase 25]: [Phase 25]: Trades/Settings tabs placeholder text, replaced in Plan 02; Analytics/Calendar disabled for Phase 26
+- [Phase 25]: Server-side filtering via queryKey changes (not client-side) for trade table
+- [Phase 25]: PTSignalOutcomes returns null for tickers without paper trades (non-intrusive)
 
 ### Pending Todos
 

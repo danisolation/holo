@@ -74,7 +74,7 @@ Full details: [milestones/v3.0-ROADMAP.md](milestones/v3.0-ROADMAP.md)
 - [x] **Phase 22: Paper Trade Foundation** - PaperTrade model, state machine, P&L calculation, SimulationConfig
 - [x] **Phase 23: Position Monitoring & Auto-Track** - Scheduler jobs for auto-tracking signals and daily TP/SL/timeout checks (completed 2026-04-20)
 - [x] **Phase 24: API & Analytics Engine** - REST API with full analytics computation and manual follow (completed 2026-04-20)
-- [ ] **Phase 25: Dashboard Structure & Trade Management** - Paper trading page, trade list, settings, signal outcome history
+- [x] **Phase 25: Dashboard Structure & Trade Management** - Paper trading page, trade list, settings, signal outcome history (completed 2026-04-20)
 - [ ] **Phase 26: Analytics Visualization & Calendar** - Calendar heatmap, streaks, timeframe comparison, performance summaries
 
 ## Phase Details
@@ -133,10 +133,10 @@ Plans:
   2. User can view a sortable/filterable trade list showing symbol, direction, entry, exit, P&L, status, and AI score
   3. User can configure simulation settings (initial capital, auto-track on/off, min confidence threshold) via a form that persists to backend
   4. User can see the 10 most recent signal outcomes (✅/❌) on each ticker's detail page
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 25-01-PLAN.md — Backend symbol filter + frontend types/hooks/API + dashboard page with tabs + overview tab
-- [ ] 25-02-PLAN.md — Trade table (UI-07) + settings form (UI-08) + signal outcome history on ticker page (UI-05)
+- [x] 25-02-PLAN.md — Trade table (UI-07) + settings form (UI-08) + signal outcome history on ticker page (UI-05)
 **UI hint**: yes
 
 ### Phase 26: Analytics Visualization & Calendar
@@ -160,5 +160,5 @@ Plans:
 | 22. Paper Trade Foundation | 2/2 | ✅ Complete | 2025-07-18 |
 | 23. Position Monitoring & Auto-Track | 2/2 | Complete   | 2026-04-20 |
 | 24. API & Analytics Engine | 2/2 | Complete   | 2026-04-20 |
-| 25. Dashboard Structure & Trade Management | 1/2 | In Progress|  |
+| 25. Dashboard Structure & Trade Management | 2/2 | Complete   | 2026-04-20 |
 | 26. Analytics Visualization & Calendar | 0/TBD | Not started | - |
