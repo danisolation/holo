@@ -40,6 +40,8 @@ from app.schemas.analysis import (
     FundamentalBatchResponse,
     SentimentBatchResponse,
     CombinedBatchResponse,
+    TradingSignalBatchResponse,  # Phase 19
+    TickerTradingSignal,         # Phase 19 — for post-validation typing
 )
 from app.services.gemini_usage_service import GeminiUsageService
 from app.services.ticker_service import TickerService
@@ -154,6 +156,67 @@ Kết quả mẫu:
 {"ticker": "VNM", "recommendation": "mua", "confidence": 8, "explanation": "Cả 3 chiều phân tích đều tích cực. Kỹ thuật cho tín hiệu mua với MACD bullish crossover. Cơ bản vững chắc với ROE 25% và tăng trưởng ổn định. Tâm lý thị trường tích cực với tin tốt về doanh thu. Khuyến nghị mua với độ tin cậy cao."}
 
 Đưa ra khuyến nghị tổng hợp cho các mã sau:"""
+
+# Phase 19: Trading Signal Pipeline Constants
+TRADING_SIGNAL_SYSTEM_INSTRUCTION = (
+    "Bạn là chuyên gia giao dịch chứng khoán Việt Nam (HOSE/HNX/UPCOM). "
+    "Cho mỗi mã, phân tích HAI hướng:\n"
+    "1. LONG: Cơ hội mua vào (entry/SL/TP)\n"
+    "2. BEARISH: Xu hướng GIẢM — khuyến nghị 'giảm vị thế' hoặc 'tránh mua' "
+    "(KHÔNG phải bán khống — thị trường VN không cho phép retail short-sell)\n\n"
+    "Quy tắc:\n"
+    "- Entry trong khoảng ±5% giá hiện tại\n"
+    "- Stop-loss trong phạm vi 2×ATR từ entry\n"
+    "- Take-profit neo vào mức hỗ trợ/kháng cự hoặc Fibonacci\n"
+    "- risk_reward_ratio = |TP1 - entry| / |entry - SL| (phải ≥ 0.5)\n"
+    "- position_size_pct: % danh mục đề xuất (xem xét ATR và confidence)\n"
+    "- timeframe: 'swing' (3-15 ngày) hoặc 'position' (nhiều tuần+)\n"
+    "- reasoning: giải thích bằng tiếng Việt, tối đa 300 ký tự\n"
+    "- recommended_direction: hướng có confidence cao hơn\n\n"
+    + SCORING_RUBRIC
+)
+
+TRADING_SIGNAL_FEW_SHOT = """Ví dụ phân tích:
+
+--- VNM ---
+Giá hiện tại: 82,000 VND
+ATR(14): 1,500 | ADX(14): 28.5 | RSI(14): 55.2
+Stochastic %K: 62.1, %D: 58.3
+Pivot: 81,500 | S1: 80,000 | S2: 78,500 | R1: 83,000 | R2: 84,500
+Fib 23.6%: 80,800 | Fib 38.2%: 79,500 | Fib 50%: 78,500 | Fib 61.8%: 77,500
+BB Upper: 84,200 | BB Middle: 81,800 | BB Lower: 79,400
+52-week High: 90,000 | 52-week Low: 70,000
+
+Kết quả mẫu:
+{"ticker": "VNM", "recommended_direction": "long", "long_analysis": {"direction": "long", "confidence": 7, "trading_plan": {"entry_price": 82000, "stop_loss": 79500, "take_profit_1": 84500, "take_profit_2": 86000, "risk_reward_ratio": 1.0, "position_size_pct": 8, "timeframe": "swing"}, "reasoning": "RSI trung tính, ADX >25 cho thấy xu hướng rõ. Giá trên pivot, nhắm R1-R2."}, "bearish_analysis": {"direction": "bearish", "confidence": 4, "trading_plan": {"entry_price": 82000, "stop_loss": 84000, "take_profit_1": 80000, "take_profit_2": 78500, "risk_reward_ratio": 1.0, "position_size_pct": 3, "timeframe": "swing"}, "reasoning": "Xu hướng giảm yếu. Stochastic chưa overbought, chờ tín hiệu rõ hơn."}}
+
+Phân tích các mã sau dựa trên dữ liệu kỹ thuật:"""
+
+
+# Phase 19: Post-validation for trading signals (module-level — pure logic, no self)
+def _validate_trading_signal(
+    signal: "TickerTradingSignal",
+    current_price: float,
+    atr: float,
+) -> tuple[bool, str]:
+    """Validate a single ticker's trading signal against price/ATR bounds.
+
+    Returns (is_valid, reason). Checks BOTH long and bearish analysis plans.
+    Per CONTEXT.md: entry ±5% of current_price, SL within 3×ATR, TP within 5×ATR.
+    """
+    for analysis in [signal.long_analysis, signal.bearish_analysis]:
+        plan = analysis.trading_plan
+        # Entry within ±5% of current_price
+        if current_price > 0 and abs(plan.entry_price - current_price) / current_price > 0.05:
+            return False, f"Entry {plan.entry_price:.0f} outside ±5% of current {current_price:.0f}"
+        # SL within 3×ATR of entry
+        if atr > 0 and abs(plan.stop_loss - plan.entry_price) > 3 * atr:
+            return False, f"SL {plan.stop_loss:.0f} exceeds 3×ATR ({3 * atr:.0f}) from entry {plan.entry_price:.0f}"
+        # TP within 5×ATR of entry
+        for tp in [plan.take_profit_1, plan.take_profit_2]:
+            if atr > 0 and abs(tp - plan.entry_price) > 5 * atr:
+                return False, f"TP {tp:.0f} exceeds 5×ATR ({5 * atr:.0f}) from entry {plan.entry_price:.0f}"
+    return True, ""
 
 
 class AIAnalysisService:
@@ -464,24 +527,26 @@ class AIAnalysisService:
         ticker_ids: dict[str, int],
         analysis_type: AnalysisType,
         batch_analyzer,
+        batch_size_override: int | None = None,  # Phase 19: for trading_signal's 15-ticker batches
     ) -> dict:
         """Run analysis in batches with rate limiting.
 
-        Batches tickers into groups of self.batch_size, calls Gemini per batch,
+        Batches tickers into groups of batch_size, calls Gemini per batch,
         stores results, and sleeps self.delay seconds between batches.
         Handles 429 quota errors by waiting the specified retry delay.
         """
         symbols = list(ticker_data.keys())
+        batch_size = batch_size_override or self.batch_size
         success = 0
         failed = 0
         failed_symbols: list[str] = []
         today = date.today()
 
-        total_batches = (len(symbols) + self.batch_size - 1) // self.batch_size
+        total_batches = (len(symbols) + batch_size - 1) // batch_size
 
-        for batch_idx in range(0, len(symbols), self.batch_size):
-            batch_symbols = symbols[batch_idx : batch_idx + self.batch_size]
-            batch_num = batch_idx // self.batch_size + 1
+        for batch_idx in range(0, len(symbols), batch_size):
+            batch_symbols = symbols[batch_idx : batch_idx + batch_size]
+            batch_num = batch_idx // batch_size + 1
             batch_data = {s: ticker_data[s] for s in batch_symbols}
 
             logger.info(
@@ -502,7 +567,9 @@ class AIAnalysisService:
                         break
 
                     # Store each ticker's analysis
-                    for analysis in result.analyses:
+                    # Trading signals use 'signals' field; others use 'analyses'
+                    items = result.signals if analysis_type == AnalysisType.TRADING_SIGNAL else result.analyses
+                    for analysis in items:
                         symbol = analysis.ticker
                         tid = ticker_ids.get(symbol)
                         if tid is None:
@@ -522,16 +589,42 @@ class AIAnalysisService:
                         elif analysis_type == AnalysisType.COMBINED:
                             signal = analysis.recommendation.value
                             score = analysis.confidence
+                        elif analysis_type == AnalysisType.TRADING_SIGNAL:
+                            # Post-validate trading signals against price/ATR bounds
+                            ctx = ticker_data.get(symbol, {})
+                            current_price = ctx.get("current_price", 0)
+                            atr = ctx.get("atr_14", 0)
+                            is_valid, reason = _validate_trading_signal(analysis, current_price, atr)
+
+                            if is_valid:
+                                signal = analysis.recommended_direction.value
+                                score = (
+                                    analysis.long_analysis.confidence
+                                    if analysis.recommended_direction.value == "long"
+                                    else analysis.bearish_analysis.confidence
+                                )
+                            else:
+                                logger.warning(f"Trading signal validation failed for {symbol}: {reason}")
+                                signal = "invalid"
+                                score = 0
                         else:
                             signal = "unknown"
                             score = 5
 
-                        # Combined uses explanation field; others use reasoning
-                        reasoning = (
-                            analysis.explanation
-                            if analysis_type == AnalysisType.COMBINED
-                            else analysis.reasoning
-                        )
+                        # Extract reasoning based on analysis type
+                        if analysis_type == AnalysisType.COMBINED:
+                            reasoning = analysis.explanation
+                        elif analysis_type == AnalysisType.TRADING_SIGNAL:
+                            if signal != "invalid":
+                                reasoning = (
+                                    analysis.long_analysis.reasoning
+                                    if analysis.recommended_direction.value == "long"
+                                    else analysis.bearish_analysis.reasoning
+                                )
+                            else:
+                                reasoning = f"Validation failed: {reason}"
+                        else:
+                            reasoning = analysis.reasoning
 
                         await self._store_analysis(
                             ticker_id=tid,
@@ -596,7 +689,7 @@ class AIAnalysisService:
                     break
 
             # Rate limiting: delay between batches (except after last batch)
-            if batch_idx + self.batch_size < len(symbols):
+            if batch_idx + batch_size < len(symbols):
                 await asyncio.sleep(self.delay)
 
         result_dict = {
@@ -617,13 +710,17 @@ class AIAnalysisService:
         retry=retry_if_exception_type(ServerError),
         reraise=True,
     )
-    async def _call_gemini_with_retry(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None):
+    async def _call_gemini_with_retry(
+        self, prompt: str, response_schema, temperature: float = 0.2,
+        system_instruction: str | None = None,
+        *, max_output_tokens: int = 16384, thinking_budget: int | None = None,
+    ):
         """Internal: Gemini call with tenacity retry. Circuit breaker wraps this."""
         # For thinking models (2.5-flash), set thinking budget to prevent
         # internal reasoning from consuming the entire output token budget
         thinking_config = None
         if "2.5" in self.model:
-            thinking_config = types.ThinkingConfig(thinking_budget=1024)
+            thinking_config = types.ThinkingConfig(thinking_budget=thinking_budget or 1024)
 
         response = await self.client.aio.models.generate_content(
             model=self.model,
@@ -633,13 +730,13 @@ class AIAnalysisService:
                 response_mime_type="application/json",
                 response_schema=response_schema,
                 temperature=temperature,
-                max_output_tokens=16384,
+                max_output_tokens=max_output_tokens,
                 thinking_config=thinking_config,
             ),
         )
         return response
 
-    async def _call_gemini(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None):
+    async def _call_gemini(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None, **kwargs):
         """Call Gemini API with circuit breaker protection.
 
         Circuit breaker wraps OUTSIDE tenacity (Pitfall 1):
@@ -647,7 +744,7 @@ class AIAnalysisService:
         - If all retries fail, that counts as 1 circuit breaker failure
         - After 3 such sequences, circuit opens
         """
-        return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema, temperature, system_instruction)
+        return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema, temperature, system_instruction, **kwargs)
 
     async def _record_usage(self, analysis_type: str, batch_size: int, response) -> None:
         """Record Gemini token usage after a successful API call."""
@@ -1001,6 +1098,86 @@ class AIAnalysisService:
 
         return context
 
+    async def _get_trading_signal_context(
+        self, ticker_id: int, symbol: str
+    ) -> dict | None:
+        """Get comprehensive context for trading signal generation.
+
+        Combines: latest indicators (ATR, ADX, RSI, Stochastic, BBands),
+        S/R levels (pivot, support, resistance, fibonacci),
+        current price, and 52-week high/low.
+        Returns None if no indicator data (skip ticker).
+        """
+        result = await self.session.execute(
+            select(TechnicalIndicator)
+            .where(TechnicalIndicator.ticker_id == ticker_id)
+            .order_by(TechnicalIndicator.date.desc())
+            .limit(1)
+        )
+        latest = result.scalar_one_or_none()
+        if latest is None:
+            return None
+
+        def _f(val) -> float | None:
+            return float(val) if val is not None else None
+
+        context = {
+            "atr_14": _f(latest.atr_14),
+            "adx_14": _f(latest.adx_14),
+            "rsi_14": _f(latest.rsi_14),
+            "stoch_k_14": _f(latest.stoch_k_14),
+            "stoch_d_14": _f(latest.stoch_d_14),
+            "bb_upper": _f(latest.bb_upper),
+            "bb_middle": _f(latest.bb_middle),
+            "bb_lower": _f(latest.bb_lower),
+            # Phase 18 S/R levels
+            "pivot_point": _f(latest.pivot_point),
+            "support_1": _f(latest.support_1),
+            "support_2": _f(latest.support_2),
+            "resistance_1": _f(latest.resistance_1),
+            "resistance_2": _f(latest.resistance_2),
+            "fib_236": _f(latest.fib_236),
+            "fib_382": _f(latest.fib_382),
+            "fib_500": _f(latest.fib_500),
+            "fib_618": _f(latest.fib_618),
+        }
+
+        # Skip if no ATR data (needed for post-validation)
+        if context["atr_14"] is None:
+            logger.debug(f"Skipping {symbol} for trading signal: no ATR data")
+            return None
+
+        # Latest close price
+        price_result = await self.session.execute(
+            select(DailyPrice.close)
+            .where(DailyPrice.ticker_id == ticker_id)
+            .order_by(DailyPrice.date.desc())
+            .limit(1)
+        )
+        latest_close = price_result.scalar_one_or_none()
+        if latest_close is None:
+            return None
+        context["current_price"] = float(latest_close)
+
+        # 52-week high/low
+        from sqlalchemy import func as sa_func
+        week52_result = await self.session.execute(
+            select(
+                sa_func.max(DailyPrice.high),
+                sa_func.min(DailyPrice.low),
+            )
+            .where(
+                DailyPrice.ticker_id == ticker_id,
+                DailyPrice.date >= date.today() - timedelta(days=365),
+            )
+        )
+        row = week52_result.one_or_none()
+        if row and row[0] is not None:
+            context["week_52_high"] = float(row[0])
+            context["week_52_low"] = float(row[1])
+
+        return context
+
     # ------------------------------------------------------------------
     # Prompt Builders
     # ------------------------------------------------------------------
@@ -1091,6 +1268,53 @@ class AIAnalysisService:
             lines.append(f"Cơ bản: health={data.get('fund_signal', 'N/A')}, score={data.get('fund_score', 'N/A')}")
             lines.append(f"Tâm lý: sentiment={data.get('sent_signal', 'neutral')}, score={data.get('sent_score', 5)}")
 
+        return "\n".join(lines)
+
+    def _build_trading_signal_prompt(self, ticker_data: dict[str, dict]) -> str:
+        """Build Vietnamese prompt for trading signal analysis batch.
+
+        Phase 19: Includes ATR, ADX, RSI, Stochastic, S/R levels, Fibonacci,
+        Bollinger Bands, 52-week high/low, and current price per ticker.
+        """
+        lines = [
+            TRADING_SIGNAL_FEW_SHOT,
+            "",
+        ]
+        for symbol, data in ticker_data.items():
+            lines.append(f"\n--- {symbol} ---")
+            lines.append(f"Giá hiện tại: {data['current_price']:,.0f} VND")
+            lines.append(
+                f"ATR(14): {data.get('atr_14', 'N/A')} | "
+                f"ADX(14): {data.get('adx_14', 'N/A')} | "
+                f"RSI(14): {data.get('rsi_14', 'N/A')}"
+            )
+            lines.append(
+                f"Stochastic %K: {data.get('stoch_k_14', 'N/A')}, "
+                f"%D: {data.get('stoch_d_14', 'N/A')}"
+            )
+            lines.append(
+                f"Pivot: {data.get('pivot_point', 'N/A')} | "
+                f"S1: {data.get('support_1', 'N/A')} | "
+                f"S2: {data.get('support_2', 'N/A')} | "
+                f"R1: {data.get('resistance_1', 'N/A')} | "
+                f"R2: {data.get('resistance_2', 'N/A')}"
+            )
+            lines.append(
+                f"Fib 23.6%: {data.get('fib_236', 'N/A')} | "
+                f"Fib 38.2%: {data.get('fib_382', 'N/A')} | "
+                f"Fib 50%: {data.get('fib_500', 'N/A')} | "
+                f"Fib 61.8%: {data.get('fib_618', 'N/A')}"
+            )
+            lines.append(
+                f"BB Upper: {data.get('bb_upper', 'N/A')} | "
+                f"BB Middle: {data.get('bb_middle', 'N/A')} | "
+                f"BB Lower: {data.get('bb_lower', 'N/A')}"
+            )
+            if "week_52_high" in data:
+                lines.append(
+                    f"52-week High: {data['week_52_high']:,.0f} | "
+                    f"52-week Low: {data['week_52_low']:,.0f}"
+                )
         return "\n".join(lines)
 
     # ------------------------------------------------------------------
