@@ -1,0 +1,88 @@
+"""Paper trading API: trade CRUD, manual follow, config, analytics.
+
+Follows portfolio.py session-per-request pattern. Per Phase 24.
+"""
+from fastapi import APIRouter, HTTPException, Query
+
+from app.database import async_session
+from app.services.paper_trade_analytics_service import PaperTradeAnalyticsService
+from app.schemas.paper_trading import (
+    ManualFollowRequest,
+    PaperTradeResponse,
+    PaperTradeListResponse,
+    SimulationConfigResponse,
+    SimulationConfigUpdateRequest,
+)
+
+router = APIRouter(prefix="/paper-trading", tags=["paper-trading"])
+
+
+@router.get("/trades", response_model=PaperTradeListResponse)
+async def list_trades(
+    status: str | None = Query(None, description="Filter: pending, active, partial_tp, closed_tp2, closed_sl, closed_timeout, closed_manual"),
+    direction: str | None = Query(None, pattern="^(long|bearish)$", description="Filter by direction"),
+    timeframe: str | None = Query(None, pattern="^(swing|position)$", description="Filter by timeframe"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    """List paper trades with optional filters and pagination."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.list_trades(
+            status=status, direction=direction, timeframe=timeframe,
+            limit=limit, offset=offset,
+        )
+        return PaperTradeListResponse(
+            trades=[PaperTradeResponse(**t) for t in result["trades"]],
+            total=result["total"],
+        )
+
+
+@router.post("/trades/follow", response_model=PaperTradeResponse, status_code=201)
+async def create_manual_follow(trade: ManualFollowRequest):
+    """PT-09: Manual follow — create paper trade with custom entry/SL/TP.
+    ai_analysis_id = NULL (not linked to signal), status = PENDING."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.create_manual_follow(trade.model_dump())
+        return PaperTradeResponse(**result)
+
+
+@router.get("/trades/{trade_id}", response_model=PaperTradeResponse)
+async def get_trade(trade_id: int):
+    """Get single paper trade detail."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_trade(trade_id)
+        return PaperTradeResponse(**result)
+
+
+@router.post("/trades/{trade_id}/close", response_model=PaperTradeResponse)
+async def close_trade(trade_id: int):
+    """Manual close — transitions trade to CLOSED_MANUAL."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.close_trade(trade_id)
+        return PaperTradeResponse(**result)
+
+
+@router.get("/config", response_model=SimulationConfigResponse)
+async def get_config():
+    """Get simulation configuration."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        result = await service.get_config()
+        return SimulationConfigResponse(**result)
+
+
+@router.put("/config", response_model=SimulationConfigResponse)
+async def update_config(config: SimulationConfigUpdateRequest):
+    """Update simulation configuration (partial update — only non-null fields)."""
+    async with async_session() as session:
+        service = PaperTradeAnalyticsService(session)
+        # Only pass non-null fields
+        update_data = {k: v for k, v in config.model_dump().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        result = await service.update_config(update_data)
+        return SimulationConfigResponse(**result)
