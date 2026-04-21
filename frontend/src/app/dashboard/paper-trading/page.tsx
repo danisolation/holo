@@ -23,13 +23,13 @@ export default function PaperTradingPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview">
+      <Tabs data-testid="pt-tabs" defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="trades">Lệnh</TabsTrigger>
-          <TabsTrigger value="analytics">Phân tích</TabsTrigger>
-          <TabsTrigger value="calendar">Lịch</TabsTrigger>
-          <TabsTrigger value="settings">Cài đặt</TabsTrigger>
+          <TabsTrigger data-testid="pt-tab-overview" value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger data-testid="pt-tab-trades" value="trades">Lệnh</TabsTrigger>
+          <TabsTrigger data-testid="pt-tab-analytics" value="analytics">Phân tích</TabsTrigger>
+          <TabsTrigger data-testid="pt-tab-calendar" value="calendar">Lịch</TabsTrigger>
+          <TabsTrigger data-testid="pt-tab-settings" value="settings">Cài đặt</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
