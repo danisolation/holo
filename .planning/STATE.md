@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: E2E Testing & Quality Assurance
 status: executing
-stopped_at: Completed 27-PLAN-2.md
-last_updated: "2026-04-21T10:27:51.802Z"
+stopped_at: Completed 27-PLAN-4.md
+last_updated: "2026-04-21T10:33:24.752Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2025-07-20)
 ## Current Position
 
 Phase: 27 of 31 (Test Infrastructure & Foundation)
-Plan: 2 of 4 in current phase (plan 1 complete)
+Plan: 4 of 4 in current phase (plan 1 complete)
 Status: Ready to execute
 Last activity: 2026-04-21
 
@@ -58,6 +58,7 @@ All v1.0–v4.0 decisions archived in PROJECT.md Key Decisions table.
 - [27.1] reuseExistingServer: !process.env.CI for local dev speed
 - [Phase 27]: holo_test_mode defaults to False — normal operation is never affected
 - [Phase 27]: Guard both startup and shutdown blocks — don't stop what wasn't started
+- [Phase 27.4]: Fixed API route paths to match actual backend: /paper-trading/config, /analytics/summary, /tickers/{symbol}/prices
 
 ### Pending Todos
 
@@ -73,6 +74,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T10:27:51.796Z
-Stopped at: Completed 27-PLAN-2.md
+Last session: 2026-04-21T10:33:11.284Z
+Stopped at: Completed 27-PLAN-4.md
 Resume file: None

@@ -85,7 +85,7 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 
 **Milestone Goal:** Playwright E2E test suite covering all pages, API endpoints, user interactions, visual regression, and critical flows — catching bugs automatically and verifying the entire application works end-to-end.
 
-- [ ] **Phase 27: Test Infrastructure & Foundation** - Playwright configured with dual webServer, test mode guard, data-testid attributes, seed fixtures
+- [x] **Phase 27: Test Infrastructure & Foundation** - Playwright configured with dual webServer, test mode guard, data-testid attributes, seed fixtures (completed 2026-04-21)
 - [ ] **Phase 28: Page Smoke Tests & API Health Checks** - Every route loads, every API endpoint responds correctly
 - [ ] **Phase 29: User Interaction Tests** - Forms, tables, tabs, and interactive controls verified
 - [ ] **Phase 30: Visual Regression Testing** - Screenshot baselines, chart verification, dynamic masking, responsive checks
@@ -103,7 +103,7 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
   3. Key UI components (navbar, tabs, forms, tables, chart containers) have stable `data-testid` attributes for reliable selection
   4. Test fixture utilities can seed necessary data (tickers, prices, analysis, paper trades) for test scenarios
   5. Test artifacts (test-results/, playwright-report/, screenshot baselines) are properly git-ignored
-**Plans:** 2/3 plans executed
+**Plans:** 4/3 plans complete
 
 Plans:
 - [ ] 27-01-PLAN.md — Playwright install + backend HOLO_TEST_MODE guard + dual webServer config + smoke test
@@ -162,7 +162,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 27. Test Infrastructure & Foundation | 2/3 | In Progress|  |
+| 27. Test Infrastructure & Foundation | 4/3 | Complete   | 2026-04-21 |
 | 28. Page Smoke Tests & API Health Checks | 0/0 | Not started | - |
 | 29. User Interaction Tests | 0/0 | Not started | - |
 | 30. Visual Regression Testing | 0/0 | Not started | - |

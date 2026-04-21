@@ -10,7 +10,7 @@
 - [ ] **INFRA-01**: Playwright installed và configured với dual webServer (FastAPI :8001 + Next.js :3000) — cả 2 server tự start/stop khi chạy test
 - [x] **INFRA-02**: HOLO_TEST_MODE env guard ngăn scheduler jobs và Telegram bot khởi động khi chạy test
 - [ ] **INFRA-03**: data-testid attributes trên các component quan trọng (navbar, tabs, forms, tables, charts) để test selector ổn định
-- [ ] **INFRA-04**: Test helper/fixture tạo seed data (tickers, prices, analysis, paper trades) cho test scenarios
+- [x] **INFRA-04**: Test helper/fixture tạo seed data (tickers, prices, analysis, paper trades) cho test scenarios
 - [ ] **INFRA-05**: .gitignore cập nhật cho test-results/, playwright-report/, screenshots baseline
 
 ### Page Smoke Tests (SMOKE)
@@ -76,7 +76,7 @@
 | INFRA-01 | Phase 27 | Pending |
 | INFRA-02 | Phase 27 | Complete |
 | INFRA-03 | Phase 27 | Pending |
-| INFRA-04 | Phase 27 | Pending |
+| INFRA-04 | Phase 27 | Complete |
 | INFRA-05 | Phase 27 | Pending |
 | SMOKE-01 | Phase 28 | Pending |
 | SMOKE-02 | Phase 28 | Pending |
