@@ -15,10 +15,10 @@
 
 ### Page Smoke Tests (SMOKE)
 
-- [ ] **SMOKE-01**: Tất cả 8 routes load thành công không crash: /, /dashboard, /watchlist, /dashboard/paper-trading, /dashboard/portfolio, /dashboard/health, /dashboard/corporate-events, /ticker/[symbol]
-- [ ] **SMOKE-02**: Navigation giữa các trang hoạt động đúng qua navbar links
-- [ ] **SMOKE-03**: Các component chính render trên mỗi trang (chart container, data table, cards, tabs)
-- [ ] **SMOKE-04**: Dark/light theme toggle không break layout
+- [x] **SMOKE-01**: Tất cả 8 routes load thành công không crash: /, /dashboard, /watchlist, /dashboard/paper-trading, /dashboard/portfolio, /dashboard/health, /dashboard/corporate-events, /ticker/[symbol]
+- [x] **SMOKE-02**: Navigation giữa các trang hoạt động đúng qua navbar links
+- [x] **SMOKE-03**: Các component chính render trên mỗi trang (chart container, data table, cards, tabs)
+- [x] **SMOKE-04**: Dark/light theme toggle không break layout
 
 ### API Health Checks (API)
 
@@ -78,10 +78,10 @@
 | INFRA-03 | Phase 27 | Complete |
 | INFRA-04 | Phase 27 | Complete |
 | INFRA-05 | Phase 27 | Pending |
-| SMOKE-01 | Phase 28 | Pending |
-| SMOKE-02 | Phase 28 | Pending |
-| SMOKE-03 | Phase 28 | Pending |
-| SMOKE-04 | Phase 28 | Pending |
+| SMOKE-01 | Phase 28 | Complete |
+| SMOKE-02 | Phase 28 | Complete |
+| SMOKE-03 | Phase 28 | Complete |
+| SMOKE-04 | Phase 28 | Complete |
 | API-01 | Phase 28 | Pending |
 | API-02 | Phase 28 | Pending |
 | API-03 | Phase 28 | Pending |
