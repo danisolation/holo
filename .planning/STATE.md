@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: E2E Testing & Quality Assurance
 status: verifying
-stopped_at: Completed 30-PLAN-1.md
-last_updated: "2026-04-21T10:53:00.626Z"
+stopped_at: Completed 31-PLAN-1.md
+last_updated: "2026-04-21T10:53:21.805Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 5
@@ -68,6 +68,9 @@ All v1.0–v4.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 29]: Empty state graceful handling for live data tables
 - [Phase 30]: Mask canvas + .font-mono + VN stock color selectors for non-deterministic visual elements
 - [Phase 30]: Graceful SVG chart assertion — pass when no paper trading data exists
+- [Phase 31]: Multi-page flow tests handle empty states gracefully — no specific data value assertions
+- [Phase 31]: Watchlist tests use localStorage injection for deterministic starting state
+- [Phase 31]: Settings tests restore original values after modification (cleanup)
 
 ### Pending Todos
 
@@ -83,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T10:53:00.621Z
-Stopped at: Completed 30-PLAN-1.md
+Last session: 2026-04-21T10:53:21.800Z
+Stopped at: Completed 31-PLAN-1.md
 Resume file: None

@@ -44,10 +44,10 @@
 
 ### Critical User Flows (FLOW)
 
-- [ ] **FLOW-01**: Flow: Mở ticker → xem analysis → xem trading plan → click Follow → verify paper trade tạo thành công
-- [ ] **FLOW-02**: Flow: Mở paper trading dashboard → xem trades → sort/filter → xem analytics tab → xem calendar tab
-- [ ] **FLOW-03**: Flow: Thêm ticker vào watchlist → verify hiển thị trên watchlist page → xóa → verify đã xóa
-- [ ] **FLOW-04**: Flow: Đổi paper trading settings → verify settings persist → verify ảnh hưởng đến overview
+- [x] **FLOW-01**: Flow: Mở ticker → xem analysis → xem trading plan → click Follow → verify paper trade tạo thành công
+- [x] **FLOW-02**: Flow: Mở paper trading dashboard → xem trades → sort/filter → xem analytics tab → xem calendar tab
+- [x] **FLOW-03**: Flow: Thêm ticker vào watchlist → verify hiển thị trên watchlist page → xóa → verify đã xóa
+- [x] **FLOW-04**: Flow: Đổi paper trading settings → verify settings persist → verify ảnh hưởng đến overview
 
 ## Future Requirements
 
@@ -95,10 +95,10 @@
 | VIS-02 | Phase 30 | Complete |
 | VIS-03 | Phase 30 | Complete |
 | VIS-04 | Phase 30 | Complete |
-| FLOW-01 | Phase 31 | Pending |
-| FLOW-02 | Phase 31 | Pending |
-| FLOW-03 | Phase 31 | Pending |
-| FLOW-04 | Phase 31 | Pending |
+| FLOW-01 | Phase 31 | Complete |
+| FLOW-02 | Phase 31 | Complete |
+| FLOW-03 | Phase 31 | Complete |
+| FLOW-04 | Phase 31 | Complete |
 
 **Coverage:**
 - v5.0 requirements: 26 total
