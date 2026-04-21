@@ -36,7 +36,7 @@ export function Navbar() {
   const { status, subscribedCount } = useRealtimePrices([]);
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header data-testid="navbar" className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center gap-4 px-4 mx-auto max-w-7xl">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
@@ -45,7 +45,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1 ml-4">
+        <nav data-testid="nav-desktop" className="hidden md:flex items-center gap-1 ml-4">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -76,6 +76,7 @@ export function Navbar() {
 
           {/* Dark mode toggle */}
           <Button
+            data-testid="theme-toggle"
             variant="ghost"
             size="icon-sm"
             className="relative"
