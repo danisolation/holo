@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: E2E Testing & Quality Assurance
 status: verifying
-stopped_at: Completed 28-PLAN-2.md
-last_updated: "2026-04-21T10:40:46.517Z"
+stopped_at: Completed 29-PLAN-1.md
+last_updated: "2026-04-21T10:47:55.418Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 3
-  completed_plans: 6
+  completed_plans: 7
   percent: 100
 ---
 
@@ -64,6 +64,8 @@ All v1.0–v4.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 28]: [28.2] API smoke tests: 22 tests across all endpoint groups, analysis accepts 200|404
 - [Phase 28]: [28.2] Paper trading: 16 read-only tests, POST excluded to avoid test data
 - [Phase 28]: [28.2] Error handling: 9 tests covering 404/422/400 with detail assertions
+- [Phase 29]: Watchlist persistence tested via localStorage injection (zustand persist key)
+- [Phase 29]: Empty state graceful handling for live data tables
 
 ### Pending Todos
 
@@ -79,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T10:40:46.511Z
-Stopped at: Completed 28-PLAN-2.md
+Last session: 2026-04-21T10:47:55.413Z
+Stopped at: Completed 29-PLAN-1.md
 Resume file: None

@@ -29,11 +29,11 @@
 
 ### User Interaction Tests (INTERACT)
 
-- [ ] **INTERACT-01**: Paper trading settings form submit thành công và persist giá trị
-- [ ] **INTERACT-02**: Trade table sorting (by P&L, status, date) và filtering (by direction, status) hoạt động đúng
-- [ ] **INTERACT-03**: Watchlist add/remove ticker hoạt động và persist qua page reload
-- [ ] **INTERACT-04**: Tab switching trên paper trading dashboard (Overview → Trades → Analytics → Calendar → Settings)
-- [ ] **INTERACT-05**: Ticker detail page tabs và interactive chart controls hoạt động
+- [x] **INTERACT-01**: Paper trading settings form submit thành công và persist giá trị
+- [x] **INTERACT-02**: Trade table sorting (by P&L, status, date) và filtering (by direction, status) hoạt động đúng
+- [x] **INTERACT-03**: Watchlist add/remove ticker hoạt động và persist qua page reload
+- [x] **INTERACT-04**: Tab switching trên paper trading dashboard (Overview → Trades → Analytics → Calendar → Settings)
+- [x] **INTERACT-05**: Ticker detail page tabs và interactive chart controls hoạt động
 
 ### Visual Regression (VIS)
 
@@ -86,11 +86,11 @@
 | API-02 | Phase 28 | Complete |
 | API-03 | Phase 28 | Complete |
 | API-04 | Phase 28 | Complete |
-| INTERACT-01 | Phase 29 | Pending |
-| INTERACT-02 | Phase 29 | Pending |
-| INTERACT-03 | Phase 29 | Pending |
-| INTERACT-04 | Phase 29 | Pending |
-| INTERACT-05 | Phase 29 | Pending |
+| INTERACT-01 | Phase 29 | Complete |
+| INTERACT-02 | Phase 29 | Complete |
+| INTERACT-03 | Phase 29 | Complete |
+| INTERACT-04 | Phase 29 | Complete |
+| INTERACT-05 | Phase 29 | Complete |
 | VIS-01 | Phase 30 | Pending |
 | VIS-02 | Phase 30 | Pending |
 | VIS-03 | Phase 30 | Pending |
