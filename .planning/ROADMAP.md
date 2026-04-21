@@ -86,10 +86,10 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 **Milestone Goal:** Playwright E2E test suite covering all pages, API endpoints, user interactions, visual regression, and critical flows — catching bugs automatically and verifying the entire application works end-to-end.
 
 - [x] **Phase 27: Test Infrastructure & Foundation** - Playwright configured with dual webServer, test mode guard, data-testid attributes, seed fixtures (completed 2026-04-21)
-- [ ] **Phase 28: Page Smoke Tests & API Health Checks** - Every route loads, every API endpoint responds correctly
-- [ ] **Phase 29: User Interaction Tests** - Forms, tables, tabs, and interactive controls verified
-- [ ] **Phase 30: Visual Regression Testing** - Screenshot baselines, chart verification, dynamic masking, responsive checks
-- [ ] **Phase 31: Critical User Flows** - Multi-page journeys proving the app works end-to-end
+- [x] **Phase 28: Page Smoke Tests & API Health Checks** - 66 tests: all 8 routes load, all API endpoints respond correctly (completed 2026-04-21)
+- [x] **Phase 29: User Interaction Tests** - 23 tests: forms, tables, tabs, and interactive controls verified (completed 2026-04-21)
+- [x] **Phase 30: Visual Regression Testing** - 14 tests: screenshot baselines, chart verification, dynamic masking, responsive checks (completed 2026-04-21)
+- [x] **Phase 31: Critical User Flows** - 8 tests: multi-page journeys proving the app works end-to-end (completed 2026-04-21)
 
 ## Phase Details
 
