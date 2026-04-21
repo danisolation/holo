@@ -166,7 +166,7 @@ export default function TickerDetailPage({
   const rtPrice = realtimePrices[upperSymbol];
 
   return (
-    <div className="space-y-6">
+    <div data-testid="ticker-page" className="space-y-6">
       {/* Ticker header */}
       <div className="flex items-center gap-4">
         <Button
@@ -237,7 +237,7 @@ export default function TickerDetailPage({
       </div>
 
       {/* Candlestick Chart */}
-      <section>
+      <section data-testid="ticker-chart">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Biểu đồ giá</h2>
           {pricesError && (

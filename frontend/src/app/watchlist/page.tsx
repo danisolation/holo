@@ -9,7 +9,7 @@ export default function WatchlistPage() {
   const { watchlist } = useWatchlistStore();
 
   return (
-    <div>
+    <div data-testid="watchlist-page">
       <div className="flex items-center gap-3 mb-6">
         <h2 className="text-2xl font-bold tracking-tight">
           Danh mục theo dõi
@@ -24,7 +24,9 @@ export default function WatchlistPage() {
         <ExchangeFilter />
       </div>
 
-      <WatchlistTable />
+      <div data-testid="watchlist-table">
+        <WatchlistTable />
+      </div>
     </div>
   );
 }
