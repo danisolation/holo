@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 
+from app.config import settings
 from app.database import engine
 from app.scheduler.manager import scheduler, configure_jobs
 from app.api.router import api_router
@@ -22,21 +23,25 @@ async def lifespan(app: FastAPI):
     """Application lifecycle: start scheduler and Telegram bot on startup, clean up on shutdown."""
     # Startup
     logger.info("Holo starting up...")
-    configure_jobs()
-    scheduler.start()
-    logger.info("Scheduler started with configured jobs")
-    try:
-        await telegram_bot.start()
-    except Exception as e:
-        logger.warning(f"Telegram bot failed to start (continuing without it): {e}")
+    if settings.holo_test_mode:
+        logger.info("HOLO_TEST_MODE=true — skipping scheduler and Telegram bot")
+    else:
+        configure_jobs()
+        scheduler.start()
+        logger.info("Scheduler started with configured jobs")
+        try:
+            await telegram_bot.start()
+        except Exception as e:
+            logger.warning(f"Telegram bot failed to start (continuing without it): {e}")
     yield
     # Shutdown
-    try:
-        await telegram_bot.stop()
-    except Exception:
-        pass
-    scheduler.shutdown(wait=False)
-    logger.info("Scheduler shut down")
+    if not settings.holo_test_mode:
+        try:
+            await telegram_bot.stop()
+        except Exception:
+            pass
+        scheduler.shutdown(wait=False)
+        logger.info("Scheduler shut down")
     await engine.dispose()
     logger.info("Database engine disposed. Holo shut down.")
 
