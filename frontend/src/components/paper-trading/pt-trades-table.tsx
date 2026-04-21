@@ -227,7 +227,7 @@ export function PTTradesTable() {
   }
 
   return (
-    <Card>
+    <Card data-testid="pt-trades-table">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="text-base">Danh sách lệnh</CardTitle>

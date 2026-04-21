@@ -326,7 +326,7 @@ function SectorCard() {
 
 export function PTAnalyticsTab() {
   return (
-    <div className="space-y-6 mt-4">
+    <div data-testid="pt-analytics-content" className="space-y-6 mt-4">
       {/* 1. Equity curve — full width */}
       <PTEquityChart />
 

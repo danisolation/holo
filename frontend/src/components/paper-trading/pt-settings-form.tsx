@@ -37,7 +37,7 @@ export function PTSettingsForm() {
   }
 
   return (
-    <Card>
+    <Card data-testid="pt-settings-form">
       <CardHeader>
         <CardTitle className="text-base">Cài đặt mô phỏng</CardTitle>
       </CardHeader>
@@ -99,7 +99,7 @@ export function PTSettingsForm() {
           </div>
 
           {/* Save button */}
-          <Button onClick={handleSave} disabled={updateConfig.isPending}>
+          <Button data-testid="pt-settings-submit" onClick={handleSave} disabled={updateConfig.isPending}>
             {updateConfig.isPending ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
