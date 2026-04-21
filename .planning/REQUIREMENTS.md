@@ -22,10 +22,10 @@
 
 ### API Health Checks (API)
 
-- [ ] **API-01**: Tất cả API endpoints trả về status code đúng (200/201) và response shape hợp lệ
-- [ ] **API-02**: Paper trading API endpoints (18 endpoints) respond correctly — CRUD + analytics
-- [ ] **API-03**: Price, analysis, trading signal endpoints respond với data structure đúng
-- [ ] **API-04**: Error handling: invalid ticker trả 404, invalid request body trả 422
+- [x] **API-01**: Tất cả API endpoints trả về status code đúng (200/201) và response shape hợp lệ
+- [x] **API-02**: Paper trading API endpoints (18 endpoints) respond correctly — CRUD + analytics
+- [x] **API-03**: Price, analysis, trading signal endpoints respond với data structure đúng
+- [x] **API-04**: Error handling: invalid ticker trả 404, invalid request body trả 422
 
 ### User Interaction Tests (INTERACT)
 
@@ -82,10 +82,10 @@
 | SMOKE-02 | Phase 28 | Complete |
 | SMOKE-03 | Phase 28 | Complete |
 | SMOKE-04 | Phase 28 | Complete |
-| API-01 | Phase 28 | Pending |
-| API-02 | Phase 28 | Pending |
-| API-03 | Phase 28 | Pending |
-| API-04 | Phase 28 | Pending |
+| API-01 | Phase 28 | Complete |
+| API-02 | Phase 28 | Complete |
+| API-03 | Phase 28 | Complete |
+| API-04 | Phase 28 | Complete |
 | INTERACT-01 | Phase 29 | Pending |
 | INTERACT-02 | Phase 29 | Pending |
 | INTERACT-03 | Phase 29 | Pending |

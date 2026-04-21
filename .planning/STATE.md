@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: E2E Testing & Quality Assurance
 status: verifying
-stopped_at: Completed 28-PLAN-1.md
-last_updated: "2026-04-21T10:39:58.704Z"
+stopped_at: Completed 28-PLAN-2.md
+last_updated: "2026-04-21T10:40:46.517Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 3
-  completed_plans: 5
+  completed_plans: 6
   percent: 100
 ---
 
@@ -61,6 +61,9 @@ All v1.0–v4.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 27.4]: Fixed API route paths to match actual backend: /paper-trading/config, /analytics/summary, /tickers/{symbol}/prices
 - [Phase 27]: data-testid attributes added as non-breaking props — no DOM restructuring needed
 - [Phase 28]: Loop over APP_ROUTES for smoke tests; Vietnamese labels via getByText; theme persistence via html class comparison
+- [Phase 28]: [28.2] API smoke tests: 22 tests across all endpoint groups, analysis accepts 200|404
+- [Phase 28]: [28.2] Paper trading: 16 read-only tests, POST excluded to avoid test data
+- [Phase 28]: [28.2] Error handling: 9 tests covering 404/422/400 with detail assertions
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T10:39:58.700Z
-Stopped at: Completed 28-PLAN-1.md
+Last session: 2026-04-21T10:40:46.511Z
+Stopped at: Completed 28-PLAN-2.md
 Resume file: None
