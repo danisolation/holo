@@ -8,9 +8,9 @@ last_activity: 2025-07-21
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -25,11 +25,11 @@ See: .planning/PROJECT.md (updated 2025-07-20)
 ## Current Position
 
 Phase: 27 of 31 (Test Infrastructure & Foundation)
-Plan: 0 of 0 in current phase (not yet planned)
-Status: Ready to plan
-Last activity: 2025-07-21 — Roadmap created for v5.0 (5 phases, 26 requirements mapped)
+Plan: 1 of 4 in current phase (plan 1 complete)
+Status: Executing
+Last activity: 2026-04-21 — Completed Plan 27.1 (Playwright Installation & Configuration)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## Shipped Milestones
 
@@ -51,6 +51,11 @@ Progress: [░░░░░░░░░░] 0%
 
 All v1.0–v4.0 decisions archived in PROJECT.md Key Decisions table.
 
+- [27.1] Playwright 1.59.1 with Chromium-only (no WebKit on Windows)
+- [27.1] Dual webServer: FastAPI :8001 + Next.js :3000 with auto-start
+- [27.1] HOLO_TEST_MODE env var for test isolation
+- [27.1] reuseExistingServer: !process.env.CI for local dev speed
+
 ### Pending Todos
 
 None yet.
@@ -65,6 +70,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2025-07-21
-Stopped at: Roadmap created for v5.0 — 5 phases (27-31), 26 requirements mapped
+Last session: 2026-04-21
+Stopped at: Completed 27-1-PLAN.md (Playwright Installation & Configuration)
 Resume file: None
