@@ -103,7 +103,12 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
   3. Key UI components (navbar, tabs, forms, tables, chart containers) have stable `data-testid` attributes for reliable selection
   4. Test fixture utilities can seed necessary data (tickers, prices, analysis, paper trades) for test scenarios
   5. Test artifacts (test-results/, playwright-report/, screenshot baselines) are properly git-ignored
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 27-01-PLAN.md — Playwright install + backend HOLO_TEST_MODE guard + dual webServer config + smoke test
+- [ ] 27-02-PLAN.md — data-testid attributes on all key UI components (pages, navbar, tabs, forms, tables, charts)
+- [ ] 27-03-PLAN.md — Test fixture utilities (base fixture, API helpers, test data constants)
 
 ### Phase 28: Page Smoke Tests & API Health Checks
 **Goal**: Every application route loads without crashing and every API endpoint responds with correct status codes and response shapes
