@@ -90,5 +90,8 @@ class Settings(BaseSettings):
     trading_signal_thinking_budget: int = 2048  # Doubled from 1024 — complex dual-direction reasoning
     trading_signal_max_tokens: int = 32768     # Doubled from 16384 — ~300 tokens/ticker × 15 tickers
 
+    # Test Mode (Phase 27 — E2E testing)
+    holo_test_mode: bool = False  # Set True to skip scheduler + telegram in tests
+
 
 settings = Settings()
