@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: E2E Testing & Quality Assurance
-status: roadmap
-last_updated: "2025-07-21"
-last_activity: 2025-07-21
+status: executing
+stopped_at: Completed 27-PLAN-2.md
+last_updated: "2026-04-21T10:27:51.802Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 4
-  completed_plans: 1
-  percent: 25
+  total_plans: 3
+  completed_plans: 2
+  percent: 67
 ---
 
 # Project State
@@ -25,9 +26,9 @@ See: .planning/PROJECT.md (updated 2025-07-20)
 ## Current Position
 
 Phase: 27 of 31 (Test Infrastructure & Foundation)
-Plan: 1 of 4 in current phase (plan 1 complete)
-Status: Executing
-Last activity: 2026-04-21 — Completed Plan 27.1 (Playwright Installation & Configuration)
+Plan: 2 of 4 in current phase (plan 1 complete)
+Status: Ready to execute
+Last activity: 2026-04-21
 
 Progress: [███░░░░░░░] 25%
 
@@ -55,6 +56,8 @@ All v1.0–v4.0 decisions archived in PROJECT.md Key Decisions table.
 - [27.1] Dual webServer: FastAPI :8001 + Next.js :3000 with auto-start
 - [27.1] HOLO_TEST_MODE env var for test isolation
 - [27.1] reuseExistingServer: !process.env.CI for local dev speed
+- [Phase 27]: holo_test_mode defaults to False — normal operation is never affected
+- [Phase 27]: Guard both startup and shutdown blocks — don't stop what wasn't started
 
 ### Pending Todos
 
@@ -70,6 +73,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21
-Stopped at: Completed 27-1-PLAN.md (Playwright Installation & Configuration)
+Last session: 2026-04-21T10:27:51.796Z
+Stopped at: Completed 27-PLAN-2.md
 Resume file: None
