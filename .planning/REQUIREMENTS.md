@@ -37,10 +37,10 @@
 
 ### Visual Regression (VIS)
 
-- [ ] **VIS-01**: Screenshot baseline cho 5 trang chính: Dashboard, Ticker detail, Paper Trading, Portfolio, Watchlist
-- [ ] **VIS-02**: Chart rendering verification — candlestick chart canvas element tồn tại và có kích thước đúng
-- [ ] **VIS-03**: Dynamic data areas (prices, timestamps) được mask trong screenshot comparison
-- [ ] **VIS-04**: Responsive layout test — mobile viewport (375px) không break key pages
+- [x] **VIS-01**: Screenshot baseline cho 5 trang chính: Dashboard, Ticker detail, Paper Trading, Portfolio, Watchlist
+- [x] **VIS-02**: Chart rendering verification — candlestick chart canvas element tồn tại và có kích thước đúng
+- [x] **VIS-03**: Dynamic data areas (prices, timestamps) được mask trong screenshot comparison
+- [x] **VIS-04**: Responsive layout test — mobile viewport (375px) không break key pages
 
 ### Critical User Flows (FLOW)
 
@@ -91,10 +91,10 @@
 | INTERACT-03 | Phase 29 | Complete |
 | INTERACT-04 | Phase 29 | Complete |
 | INTERACT-05 | Phase 29 | Complete |
-| VIS-01 | Phase 30 | Pending |
-| VIS-02 | Phase 30 | Pending |
-| VIS-03 | Phase 30 | Pending |
-| VIS-04 | Phase 30 | Pending |
+| VIS-01 | Phase 30 | Complete |
+| VIS-02 | Phase 30 | Complete |
+| VIS-03 | Phase 30 | Complete |
+| VIS-04 | Phase 30 | Complete |
 | FLOW-01 | Phase 31 | Pending |
 | FLOW-02 | Phase 31 | Pending |
 | FLOW-03 | Phase 31 | Pending |

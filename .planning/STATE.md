@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: E2E Testing & Quality Assurance
 status: verifying
-stopped_at: Completed 29-PLAN-1.md
-last_updated: "2026-04-21T10:47:55.418Z"
+stopped_at: Completed 30-PLAN-1.md
+last_updated: "2026-04-21T10:53:00.626Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 3
-  completed_plans: 7
+  completed_plans: 9
   percent: 100
 ---
 
@@ -66,6 +66,8 @@ All v1.0–v4.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 28]: [28.2] Error handling: 9 tests covering 404/422/400 with detail assertions
 - [Phase 29]: Watchlist persistence tested via localStorage injection (zustand persist key)
 - [Phase 29]: Empty state graceful handling for live data tables
+- [Phase 30]: Mask canvas + .font-mono + VN stock color selectors for non-deterministic visual elements
+- [Phase 30]: Graceful SVG chart assertion — pass when no paper trading data exists
 
 ### Pending Todos
 
@@ -81,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T10:47:55.413Z
-Stopped at: Completed 29-PLAN-1.md
+Last session: 2026-04-21T10:53:00.621Z
+Stopped at: Completed 30-PLAN-1.md
 Resume file: None
