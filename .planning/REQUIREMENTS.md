@@ -73,37 +73,37 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| SMOKE-01 | — | Pending |
-| SMOKE-02 | — | Pending |
-| SMOKE-03 | — | Pending |
-| SMOKE-04 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| INTERACT-01 | — | Pending |
-| INTERACT-02 | — | Pending |
-| INTERACT-03 | — | Pending |
-| INTERACT-04 | — | Pending |
-| INTERACT-05 | — | Pending |
-| VIS-01 | — | Pending |
-| VIS-02 | — | Pending |
-| VIS-03 | — | Pending |
-| VIS-04 | — | Pending |
-| FLOW-01 | — | Pending |
-| FLOW-02 | — | Pending |
-| FLOW-03 | — | Pending |
-| FLOW-04 | — | Pending |
+| INFRA-01 | Phase 27 | Pending |
+| INFRA-02 | Phase 27 | Pending |
+| INFRA-03 | Phase 27 | Pending |
+| INFRA-04 | Phase 27 | Pending |
+| INFRA-05 | Phase 27 | Pending |
+| SMOKE-01 | Phase 28 | Pending |
+| SMOKE-02 | Phase 28 | Pending |
+| SMOKE-03 | Phase 28 | Pending |
+| SMOKE-04 | Phase 28 | Pending |
+| API-01 | Phase 28 | Pending |
+| API-02 | Phase 28 | Pending |
+| API-03 | Phase 28 | Pending |
+| API-04 | Phase 28 | Pending |
+| INTERACT-01 | Phase 29 | Pending |
+| INTERACT-02 | Phase 29 | Pending |
+| INTERACT-03 | Phase 29 | Pending |
+| INTERACT-04 | Phase 29 | Pending |
+| INTERACT-05 | Phase 29 | Pending |
+| VIS-01 | Phase 30 | Pending |
+| VIS-02 | Phase 30 | Pending |
+| VIS-03 | Phase 30 | Pending |
+| VIS-04 | Phase 30 | Pending |
+| FLOW-01 | Phase 31 | Pending |
+| FLOW-02 | Phase 31 | Pending |
+| FLOW-03 | Phase 31 | Pending |
+| FLOW-04 | Phase 31 | Pending |
 
 **Coverage:**
 - v5.0 requirements: 26 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 26
+- Mapped to phases: 26
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2025-07-20*
