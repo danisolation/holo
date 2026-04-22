@@ -115,7 +115,12 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
   3. Open positions are monitored at each subsequent session for SL hit, TP hit, or timeout expiry — exits reflect configured slippage and P&L is computed per trade
   4. Backtest progress is checkpointed to database — if interrupted (crash, rate limit, restart), user can resume from the last completed session without re-processing prior sessions
   5. All 400+ tickers are processed with smart batching that respects 15 RPM Gemini rate limit, and per-session equity (cash balance, open positions value, cumulative P&L, % return) is tracked
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 32-01-PLAN.md — Database models + Alembic migration + API layer
+- [ ] 32-02-PLAN.md — Backtest engine core (analysis service + engine loop)
+- [ ] 32-03-PLAN.md — Comprehensive tests + human verification
 
 ### Phase 33: Analytics & Benchmark Computation
 **Goal**: After backtest completion, system computes comprehensive performance metrics and multi-dimensional breakdowns comparing AI strategy returns vs VN-Index buy-and-hold
@@ -148,6 +153,6 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 32. Backtest Engine & Portfolio Simulation | 0/0 | Not started | - |
+| 32. Backtest Engine & Portfolio Simulation | 0/3 | In progress | - |
 | 33. Analytics & Benchmark Computation | 0/0 | Not started | - |
 | 34. Backtest Dashboard | 0/0 | Not started | - |
