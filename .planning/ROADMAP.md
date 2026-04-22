@@ -11,7 +11,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v2.0 Full Coverage & Real-Time** — Phases 12-16 (shipped 2026-04-17)
 - ✅ **v3.0 Smart Trading Signals** — Phases 17-21 (shipped 2026-04-20)
 - ✅ **v4.0 Paper Trading & Signal Verification** — Phases 22-26 (shipped 2025-07-20)
-- 🚧 **v5.0 E2E Testing & Quality Assurance** — Phases 27-31 (in progress)
+- ✅ **v5.0 E2E Testing & Quality Assurance** — Phases 27-31 (shipped 2025-07-21)
+- 🚧 **v6.0 AI Backtesting Engine** — Phases 32-34 (in progress)
 
 ## Phases
 
@@ -81,89 +82,72 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 
 </details>
 
-### 🚧 v5.0 E2E Testing & Quality Assurance (In Progress)
+<details>
+<summary>✅ v5.0 E2E Testing & Quality Assurance (Phases 27-31) — SHIPPED 2025-07-21</summary>
 
-**Milestone Goal:** Playwright E2E test suite covering all pages, API endpoints, user interactions, visual regression, and critical flows — catching bugs automatically and verifying the entire application works end-to-end.
+- [x] Phase 27: Test Infrastructure & Foundation (4 plans) — Playwright dual webServer, test mode guard, data-testid, fixtures
+- [x] Phase 28: Page Smoke Tests & API Health Checks (3 plans) — 66 tests: all 8 routes, all API endpoints
+- [x] Phase 29: User Interaction Tests (2 plans) — 23 tests: forms, tables, tabs, interactive controls
+- [x] Phase 30: Visual Regression Testing (2 plans) — 14 tests: screenshots, chart canvas, responsive checks
+- [x] Phase 31: Critical User Flows (2 plans) — 8 tests: multi-page journeys end-to-end
 
-- [x] **Phase 27: Test Infrastructure & Foundation** - Playwright configured with dual webServer, test mode guard, data-testid attributes, seed fixtures (completed 2026-04-21)
-- [x] **Phase 28: Page Smoke Tests & API Health Checks** - 66 tests: all 8 routes load, all API endpoints respond correctly (completed 2026-04-21)
-- [x] **Phase 29: User Interaction Tests** - 23 tests: forms, tables, tabs, and interactive controls verified (completed 2026-04-21)
-- [x] **Phase 30: Visual Regression Testing** - 14 tests: screenshot baselines, chart verification, dynamic masking, responsive checks (completed 2026-04-21)
-- [x] **Phase 31: Critical User Flows** - 8 tests: multi-page journeys proving the app works end-to-end (completed 2026-04-21)
+Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
+
+</details>
+
+### 🚧 v6.0 AI Backtesting Engine (In Progress)
+
+**Milestone Goal:** Backtest hệ thống AI trên dữ liệu lịch sử 6 tháng (120 phiên) cho 400+ mã, gọi Gemini phân tích thật tại mỗi phiên, mô phỏng mở/đóng lệnh, tổng kết P&L so sánh với VN-Index — delivered via dedicated /backtest dashboard.
+
+- [ ] **Phase 32: Backtest Engine & Portfolio Simulation** - Historical session replay with Gemini AI calls, virtual position management, checkpoint/resume, smart batching
+- [ ] **Phase 33: Analytics & Benchmark Computation** - Post-backtest metrics: AI equity vs VN-Index, win rate, drawdown, Sharpe, sector/confidence/timeframe breakdowns
+- [ ] **Phase 34: Backtest Dashboard** - /backtest page with config form, real-time progress, equity chart, stats tables, breakdown charts
 
 ## Phase Details
 
-### Phase 27: Test Infrastructure & Foundation
-**Goal**: E2E test infrastructure is fully operational — Playwright configured, both servers auto-start/stop, test selectors stable, seed fixtures ready
-**Depends on**: Phase 26 (v4.0 shipped — all features exist to test)
-**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05
+### Phase 32: Backtest Engine & Portfolio Simulation
+**Goal**: Complete backtest engine can replay historical sessions, call Gemini AI at each session, open/close virtual positions with position sizing and slippage, and track portfolio equity — with checkpoint/resume for the ~53-hour compute workload
+**Depends on**: Phase 31 (v5.0 shipped); reuses v4.0 paper trading logic (position sizing, SL/TP monitoring)
+**Requirements**: BT-01, BT-02, BT-03, BT-04, BT-05, BT-06, SIM-01, SIM-02, SIM-03, SIM-04
 **Success Criteria** (what must be TRUE):
-  1. `npx playwright test` executes with both FastAPI (:8001) and Next.js (:3000) auto-starting via `webServer` config and stopping after completion
-  2. HOLO_TEST_MODE=true prevents APScheduler jobs and Telegram bot from starting during test runs
-  3. Key UI components (navbar, tabs, forms, tables, chart containers) have stable `data-testid` attributes for reliable selection
-  4. Test fixture utilities can seed necessary data (tickers, prices, analysis, paper trades) for test scenarios
-  5. Test artifacts (test-results/, playwright-report/, screenshot baselines) are properly git-ignored
-**Plans:** 4/3 plans complete
-
-Plans:
-- [ ] 27-01-PLAN.md — Playwright install + backend HOLO_TEST_MODE guard + dual webServer config + smoke test
-- [x] 27-02-PLAN.md — data-testid attributes on all key UI components (pages, navbar, tabs, forms, tables, charts)
-- [ ] 27-03-PLAN.md — Test fixture utilities (base fixture, API helpers, test data constants)
-
-### Phase 28: Page Smoke Tests & API Health Checks
-**Goal**: Every application route loads without crashing and every API endpoint responds with correct status codes and response shapes
-**Depends on**: Phase 27
-**Requirements**: SMOKE-01, SMOKE-02, SMOKE-03, SMOKE-04, API-01, API-02, API-03, API-04
-**Success Criteria** (what must be TRUE):
-  1. All 8 routes (/, /dashboard, /watchlist, /dashboard/paper-trading, /dashboard/portfolio, /dashboard/health, /dashboard/corporate-events, /ticker/[symbol]) load without errors
-  2. Navbar navigation between all pages works correctly
-  3. Key components (chart containers, data tables, stat cards, tab panels) render on their respective pages
-  4. Dark/light theme toggle preserves layout integrity on all pages
-  5. All API endpoints (price, analysis, trading signals, paper trading CRUD, health) return correct status codes and response structures, with 404 for invalid tickers and 422 for invalid request bodies
+  1. User can configure a backtest specifying time period (1-6 months), initial capital, and slippage percentage — configuration is persisted and validated before engine starts
+  2. Engine replays historical sessions sequentially, calling Gemini for technical + combined + trading signal analysis at each session, and opens virtual positions when signals meet entry criteria (using v4.0 position sizing logic with configurable slippage)
+  3. Open positions are monitored at each subsequent session for SL hit, TP hit, or timeout expiry — exits reflect configured slippage and P&L is computed per trade
+  4. Backtest progress is checkpointed to database — if interrupted (crash, rate limit, restart), user can resume from the last completed session without re-processing prior sessions
+  5. All 400+ tickers are processed with smart batching that respects 15 RPM Gemini rate limit, and per-session equity (cash balance, open positions value, cumulative P&L, % return) is tracked
 **Plans**: TBD
 
-### Phase 29: User Interaction Tests
-**Goal**: Forms, tables, tabs, and interactive UI controls respond correctly to user input and persist state where expected
-**Depends on**: Phase 28
-**Requirements**: INTERACT-01, INTERACT-02, INTERACT-03, INTERACT-04, INTERACT-05
+### Phase 33: Analytics & Benchmark Computation
+**Goal**: After backtest completion, system computes comprehensive performance metrics and multi-dimensional breakdowns comparing AI strategy returns vs VN-Index buy-and-hold
+**Depends on**: Phase 32
+**Requirements**: BENCH-01, BENCH-02, BENCH-03, BENCH-04, BENCH-05
 **Success Criteria** (what must be TRUE):
-  1. Paper trading settings form submits successfully and persisted values survive page reload
-  2. Trade table sorting (by P&L, status, date) and filtering (by direction, status) produce correctly ordered/filtered results
-  3. Watchlist add/remove operations work and persist across page reloads
-  4. Tab switching on paper trading dashboard (Overview → Trades → Analytics → Calendar → Settings) renders correct content for each tab
-  5. Ticker detail page tabs and interactive chart controls respond to user input
+  1. System computes AI strategy equity curve and VN-Index buy-and-hold equity curve over the same backtest period, stored as time-series data ready for charting
+  2. Core performance metrics are calculated and persisted: win rate, total P&L (absolute + %), max drawdown (absolute + %), Sharpe ratio, total trade count
+  3. Performance breakdown by sector shows win rate and average P&L per industry — revealing which sectors the AI analyzes most accurately
+  4. Performance breakdown by confidence level (buckets: 1-3, 4-6, 7-10) shows whether higher-confidence signals produce higher win rates
+  5. Performance breakdown by timeframe (short-term vs medium-term) shows which signal durations the AI predicts most accurately
 **Plans**: TBD
 
-### Phase 30: Visual Regression Testing
-**Goal**: Screenshot baselines capture key page states, chart rendering is verified via canvas checks, and layout holds on mobile viewports
-**Depends on**: Phase 28
-**Requirements**: VIS-01, VIS-02, VIS-03, VIS-04
+### Phase 34: Backtest Dashboard
+**Goal**: Users can configure, launch, monitor progress, and review full backtest results through a dedicated /backtest page with interactive visualizations
+**Depends on**: Phase 32, Phase 33
+**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06
 **Success Criteria** (what must be TRUE):
-  1. Screenshot baselines exist for 5 key pages (Dashboard, Ticker detail, Paper Trading, Portfolio, Watchlist) and `toHaveScreenshot()` comparisons pass
-  2. Candlestick chart canvas elements are verified to exist with non-zero dimensions on pages that display charts
-  3. Dynamic data areas (prices, timestamps, percentages) are masked in screenshot comparisons to prevent false positives from live data changes
-  4. Key pages render correctly at mobile viewport (375px) without layout breakage or content overflow
+  1. User can navigate to /backtest page and fill in a configuration form (time period, initial capital, slippage) then click "Run Backtest" to start the engine
+  2. While backtest is running, a real-time progress bar displays percentage completion, current session/ticker being processed, and estimated time remaining
+  3. After completion, an equity curve area chart (Recharts) overlays AI strategy returns vs VN-Index buy-and-hold returns for visual comparison
+  4. A summary statistics panel displays win rate, total P&L, max drawdown, Sharpe ratio, and total trade count in a clear card/table layout
+  5. User can browse a detailed trade log table (symbol, direction, entry/exit price, P&L, holding time) and view breakdown charts (bar/pie) by sector, confidence level, and timeframe
 **Plans**: TBD
-
-### Phase 31: Critical User Flows
-**Goal**: Multi-page end-to-end user journeys complete successfully — proving the application works as a cohesive whole
-**Depends on**: Phase 29
-**Requirements**: FLOW-01, FLOW-02, FLOW-03, FLOW-04
-**Success Criteria** (what must be TRUE):
-  1. User can navigate: open ticker → view analysis → view trading plan → click Follow → verify paper trade is created successfully
-  2. User can navigate paper trading dashboard: view trades → sort/filter table → switch to analytics tab → switch to calendar tab — all content loads correctly
-  3. User can add ticker to watchlist → verify it appears on watchlist page → remove it → verify removal persists
-  4. User can change paper trading settings → verify settings persist after reload → verify settings affect overview display
-**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
-**Execution Order:** 27 → 28 → 29 → 30 → 31
+**Execution Order:** 32 → 33 → 34
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 27. Test Infrastructure & Foundation | 4/3 | Complete   | 2026-04-21 |
-| 28. Page Smoke Tests & API Health Checks | 0/0 | Not started | - |
-| 29. User Interaction Tests | 0/0 | Not started | - |
-| 30. Visual Regression Testing | 0/0 | Not started | - |
-| 31. Critical User Flows | 0/0 | Not started | - |
+| 32. Backtest Engine & Portfolio Simulation | 0/0 | Not started | - |
+| 33. Analytics & Benchmark Computation | 0/0 | Not started | - |
+| 34. Backtest Dashboard | 0/0 | Not started | - |

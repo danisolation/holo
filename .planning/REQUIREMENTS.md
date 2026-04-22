@@ -56,15 +56,32 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BT-01..BT-06 | TBD | Pending |
-| SIM-01..SIM-04 | TBD | Pending |
-| BENCH-01..BENCH-05 | TBD | Pending |
-| DASH-01..DASH-06 | TBD | Pending |
+| BT-01 | Phase 32 | Pending |
+| BT-02 | Phase 32 | Pending |
+| BT-03 | Phase 32 | Pending |
+| BT-04 | Phase 32 | Pending |
+| BT-05 | Phase 32 | Pending |
+| BT-06 | Phase 32 | Pending |
+| SIM-01 | Phase 32 | Pending |
+| SIM-02 | Phase 32 | Pending |
+| SIM-03 | Phase 32 | Pending |
+| SIM-04 | Phase 32 | Pending |
+| BENCH-01 | Phase 33 | Pending |
+| BENCH-02 | Phase 33 | Pending |
+| BENCH-03 | Phase 33 | Pending |
+| BENCH-04 | Phase 33 | Pending |
+| BENCH-05 | Phase 33 | Pending |
+| DASH-01 | Phase 34 | Pending |
+| DASH-02 | Phase 34 | Pending |
+| DASH-03 | Phase 34 | Pending |
+| DASH-04 | Phase 34 | Pending |
+| DASH-05 | Phase 34 | Pending |
+| DASH-06 | Phase 34 | Pending |
 
 **Coverage:**
 - v6.0 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21
+- Mapped to phases: 21
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2025-07-21*

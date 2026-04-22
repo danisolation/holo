@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: AI Backtesting Engine
-status: defining_requirements
-stopped_at: Milestone started
+status: roadmap_complete
+stopped_at: Roadmap created — 3 phases (32-34), ready for Phase 32 planning
 last_updated: "2025-07-21"
 last_activity: 2025-07-21
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2025-07-21)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** v6.0 AI Backtesting Engine — Defining requirements
+**Current focus:** v6.0 AI Backtesting Engine — Roadmap complete, ready for Phase 32 planning
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 32 — Backtest Engine & Portfolio Simulation (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2025-07-21 — Milestone v6.0 started
+Status: Roadmap complete, awaiting phase planning
+Last activity: 2025-07-21 — Roadmap created
+
+Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/3 phases)
 
 ## Shipped Milestones
 
@@ -60,9 +62,10 @@ None yet.
 - Gemini free tier 15 RPM: 48K calls ≈ 53 hours continuous — need smart batching + checkpoint/resume
 - Historical analysis must NOT overwrite current live analysis data
 - Backtest results stored separately from paper trading data
+- Reuse v4.0 paper trading logic (position sizing, SL/TP monitoring) — don't duplicate
 
 ## Session Continuity
 
 Last session: 2025-07-21
-Stopped at: Milestone v6.0 started
+Stopped at: Roadmap created — next step: /gsd-plan-phase 32
 Resume file: None
