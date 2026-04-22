@@ -838,3 +838,192 @@ export async function fetchPaperPeriodic(period: "weekly" | "monthly" = "weekly"
 export async function fetchPaperCalendar(): Promise<CalendarDataPoint[]> {
   return apiFetch<CalendarDataPoint[]>("/paper-trading/analytics/calendar");
 }
+
+// --- Backtest Types (Phase 34) ---
+
+export interface BacktestRunResponse {
+  id: number;
+  start_date: string;
+  end_date: string;
+  initial_capital: number;
+  slippage_pct: number;
+  status: string; // "running" | "completed" | "failed" | "cancelled"
+  last_completed_date: string | null;
+  total_sessions: number;
+  completed_sessions: number;
+  is_cancelled: boolean;
+  created_at: string;
+  updated_at: string;
+  progress_pct: number;
+}
+
+export interface BacktestStartRequest {
+  start_date: string; // ISO date "YYYY-MM-DD"
+  end_date: string;
+  initial_capital: number;
+  slippage_pct: number;
+}
+
+export interface BacktestStartResponse {
+  id: number;
+  status: string;
+  total_sessions: number;
+}
+
+export interface BacktestTradeResponse {
+  id: number;
+  run_id: number;
+  symbol: string;
+  backtest_analysis_id: number | null;
+  direction: string;
+  status: string;
+  entry_price: number;
+  stop_loss: number;
+  take_profit_1: number;
+  take_profit_2: number;
+  adjusted_stop_loss: number | null;
+  quantity: number;
+  closed_quantity: number;
+  realized_pnl: number | null;
+  realized_pnl_pct: number | null;
+  exit_price: number | null;
+  partial_exit_price: number | null;
+  signal_date: string;
+  entry_date: string | null;
+  closed_date: string | null;
+  confidence: number;
+  timeframe: string;
+  position_size_pct: number;
+  risk_reward_ratio: number;
+  created_at: string;
+}
+
+export interface BacktestTradeListResponse {
+  trades: BacktestTradeResponse[];
+  total: number;
+}
+
+export interface BacktestEquityResponse {
+  run_id: number;
+  date: string;
+  cash: number;
+  positions_value: number;
+  total_equity: number;
+  daily_return_pct: number | null;
+  cumulative_return_pct: number | null;
+}
+
+export interface BacktestEquityListResponse {
+  equity: BacktestEquityResponse[];
+  total: number;
+}
+
+export interface BenchmarkPointResponse {
+  date: string;
+  ai_equity: number;
+  ai_return_pct: number;
+  vnindex_return_pct: number | null;
+}
+
+export interface BenchmarkComparisonResponse {
+  initial_capital: number;
+  ai_total_return_pct: number;
+  vnindex_total_return_pct: number | null;
+  outperformance_pct: number | null;
+  data: BenchmarkPointResponse[];
+}
+
+export interface PerformanceSummaryResponse {
+  total_trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  max_drawdown: number;
+  max_drawdown_pct: number;
+  sharpe_ratio: number;
+  avg_pnl_per_trade: number;
+}
+
+export interface SectorBreakdownResponse {
+  sector: string;
+  total_trades: number;
+  wins: number;
+  win_rate: number;
+  total_pnl: number;
+  avg_pnl: number;
+}
+
+export interface ConfidenceBreakdownResponse {
+  bracket: string;
+  total_trades: number;
+  wins: number;
+  win_rate: number;
+  avg_pnl: number;
+  avg_pnl_pct: number;
+}
+
+export interface TimeframeBreakdownResponse {
+  bucket: string;
+  total_trades: number;
+  wins: number;
+  win_rate: number;
+  avg_holding_days: number;
+  total_pnl: number;
+  avg_pnl: number;
+}
+
+export interface BacktestAnalyticsResponse {
+  run_id: number;
+  summary: PerformanceSummaryResponse;
+  sectors: SectorBreakdownResponse[];
+  confidence: ConfidenceBreakdownResponse[];
+  timeframes: TimeframeBreakdownResponse[];
+}
+
+// --- Backtest Fetch Functions (Phase 34) ---
+
+export async function fetchStartBacktest(req: BacktestStartRequest): Promise<BacktestStartResponse> {
+  return apiFetch<BacktestStartResponse>("/backtest/runs", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
+}
+
+export async function fetchBacktestLatest(): Promise<BacktestRunResponse> {
+  return apiFetch<BacktestRunResponse>("/backtest/runs/latest");
+}
+
+export async function fetchBacktestRun(runId: number): Promise<BacktestRunResponse> {
+  return apiFetch<BacktestRunResponse>(`/backtest/runs/${runId}`);
+}
+
+export async function fetchCancelBacktest(runId: number): Promise<{ id: number; is_cancelled: boolean; status: string }> {
+  return apiFetch(`/backtest/runs/${runId}/cancel`, { method: "POST" });
+}
+
+export async function fetchBacktestTrades(
+  runId: number,
+  params?: { status?: string; direction?: string; limit?: number; offset?: number }
+): Promise<BacktestTradeListResponse> {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set("status", params.status);
+  if (params?.direction) qs.set("direction", params.direction);
+  if (params?.limit) qs.set("limit", String(params.limit));
+  if (params?.offset) qs.set("offset", String(params.offset));
+  const query = qs.toString();
+  return apiFetch<BacktestTradeListResponse>(`/backtest/runs/${runId}/trades${query ? `?${query}` : ""}`);
+}
+
+export async function fetchBacktestEquity(runId: number): Promise<BacktestEquityListResponse> {
+  return apiFetch<BacktestEquityListResponse>(`/backtest/runs/${runId}/equity`);
+}
+
+export async function fetchBacktestAnalytics(runId: number): Promise<BacktestAnalyticsResponse> {
+  return apiFetch<BacktestAnalyticsResponse>(`/backtest/runs/${runId}/analytics`);
+}
+
+export async function fetchBacktestBenchmark(runId: number): Promise<BenchmarkComparisonResponse> {
+  return apiFetch<BenchmarkComparisonResponse>(`/backtest/runs/${runId}/benchmark`);
+}

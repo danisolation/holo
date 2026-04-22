@@ -49,6 +49,15 @@ import {
   fetchPaperTimeframe,
   fetchPaperPeriodic,
   fetchPaperCalendar,
+  fetchStartBacktest,
+  fetchBacktestLatest,
+  fetchBacktestRun,
+  fetchCancelBacktest,
+  fetchBacktestTrades,
+  fetchBacktestEquity,
+  fetchBacktestAnalytics,
+  fetchBacktestBenchmark,
+  type BacktestStartRequest,
 } from "@/lib/api";
 
 /**
@@ -490,6 +499,85 @@ export function usePaperCalendar() {
   return useQuery({
     queryKey: ["paper-analytics-calendar"],
     queryFn: fetchPaperCalendar,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+// --- Backtest Hooks (Phase 34) ---
+
+export function useBacktestLatest(polling: boolean = false) {
+  return useQuery({
+    queryKey: ["backtest-latest"],
+    queryFn: fetchBacktestLatest,
+    staleTime: polling ? 0 : 30 * 1000,
+    refetchInterval: polling ? 5000 : false,
+  });
+}
+
+export function useBacktestRun(runId: number | undefined) {
+  return useQuery({
+    queryKey: ["backtest-run", runId],
+    queryFn: () => fetchBacktestRun(runId!),
+    enabled: !!runId,
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useStartBacktest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (req: BacktestStartRequest) => fetchStartBacktest(req),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backtest-latest"] });
+    },
+  });
+}
+
+export function useCancelBacktest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (runId: number) => fetchCancelBacktest(runId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backtest-latest"] });
+    },
+  });
+}
+
+export function useBacktestTrades(
+  runId: number | undefined,
+  params?: { status?: string; direction?: string; limit?: number; offset?: number }
+) {
+  return useQuery({
+    queryKey: ["backtest-trades", runId, params],
+    queryFn: () => fetchBacktestTrades(runId!, params),
+    enabled: !!runId,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useBacktestEquity(runId: number | undefined) {
+  return useQuery({
+    queryKey: ["backtest-equity", runId],
+    queryFn: () => fetchBacktestEquity(runId!),
+    enabled: !!runId,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useBacktestAnalytics(runId: number | undefined) {
+  return useQuery({
+    queryKey: ["backtest-analytics", runId],
+    queryFn: () => fetchBacktestAnalytics(runId!),
+    enabled: !!runId,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useBacktestBenchmark(runId: number | undefined) {
+  return useQuery({
+    queryKey: ["backtest-benchmark", runId],
+    queryFn: () => fetchBacktestBenchmark(runId!),
+    enabled: !!runId,
     staleTime: 1 * 60 * 1000,
   });
 }
