@@ -148,8 +148,11 @@ Plans:
   3. After completion, an equity curve area chart (Recharts) overlays AI strategy returns vs VN-Index buy-and-hold returns for visual comparison
   4. A summary statistics panel displays win rate, total P&L, max drawdown, Sharpe ratio, and total trade count in a clear card/table layout
   5. User can browse a detailed trade log table (symbol, direction, entry/exit price, P&L, holding time) and view breakdown charts (bar/pie) by sector, confidence level, and timeframe
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+- [ ] 34-01-PLAN.md — Page + API layer + Config tab + Progress + Results tab (equity chart + stats)
+- [ ] 34-02-PLAN.md — Trade log table + Analytics breakdown charts
 
 ## Progress
 
@@ -159,4 +162,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 32. Backtest Engine & Portfolio Simulation | 3/3 | ✅ Complete |  |
 | 33. Analytics & Benchmark Computation | 2/2 | Complete   | 2026-04-22 |
-| 34. Backtest Dashboard | 0/0 | Not started | - |
+| 34. Backtest Dashboard | 0/2 | Not started | - |
