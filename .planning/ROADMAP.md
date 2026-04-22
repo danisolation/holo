@@ -115,7 +115,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 - [x] **Phase 36: Frontend Cleanup & Utility Extraction** - Remove dead components, consolidate format/config utilities
 - [x] **Phase 37: Backend Analytics Consolidation** - Extract shared analytics logic, composition pattern, merge schemas
 - [x] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
-- [ ] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
+- [x] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
 - [ ] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
 - [ ] **Phase 41: Performance Optimization** - WebSocket off-hours scheduling, chart lazy-loading
 - [ ] **Phase 42: Test Maintenance** - Update all unit tests and E2E tests after refactoring
@@ -181,7 +181,9 @@ Plans:
   1. When AI returns a score < 5, the signal cannot be buy or strong_buy — the system rejects or corrects inconsistent score-signal pairs automatically
   2. Trading signal entry prices are validated against the ticker's 52-week high/low range — prices outside this range are flagged as invalid (score=0)
   3. News titles are sanitized (control characters stripped, length enforced) before being sent to Gemini — preventing prompt corruption from malformed source data
-**Plans**: TBD
+**Plans**: 1/1 plans executed ✅
+Plans:
+- [x] 39-01-PLAN.md — Score-signal consistency, 52-week bounds, news sanitization
 
 ### Phase 40: Frontend Component Consolidation
 **Goal**: Duplicated frontend components are replaced with shared, reusable components — and page roles are clearly differentiated so users know where to find what
@@ -224,7 +226,7 @@ Plans:
 | 36. Frontend Cleanup & Utility Extraction | 1/1 | ✅ Complete | 2025-07-22 |
 | 37. Backend Analytics Consolidation | 1/1 | ✅ Complete | 2025-07-22 |
 | 38. Backend Architecture Refactor | 1/1 | ✅ Complete | 2025-07-22 |
-| 39. AI Quality Upgrade | 0/0 | Not started | - |
+| 39. AI Quality Upgrade | 1/1 | ✅ Complete | 2025-07-22 |
 | 40. Frontend Component Consolidation | 0/0 | Not started | - |
 | 41. Performance Optimization | 0/0 | Not started | - |
 | 42. Test Maintenance | 0/0 | Not started | - |
