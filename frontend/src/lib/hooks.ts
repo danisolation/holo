@@ -76,10 +76,10 @@ export function useTickers(sector?: string, exchange?: string) {
  * Fetch OHLCV price data for a single ticker.
  * staleTime: 5 minutes — prices update at most once per trading session.
  */
-export function usePrices(symbol: string | undefined, days: number = 365, adjusted: boolean = true) {
+export function usePrices(symbol: string | undefined, days: number = 365) {
   return useQuery({
-    queryKey: ["prices", symbol, days, adjusted],
-    queryFn: () => fetchPrices(symbol!, days, adjusted),
+    queryKey: ["prices", symbol, days],
+    queryFn: () => fetchPrices(symbol!, days),
     enabled: !!symbol,
     staleTime: 5 * 60 * 1000,
   });

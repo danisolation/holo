@@ -1,4 +1,4 @@
-"""Tests for corporate events calendar API and adjusted price toggle (Plan 14-03)."""
+"""Tests for corporate events calendar API (Plan 14-03)."""
 import pytest
 from datetime import date, timedelta
 from decimal import Decimal
@@ -215,9 +215,8 @@ def _make_mock_price(
     low_val=49000,
     close_val=51000,
     volume=1000000,
-    adjusted_close=53000,
 ):
-    """Create a mock DailyPrice object with distinct close and adjusted_close."""
+    """Create a mock DailyPrice object."""
     if price_date is None:
         price_date = date.today()
     price = MagicMock()
@@ -227,71 +226,16 @@ def _make_mock_price(
     price.low = Decimal(str(low_val))
     price.close = Decimal(str(close_val))
     price.volume = volume
-    price.adjusted_close = Decimal(str(adjusted_close)) if adjusted_close is not None else None
     return price
 
 
-class TestAdjustedPriceToggle:
-    """Tests for GET /{symbol}/prices adjusted parameter (CORP-09)."""
+class TestPriceEndpoint:
+    """Tests for GET /{symbol}/prices endpoint (simplified — no adjusted param)."""
 
-    def test_adjusted_true_returns_adjusted_close(self, client):
-        """adjusted=true should use adjusted_close as close value."""
+    def test_prices_returns_ohlcv(self, client):
+        """Prices endpoint should return OHLCV data."""
         ticker = _make_mock_ticker()
-        prices = [_make_mock_price(close_val=50000, adjusted_close=53000)]
-
-        mock_session = AsyncMock()
-        # First call: ticker lookup
-        ticker_result = MagicMock()
-        ticker_result.scalar_one_or_none.return_value = ticker
-        # Second call: price query
-        price_result = MagicMock()
-        price_result.scalars.return_value.all.return_value = prices
-
-        mock_session.execute = AsyncMock(side_effect=[ticker_result, price_result])
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("app.api.tickers.async_session", return_value=mock_ctx):
-            response = client.get("/api/tickers/VNM/prices?adjusted=true")
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data) == 1
-            # close field should be adjusted_close value (53000)
-            assert data[0]["close"] == 53000.0
-            # adjusted_close should still be populated
-            assert data[0]["adjusted_close"] == 53000.0
-
-    def test_adjusted_false_returns_raw_close(self, client):
-        """adjusted=false should use raw close value."""
-        ticker = _make_mock_ticker()
-        prices = [_make_mock_price(close_val=50000, adjusted_close=53000)]
-
-        mock_session = AsyncMock()
-        ticker_result = MagicMock()
-        ticker_result.scalar_one_or_none.return_value = ticker
-        price_result = MagicMock()
-        price_result.scalars.return_value.all.return_value = prices
-
-        mock_session.execute = AsyncMock(side_effect=[ticker_result, price_result])
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("app.api.tickers.async_session", return_value=mock_ctx):
-            response = client.get("/api/tickers/VNM/prices?adjusted=false")
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data) == 1
-            # close field should be raw close value (50000)
-            assert data[0]["close"] == 50000.0
-            # adjusted_close should still be populated
-            assert data[0]["adjusted_close"] == 53000.0
-
-    def test_default_no_adjusted_param_returns_adjusted(self, client):
-        """No adjusted param should default to adjusted=true (backward compatible)."""
-        ticker = _make_mock_ticker()
-        prices = [_make_mock_price(close_val=50000, adjusted_close=53000)]
+        prices = [_make_mock_price(close_val=50000)]
 
         mock_session = AsyncMock()
         ticker_result = MagicMock()
@@ -309,36 +253,11 @@ class TestAdjustedPriceToggle:
             assert response.status_code == 200
             data = response.json()
             assert len(data) == 1
-            # Default should use adjusted close (53000)
-            assert data[0]["close"] == 53000.0
-
-    def test_adjusted_true_no_adjusted_close_falls_back_to_close(self, client):
-        """When adjusted=true but adjusted_close is None, should fall back to raw close."""
-        ticker = _make_mock_ticker()
-        prices = [_make_mock_price(close_val=50000, adjusted_close=None)]
-
-        mock_session = AsyncMock()
-        ticker_result = MagicMock()
-        ticker_result.scalar_one_or_none.return_value = ticker
-        price_result = MagicMock()
-        price_result.scalars.return_value.all.return_value = prices
-
-        mock_session.execute = AsyncMock(side_effect=[ticker_result, price_result])
-        mock_ctx = AsyncMock()
-        mock_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_ctx.__aexit__ = AsyncMock(return_value=False)
-
-        with patch("app.api.tickers.async_session", return_value=mock_ctx):
-            response = client.get("/api/tickers/VNM/prices?adjusted=true")
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data) == 1
-            # Should fall back to raw close (50000) when adjusted_close is None
             assert data[0]["close"] == 50000.0
-            assert data[0]["adjusted_close"] is None
+            assert "adjusted_close" not in data[0]
 
-    def test_response_schema_unchanged(self, client):
-        """PriceResponse schema should still have all original fields."""
+    def test_response_schema(self, client):
+        """PriceResponse schema should have OHLCV fields without adjusted_close."""
         from app.api.tickers import PriceResponse
         fields = PriceResponse.model_fields
         assert "date" in fields
@@ -347,4 +266,4 @@ class TestAdjustedPriceToggle:
         assert "low" in fields
         assert "close" in fields
         assert "volume" in fields
-        assert "adjusted_close" in fields
+        assert "adjusted_close" not in fields

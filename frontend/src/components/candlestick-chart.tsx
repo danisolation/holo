@@ -31,16 +31,12 @@ interface TradingPlanOverlay {
 interface CandlestickChartProps {
   priceData: PriceData[];
   indicatorData?: IndicatorData[];
-  adjusted?: boolean;
-  onAdjustedChange?: (adjusted: boolean) => void;
   tradingPlan?: TradingPlanOverlay;
 }
 
 export function CandlestickChart({
   priceData,
   indicatorData,
-  adjusted,
-  onAdjustedChange,
   tradingPlan,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -303,28 +299,6 @@ export function CandlestickChart({
           </Button>
         ))}
 
-        {onAdjustedChange && (
-          <>
-            <Separator orientation="vertical" className="mx-2 h-4" />
-            <span className="text-xs text-muted-foreground mr-2">Hiển thị:</span>
-            <Button
-              variant={adjusted !== false ? "default" : "outline"}
-              size="xs"
-              className="rounded-r-none border-r-0"
-              onClick={() => onAdjustedChange(true)}
-            >
-              Giá ĐC
-            </Button>
-            <Button
-              variant={adjusted === false ? "default" : "outline"}
-              size="xs"
-              className="rounded-l-none"
-              onClick={() => onAdjustedChange(false)}
-            >
-              Giá gốc
-            </Button>
-          </>
-        )}
       </div>
 
       {/* MA Legend */}

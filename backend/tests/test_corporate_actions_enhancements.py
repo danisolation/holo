@@ -4,12 +4,10 @@ Tests cover:
 - alert_sent boolean field on CorporateEvent model
 - Migration 008 structure
 - RIGHTS_ISSUE type in TYPE_MAP and RELEVANT_TYPES
-- RIGHTS_ISSUE factor formula returns 1.0 (no price adjustment — rights are optional)
-- Regression: existing factor formulas unchanged
+
+Note: TestRightsIssueFactor removed — CorporateActionService deleted in v7.0.
 """
 from datetime import date
-from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -95,105 +93,6 @@ class TestRightsIssueTypeMapping:
         assert TYPE_MAP["DIVIDEND"] == "CASH_DIVIDEND"
         assert TYPE_MAP["STOCKDIV"] == "STOCK_DIVIDEND"
         assert TYPE_MAP["KINDDIV"] == "BONUS_SHARES"
-
-
-class TestRightsIssueFactor:
-    """Test _compute_single_factor returns 1.0 for RIGHTS_ISSUE."""
-
-    def _make_event(self, event_type, dividend_amount=None, ratio=None, ex_date=None):
-        """Create a mock CorporateEvent."""
-        from unittest.mock import MagicMock
-        event = MagicMock()
-        event.event_type = event_type
-        event.dividend_amount = Decimal(str(dividend_amount)) if dividend_amount is not None else None
-        event.ratio = Decimal(str(ratio)) if ratio is not None else None
-        event.ex_date = ex_date or date(2025, 5, 14)
-        event.event_source_id = "test_event"
-        return event
-
-    @pytest.mark.asyncio
-    async def test_rights_issue_factor_is_one(self):
-        """RIGHTS_ISSUE returns factor 1.0 — rights are optional, no price adjustment."""
-        from app.services.corporate_action_service import CorporateActionService
-        from unittest.mock import AsyncMock
-
-        svc = CorporateActionService.__new__(CorporateActionService)
-        svc.session = AsyncMock()
-
-        event = self._make_event("RIGHTS_ISSUE", ratio=50)
-        factor = await svc._compute_single_factor(event, ticker_id=1)
-        assert factor == Decimal("1.0"), (
-            f"RIGHTS_ISSUE factor should be 1.0, got {factor}"
-        )
-
-    @pytest.mark.asyncio
-    async def test_rights_issue_factor_zero_ratio(self):
-        """RIGHTS_ISSUE with zero ratio also returns 1.0."""
-        from app.services.corporate_action_service import CorporateActionService
-        from unittest.mock import AsyncMock
-
-        svc = CorporateActionService.__new__(CorporateActionService)
-        svc.session = AsyncMock()
-
-        event = self._make_event("RIGHTS_ISSUE", ratio=0)
-        factor = await svc._compute_single_factor(event, ticker_id=1)
-        assert factor == Decimal("1.0")
-
-    @pytest.mark.asyncio
-    async def test_rights_issue_factor_no_ratio(self):
-        """RIGHTS_ISSUE with None ratio returns 1.0."""
-        from app.services.corporate_action_service import CorporateActionService
-        from unittest.mock import AsyncMock
-
-        svc = CorporateActionService.__new__(CorporateActionService)
-        svc.session = AsyncMock()
-
-        event = self._make_event("RIGHTS_ISSUE")
-        factor = await svc._compute_single_factor(event, ticker_id=1)
-        assert factor == Decimal("1.0")
-
-    @pytest.mark.asyncio
-    async def test_existing_cash_dividend_unchanged(self):
-        """Regression: CASH_DIVIDEND factor formula still works."""
-        from app.services.corporate_action_service import CorporateActionService
-        from unittest.mock import AsyncMock
-
-        svc = CorporateActionService.__new__(CorporateActionService)
-        svc.session = AsyncMock()
-        svc._get_close_before = AsyncMock(return_value=Decimal("84000"))
-
-        event = self._make_event("CASH_DIVIDEND", dividend_amount=2000)
-        factor = await svc._compute_single_factor(event, ticker_id=1)
-        expected = (Decimal("84000") - Decimal("2000")) / Decimal("84000")
-        assert factor == expected
-
-    @pytest.mark.asyncio
-    async def test_existing_stock_dividend_unchanged(self):
-        """Regression: STOCK_DIVIDEND factor formula still works."""
-        from app.services.corporate_action_service import CorporateActionService
-        from unittest.mock import AsyncMock
-
-        svc = CorporateActionService.__new__(CorporateActionService)
-        svc.session = AsyncMock()
-
-        event = self._make_event("STOCK_DIVIDEND", ratio=20)
-        factor = await svc._compute_single_factor(event, ticker_id=1)
-        expected = Decimal("100") / Decimal("120")
-        assert factor == expected
-
-    @pytest.mark.asyncio
-    async def test_existing_bonus_shares_unchanged(self):
-        """Regression: BONUS_SHARES factor formula still works."""
-        from app.services.corporate_action_service import CorporateActionService
-        from unittest.mock import AsyncMock
-
-        svc = CorporateActionService.__new__(CorporateActionService)
-        svc.session = AsyncMock()
-
-        event = self._make_event("BONUS_SHARES", ratio=10)
-        factor = await svc._compute_single_factor(event, ticker_id=1)
-        expected = Decimal("100") / Decimal("110")
-        assert factor == expected
 
 
 class TestMigration008:

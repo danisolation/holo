@@ -143,10 +143,9 @@ export async function fetchTickers(sector?: string, exchange?: string): Promise<
 export async function fetchPrices(
   symbol: string,
   days: number = 365,
-  adjusted: boolean = true,
 ): Promise<PriceData[]> {
   return apiFetch<PriceData[]>(
-    `/tickers/${encodeURIComponent(symbol)}/prices?days=${days}&adjusted=${adjusted}`,
+    `/tickers/${encodeURIComponent(symbol)}/prices?days=${days}`,
   );
 }
 

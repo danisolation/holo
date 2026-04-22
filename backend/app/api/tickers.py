@@ -32,7 +32,6 @@ class PriceResponse(BaseModel):
     low: float
     close: float
     volume: int
-    adjusted_close: float | None = None
 
 
 class MarketTickerResponse(BaseModel):
@@ -89,15 +88,8 @@ async def list_tickers(
 async def get_ticker_prices(
     symbol: str,
     days: int = Query(365, ge=1, le=730, description="Number of days of price history"),
-    adjusted: bool = Query(True, description="Use adjusted prices (default true). Set false for raw prices."),
 ):
-    """Get OHLCV price data for a ticker, ordered by date ASC (for charting).
-
-    When adjusted=True (default): close field uses adjusted_close if available,
-    falls back to raw close. Backward compatible with existing consumers.
-    When adjusted=False: close field always uses raw close value.
-    The adjusted_close field is always populated from the stored value.
-    """
+    """Get OHLCV price data for a ticker, ordered by date ASC (for charting)."""
     async with async_session() as session:
         # Resolve ticker
         ticker_result = await session.execute(
@@ -119,30 +111,14 @@ async def get_ticker_prices(
 
     result_prices = []
     for p in prices:
-        adj_close = p.adjusted_close
-        raw_close = p.close
-        # When adjusted=True and adjustment data exists, scale all OHLC fields
-        # by the same ratio so candlestick proportions remain valid.
-        if adjusted and adj_close is not None and raw_close and float(raw_close) != 0:
-            ratio = float(adj_close) / float(raw_close)
-            o = float(p.open) * ratio
-            h = float(p.high) * ratio
-            lo = float(p.low) * ratio
-            c = float(adj_close)
-        else:
-            o = float(p.open)
-            h = float(p.high)
-            lo = float(p.low)
-            c = float(raw_close)
         result_prices.append(
             PriceResponse(
                 date=p.date.isoformat(),
-                open=o,
-                high=h,
-                low=lo,
-                close=c,
+                open=float(p.open),
+                high=float(p.high),
+                low=float(p.low),
+                close=float(p.close),
                 volume=p.volume,
-                adjusted_close=float(adj_close) if adj_close is not None else None,
             )
         )
     return result_prices
