@@ -100,7 +100,7 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 **Milestone Goal:** Backtest hệ thống AI trên dữ liệu lịch sử 6 tháng (120 phiên) cho 400+ mã, gọi Gemini phân tích thật tại mỗi phiên, mô phỏng mở/đóng lệnh, tổng kết P&L so sánh với VN-Index — delivered via dedicated /backtest dashboard.
 
 - [x] **Phase 32: Backtest Engine & Portfolio Simulation** - Historical session replay with Gemini AI calls, virtual position management, checkpoint/resume, smart batching
-- [ ] **Phase 33: Analytics & Benchmark Computation** - Post-backtest metrics: AI equity vs VN-Index, win rate, drawdown, Sharpe, sector/confidence/timeframe breakdowns
+- [x] **Phase 33: Analytics & Benchmark Computation** - Post-backtest metrics: AI equity vs VN-Index, win rate, drawdown, Sharpe, sector/confidence/timeframe breakdowns (completed 2026-04-22)
 - [ ] **Phase 34: Backtest Dashboard** - /backtest page with config form, real-time progress, equity chart, stats tables, breakdown charts
 
 ## Phase Details
@@ -136,7 +136,7 @@ Plans:
 
 Plans:
 - [x] 33-01-PLAN.md — BacktestAnalyticsService + schemas + API endpoints
-- [ ] 33-02-PLAN.md — Comprehensive tests for analytics service
+- [x] 33-02-PLAN.md — Comprehensive tests for analytics service
 
 ### Phase 34: Backtest Dashboard
 **Goal**: Users can configure, launch, monitor progress, and review full backtest results through a dedicated /backtest page with interactive visualizations
@@ -158,5 +158,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 32. Backtest Engine & Portfolio Simulation | 3/3 | ✅ Complete |  |
-| 33. Analytics & Benchmark Computation | 1/2 | In Progress|  |
+| 33. Analytics & Benchmark Computation | 2/2 | Complete   | 2026-04-22 |
 | 34. Backtest Dashboard | 0/0 | Not started | - |

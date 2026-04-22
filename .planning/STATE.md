@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: AI Backtesting Engine
-status: completed
-stopped_at: Completed 33-01-PLAN.md
-last_updated: "2026-04-22T06:02:54.554Z"
-last_activity: 2026-04-22 — Phase 32 Backtest Engine & Portfolio Simulation complete
+status: executing
+stopped_at: Completed 33-02-PLAN.md
+last_updated: "2026-04-22T06:09:10.341Z"
+last_activity: 2026-04-22
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 3
-  percent: 60
+  completed_plans: 4
+  percent: 80
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2025-07-21)
 ## Current Position
 
 Phase: 33 — Analytics & Benchmark Computation (in progress)
-Plan: 1 of 2
-Status: Plan 01 complete — BacktestAnalyticsService + API endpoints done
-Last activity: 2026-04-22 — Phase 33 Plan 01 complete
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-22
 
 Progress: ████████████░░░░░░░░ 60% (1/3 phases, 4/5 plans)
 
@@ -60,6 +60,7 @@ All v1.0–v5.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 32]: Timeout counts actual trading days via daily_prices COUNT query (not calendar days)
 - [Phase 33]: VN-Index benchmark uses try/except with None fallback — partial response on fetch failure
 - [Phase 33]: Holding days computed via PostgreSQL date subtraction (closed_date - entry_date)
+- [Phase 33]: Used patch.object on _get_run to isolate service method tests from DB lookup
 
 ### Pending Todos
 
@@ -74,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T06:02:54.548Z
-Stopped at: Completed 33-01-PLAN.md
+Last session: 2026-04-22T06:09:10.334Z
+Stopped at: Completed 33-02-PLAN.md
 Resume file: None

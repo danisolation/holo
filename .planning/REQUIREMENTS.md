@@ -23,11 +23,11 @@
 
 ### Analytics & Benchmark (BENCH)
 
-- [ ] **BENCH-01**: So sánh equity curve AI strategy vs VN-Index buy-and-hold trong cùng khoảng thời gian
-- [ ] **BENCH-02**: Tính toán và hiển thị: win rate, total P&L, max drawdown, Sharpe ratio
-- [ ] **BENCH-03**: Thống kê hiệu suất AI theo ngành (ngành nào AI phân tích chính xác nhất)
-- [ ] **BENCH-04**: Thống kê theo confidence level — confidence cao có tỷ lệ thắng cao hơn không
-- [ ] **BENCH-05**: Thống kê theo timeframe — AI phân tích ngắn hạn hay trung hạn chính xác hơn
+- [x] **BENCH-01**: So sánh equity curve AI strategy vs VN-Index buy-and-hold trong cùng khoảng thời gian
+- [x] **BENCH-02**: Tính toán và hiển thị: win rate, total P&L, max drawdown, Sharpe ratio
+- [x] **BENCH-03**: Thống kê hiệu suất AI theo ngành (ngành nào AI phân tích chính xác nhất)
+- [x] **BENCH-04**: Thống kê theo confidence level — confidence cao có tỷ lệ thắng cao hơn không
+- [x] **BENCH-05**: Thống kê theo timeframe — AI phân tích ngắn hạn hay trung hạn chính xác hơn
 
 ### Dashboard UI (DASH)
 
@@ -66,11 +66,11 @@
 | SIM-02 | Phase 32 | Pending |
 | SIM-03 | Phase 32 | Complete |
 | SIM-04 | Phase 32 | Pending |
-| BENCH-01 | Phase 33 | Pending |
-| BENCH-02 | Phase 33 | Pending |
-| BENCH-03 | Phase 33 | Pending |
-| BENCH-04 | Phase 33 | Pending |
-| BENCH-05 | Phase 33 | Pending |
+| BENCH-01 | Phase 33 | Complete |
+| BENCH-02 | Phase 33 | Complete |
+| BENCH-03 | Phase 33 | Complete |
+| BENCH-04 | Phase 33 | Complete |
+| BENCH-05 | Phase 33 | Complete |
 | DASH-01 | Phase 34 | Pending |
 | DASH-02 | Phase 34 | Pending |
 | DASH-03 | Phase 34 | Pending |
