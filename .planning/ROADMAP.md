@@ -13,7 +13,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v4.0 Paper Trading & Signal Verification** — Phases 22-26 (shipped 2025-07-20)
 - ✅ **v5.0 E2E Testing & Quality Assurance** — Phases 27-31 (shipped 2025-07-21)
 - ✅ **v6.0 AI Backtesting Engine** — Phases 32-34 (shipped 2026-04-22)
-- 🚧 **v7.0 Consolidation & Quality Upgrade** — Phases 35-42 (in progress)
+- ✅ **v7.0 Consolidation & Quality Upgrade** — Phases 35-42 (shipped 2025-07-22)
 
 ## Phases
 
@@ -107,7 +107,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 
 </details>
 
-### 🚧 v7.0 Consolidation & Quality Upgrade (In Progress)
+### ✅ v7.0 Consolidation & Quality Upgrade (Shipped 2025-07-22)
 
 **Milestone Goal:** Audit toàn diện → xóa code dư thừa, gộp logic chồng chéo, nâng cấp AI validation và UX — giảm LOC, tăng maintainability và trải nghiệm dùng.
 
@@ -118,7 +118,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 - [x] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
 - [x] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
 - [x] **Phase 41: Performance Optimization** - WebSocket off-hours scheduling, chart lazy-loading
-- [ ] **Phase 42: Test Maintenance** - Update all unit tests and E2E tests after refactoring
+- [x] **Phase 42: Test Maintenance** - Update all unit tests and E2E tests after refactoring
 
 ## Phase Details
 
@@ -216,7 +216,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. All 560+ backend unit tests pass after the service refactoring — tests updated for new class/module structure (AnalyticsBase, composition pattern, split AIAnalysisService, split BacktestEngine)
   2. All 119+ E2E tests pass after the frontend consolidation — tests updated for removed components (DilutionBadge, watchlist cards on dashboard), renamed imports, and page role changes
-**Plans**: TBD
+**Plans**: 1/1 plans executed ✅
+Plans:
+- [x] 42-01-PLAN.md — Fix E2E tests, update visual snapshots
 
 ## Progress
 
@@ -231,4 +233,4 @@ Plans:
 | 39. AI Quality Upgrade | 1/1 | ✅ Complete | 2025-07-22 |
 | 40. Frontend Component Consolidation | 1/1 | ✅ Complete | 2025-07-22 |
 | 41. Performance Optimization | 1/1 | ✅ Complete | 2025-07-22 |
-| 42. Test Maintenance | 0/0 | Not started | - |
+| 42. Test Maintenance | 1/1 | ✅ Complete | 2025-07-22 |
