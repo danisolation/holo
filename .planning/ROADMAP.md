@@ -101,7 +101,7 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 - [x] **Phase 32: Backtest Engine & Portfolio Simulation** - Historical session replay with Gemini AI calls, virtual position management, checkpoint/resume, smart batching
 - [x] **Phase 33: Analytics & Benchmark Computation** - Post-backtest metrics: AI equity vs VN-Index, win rate, drawdown, Sharpe, sector/confidence/timeframe breakdowns (completed 2026-04-22)
-- [ ] **Phase 34: Backtest Dashboard** - /backtest page with config form, real-time progress, equity chart, stats tables, breakdown charts
+- [x] **Phase 34: Backtest Dashboard** - /backtest page with config form, real-time progress, equity chart, stats tables, breakdown charts (completed 2026-04-22)
 
 ## Phase Details
 
@@ -151,8 +151,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 34-01-PLAN.md — Page + API layer + Config tab + Progress + Results tab (equity chart + stats)
-- [ ] 34-02-PLAN.md — Trade log table + Analytics breakdown charts
+- [x] 34-01-PLAN.md — Page + API layer + Config tab + Progress + Results tab (equity chart + stats)
+- [x] 34-02-PLAN.md — Trade log table + Analytics breakdown charts
 
 ## Progress
 
@@ -162,4 +162,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 32. Backtest Engine & Portfolio Simulation | 3/3 | ✅ Complete |  |
 | 33. Analytics & Benchmark Computation | 2/2 | Complete   | 2026-04-22 |
-| 34. Backtest Dashboard | 0/2 | Not started | - |
+| 34. Backtest Dashboard | 2/2 | Complete   | 2026-04-22 |

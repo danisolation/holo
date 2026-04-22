@@ -35,8 +35,8 @@
 - [ ] **DASH-02**: Progress bar real-time hiển thị tiến trình backtest đang chạy (% hoàn thành, ETA)
 - [ ] **DASH-03**: Equity curve chart (Recharts area chart) — AI vs VN-Index overlay so sánh trực quan
 - [ ] **DASH-04**: Bảng thống kê tổng hợp — win rate, total P&L, max drawdown, Sharpe ratio, số lệnh
-- [ ] **DASH-05**: Bảng chi tiết từng lệnh — symbol, direction, entry/exit price, P&L, holding time
-- [ ] **DASH-06**: Charts breakdown theo ngành, confidence level, timeframe (bar/pie charts)
+- [x] **DASH-05**: Bảng chi tiết từng lệnh — symbol, direction, entry/exit price, P&L, holding time
+- [x] **DASH-06**: Charts breakdown theo ngành, confidence level, timeframe (bar/pie charts)
 
 ## Future Requirements (deferred)
 
@@ -75,8 +75,8 @@
 | DASH-02 | Phase 34 | Pending |
 | DASH-03 | Phase 34 | Pending |
 | DASH-04 | Phase 34 | Pending |
-| DASH-05 | Phase 34 | Pending |
-| DASH-06 | Phase 34 | Pending |
+| DASH-05 | Phase 34 | Complete |
+| DASH-06 | Phase 34 | Complete |
 
 **Coverage:**
 - v6.0 requirements: 21 total
