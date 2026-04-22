@@ -2,7 +2,7 @@
 
 Follows paper_trading.py session-per-request pattern. Per Phase 32.
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from sqlalchemy import select, func as sa_func, text
 
 from app.database import async_session
@@ -15,6 +15,7 @@ from app.schemas.backtest import (
     BacktestEquityResponse,
     BacktestEquityListResponse,
 )
+from app.services.backtest_engine import BacktestEngine
 
 router = APIRouter(prefix="/backtest", tags=["backtest"])
 
@@ -38,12 +39,12 @@ def _run_to_response(run: BacktestRun) -> BacktestRunResponse:
 
 
 @router.post("/runs", status_code=201)
-async def start_backtest(request: BacktestStartRequest):
+async def start_backtest(request: BacktestStartRequest, bg: BackgroundTasks):
     """BT-01, SIM-01, SIM-03: Start a new backtest run.
 
     Validates request, enforces singleton (only 1 running at a time),
-    counts trading days, and creates the run record.
-    NOTE: Does NOT launch background task — Plan 02 wires the engine.
+    counts trading days, creates the run record, and launches the engine
+    via BackgroundTasks.
     """
     async with async_session() as session:
         # Singleton check: only 1 backtest running at a time
@@ -79,6 +80,10 @@ async def start_backtest(request: BacktestStartRequest):
         session.add(run)
         await session.commit()
         await session.refresh(run)
+
+        # Launch backtest engine in background
+        engine = BacktestEngine()
+        bg.add_task(engine.run, run.id)
 
         return {
             "id": run.id,
