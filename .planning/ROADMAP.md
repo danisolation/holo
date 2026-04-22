@@ -132,7 +132,11 @@ Plans:
   3. Performance breakdown by sector shows win rate and average P&L per industry — revealing which sectors the AI analyzes most accurately
   4. Performance breakdown by confidence level (buckets: 1-3, 4-6, 7-10) shows whether higher-confidence signals produce higher win rates
   5. Performance breakdown by timeframe (short-term vs medium-term) shows which signal durations the AI predicts most accurately
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 33-01-PLAN.md — BacktestAnalyticsService + schemas + API endpoints
+- [ ] 33-02-PLAN.md — Comprehensive tests for analytics service
 
 ### Phase 34: Backtest Dashboard
 **Goal**: Users can configure, launch, monitor progress, and review full backtest results through a dedicated /backtest page with interactive visualizations
@@ -154,5 +158,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 32. Backtest Engine & Portfolio Simulation | 3/3 | ✅ Complete |  |
-| 33. Analytics & Benchmark Computation | 0/0 | Not started | - |
+| 33. Analytics & Benchmark Computation | 0/2 | Not started | - |
 | 34. Backtest Dashboard | 0/0 | Not started | - |
