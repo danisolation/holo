@@ -116,7 +116,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 - [x] **Phase 37: Backend Analytics Consolidation** - Extract shared analytics logic, composition pattern, merge schemas
 - [x] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
 - [x] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
-- [ ] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
+- [x] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
 - [ ] **Phase 41: Performance Optimization** - WebSocket off-hours scheduling, chart lazy-loading
 - [ ] **Phase 42: Test Maintenance** - Update all unit tests and E2E tests after refactoring
 
@@ -194,8 +194,9 @@ Plans:
   2. A shared EquityCurveChart component renders equity curves on both paper-trading and backtest pages — replacing two separate chart implementations
   3. Watchlist management happens exclusively on the /watchlist page — the /dashboard page no longer shows watchlist cards
   4. The "/" route shows Market Overview (heatmap-focused) and "/dashboard" shows Portfolio Dashboard (portfolio-focused) — with no duplicated market stats between them
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 1/1 plans executed ✅
+Plans:
+- [x] 40-01-PLAN.md — GenericTradesTable, EquityCurveChart, dashboard cleanup, page role separation
 
 ### Phase 41: Performance Optimization
 **Goal**: System resources are used efficiently — no unnecessary WebSocket polling off-hours, no heavy chart library loaded on pages that don't need it
@@ -227,6 +228,6 @@ Plans:
 | 37. Backend Analytics Consolidation | 1/1 | ✅ Complete | 2025-07-22 |
 | 38. Backend Architecture Refactor | 1/1 | ✅ Complete | 2025-07-22 |
 | 39. AI Quality Upgrade | 1/1 | ✅ Complete | 2025-07-22 |
-| 40. Frontend Component Consolidation | 0/0 | Not started | - |
+| 40. Frontend Component Consolidation | 1/1 | ✅ Complete | 2025-07-22 |
 | 41. Performance Optimization | 0/0 | Not started | - |
 | 42. Test Maintenance | 0/0 | Not started | - |
