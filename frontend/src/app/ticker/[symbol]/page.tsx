@@ -17,8 +17,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ExchangeBadge } from "@/components/exchange-badge";
-import { CandlestickChart } from "@/components/candlestick-chart";
-import { IndicatorChart } from "@/components/indicator-chart";
+import dynamic from "next/dynamic";
+
+const CandlestickChart = dynamic(
+  () =>
+    import("@/components/candlestick-chart").then((m) => ({
+      default: m.CandlestickChart,
+    })),
+  { ssr: false, loading: () => <Skeleton className="h-[400px] rounded-xl" /> },
+);
+const IndicatorChart = dynamic(
+  () =>
+    import("@/components/indicator-chart").then((m) => ({
+      default: m.IndicatorChart,
+    })),
+  { ssr: false, loading: () => <Skeleton className="h-[200px] rounded-xl" /> },
+);
+
 import { SupportResistanceCard } from "@/components/support-resistance-card";
 import {
   AnalysisCard,

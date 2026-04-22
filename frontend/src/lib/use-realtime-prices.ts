@@ -50,6 +50,25 @@ function deriveWsUrl(): string {
 }
 
 // ---------------------------------------------------------------------------
+// VN Market hours guard: 9:00-15:00 UTC+7, Mon-Fri
+// ---------------------------------------------------------------------------
+
+const VN_UTC_OFFSET = 7;
+const MARKET_OPEN_HOUR = 9;
+const MARKET_CLOSE_HOUR = 15;
+const MARKET_CHECK_INTERVAL = 60_000; // re-check every 60s
+
+function isVNMarketOpen(): boolean {
+  const now = new Date();
+  const vnHour = (now.getUTCHours() + VN_UTC_OFFSET) % 24;
+  const vnDay = new Date(
+    now.getTime() + VN_UTC_OFFSET * 3600_000,
+  ).getUTCDay();
+  if (vnDay === 0 || vnDay === 6) return false;
+  return vnHour >= MARKET_OPEN_HOUR && vnHour < MARKET_CLOSE_HOUR;
+}
+
+// ---------------------------------------------------------------------------
 // Reconnect backoff: 1s → 2s → 4s → 8s → 16s → 30s max
 // ---------------------------------------------------------------------------
 
@@ -173,12 +192,38 @@ export function RealtimePriceProvider({ children }: { children: ReactNode }) {
     };
   }, [sendSubscribe]);
 
-  // Mount: establish connection; Unmount: tear down
+  // Mount: establish connection only during market hours; Unmount: tear down
   useEffect(() => {
     mountedRef.current = true;
-    connect();
+
+    function tick() {
+      if (!mountedRef.current) return;
+      if (isVNMarketOpen()) {
+        // Market open — connect if not already connected
+        if (!wsRef.current || wsRef.current.readyState > WebSocket.OPEN) {
+          connect();
+        }
+      } else {
+        // Market closed — disconnect if connected
+        if (wsRef.current) {
+          wsRef.current.onclose = null;
+          wsRef.current.close();
+          wsRef.current = null;
+        }
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
+        setStatus("market_closed");
+      }
+    }
+
+    tick();
+    const intervalId = setInterval(tick, MARKET_CHECK_INTERVAL);
+
     return () => {
       mountedRef.current = false;
+      clearInterval(intervalId);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (wsRef.current) {
         wsRef.current.onclose = null;
