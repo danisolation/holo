@@ -334,28 +334,23 @@ class TestTemperatureConfig:
 
 
 class TestLanguageConsistency:
-    """Tests for AI-11 (English for tech/fund, Vietnamese for sentiment/combined)."""
+    """All AI prompts should be in Vietnamese."""
 
     _VN_REGEX = re.compile(
         r"[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵđ]",
         re.IGNORECASE,
     )
 
-    def test_technical_fundamental_are_english(self):
-        """Tech & fund system instructions must not contain Vietnamese diacritics."""
+    def test_all_prompts_are_vietnamese(self):
+        """All system instructions must contain Vietnamese diacritics."""
         from app.services.ai_analysis_service import (
             TECHNICAL_SYSTEM_INSTRUCTION,
             FUNDAMENTAL_SYSTEM_INSTRUCTION,
-        )
-        assert not self._VN_REGEX.search(TECHNICAL_SYSTEM_INSTRUCTION), "TECHNICAL has VN chars"
-        assert not self._VN_REGEX.search(FUNDAMENTAL_SYSTEM_INSTRUCTION), "FUNDAMENTAL has VN chars"
-
-    def test_sentiment_combined_are_vietnamese(self):
-        """Sentiment & combined system instructions must contain Vietnamese."""
-        from app.services.ai_analysis_service import (
             SENTIMENT_SYSTEM_INSTRUCTION,
             COMBINED_SYSTEM_INSTRUCTION,
         )
+        assert self._VN_REGEX.search(TECHNICAL_SYSTEM_INSTRUCTION), "TECHNICAL missing VN chars"
+        assert self._VN_REGEX.search(FUNDAMENTAL_SYSTEM_INSTRUCTION), "FUNDAMENTAL missing VN chars"
         assert self._VN_REGEX.search(SENTIMENT_SYSTEM_INSTRUCTION), "SENTIMENT missing VN chars"
         assert self._VN_REGEX.search(COMBINED_SYSTEM_INSTRUCTION), "COMBINED missing VN chars"
 
@@ -383,14 +378,14 @@ class TestFewShotExamples:
         svc = _make_service()
 
         tech_prompt = svc._build_technical_prompt(self._sample_technical_data())
-        assert "Example" in tech_prompt or "Expected output" in tech_prompt
+        assert "Ví dụ" in tech_prompt or "Kết quả mẫu" in tech_prompt
 
         fund_prompt = svc._build_fundamental_prompt({
             "VNM": {"period": "Q4/2024", "pe": 15.2, "pb": 3.1, "eps": 5000,
                      "roe": 0.25, "roa": 0.12, "revenue_growth": 0.08,
                      "profit_growth": 0.05, "current_ratio": 1.5, "debt_to_equity": 0.3}
         })
-        assert "Example" in fund_prompt or "Expected output" in fund_prompt
+        assert "Ví dụ" in fund_prompt or "Kết quả mẫu" in fund_prompt
 
         sent_prompt = svc._build_sentiment_prompt({
             "VNM": {"news_titles": ["Tin tốt"]}
@@ -445,8 +440,8 @@ class TestTechnicalClosePrice:
         svc = _make_service()
         data = self._base_data()
         prompt = svc._build_technical_prompt({"VNM": data})
-        assert "Latest close" not in prompt
-        assert "Price vs SMA" not in prompt
+        assert "Giá đóng cửa gần nhất" not in prompt
+        assert "Giá vs SMA" not in prompt
 
 
 class TestStructuredOutputRetry:

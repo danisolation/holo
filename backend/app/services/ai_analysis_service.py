@@ -74,20 +74,20 @@ ANALYSIS_TEMPERATURES: dict[AnalysisType, float] = {
 
 # System instructions (D-09-01, D-09-03, D-09-05)
 TECHNICAL_SYSTEM_INSTRUCTION = (
-    "You are a senior HOSE (Vietnam stock exchange) technical analyst. "
-    "For each ticker, output: signal (strong_buy/buy/neutral/sell/strong_sell), "
-    "strength (1-10), reasoning (2-3 sentences in English). "
-    "Consider RSI zones (oversold <30 = bullish, overbought >70 = bearish), "
-    "MACD crossovers, price position relative to moving averages, "
-    "and Bollinger Band positions.\n\n" + SCORING_RUBRIC
+    "Bạn là chuyên gia phân tích kỹ thuật chứng khoán Việt Nam (HOSE). "
+    "Cho mỗi mã, đánh giá: signal (strong_buy/buy/neutral/sell/strong_sell), "
+    "strength (1-10), reasoning (2-3 câu tiếng Việt). "
+    "Xem xét vùng RSI (quá bán <30 = tích cực, quá mua >70 = tiêu cực), "
+    "giao cắt MACD, vị trí giá so với đường trung bình động, "
+    "và vị trí Bollinger Band.\n\n" + SCORING_RUBRIC
 )
 
 FUNDAMENTAL_SYSTEM_INSTRUCTION = (
-    "You are a senior HOSE (Vietnam stock exchange) fundamental analyst. "
-    "For each ticker, output: health (strong/good/neutral/weak/critical), "
-    "score (1-10), reasoning (2-3 sentences in English). "
-    "Consider P/E relative to VN market average (~12-15), profitability (ROE, ROA), "
-    "growth rates, and financial stability (current ratio, debt-to-equity).\n\n"
+    "Bạn là chuyên gia phân tích cơ bản chứng khoán Việt Nam (HOSE). "
+    "Cho mỗi mã, đánh giá: health (strong/good/neutral/weak/critical), "
+    "score (1-10), reasoning (2-3 câu tiếng Việt). "
+    "Xem xét P/E so với trung bình thị trường VN (~12-15), khả năng sinh lời (ROE, ROA), "
+    "tốc độ tăng trưởng, và ổn định tài chính (hệ số thanh toán, nợ/vốn).\n\n"
     + SCORING_RUBRIC
 )
 
@@ -107,31 +107,31 @@ COMBINED_SYSTEM_INSTRUCTION = (
 )
 
 # Few-shot examples (D-09-02)
-TECHNICAL_FEW_SHOT = """Example analysis:
+TECHNICAL_FEW_SHOT = """Ví dụ phân tích:
 
 --- VNM ---
-RSI(14) last 5 days: [42.1, 44.3, 46.8, 49.2, 52.1]
-RSI zone: neutral
-MACD histogram last 5 days: [-0.12, -0.05, 0.03, 0.11, 0.18]
-MACD crossover: bullish
+RSI(14) 5 phiên gần nhất: [42.1, 44.3, 46.8, 49.2, 52.1]
+Vùng RSI: trung tính
+MACD histogram 5 phiên: [-0.12, -0.05, 0.03, 0.11, 0.18]
+Giao cắt MACD: tăng
 SMA(20): 82000, SMA(50): 80500, SMA(200): 78000
 
-Expected output:
-{"ticker": "VNM", "signal": "buy", "strength": 7, "reasoning": "RSI rising from mid-range with bullish MACD crossover. Price above all major moving averages confirms uptrend. Momentum building but not yet overbought."}
+Kết quả mẫu:
+{"ticker": "VNM", "signal": "buy", "strength": 7, "reasoning": "RSI tăng dần từ vùng trung tính kết hợp MACD giao cắt tăng. Giá nằm trên tất cả đường trung bình động chính, xác nhận xu hướng tăng. Động lượng đang tích lũy nhưng chưa quá mua."}
 
-Now analyze the following tickers based on their technical indicators from the last 5 trading days:"""
+Phân tích các mã sau dựa trên chỉ báo kỹ thuật 5 phiên gần nhất:"""
 
-FUNDAMENTAL_FEW_SHOT = """Example analysis:
+FUNDAMENTAL_FEW_SHOT = """Ví dụ phân tích:
 
---- VNM (Period: Q4/2024) ---
+--- VNM (Kỳ: Q4/2024) ---
 P/E: 15.2, P/B: 3.1, EPS: 5000
 ROE: 0.25, ROA: 0.12
-Revenue Growth: 0.08, Profit Growth: 0.05
+Tăng trưởng doanh thu: 0.08, Tăng trưởng lợi nhuận: 0.05
 
-Expected output:
-{"ticker": "VNM", "health": "good", "score": 7, "reasoning": "P/E of 15.2 is at market average but justified by strong ROE of 25%. Modest but stable growth in revenue and profit. Low debt profile supports financial health."}
+Kết quả mẫu:
+{"ticker": "VNM", "health": "good", "score": 7, "reasoning": "P/E 15.2 ở mức trung bình thị trường nhưng hợp lý nhờ ROE 25% cao. Tăng trưởng doanh thu và lợi nhuận ổn định dù không đột phá. Cấu trúc nợ thấp hỗ trợ sức khỏe tài chính tốt."}
 
-Now analyze the following tickers based on their most recent financial data:"""
+Phân tích các mã sau dựa trên dữ liệu tài chính mới nhất:"""
 
 SENTIMENT_FEW_SHOT = """Ví dụ phân tích:
 
@@ -1278,22 +1278,22 @@ class AIAnalysisService:
 
         for symbol, data in ticker_data.items():
             lines.append(f"\n--- {symbol} ---")
-            lines.append(f"RSI(14) last 5 days: {data['rsi_14']}")
-            lines.append(f"RSI zone: {data['rsi_zone']}")
-            lines.append(f"MACD line last 5 days: {data['macd_line']}")
-            lines.append(f"MACD signal last 5 days: {data['macd_signal']}")
-            lines.append(f"MACD histogram last 5 days: {data['macd_histogram']}")
-            lines.append(f"MACD crossover: {data['macd_crossover']}")
+            lines.append(f"RSI(14) 5 phiên gần nhất: {data['rsi_14']}")
+            lines.append(f"Vùng RSI: {data['rsi_zone']}")
+            lines.append(f"MACD line 5 phiên: {data['macd_line']}")
+            lines.append(f"MACD signal 5 phiên: {data['macd_signal']}")
+            lines.append(f"MACD histogram 5 phiên: {data['macd_histogram']}")
+            lines.append(f"Giao cắt MACD: {data['macd_crossover']}")
             lines.append(f"SMA(20): {data['sma_20']}, SMA(50): {data['sma_50']}, SMA(200): {data['sma_200']}")
             lines.append(f"EMA(12): {data['ema_12']}, EMA(26): {data['ema_26']}")
-            lines.append(f"Bollinger Bands — Upper: {data['bb_upper']}, Middle: {data['bb_middle']}, Lower: {data['bb_lower']}")
+            lines.append(f"Bollinger Bands — Trên: {data['bb_upper']}, Giữa: {data['bb_middle']}, Dưới: {data['bb_lower']}")
             if "latest_close" in data:
-                lines.append(f"Latest close: {data['latest_close']:,.0f} VND")
+                lines.append(f"Giá đóng cửa gần nhất: {data['latest_close']:,.0f} VND")
             if "price_vs_sma_20_pct" in data:
                 lines.append(
-                    f"Price vs SMA(20): {data['price_vs_sma_20_pct']:+.1f}%, "
-                    f"Price vs SMA(50): {data.get('price_vs_sma_50_pct', 'N/A')}%, "
-                    f"Price vs SMA(200): {data.get('price_vs_sma_200_pct', 'N/A')}%"
+                    f"Giá vs SMA(20): {data['price_vs_sma_20_pct']:+.1f}%, "
+                    f"Giá vs SMA(50): {data.get('price_vs_sma_50_pct', 'N/A')}%, "
+                    f"Giá vs SMA(200): {data.get('price_vs_sma_200_pct', 'N/A')}%"
                 )
 
         return "\n".join(lines)
@@ -1306,11 +1306,11 @@ class AIAnalysisService:
         ]
 
         for symbol, data in ticker_data.items():
-            lines.append(f"\n--- {symbol} (Period: {data['period']}) ---")
+            lines.append(f"\n--- {symbol} (Kỳ: {data['period']}) ---")
             lines.append(f"P/E: {data['pe']}, P/B: {data['pb']}, EPS: {data['eps']}")
             lines.append(f"ROE: {data['roe']}, ROA: {data['roa']}")
-            lines.append(f"Revenue Growth: {data['revenue_growth']}, Profit Growth: {data['profit_growth']}")
-            lines.append(f"Current Ratio: {data['current_ratio']}, Debt/Equity: {data['debt_to_equity']}")
+            lines.append(f"Tăng trưởng doanh thu: {data['revenue_growth']}, Tăng trưởng lợi nhuận: {data['profit_growth']}")
+            lines.append(f"Hệ số thanh toán: {data['current_ratio']}, Nợ/Vốn: {data['debt_to_equity']}")
 
         return "\n".join(lines)
 
