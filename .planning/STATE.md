@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: AI Backtesting Engine
 status: executing
-stopped_at: Completed 32-02-PLAN.md
-last_updated: "2026-04-22T05:35:00Z"
-last_activity: 2026-04-22 — Completed 32-02 Backtest Engine Core
+stopped_at: Phase 32 complete, starting Phase 33
+last_updated: "2026-04-22T06:30:00Z"
+last_activity: 2026-04-22 — Phase 32 complete (130 backtest tests, 689 total)
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 33
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2025-07-21)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** v6.0 AI Backtesting Engine — Phase 32 Plan 02 complete, Plan 03 next
+**Current focus:** v6.0 AI Backtesting Engine — Phase 32 complete, Phase 33 next
 
 ## Current Position
 
-Phase: 32 — Backtest Engine & Portfolio Simulation (in progress)
-Plan: 3 of 3
-Status: Plan 02 complete — engine core built, Plan 03 (API integration & monitoring) next
-Last activity: 2026-04-22 — Completed 32-02 Backtest Engine Core
+Phase: 33 — Analytics & Benchmark Computation (not started)
+Plan: 0 of TBD
+Status: Phase 32 complete — moving to Phase 33
+Last activity: 2026-04-22 — Phase 32 Backtest Engine & Portfolio Simulation complete
 
-Progress: █████████████░░░░░░░ 67% (0/3 phases, 2/3 plans)
+Progress: ██████░░░░░░░░░░░░░░ 33% (1/3 phases, 3/3 plans)
 
 ## Shipped Milestones
 

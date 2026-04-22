@@ -99,7 +99,7 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 **Milestone Goal:** Backtest hệ thống AI trên dữ liệu lịch sử 6 tháng (120 phiên) cho 400+ mã, gọi Gemini phân tích thật tại mỗi phiên, mô phỏng mở/đóng lệnh, tổng kết P&L so sánh với VN-Index — delivered via dedicated /backtest dashboard.
 
-- [ ] **Phase 32: Backtest Engine & Portfolio Simulation** - Historical session replay with Gemini AI calls, virtual position management, checkpoint/resume, smart batching
+- [x] **Phase 32: Backtest Engine & Portfolio Simulation** - Historical session replay with Gemini AI calls, virtual position management, checkpoint/resume, smart batching
 - [ ] **Phase 33: Analytics & Benchmark Computation** - Post-backtest metrics: AI equity vs VN-Index, win rate, drawdown, Sharpe, sector/confidence/timeframe breakdowns
 - [ ] **Phase 34: Backtest Dashboard** - /backtest page with config form, real-time progress, equity chart, stats tables, breakdown charts
 
@@ -119,8 +119,8 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 Plans:
 - [x] 32-01-PLAN.md — Database models + Alembic migration + API layer
-- [ ] 32-02-PLAN.md — Backtest engine core (analysis service + engine loop)
-- [ ] 32-03-PLAN.md — Comprehensive tests + human verification
+- [x] 32-02-PLAN.md — Backtest engine core (analysis service + engine loop)
+- [x] 32-03-PLAN.md — Comprehensive tests + human verification
 
 ### Phase 33: Analytics & Benchmark Computation
 **Goal**: After backtest completion, system computes comprehensive performance metrics and multi-dimensional breakdowns comparing AI strategy returns vs VN-Index buy-and-hold
@@ -153,6 +153,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 32. Backtest Engine & Portfolio Simulation | 1/3 | In Progress|  |
+| 32. Backtest Engine & Portfolio Simulation | 3/3 | ✅ Complete |  |
 | 33. Analytics & Benchmark Computation | 0/0 | Not started | - |
 | 34. Backtest Dashboard | 0/0 | Not started | - |
