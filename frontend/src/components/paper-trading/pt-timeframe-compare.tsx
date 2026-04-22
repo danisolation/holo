@@ -4,10 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePaperTimeframe } from "@/lib/hooks";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
+import { formatVND } from "@/lib/format";
 
 const TIMEFRAME_LABELS: Record<string, string> = {
   swing: "Swing (ngắn hạn)",

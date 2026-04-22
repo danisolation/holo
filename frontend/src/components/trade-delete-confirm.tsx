@@ -13,12 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { useDeleteTrade } from "@/lib/hooks";
 import type { TradeResponse } from "@/lib/api";
+import { formatVND } from "@/lib/format";
 
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
-
-interface TradeDeleteConfirmProps {
+interface TradeDeleteConfirmProps{
   trade: TradeResponse;
   open: boolean;
   onOpenChange: (open: boolean) => void;

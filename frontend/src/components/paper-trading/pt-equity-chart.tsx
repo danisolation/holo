@@ -12,16 +12,9 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePaperEquityCurve, usePaperDrawdown } from "@/lib/hooks";
+import { formatVND, formatCompactVND } from "@/lib/format";
 
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
-
-function formatCompactVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(value);
-}
-
-interface CustomTooltipProps {
+interface CustomTooltipProps{
   active?: boolean;
   payload?: Array<{ payload: { date: string; daily_pnl: number; cumulative_pnl: number } }>;
   label?: string;

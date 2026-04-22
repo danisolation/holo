@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAllocationData } from "@/lib/hooks";
+import { formatVND, formatCompactVND } from "@/lib/format";
 
 const COLORS = [
   "#3b82f6",
@@ -24,15 +25,7 @@ const COLORS = [
   "#9ca3af",
 ];
 
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
-
-function formatCompactVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(value);
-}
-
-interface SliceData {
+interface SliceData{
   name: string;
   value: number;
   percentage: number;

@@ -11,12 +11,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { CSVPreviewRow } from "@/lib/api";
+import { formatVND } from "@/lib/format";
 
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
-
-interface CSVPreviewTableProps {
+interface CSVPreviewTableProps{
   rows: CSVPreviewRow[];
 }
 

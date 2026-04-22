@@ -4,10 +4,7 @@ import { TrendingUp, TrendingDown, Target, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePaperAnalyticsSummary } from "@/lib/hooks";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
+import { formatVND } from "@/lib/format";
 
 export function PTOverviewTab() {
   const { data, isLoading, error } = usePaperAnalyticsSummary();

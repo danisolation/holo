@@ -27,10 +27,7 @@ import { useTradeHistory } from "@/lib/hooks";
 import type { TradeResponse } from "@/lib/api";
 import { TradeEditDialog } from "@/components/trade-edit-dialog";
 import { TradeDeleteConfirm } from "@/components/trade-delete-confirm";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
+import { formatVND } from "@/lib/format";
 
 export function TradeHistory() {
   const [tickerFilter, setTickerFilter] = useState("");

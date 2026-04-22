@@ -29,10 +29,7 @@ import type {
   BenchmarkComparisonResponse,
   BacktestAnalyticsResponse,
 } from "@/lib/api";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
+import { formatVND } from "@/lib/format";
 
 // --- Equity Curve Tooltip ---
 

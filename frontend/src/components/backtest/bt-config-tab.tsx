@@ -11,10 +11,7 @@ import {
   useStartBacktest,
   useCancelBacktest,
 } from "@/lib/hooks";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
+import { formatVND } from "@/lib/format";
 
 function formatEta(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)}s`;

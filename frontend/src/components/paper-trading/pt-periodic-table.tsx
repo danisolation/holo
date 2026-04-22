@@ -14,10 +14,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { usePaperPeriodic } from "@/lib/hooks";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
+import { formatVND } from "@/lib/format";
 
 export function PTPeriodicTable() {
   const [period, setPeriod] = useState<"weekly" | "monthly">("weekly");

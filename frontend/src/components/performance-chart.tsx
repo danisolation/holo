@@ -14,6 +14,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePerformanceData } from "@/lib/hooks";
+import { formatVND, formatCompactVND } from "@/lib/format";
 
 const PERIODS = [
   { value: "1M", label: "1T" },
@@ -24,14 +25,6 @@ const PERIODS = [
 ] as const;
 
 const LONG_PERIODS = new Set(["1Y", "ALL"]);
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
-
-function formatCompactVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(value);
-}
 
 function formatDateTick(dateStr: string, period: string): string {
   const [year, month, day] = dateStr.split("-");

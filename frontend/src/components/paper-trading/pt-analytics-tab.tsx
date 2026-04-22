@@ -13,10 +13,7 @@ import {
 import { PTEquityChart } from "./pt-equity-chart";
 import { PTStreakCards } from "./pt-streak-cards";
 import { PTTimeframeCompare } from "./pt-timeframe-compare";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
+import { formatVND } from "@/lib/format";
 
 /* ---------- Direction comparison ---------- */
 

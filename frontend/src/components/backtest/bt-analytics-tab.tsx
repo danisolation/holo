@@ -15,14 +15,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBacktestLatest, useBacktestAnalytics } from "@/lib/hooks";
-
-function formatVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN").format(Math.round(value));
-}
-
-function formatCompactVND(value: number): string {
-  return new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(value);
-}
+import { formatVND, formatCompactVND } from "@/lib/format";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function SectorTooltip({ active, payload, label }: any) {

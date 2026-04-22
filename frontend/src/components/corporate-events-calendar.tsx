@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { useCorporateEvents } from "@/lib/hooks";
 import type { CorporateEventResponse } from "@/lib/api";
+import { formatDateVN } from "@/lib/format";
 
 // --- Constants ---
 
@@ -58,11 +59,6 @@ const FILTER_TABS = [
 
 function formatMonth(year: number, month: number): string {
   return `${year}-${String(month + 1).padStart(2, "0")}`;
-}
-
-function formatDateVN(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
 function getCalendarDays(year: number, month: number) {
