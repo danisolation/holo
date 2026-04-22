@@ -163,7 +163,7 @@ class TestJobChaining:
     """Tests for EVENT_JOB_EXECUTED job chaining (Phase 2)."""
 
     def test_on_job_executed_chains_indicators_after_price_crawl(self):
-        """Successful daily_price_crawl_upcom must trigger daily_indicator_compute and daily_price_alert_check."""
+        """Successful daily_price_crawl_upcom must trigger daily_indicator_compute and daily_corporate_action_check."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
@@ -172,10 +172,9 @@ class TestJobChaining:
 
         with patch.object(scheduler, "add_job") as mock_add:
             _on_job_executed(mock_event)
-            assert mock_add.call_count == 4
+            assert mock_add.call_count == 3
             call_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in mock_add.call_args_list]
             assert "daily_indicator_compute_triggered" in call_ids
-            assert "daily_price_alert_check_triggered" in call_ids
             assert "daily_corporate_action_check_triggered" in call_ids
 
     def test_on_job_executed_chains_ai_after_indicators(self):

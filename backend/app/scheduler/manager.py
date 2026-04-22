@@ -40,7 +40,6 @@ _JOB_NAMES = {
     "daily_signal_alert_check_triggered": "Daily Signal Alert Check",
     "daily_corporate_action_check_triggered": "Daily Corporate Action Check",
     "daily_exdate_alert_check_triggered": "Daily Ex-Date Alert Check",
-    "daily_price_alert_check_triggered": "Daily Price Alert Check",
     "daily_summary_send": "Daily Market Summary",
     "daily_hnx_upcom_analysis": "Daily HNX/UPCOM Watchlist Analysis",
     "daily_hnx_upcom_analysis_triggered": "Daily HNX/UPCOM Watchlist Analysis",
@@ -92,15 +91,6 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_indicator_compute,
             id="daily_indicator_compute_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-        # Also trigger price alert check (parallel branch)
-        from app.scheduler.jobs import daily_price_alert_check
-        logger.info("Chaining: daily_price_crawl_upcom → daily_price_alert_check")
-        scheduler.add_job(
-            daily_price_alert_check,
-            id="daily_price_alert_check_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -344,7 +334,7 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_upcom → [indicators → AI → news → sentiment → combined → trading_signal → signal_alerts + hnx_upcom_analysis] + [price_alerts] + [corporate_action_check → exdate_alert_check], "
+        "daily_price_crawl_upcom → [indicators → AI → news → sentiment → combined → trading_signal → signal_alerts + hnx_upcom_analysis] + [corporate_action_check → exdate_alert_check], "
         "daily_summary_send (cron 18:30)"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")

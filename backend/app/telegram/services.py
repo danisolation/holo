@@ -20,7 +20,6 @@ from app.models.ticker import Ticker
 from app.models.daily_price import DailyPrice
 from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.models.user_watchlist import UserWatchlist
-from app.models.price_alert import PriceAlert
 from app.telegram.formatter import MessageFormatter
 
 
@@ -109,85 +108,6 @@ class AlertService:
 
         logger.info(f"Signal alert check complete: {alerts_sent} alerts sent for {len(watched)} watched tickers")
         return alerts_sent
-
-    async def check_price_alerts(self, chat_id: str | None = None) -> int:
-        """Check active price alerts against latest close prices.
-
-        For each non-triggered alert:
-        - direction="up": alert if latest close >= target_price
-        - direction="down": alert if latest close <= target_price
-        Triggered alerts are marked is_triggered=True with triggered_at timestamp.
-
-        Per CONTEXT.md D-2.2: triggers after daily price crawl.
-
-        Args:
-            chat_id: Target chat ID. Defaults to settings.telegram_chat_id.
-
-        Returns: Number of price alerts triggered.
-        """
-        target_chat = chat_id or settings.telegram_chat_id
-        if not target_chat:
-            logger.warning("No chat_id for price alerts — skipping")
-            return 0
-
-        # Get all active (non-triggered) alerts for this chat
-        result = await self.session.execute(
-            select(PriceAlert, Ticker.symbol)
-            .join(Ticker, Ticker.id == PriceAlert.ticker_id)
-            .where(
-                PriceAlert.chat_id == target_chat,
-                PriceAlert.is_triggered == False,  # noqa: E712
-            )
-        )
-        active_alerts = result.all()
-
-        if not active_alerts:
-            logger.info("No active price alerts — skipping")
-            return 0
-
-        triggered_count = 0
-        for alert, symbol in active_alerts:
-            # Get latest close price
-            price_result = await self.session.execute(
-                select(DailyPrice.close)
-                .where(DailyPrice.ticker_id == alert.ticker_id)
-                .order_by(DailyPrice.date.desc())
-                .limit(1)
-            )
-            latest_close = price_result.scalar_one_or_none()
-            if latest_close is None:
-                continue
-
-            # Check threshold
-            crossed = False
-            if alert.direction == "up" and latest_close >= alert.target_price:
-                crossed = True
-            elif alert.direction == "down" and latest_close <= alert.target_price:
-                crossed = True
-
-            if crossed:
-                # Mark as triggered
-                await self.session.execute(
-                    update(PriceAlert)
-                    .where(PriceAlert.id == alert.id)
-                    .values(is_triggered=True, triggered_at=datetime.now(timezone.utc))
-                )
-                await self.session.commit()
-
-                # Send notification
-                msg = MessageFormatter.alert_triggered(
-                    symbol=symbol,
-                    current_price=latest_close,
-                    target_price=alert.target_price,
-                    direction=alert.direction,
-                )
-                from app.telegram.bot import telegram_bot
-                sent = await telegram_bot.send_message(msg, chat_id=target_chat)
-                if sent:
-                    triggered_count += 1
-
-        logger.info(f"Price alert check complete: {triggered_count} alerts triggered from {len(active_alerts)} active")
-        return triggered_count
 
     async def build_daily_summary(self, chat_id: str | None = None) -> dict:
         """Build daily summary data dict for formatting.

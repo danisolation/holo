@@ -19,7 +19,6 @@ from app.models.ticker import Ticker
 from app.models.daily_price import DailyPrice
 from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.models.user_watchlist import UserWatchlist
-from app.models.price_alert import PriceAlert
 from app.telegram.formatter import MessageFormatter
 from app.services.portfolio_service import PortfolioService
 
@@ -31,7 +30,6 @@ def register_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("unwatch", unwatch_command))
     app.add_handler(CommandHandler("list", list_command))
     app.add_handler(CommandHandler("check", check_command))
-    app.add_handler(CommandHandler("alert", alert_command))
     app.add_handler(CommandHandler("summary", summary_command))
     app.add_handler(CommandHandler("buy", buy_command))
     app.add_handler(CommandHandler("sell", sell_command))
@@ -254,71 +252,6 @@ async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         await update.message.reply_text(
             MessageFormatter.ticker_summary(data), parse_mode="HTML"
-        )
-
-
-async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """/alert <ticker> <price> — Set price threshold alert.
-
-    Direction auto-detected: if target > current close → "up", else → "down".
-    If no current price data, defaults to "up".
-    """
-    if not context.args or len(context.args) != 2:
-        await update.message.reply_text(
-            MessageFormatter.usage_error("/alert", "/alert VNM 85000"),
-            parse_mode="HTML",
-        )
-        return
-
-    symbol = context.args[0].upper().strip()
-    try:
-        target_price = Decimal(context.args[1].replace(",", ""))
-    except (InvalidOperation, ValueError):
-        await update.message.reply_text(
-            MessageFormatter.usage_error("/alert", "/alert VNM 85000"),
-            parse_mode="HTML",
-        )
-        return
-
-    chat_id = str(update.effective_chat.id)
-
-    async with async_session() as session:
-        # Look up ticker
-        result = await session.execute(
-            select(Ticker).where(Ticker.symbol == symbol, Ticker.is_active == True)  # noqa: E712
-        )
-        ticker = result.scalar_one_or_none()
-        if not ticker:
-            await update.message.reply_text(
-                MessageFormatter.ticker_not_found(symbol), parse_mode="HTML"
-            )
-            return
-
-        # Auto-detect direction from current price
-        direction = "up"  # default
-        price_result = await session.execute(
-            select(DailyPrice.close)
-            .where(DailyPrice.ticker_id == ticker.id)
-            .order_by(DailyPrice.date.desc())
-            .limit(1)
-        )
-        current_close = price_result.scalar_one_or_none()
-        if current_close is not None:
-            direction = "up" if target_price > current_close else "down"
-
-        # Insert price alert
-        alert = PriceAlert(
-            chat_id=chat_id,
-            ticker_id=ticker.id,
-            target_price=target_price,
-            direction=direction,
-        )
-        session.add(alert)
-        await session.commit()
-
-        await update.message.reply_text(
-            MessageFormatter.alert_created(symbol, target_price, direction),
-            parse_mode="HTML",
         )
 
 

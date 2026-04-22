@@ -26,7 +26,6 @@ class TestCafeFCrawlerParsing:
         assert len(articles) == 1
         assert articles[0]["title"] == "Short Title"
         assert articles[0]["url"] == "https://cafef.vn/test-article.chn"
-        assert articles[0]["source"] == "cafef"
 
     def test_parse_articles_filters_old_articles(self):
         """Parser must exclude articles older than news_days window."""

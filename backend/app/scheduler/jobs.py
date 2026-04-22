@@ -511,35 +511,6 @@ async def daily_signal_alert_check():
             logger.error(f"=== DAILY SIGNAL ALERT CHECK FAILED: {e} ===")
 
 
-async def daily_price_alert_check():
-    """Check price alerts against latest close prices after daily crawl.
-
-    Triggered after daily_price_crawl via job chaining.
-    Never raises — alert failure must not break the pipeline (D-3.4).
-    """
-    logger.info("=== DAILY PRICE ALERT CHECK START ===")
-    async with async_session() as session:
-        job_svc = JobExecutionService(session)
-        execution = await job_svc.start("daily_price_alert_check")
-        try:
-            from app.telegram.services import AlertService
-            service = AlertService(session)
-            result = await service.check_price_alerts()
-            await job_svc.complete(
-                execution, status="success",
-                result_summary={"alerts_triggered": result},
-            )
-            await session.commit()
-            logger.info(f"=== DAILY PRICE ALERT CHECK COMPLETE: {result} alerts triggered ===")
-        except Exception as e:
-            await job_svc.complete(
-                execution, status="partial",
-                result_summary={"error": str(e)[:200]},
-            )
-            await session.commit()
-            logger.error(f"=== DAILY PRICE ALERT CHECK FAILED: {e} ===")
-
-
 async def daily_summary_send():
     """Send daily market summary via Telegram.
 

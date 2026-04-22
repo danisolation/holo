@@ -15,7 +15,6 @@ class TestMessageFormatter:
         assert "/unwatch" in msg
         assert "/list" in msg
         assert "/check" in msg
-        assert "/alert" in msg
         assert "/summary" in msg
         assert "Holo" in msg
 
@@ -66,25 +65,6 @@ class TestMessageFormatter:
         assert "Vinamilk" in msg
         assert "85,000" in msg
         assert "mua" in msg.lower() or "MUA" in msg
-
-    def test_alert_created_up(self):
-        from app.telegram.formatter import MessageFormatter
-        msg = MessageFormatter.alert_created("VNM", Decimal("90000"), "up")
-        assert "VNM" in msg
-        assert "90,000" in msg
-        assert "vượt lên" in msg
-
-    def test_alert_created_down(self):
-        from app.telegram.formatter import MessageFormatter
-        msg = MessageFormatter.alert_created("VNM", Decimal("80000"), "down")
-        assert "giảm xuống" in msg
-
-    def test_alert_triggered_format(self):
-        from app.telegram.formatter import MessageFormatter
-        msg = MessageFormatter.alert_triggered("VNM", Decimal("91000"), Decimal("90000"), "up")
-        assert "CẢNH BÁO GIÁ" in msg
-        assert "VNM" in msg
-        assert "91,000" in msg
 
     def test_signal_change_format(self):
         from app.telegram.formatter import MessageFormatter
@@ -145,18 +125,6 @@ class TestAlertService:
         with patch("app.telegram.services.settings") as mock_settings:
             mock_settings.telegram_chat_id = ""
             result = await service.check_signal_changes(chat_id="")
-            assert result == 0
-
-    @pytest.mark.asyncio
-    async def test_check_price_alerts_no_chat_id(self):
-        """Should return 0 if no chat_id configured."""
-        from app.telegram.services import AlertService
-        session = AsyncMock()
-        service = AlertService(session)
-
-        with patch("app.telegram.services.settings") as mock_settings:
-            mock_settings.telegram_chat_id = ""
-            result = await service.check_price_alerts(chat_id="")
             assert result == 0
 
     @pytest.mark.asyncio
@@ -276,22 +244,6 @@ class TestSchedulerChaining:
             assert "daily_signal_alert_check_triggered" in job_ids
             assert "daily_hnx_upcom_analysis_triggered" in job_ids
 
-    def test_price_crawl_chains_to_both_indicators_and_price_alerts(self):
-        """After UPCOM price crawl (last exchange), both indicator compute AND price alert check should trigger."""
-        from app.scheduler.manager import _on_job_executed
-        from apscheduler import events as aps_events
-
-        mock_event = MagicMock(spec=aps_events.JobExecutionEvent)
-        mock_event.exception = None
-        mock_event.job_id = "daily_price_crawl_upcom"
-
-        with patch("app.scheduler.manager.scheduler") as mock_scheduler:
-            _on_job_executed(mock_event)
-            calls = mock_scheduler.add_job.call_args_list
-            job_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in calls]
-            assert "daily_indicator_compute_triggered" in job_ids
-            assert "daily_price_alert_check_triggered" in job_ids
-
     def test_failed_job_does_not_chain(self):
         """Jobs that failed should not trigger chaining."""
         from app.scheduler.manager import _on_job_executed
@@ -310,20 +262,20 @@ class TestHandlerRegistration:
     """Tests for command handler registration."""
 
     def test_register_handlers_adds_all_commands(self):
-        """register_handlers should add 11 command handlers."""
+        """register_handlers should add 10 command handlers."""
         from app.telegram.handlers import register_handlers
 
         mock_app = MagicMock()
         register_handlers(mock_app)
 
-        assert mock_app.add_handler.call_count == 11
+        assert mock_app.add_handler.call_count == 10
         # Extract command names from the CommandHandler objects
         commands = []
         for call in mock_app.add_handler.call_args_list:
             handler = call[0][0]
             if hasattr(handler, "commands"):
                 commands.extend(handler.commands)
-        expected = {"start", "watch", "unwatch", "list", "check", "alert", "summary", "buy", "sell", "portfolio", "pnl"}
+        expected = {"start", "watch", "unwatch", "list", "check", "summary", "buy", "sell", "portfolio", "pnl"}
         assert set(commands) == expected
 
 
