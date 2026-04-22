@@ -99,3 +99,76 @@ class BacktestEquityListResponse(BaseModel):
     """List of equity snapshots for a run."""
     equity: list[BacktestEquityResponse]
     total: int
+
+
+# --- Analytics Response Schemas (Phase 33) ---
+
+class PerformanceSummaryResponse(BaseModel):
+    """BENCH-02: Core performance metrics."""
+    total_trades: int
+    wins: int
+    losses: int
+    win_rate: float
+    total_pnl: float
+    total_pnl_pct: float
+    max_drawdown: float
+    max_drawdown_pct: float
+    sharpe_ratio: float
+    avg_pnl_per_trade: float
+
+
+class BenchmarkPointResponse(BaseModel):
+    """Single data point in benchmark comparison time-series."""
+    date: str
+    ai_equity: float
+    ai_return_pct: float
+    vnindex_return_pct: float | None = None
+
+
+class BenchmarkComparisonResponse(BaseModel):
+    """BENCH-01: AI strategy vs VN-Index buy-and-hold."""
+    initial_capital: float
+    ai_total_return_pct: float
+    vnindex_total_return_pct: float | None = None
+    outperformance_pct: float | None = None
+    data: list[BenchmarkPointResponse]
+
+
+class SectorBreakdownResponse(BaseModel):
+    """BENCH-03: Per-sector performance stats."""
+    sector: str
+    total_trades: int
+    wins: int
+    win_rate: float
+    total_pnl: float
+    avg_pnl: float
+
+
+class ConfidenceBreakdownResponse(BaseModel):
+    """BENCH-04: Per-confidence-bucket stats."""
+    bracket: str
+    total_trades: int
+    wins: int
+    win_rate: float
+    avg_pnl: float
+    avg_pnl_pct: float
+
+
+class TimeframeBreakdownResponse(BaseModel):
+    """BENCH-05: Per-holding-period-bucket stats."""
+    bucket: str
+    total_trades: int
+    wins: int
+    win_rate: float
+    avg_holding_days: float
+    total_pnl: float
+    avg_pnl: float
+
+
+class BacktestAnalyticsResponse(BaseModel):
+    """Combined analytics response for GET /runs/{id}/analytics."""
+    run_id: int
+    summary: PerformanceSummaryResponse
+    sectors: list[SectorBreakdownResponse]
+    confidence: list[ConfidenceBreakdownResponse]
+    timeframes: list[TimeframeBreakdownResponse]

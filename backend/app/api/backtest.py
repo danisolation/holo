@@ -14,8 +14,16 @@ from app.schemas.backtest import (
     BacktestTradeListResponse,
     BacktestEquityResponse,
     BacktestEquityListResponse,
+    BacktestAnalyticsResponse,
+    PerformanceSummaryResponse,
+    BenchmarkComparisonResponse,
+    BenchmarkPointResponse,
+    SectorBreakdownResponse,
+    ConfidenceBreakdownResponse,
+    TimeframeBreakdownResponse,
 )
 from app.services.backtest_engine import BacktestEngine
+from app.services.backtest_analytics_service import BacktestAnalyticsService
 
 router = APIRouter(prefix="/backtest", tags=["backtest"])
 
@@ -258,3 +266,38 @@ async def get_run_equity(run_id: int):
         ]
 
         return BacktestEquityListResponse(equity=equity, total=len(equity))
+
+
+@router.get("/runs/{run_id}/analytics", response_model=BacktestAnalyticsResponse)
+async def get_run_analytics(run_id: int):
+    """BENCH-02..05: Performance summary + sector/confidence/timeframe breakdowns."""
+    async with async_session() as session:
+        svc = BacktestAnalyticsService(session)
+        summary = await svc.get_performance_summary(run_id)
+        sectors = await svc.get_sector_breakdown(run_id)
+        confidence = await svc.get_confidence_breakdown(run_id)
+        timeframes = await svc.get_timeframe_breakdown(run_id)
+
+        return BacktestAnalyticsResponse(
+            run_id=run_id,
+            summary=PerformanceSummaryResponse(**summary),
+            sectors=[SectorBreakdownResponse(**s) for s in sectors],
+            confidence=[ConfidenceBreakdownResponse(**c) for c in confidence],
+            timeframes=[TimeframeBreakdownResponse(**t) for t in timeframes],
+        )
+
+
+@router.get("/runs/{run_id}/benchmark", response_model=BenchmarkComparisonResponse)
+async def get_run_benchmark(run_id: int):
+    """BENCH-01: AI strategy equity vs VN-Index buy-and-hold comparison."""
+    async with async_session() as session:
+        svc = BacktestAnalyticsService(session)
+        result = await svc.get_benchmark_comparison(run_id)
+
+        return BenchmarkComparisonResponse(
+            initial_capital=result["initial_capital"],
+            ai_total_return_pct=result["ai_total_return_pct"],
+            vnindex_total_return_pct=result.get("vnindex_total_return_pct"),
+            outperformance_pct=result.get("outperformance_pct"),
+            data=[BenchmarkPointResponse(**d) for d in result["data"]],
+        )
