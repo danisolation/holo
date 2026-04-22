@@ -27,9 +27,6 @@ class DailyPrice(Base):
     low: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     close: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     volume: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    adjusted_close: Mapped[Decimal | None] = mapped_column(
-        Numeric(12, 2), nullable=True
-    )  # NULL until corporate actions handling in Phase 2
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )

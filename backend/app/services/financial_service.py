@@ -1,6 +1,6 @@
 """Financial ratio crawling and storage service.
 
-Fetches P/E, P/B, EPS, ROE, ROA, revenue, net_profit, growth rates,
+Fetches P/E, P/B, EPS, ROE, ROA, growth rates,
 current_ratio, and debt_to_equity from vnstock finance.ratio().
 
 WARNING: vnstock Finance.__init__() triggers an extra API call per ticker
@@ -128,10 +128,6 @@ class FinancialService:
                     eps=self._safe_decimal(row.get("eps", row.get("EPS", None))),
                     roe=self._safe_decimal(row.get("roe", row.get("ROE", None))),
                     roa=self._safe_decimal(row.get("roa", row.get("ROA", None))),
-                    revenue=self._safe_decimal(row.get("revenue", row.get("Revenue", None))),
-                    net_profit=self._safe_decimal(
-                        row.get("net_profit", row.get("netProfit", row.get("Net Profit", None)))
-                    ),
                     revenue_growth=self._safe_decimal(
                         row.get("revenue_growth", row.get("revenueGrowth", None))
                     ),
@@ -152,12 +148,6 @@ class FinancialService:
                         "eps": self._safe_decimal(row.get("eps", row.get("EPS", None))),
                         "roe": self._safe_decimal(row.get("roe", row.get("ROE", None))),
                         "roa": self._safe_decimal(row.get("roa", row.get("ROA", None))),
-                        "revenue": self._safe_decimal(
-                            row.get("revenue", row.get("Revenue", None))
-                        ),
-                        "net_profit": self._safe_decimal(
-                            row.get("net_profit", row.get("netProfit", row.get("Net Profit", None)))
-                        ),
                         "revenue_growth": self._safe_decimal(
                             row.get("revenue_growth", row.get("revenueGrowth", None))
                         ),

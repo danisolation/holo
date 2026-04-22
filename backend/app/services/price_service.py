@@ -5,7 +5,7 @@ Decisions:
 - 2-second delay between tickers for rate limiting (~13 min for 400)
 - 3 retries with exponential backoff via tenacity (on crawler)
 - Persistent failures: log and skip, continue with remaining tickers
-- Store raw prices; adjusted_close is NULL (corporate actions in Phase 2)
+- Store raw OHLCV prices
 """
 import asyncio
 from datetime import date, datetime, timezone
@@ -161,7 +161,6 @@ class PriceService:
                 "low": Decimal(str(row["low"])),
                 "close": Decimal(str(row["close"])),
                 "volume": int(row["volume"]),
-                "adjusted_close": None,
             })
 
         stmt = insert(DailyPrice).values(rows)

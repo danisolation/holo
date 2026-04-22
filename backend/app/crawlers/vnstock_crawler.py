@@ -74,7 +74,6 @@ class VnstockCrawler:
         """Fetch OHLCV history for one ticker.
 
         Returns DataFrame with columns: time, open, high, low, close, volume.
-        NOTE: No adjusted_close — vnstock returns UNADJUSTED prices only.
         Circuit breaker wraps OUTSIDE tenacity retries (Pitfall 1).
         """
         return await vnstock_breaker.call(self._fetch_ohlcv_with_retry, symbol, start, end)

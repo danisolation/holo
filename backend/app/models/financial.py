@@ -12,7 +12,7 @@ class Financial(Base):
     """Financial ratios and metrics per ticker per period.
 
     Data sourced from vnstock finance.ratio() which returns P/E, P/B, EPS,
-    ROE, ROA, revenue, net_profit, growth rates, and health indicators.
+    ROE, ROA, growth rates, and health indicators.
     """
     __tablename__ = "financials"
 
@@ -37,9 +37,7 @@ class Financial(Base):
     roe: Mapped[Decimal | None] = mapped_column(Numeric(8, 4), nullable=True)
     roa: Mapped[Decimal | None] = mapped_column(Numeric(8, 4), nullable=True)
 
-    # Income
-    revenue: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
-    net_profit: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    # Growth
     revenue_growth: Mapped[Decimal | None] = mapped_column(Numeric(8, 4), nullable=True)
     profit_growth: Mapped[Decimal | None] = mapped_column(Numeric(8, 4), nullable=True)
 
