@@ -1,36 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: AI Backtesting Engine
-status: shipped
-stopped_at: All phases complete
-last_updated: "2026-04-22T07:30:00Z"
+milestone: v7.0
+milestone_name: Consolidation & Quality Upgrade
+status: active
+stopped_at: Defining requirements
+last_updated: "2026-04-22T14:47:00Z"
 last_activity: 2026-04-22
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2025-07-21)
+See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** v6.0 AI Backtesting Engine — SHIPPED
+**Current focus:** v7.0 Consolidation & Quality Upgrade
 
 ## Current Position
 
-Phase: All complete
-Plan: 7/7
-Status: v6.0 milestone shipped
-Last activity: 2026-04-22
-
-Progress: ████████████████████ 100% (3/3 phases, 7/7 plans)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-22 — Milestone v7.0 started
 
 ## Shipped Milestones
 
@@ -42,30 +40,13 @@ Progress: ████████████████████ 100% (3/3
 | v3.0 | Smart Trading Signals | 5 | 10 | 2026-04-20 |
 | v4.0 | Paper Trading & Signal Verification | 5 | 10 | 2025-07-20 |
 | v5.0 | E2E Testing & Quality Assurance | 5 | 9 | 2025-07-21 |
-
-## Performance Metrics
-
-**Velocity:** (Reset for v6.0)
+| v6.0 | AI Backtesting Engine | 3 | 7 | 2026-04-22 |
 
 ## Accumulated Context
 
 ### Decisions
 
-All v1.0–v5.0 decisions archived in PROJECT.md Key Decisions table.
-
-- [Phase 32]: BacktestAnalysis.analysis_type uses String(20) not Enum to avoid enum dependency
-- [Phase 32]: BacktestTrade reuses TradeStatus/TradeDirection enums from paper_trade.py
-- [Phase 32]: BacktestAnalysisService overrides _store_analysis to use self.as_of_date (ignoring parent date.today())
-- [Phase 32]: Engine does NOT call fundamental/sentiment analysis — quarterly data same historically, sentiment unavailable
-- [Phase 32]: Timeout counts actual trading days via daily_prices COUNT query (not calendar days)
-- [Phase 33]: VN-Index benchmark uses try/except with None fallback — partial response on fetch failure
-- [Phase 33]: Holding days computed via PostgreSQL date subtraction (closed_date - entry_date)
-- [Phase 33]: Used patch.object on _get_run to isolate service method tests from DB lookup
-- [Phase 34]: Used Tailwind div-based progress bar (shadcn Progress not installed)
-- [Phase 34]: Equity chart uses AreaChart+Line combo for AI vs VN-Index overlay
-- [Phase 34]: Polling 5s interval for running backtest via useBacktestLatest refetchInterval
-- [Phase 34]: Client-side trade filtering via useMemo for finite backtest dataset
-- [Phase 34]: Confidence chart uses Cell conditional coloring per bracket (green/red)
+All v1.0–v6.0 decisions archived in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
@@ -73,13 +54,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- Gemini free tier 15 RPM: 48K calls ≈ 53 hours continuous — need smart batching + checkpoint/resume
-- Historical analysis must NOT overwrite current live analysis data
-- Backtest results stored separately from paper trading data
-- Reuse v4.0 paper trading logic (position sizing, SL/TP monitoring) — don't duplicate
+- Consolidation milestone: removing features may break E2E tests (v5.0) — need to update tests
+- Refactoring services: ensure 560 unit tests still pass after restructuring
+- Schema migrations: removing columns requires careful Alembic migration
 
 ## Session Continuity
 
-Last session: 2026-04-22T06:30:43.390Z
-Stopped at: Completed 34-02-PLAN.md
+Last session: 2026-04-22
+Stopped at: Milestone v7.0 initialization
 Resume file: None
