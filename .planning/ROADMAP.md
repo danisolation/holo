@@ -112,7 +112,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 **Milestone Goal:** Audit toàn diện → xóa code dư thừa, gộp logic chồng chéo, nâng cấp AI validation và UX — giảm LOC, tăng maintainability và trải nghiệm dùng.
 
 - [x] **Phase 35: Database & Model Cleanup** - Remove dead tables, unused columns via Alembic migrations
-- [ ] **Phase 36: Frontend Cleanup & Utility Extraction** - Remove dead components, consolidate format/config utilities
+- [x] **Phase 36: Frontend Cleanup & Utility Extraction** - Remove dead components, consolidate format/config utilities
 - [ ] **Phase 37: Backend Analytics Consolidation** - Extract shared analytics logic, composition pattern, merge schemas
 - [ ] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
 - [ ] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
@@ -144,7 +144,9 @@ Plans:
   1. The DilutionBadge component file no longer exists and no imports reference it anywhere in the codebase
   2. A single `src/lib/format.ts` module exports formatVND, formatCompactVND, formatDateVN — all components import from this shared module instead of local duplicates
   3. STATUS_CONFIG and SIGNAL_CONFIG are defined once in `src/lib/constants.ts` — all components that used inline copies now import from the shared file
-**Plans**: TBD
+**Plans**: 1/1 plans executed ✅
+Plans:
+- [x] 36-01-PLAN.md — Remove DilutionBadge, extract format utilities, consolidate config constants
 **UI hint**: yes
 
 ### Phase 37: Backend Analytics Consolidation
@@ -215,7 +217,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 35. Database & Model Cleanup | 2/2 | ✅ Complete | 2025-07-22 |
-| 36. Frontend Cleanup & Utility Extraction | 0/0 | Not started | - |
+| 36. Frontend Cleanup & Utility Extraction | 1/1 | ✅ Complete | 2025-07-22 |
 | 37. Backend Analytics Consolidation | 0/0 | Not started | - |
 | 38. Backend Architecture Refactor | 0/0 | Not started | - |
 | 39. AI Quality Upgrade | 0/0 | Not started | - |
