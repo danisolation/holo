@@ -28,7 +28,6 @@ class MessageFormatter:
             "/unwatch &lt;mã&gt; — Bỏ theo dõi\n"
             "/list — Xem danh sách theo dõi\n"
             "/check &lt;mã&gt; — Kiểm tra phân tích mã\n"
-            "/alert &lt;mã&gt; &lt;giá&gt; — Đặt cảnh báo giá\n"
             "/summary — Tóm tắt thị trường hôm nay\n"
             "/buy &lt;mã&gt; &lt;SL&gt; &lt;giá&gt; — Ghi nhận mua\n"
             "/sell &lt;mã&gt; &lt;SL&gt; &lt;giá&gt; — Ghi nhận bán\n"
@@ -135,24 +134,6 @@ class MessageFormatter:
                 lines.append(f"<i>{reasoning}</i>")
 
         return "\n".join(lines)
-
-    @staticmethod
-    def alert_created(symbol: str, price: Decimal, direction: str) -> str:
-        """Confirmation for /alert command."""
-        dir_text = "vượt lên" if direction == "up" else "giảm xuống"
-        emoji = "🔔" if direction == "up" else "🔕"
-        return f"{emoji} Đặt cảnh báo: <b>{symbol}</b> {dir_text} <b>{price:,.0f}đ</b>"
-
-    @staticmethod
-    def alert_triggered(symbol: str, current_price: Decimal, target_price: Decimal, direction: str) -> str:
-        """Alert notification when price threshold crossed."""
-        dir_text = "vượt lên trên" if direction == "up" else "giảm xuống dưới"
-        return (
-            f"🚨 <b>CẢNH BÁO GIÁ</b>\n\n"
-            f"<b>{symbol}</b> đã {dir_text} ngưỡng!\n"
-            f"💰 Giá hiện tại: <b>{current_price:,.0f}đ</b>\n"
-            f"🎯 Ngưỡng đặt: {target_price:,.0f}đ"
-        )
 
     @staticmethod
     def signal_change(symbol: str, old_signal: str, new_signal: str, score: int, reasoning: str) -> str:

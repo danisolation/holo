@@ -155,7 +155,6 @@ class CafeFCrawler:
                 "title": title,
                 "url": url,
                 "published_at": pub_date,
-                "source": "cafef",
             })
 
         return articles
@@ -179,7 +178,6 @@ class CafeFCrawler:
                 title=article["title"],
                 url=article["url"],
                 published_at=article["published_at"],
-                source=article["source"],
             ).on_conflict_do_nothing(
                 constraint="uq_news_articles_ticker_url"
             )

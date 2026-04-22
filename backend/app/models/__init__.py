@@ -13,7 +13,6 @@ from app.models.technical_indicator import TechnicalIndicator  # noqa: E402
 from app.models.ai_analysis import AIAnalysis, AnalysisType  # noqa: E402
 from app.models.news_article import NewsArticle  # noqa: E402
 from app.models.user_watchlist import UserWatchlist  # noqa: E402
-from app.models.price_alert import PriceAlert  # noqa: E402
 from app.models.job_execution import JobExecution  # noqa: E402
 from app.models.failed_job import FailedJob  # noqa: E402
 from app.models.corporate_event import CorporateEvent  # noqa: E402
@@ -24,4 +23,4 @@ from app.models.paper_trade import PaperTrade, TradeStatus, TradeDirection  # no
 from app.models.simulation_config import SimulationConfig  # noqa: E402
 from app.models.backtest import BacktestRun, BacktestTrade, BacktestEquity, BacktestAnalysis, BacktestStatus  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "PriceAlert", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot", "GeminiUsage", "PaperTrade", "TradeStatus", "TradeDirection", "SimulationConfig", "BacktestRun", "BacktestTrade", "BacktestEquity", "BacktestAnalysis", "BacktestStatus"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot", "GeminiUsage", "PaperTrade", "TradeStatus", "TradeDirection", "SimulationConfig", "BacktestRun", "BacktestTrade", "BacktestEquity", "BacktestAnalysis", "BacktestStatus"]
