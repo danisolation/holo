@@ -596,6 +596,7 @@ class BacktestEngine:
                     take_profit_1=Decimal(str(plan.take_profit_1)),
                     take_profit_2=Decimal(str(plan.take_profit_2)),
                     quantity=quantity,
+                    closed_quantity=0,
                     confidence=dir_analysis.confidence,
                     timeframe=plan.timeframe.value if hasattr(plan.timeframe, "value") else str(plan.timeframe),
                     position_size_pct=plan.position_size_pct,

@@ -112,7 +112,7 @@ class BacktestTrade(Base):
     adjusted_stop_loss: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     # Sizing
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    closed_quantity: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    closed_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     # P&L fields
     realized_pnl: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     realized_pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
