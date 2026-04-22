@@ -14,12 +14,7 @@ from app.models.paper_trade import PaperTrade, TradeStatus, TradeDirection
 from app.models.simulation_config import SimulationConfig
 from app.models.ticker import Ticker
 from app.services.paper_trade_service import calculate_position_size, validate_transition
-
-
-CLOSED_STATUSES = [
-    TradeStatus.CLOSED_TP2, TradeStatus.CLOSED_SL,
-    TradeStatus.CLOSED_TIMEOUT, TradeStatus.CLOSED_MANUAL,
-]
+from app.services.analytics_base import CLOSED_STATUSES, calc_win_rate, calc_pnl_pct, calc_avg_pnl, calc_max_drawdown
 
 
 class PaperTradeAnalyticsService:
@@ -227,15 +222,15 @@ class PaperTradeAnalyticsService:
         total = row.total or 0
         wins = row.wins or 0
         total_pnl = float(row.total_pnl or 0)
-        win_rate = round(wins / total * 100, 2) if total > 0 else 0.0
-        avg_pnl = round(total_pnl / total, 2) if total > 0 else 0.0
+        win_rate = calc_win_rate(wins, total)
+        avg_pnl = calc_avg_pnl(total_pnl, total)
 
         # AN-02: P&L as % of initial capital
         config_result = await self.session.execute(
             select(SimulationConfig.initial_capital).where(SimulationConfig.id == 1)
         )
         initial_capital = float(config_result.scalar_one())
-        total_pnl_pct = round(total_pnl / initial_capital * 100, 2) if initial_capital > 0 else 0.0
+        total_pnl_pct = calc_pnl_pct(total_pnl, initial_capital)
 
         return {
             "total_trades": total,
@@ -295,22 +290,11 @@ class PaperTradeAnalyticsService:
             }
 
         initial_capital = equity_data["initial_capital"]
-        peak = 0.0
-        max_dd_vnd = 0.0
-        max_dd_pct = 0.0
-
-        for point in curve:
-            value = point["cumulative_pnl"]
-            if value > peak:
-                peak = value
-            else:
-                dd = value - peak
-                if dd < max_dd_vnd:
-                    max_dd_vnd = dd
-                    equity_at_peak = initial_capital + peak
-                    max_dd_pct = round(dd / equity_at_peak * 100, 2) if equity_at_peak > 0 else 0.0
+        equity_points = [p["cumulative_pnl"] for p in curve]
+        max_dd_vnd, max_dd_pct = calc_max_drawdown(equity_points)
 
         # Current drawdown
+        peak = max(equity_points) if equity_points else 0.0
         current_value = curve[-1]["cumulative_pnl"] if curve else 0
         current_dd = current_value - peak
         current_dd_pct = 0.0

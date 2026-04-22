@@ -1,32 +1,13 @@
 """Pydantic schemas for paper trading API endpoints."""
 from pydantic import BaseModel, Field
 
+from app.schemas.trade import TradeBaseResponse
+
 
 # --- Trade Response ---
-class PaperTradeResponse(BaseModel):
-    id: int
-    symbol: str
-    direction: str
-    status: str
-    entry_price: float
-    stop_loss: float
-    take_profit_1: float
-    take_profit_2: float
-    adjusted_stop_loss: float | None = None
-    quantity: int
-    closed_quantity: int
-    realized_pnl: float | None = None
-    realized_pnl_pct: float | None = None
-    exit_price: float | None = None
-    partial_exit_price: float | None = None
-    signal_date: str
-    entry_date: str | None = None
-    closed_date: str | None = None
-    confidence: int
-    timeframe: str
-    position_size_pct: int
-    risk_reward_ratio: float
-    created_at: str
+class PaperTradeResponse(TradeBaseResponse):
+    """Paper trade response — inherits all fields from TradeBaseResponse."""
+    pass
 
 
 class PaperTradeListResponse(BaseModel):

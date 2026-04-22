@@ -19,12 +19,7 @@ from app.models.backtest import BacktestRun, BacktestTrade, BacktestEquity, Back
 from app.models.paper_trade import TradeStatus
 from app.models.ticker import Ticker
 from app.crawlers.vnstock_crawler import VnstockCrawler
-
-
-CLOSED_STATUSES = [
-    TradeStatus.CLOSED_TP2, TradeStatus.CLOSED_SL,
-    TradeStatus.CLOSED_TIMEOUT, TradeStatus.CLOSED_MANUAL,
-]
+from app.services.analytics_base import CLOSED_STATUSES, calc_win_rate, calc_pnl_pct, calc_avg_pnl, calc_max_drawdown
 
 
 class BacktestAnalyticsService:
@@ -69,9 +64,9 @@ class BacktestAnalyticsService:
         total_pnl = float(row.total_pnl or 0)
         initial_capital = float(run.initial_capital)
 
-        win_rate = round(wins / total * 100, 2) if total > 0 else 0.0
-        total_pnl_pct = round(total_pnl / initial_capital * 100, 2) if initial_capital > 0 else 0.0
-        avg_pnl = round(total_pnl / total, 2) if total > 0 else 0.0
+        win_rate = calc_win_rate(wins, total)
+        total_pnl_pct = calc_pnl_pct(total_pnl, initial_capital)
+        avg_pnl = calc_avg_pnl(total_pnl, total)
 
         # Max drawdown from equity curve
         equity_result = await self.session.execute(
@@ -81,16 +76,7 @@ class BacktestAnalyticsService:
         )
         equities = [float(r.total_equity) for r in equity_result.all()]
 
-        max_dd_vnd = 0.0
-        max_dd_pct = 0.0
-        peak = 0.0
-        for equity in equities:
-            if equity > peak:
-                peak = equity
-            drawdown = equity - peak
-            if drawdown < max_dd_vnd:
-                max_dd_vnd = drawdown
-                max_dd_pct = round(drawdown / peak * 100, 2) if peak > 0 else 0.0
+        max_dd_vnd, max_dd_pct = calc_max_drawdown(equities)
 
         # Sharpe ratio from daily returns
         returns_result = await self.session.execute(

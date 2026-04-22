@@ -2,6 +2,8 @@
 from datetime import date
 from pydantic import BaseModel, Field, model_validator, computed_field
 
+from app.schemas.trade import TradeBaseResponse
+
 
 # --- Request Schemas ---
 
@@ -49,33 +51,10 @@ class BacktestRunResponse(BaseModel):
         return 0.0
 
 
-class BacktestTradeResponse(BaseModel):
-    """Response for a single backtest trade."""
-    id: int
+class BacktestTradeResponse(TradeBaseResponse):
+    """Response for a single backtest trade — adds run_id and backtest_analysis_id."""
     run_id: int
-    symbol: str
     backtest_analysis_id: int | None = None
-    direction: str
-    status: str
-    entry_price: float
-    stop_loss: float
-    take_profit_1: float
-    take_profit_2: float
-    adjusted_stop_loss: float | None = None
-    quantity: int
-    closed_quantity: int
-    realized_pnl: float | None = None
-    realized_pnl_pct: float | None = None
-    exit_price: float | None = None
-    partial_exit_price: float | None = None
-    signal_date: str
-    entry_date: str | None = None
-    closed_date: str | None = None
-    confidence: int
-    timeframe: str
-    position_size_pct: int
-    risk_reward_ratio: float
-    created_at: str
 
 
 class BacktestEquityResponse(BaseModel):
