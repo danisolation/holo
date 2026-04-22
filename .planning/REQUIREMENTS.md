@@ -1,87 +1,99 @@
-# Requirements: Holo v6.0 — AI Backtesting Engine
+# Requirements: Holo — v7.0 Consolidation & Quality Upgrade
 
-**Defined:** 2025-07-21
-**Core Value:** Backtest hệ thống AI trên dữ liệu lịch sử để kiểm chứng chất lượng tín hiệu trading — so sánh hiệu suất AI vs VN-Index.
+**Defined:** 2026-04-22
+**Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
 
-## v6.0 Requirements
+## v7.0 Requirements
 
-### Backtest Engine Core (BT)
+### Cleanup — Dead Code Removal (CLN)
 
-- [x] **BT-01**: User can chọn khoảng thời gian backtest (1-6 tháng, mặc định 6 tháng / 120 phiên)
-- [ ] **BT-02**: Hệ thống duyệt từng phiên giao dịch lịch sử, gọi Gemini AI phân tích technical + combined + trading signal tại mỗi phiên
-- [ ] **BT-03**: Hệ thống tự động mở lệnh ảo khi có tín hiệu AI (theo direction, entry price, SL/TP từ trading plan)
-- [ ] **BT-04**: Hệ thống theo dõi và đóng lệnh ảo theo SL/TP/timeout tại mỗi phiên tiếp theo
-- [x] **BT-05**: Backtest có checkpoint/resume — lưu tiến trình, có thể tiếp tục nếu bị gián đoạn (crash, rate limit)
-- [ ] **BT-06**: Backtest chạy trên toàn bộ 400+ mã với smart batching tránh Gemini rate limit (15 RPM)
+- [ ] **CLN-01**: Xóa price_alert model, DB table, và tất cả references (service method, handler import)
+- [ ] **CLN-02**: Xóa daily_price.adjusted_close column (migration + model + schema)
+- [ ] **CLN-03**: Xóa Financial.revenue và net_profit columns (migration + model)
+- [ ] **CLN-04**: Xóa news_article.source column (migration + model)
+- [ ] **CLN-05**: Xóa DilutionBadge component (frontend dead code)
+- [ ] **CLN-06**: Xóa tất cả formatVND/formatCompactVND/formatDateVN duplicates, extract sang src/lib/format.ts
 
-### Portfolio Simulation (SIM)
+### Backend Consolidation (BCK)
 
-- [x] **SIM-01**: User can cấu hình vốn khởi điểm (mặc định 100M VND)
-- [ ] **SIM-02**: Position sizing theo % vốn hiện tại, tái sử dụng logic paper trading v4.0
-- [x] **SIM-03**: Slippage simulation — giả lập trượt giá khi mở/đóng lệnh (configurable %)
-- [ ] **SIM-04**: Equity tracking theo từng phiên — số dư, vị thế mở, P&L tích lũy, % return
+- [ ] **BCK-01**: Extract shared analytics logic từ backtest_analytics_service + paper_trade_analytics_service thành AnalyticsBase class (win rate, P&L, drawdown, sector, confidence, timeframe)
+- [ ] **BCK-02**: Refactor BacktestAnalysisService từ inheritance sang composition pattern — tách AnalysisContextStrategy (Live vs Backtest)
+- [ ] **BCK-03**: Gộp BacktestTradeResponse + PaperTradeResponse schemas thành TradeBaseResponse + subclass
+- [ ] **BCK-04**: Tách AIAnalysisService (400+ LOC) thành: ContextBuilder, GeminiClient, AnalysisStorage, AnalysisOrchestrator
+- [ ] **BCK-05**: Tách BacktestEngine (300+ LOC) thành: BacktestRunner, TradeActivator, PositionEvaluator, EquitySnapshot
 
-### Analytics & Benchmark (BENCH)
+### Frontend Consolidation (FRN)
 
-- [x] **BENCH-01**: So sánh equity curve AI strategy vs VN-Index buy-and-hold trong cùng khoảng thời gian
-- [x] **BENCH-02**: Tính toán và hiển thị: win rate, total P&L, max drawdown, Sharpe ratio
-- [x] **BENCH-03**: Thống kê hiệu suất AI theo ngành (ngành nào AI phân tích chính xác nhất)
-- [x] **BENCH-04**: Thống kê theo confidence level — confidence cao có tỷ lệ thắng cao hơn không
-- [x] **BENCH-05**: Thống kê theo timeframe — AI phân tích ngắn hạn hay trung hạn chính xác hơn
+- [ ] **FRN-01**: Tạo GenericTradesTable component thay thế 3 trade tables (portfolio, paper-trading, backtest)
+- [ ] **FRN-02**: Tạo shared EquityCurveChart component thay thế pt-equity-chart + bt-analytics equity chart
+- [ ] **FRN-03**: Extract STATUS_CONFIG, SIGNAL_CONFIG sang src/lib/constants.ts — xóa duplicates từ tất cả components
+- [ ] **FRN-04**: Consolidate watchlist UX — bỏ watchlist cards trên /dashboard, giữ /watchlist page làm single source
+- [ ] **FRN-05**: Phân vai rõ "/" (Market Overview — heatmap focus) vs "/dashboard" (Portfolio Dashboard — portfolio focus), bỏ market stats trùng lặp
 
-### Dashboard UI (DASH)
+### AI Quality Upgrade (AIQ)
 
-- [ ] **DASH-01**: Trang /backtest với form cấu hình (thời gian, vốn, slippage) và nút "Run Backtest"
-- [ ] **DASH-02**: Progress bar real-time hiển thị tiến trình backtest đang chạy (% hoàn thành, ETA)
-- [ ] **DASH-03**: Equity curve chart (Recharts area chart) — AI vs VN-Index overlay so sánh trực quan
-- [ ] **DASH-04**: Bảng thống kê tổng hợp — win rate, total P&L, max drawdown, Sharpe ratio, số lệnh
-- [x] **DASH-05**: Bảng chi tiết từng lệnh — symbol, direction, entry/exit price, P&L, holding time
-- [x] **DASH-06**: Charts breakdown theo ngành, confidence level, timeframe (bar/pie charts)
+- [ ] **AIQ-01**: Thêm score-signal consistency validation (score < 5 không được là buy/strong_buy)
+- [ ] **AIQ-02**: Thêm price bounds validation cho trading signals (entry within week_52_high/low range)
+- [ ] **AIQ-03**: Sanitize news titles trước khi gửi Gemini (strip control chars, enforce max_length)
+
+### Performance Optimization (PRF)
+
+- [ ] **PRF-01**: WebSocket real-time chỉ active trong giờ giao dịch (9:00-15:00 VN weekdays), tự tắt off-hours
+- [ ] **PRF-02**: Lazy-load lightweight-charts (150KB) chỉ trên /ticker/[symbol] page, không load global
+
+### Test Maintenance (TST)
+
+- [ ] **TST-01**: Cập nhật unit tests (560 tests) sau khi refactor backend services — đảm bảo tất cả pass
+- [ ] **TST-02**: Cập nhật E2E tests (119 tests) sau khi xóa/consolidate frontend components — đảm bảo tất cả pass
 
 ## Future Requirements (deferred)
 
-- Telegram backtest notification — bỏ theo yêu cầu user
-- Multi-strategy comparison — so sánh nhiều chiến lược AI khác nhau
+- Complete watchlist migration từ DB sang localStorage (xóa user_watchlist table) — cần update Telegram bot trước
+- Multi-source news crawling (thêm nguồn ngoài CafeF)
 - Walk-forward optimization — tối ưu tham số AI trên rolling window
-- Monte Carlo simulation — stress test portfolio scenarios
 
 ## Out of Scope
 
-- **Auto-trade**: Không tự động giao dịch thật — chỉ mô phỏng ảo
-- **Real-time backtest**: Không chạy backtest trong giờ giao dịch — chỉ dữ liệu lịch sử
-- **Custom AI models**: Không thay đổi Gemini model — dùng model hiện tại (gemini-2.5-flash-lite)
-- **Telegram notifications**: Bỏ hoàn toàn — chỉ xem kết quả trên web dashboard
+| Feature | Reason |
+|---------|--------|
+| Xóa user_watchlist table | Telegram bot vẫn dùng — cần refactor bot trước |
+| Thêm feature mới | Milestone này chỉ consolidation + upgrade, không thêm |
+| Đổi chart library | lightweight-charts + recharts serve different purposes — chỉ lazy-load |
+| Refactor Telegram bot | Scope quá lớn — dành cho milestone riêng |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BT-01 | Phase 32 | Complete |
-| BT-02 | Phase 32 | Pending |
-| BT-03 | Phase 32 | Pending |
-| BT-04 | Phase 32 | Pending |
-| BT-05 | Phase 32 | Complete |
-| BT-06 | Phase 32 | Pending |
-| SIM-01 | Phase 32 | Complete |
-| SIM-02 | Phase 32 | Pending |
-| SIM-03 | Phase 32 | Complete |
-| SIM-04 | Phase 32 | Pending |
-| BENCH-01 | Phase 33 | Complete |
-| BENCH-02 | Phase 33 | Complete |
-| BENCH-03 | Phase 33 | Complete |
-| BENCH-04 | Phase 33 | Complete |
-| BENCH-05 | Phase 33 | Complete |
-| DASH-01 | Phase 34 | Pending |
-| DASH-02 | Phase 34 | Pending |
-| DASH-03 | Phase 34 | Pending |
-| DASH-04 | Phase 34 | Pending |
-| DASH-05 | Phase 34 | Complete |
-| DASH-06 | Phase 34 | Complete |
+| CLN-01 | — | Pending |
+| CLN-02 | — | Pending |
+| CLN-03 | — | Pending |
+| CLN-04 | — | Pending |
+| CLN-05 | — | Pending |
+| CLN-06 | — | Pending |
+| BCK-01 | — | Pending |
+| BCK-02 | — | Pending |
+| BCK-03 | — | Pending |
+| BCK-04 | — | Pending |
+| BCK-05 | — | Pending |
+| FRN-01 | — | Pending |
+| FRN-02 | — | Pending |
+| FRN-03 | — | Pending |
+| FRN-04 | — | Pending |
+| FRN-05 | — | Pending |
+| AIQ-01 | — | Pending |
+| AIQ-02 | — | Pending |
+| AIQ-03 | — | Pending |
+| PRF-01 | — | Pending |
+| PRF-02 | — | Pending |
+| TST-01 | — | Pending |
+| TST-02 | — | Pending |
 
 **Coverage:**
-- v6.0 requirements: 21 total
-- Mapped to phases: 21
-- Unmapped: 0 ✓
+- v7.0 requirements: 23 total
+- Mapped to phases: 0
+- Unmapped: 23 ⚠️ (pending roadmap)
 
 ---
-*Requirements defined: 2025-07-21*
+*Requirements defined: 2026-04-22*
+*Last updated: 2026-04-22 after initial definition*
