@@ -19,9 +19,13 @@ test.describe('INTERACT-02: Trades Table Sorting & Filtering', () => {
     const tradesTable = page.locator('[data-testid="pt-trades-table"]');
     await expect(tradesTable).toBeVisible();
 
-    // Either we see data rows or the empty state message
+    // Wait for loading to complete — either empty state text or table rows appear
     const emptyState = tradesTable.getByText('Chưa có lệnh paper trading nào.');
     const tableBody = tradesTable.locator('tbody tr');
+
+    await expect(
+      emptyState.or(tableBody.first()),
+    ).toBeVisible({ timeout: 15000 });
 
     const hasEmpty = await emptyState.isVisible().catch(() => false);
     if (hasEmpty) {

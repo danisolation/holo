@@ -53,9 +53,8 @@ test.describe('FLOW-04: Settings Change → Persist → Verify Effect', () => {
     await page.locator('[data-testid="pt-tab-settings"]').click();
     await expect(settingsForm).toBeVisible({ timeout: 10000 });
 
-    // Verify the capital input shows the new value
-    const persistedValue = await capitalInput.inputValue();
-    expect(persistedValue).toBe(newCapital);
+    // Wait for form to load persisted values (not defaults)
+    await expect(capitalInput).toHaveValue(newCapital, { timeout: 10000 });
 
     // ── Step 7: Switch to Overview tab and verify effect ────────────
     await page.locator('[data-testid="pt-tab-overview"]').click();
@@ -110,6 +109,7 @@ test.describe('FLOW-04: Settings Change → Persist → Verify Effect', () => {
     const submitButton = page.locator('[data-testid="pt-settings-submit"]');
     await submitButton.click();
     await expect(submitButton).not.toBeDisabled({ timeout: 10000 });
+    await expect(submitButton).toContainText('Lưu cài đặt', { timeout: 5000 });
 
     // ── Step 4: Reload and verify ───────────────────────────────────
     await page.reload();
