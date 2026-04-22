@@ -515,7 +515,7 @@ class PaperTradeAnalyticsService:
             )
             .join(Ticker, PaperTrade.ticker_id == Ticker.id)
             .where(PaperTrade.status.in_(CLOSED_STATUSES))
-            .group_by(func.coalesce(Ticker.industry, "Unknown"))
+            .group_by(Ticker.industry)
             .order_by(func.count().desc())
         )
         return [

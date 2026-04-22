@@ -16,47 +16,41 @@ test.describe('INTERACT-04: Paper Trading Tab Switching', () => {
   });
 
   test('Overview tab is active by default', async ({ page }) => {
-    // Overview tab should have the active/selected state by default
     const overviewTab = page.locator('[data-testid="pt-tab-overview"]');
-    await expect(overviewTab).toHaveAttribute('data-state', 'active');
+    await expect(overviewTab).toHaveAttribute('aria-selected', 'true');
   });
 
   test('clicking each tab shows corresponding content', async ({ page }) => {
     // --- Trades tab ---
     await page.locator('[data-testid="pt-tab-trades"]').click();
-    // Trades tab renders PTTradesTable (has data-testid="pt-trades-table") or loading skeleton
     const tradesTable = page.locator('[data-testid="pt-trades-table"]');
-    // Wait for either the table or an empty-state message
     await expect(
-      tradesTable.or(page.getByText('Chưa có lệnh paper trading nào.'))
+      tradesTable.or(page.getByText('Chưa có lệnh paper trading nào.')).first()
     ).toBeVisible({ timeout: 10000 });
-    // Verify trades tab is active
-    await expect(page.locator('[data-testid="pt-tab-trades"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-trades"]')).toHaveAttribute('aria-selected', 'true');
 
     // --- Analytics tab ---
     await page.locator('[data-testid="pt-tab-analytics"]').click();
     const analyticsContent = page.locator('[data-testid="pt-analytics-content"]');
     await expect(analyticsContent).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('data-state', 'active');
-    // Trades tab should no longer be active
-    await expect(page.locator('[data-testid="pt-tab-trades"]')).toHaveAttribute('data-state', 'inactive');
+    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-testid="pt-tab-trades"]')).toHaveAttribute('aria-selected', 'false');
 
     // --- Calendar tab ---
     await page.locator('[data-testid="pt-tab-calendar"]').click();
-    // Calendar tab renders PTCalendarTab — wait for its content area
-    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('data-state', 'active');
-    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('data-state', 'inactive');
+    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('aria-selected', 'false');
 
     // --- Settings tab ---
     await page.locator('[data-testid="pt-tab-settings"]').click();
     const settingsForm = page.locator('[data-testid="pt-settings-form"]');
     await expect(settingsForm).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('[data-testid="pt-tab-settings"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-settings"]')).toHaveAttribute('aria-selected', 'true');
 
     // --- Back to Overview tab ---
     await page.locator('[data-testid="pt-tab-overview"]').click();
-    await expect(page.locator('[data-testid="pt-tab-overview"]')).toHaveAttribute('data-state', 'active');
-    await expect(page.locator('[data-testid="pt-tab-settings"]')).toHaveAttribute('data-state', 'inactive');
+    await expect(page.locator('[data-testid="pt-tab-overview"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('[data-testid="pt-tab-settings"]')).toHaveAttribute('aria-selected', 'false');
   });
 
   test('tab switching hides previous content', async ({ page }) => {
@@ -72,7 +66,7 @@ test.describe('INTERACT-04: Paper Trading Tab Switching', () => {
     await expect(
       page.locator('[data-testid="pt-trades-table"]').or(
         page.getByText('Chưa có lệnh paper trading nào.')
-      )
+      ).first()
     ).toBeVisible({ timeout: 10000 });
   });
 });

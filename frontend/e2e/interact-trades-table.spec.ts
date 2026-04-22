@@ -11,7 +11,7 @@ test.describe('INTERACT-02: Trades Table Sorting & Filtering', () => {
     await expect(
       page.locator('[data-testid="pt-trades-table"]').or(
         page.getByText('Chưa có lệnh paper trading nào.')
-      )
+      ).first()
     ).toBeVisible({ timeout: 15000 });
   });
 

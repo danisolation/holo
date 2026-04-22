@@ -94,7 +94,7 @@ test.describe('INTERACT-05: Ticker Detail Page Interactions', () => {
     await expect(page.getByText('Chỉ báo kỹ thuật')).toBeVisible({ timeout: 10000 });
 
     // "Hỗ trợ & Kháng cự" section heading
-    await expect(page.getByText('Hỗ trợ & Kháng cự')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Hỗ trợ & Kháng cự').first()).toBeVisible({ timeout: 10000 });
 
     // "Phân tích AI đa chiều" section heading
     await expect(page.getByText('Phân tích AI đa chiều')).toBeVisible({ timeout: 10000 });

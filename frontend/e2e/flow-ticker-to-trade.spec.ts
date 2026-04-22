@@ -23,9 +23,9 @@ test.describe('FLOW-01: Ticker to Trade Journey', () => {
     // Technical indicators
     await expect(page.getByText('Chỉ báo kỹ thuật')).toBeVisible({ timeout: 10000 });
     // Support & Resistance
-    await expect(page.getByText('Hỗ trợ & Kháng cự')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Hỗ trợ & Kháng cự').first()).toBeVisible({ timeout: 10000 });
     // AI multi-dimensional analysis
-    await expect(page.getByText('Phân tích AI đa chiều')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Phân tích AI đa chiều').first()).toBeVisible({ timeout: 10000 });
 
     // ── Step 4: Look for trading plan panel and Follow button ───────
     // The trading plan section ("Kế Hoạch Giao Dịch") renders only
@@ -85,7 +85,7 @@ test.describe('FLOW-01: Ticker to Trade Journey', () => {
     } else {
       // Even without a Follow, verify the dashboard structure is intact
       const overviewTab = page.locator('[data-testid="pt-tab-overview"]');
-      await expect(overviewTab).toHaveAttribute('data-state', 'active');
+      await expect(overviewTab).toHaveAttribute('aria-selected', 'true');
     }
   });
 
@@ -102,10 +102,10 @@ test.describe('FLOW-01: Ticker to Trade Journey', () => {
     await expect(page.getByText('Chỉ báo kỹ thuật')).toBeVisible({ timeout: 10000 });
 
     // Support & Resistance
-    await expect(page.getByText('Hỗ trợ & Kháng cự')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Hỗ trợ & Kháng cự').first()).toBeVisible({ timeout: 10000 });
 
     // AI Analysis section heading (always visible even if no data)
-    await expect(page.getByText('Phân tích AI đa chiều')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Phân tích AI đa chiều').first()).toBeVisible({ timeout: 10000 });
 
     // If trading plan heading is missing, that's okay — verify page didn't crash
     await expect(page.locator('[data-testid="ticker-page"]')).toBeVisible();

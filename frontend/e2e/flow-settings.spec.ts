@@ -16,7 +16,7 @@ test.describe('FLOW-04: Settings Change → Persist → Verify Effect', () => {
 
     // ── Step 2: Click Settings tab ──────────────────────────────────
     await page.locator('[data-testid="pt-tab-settings"]').click();
-    await expect(page.locator('[data-testid="pt-tab-settings"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-settings"]')).toHaveAttribute('aria-selected', 'true');
 
     const settingsForm = page.locator('[data-testid="pt-settings-form"]');
     await expect(settingsForm).toBeVisible({ timeout: 10000 });
@@ -59,7 +59,7 @@ test.describe('FLOW-04: Settings Change → Persist → Verify Effect', () => {
 
     // ── Step 7: Switch to Overview tab and verify effect ────────────
     await page.locator('[data-testid="pt-tab-overview"]').click();
-    await expect(page.locator('[data-testid="pt-tab-overview"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-overview"]')).toHaveAttribute('aria-selected', 'true');
 
     // Overview loads summary data from the analytics API.
     // The settings change affects the simulation — verify the overview

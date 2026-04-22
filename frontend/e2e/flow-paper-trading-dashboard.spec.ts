@@ -17,7 +17,7 @@ test.describe('FLOW-02: Paper Trading Dashboard Exploration', () => {
 
     // ── Step 2: Verify Overview tab content loads by default ────────
     const overviewTab = page.locator('[data-testid="pt-tab-overview"]');
-    await expect(overviewTab).toHaveAttribute('data-state', 'active');
+    await expect(overviewTab).toHaveAttribute('aria-selected', 'true');
 
     // Overview renders summary cards or error message — just check the page is stable
     // Cards show "Tỷ lệ thắng", "Tổng P&L", etc. or a fallback
@@ -25,12 +25,12 @@ test.describe('FLOW-02: Paper Trading Dashboard Exploration', () => {
 
     // ── Step 3: Click Trades tab and verify table loads ─────────────
     await page.locator('[data-testid="pt-tab-trades"]').click();
-    await expect(page.locator('[data-testid="pt-tab-trades"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-trades"]')).toHaveAttribute('aria-selected', 'true');
 
     // Wait for trades table or empty state
     const tradesTable = page.locator('[data-testid="pt-trades-table"]');
     const emptyState = page.getByText('Chưa có lệnh paper trading nào.');
-    await expect(tradesTable.or(emptyState)).toBeVisible({ timeout: 10000 });
+    await expect(tradesTable.or(emptyState).first()).toBeVisible({ timeout: 10000 });
 
     const hasTradesData = await tradesTable.isVisible();
 
@@ -63,7 +63,7 @@ test.describe('FLOW-02: Paper Trading Dashboard Exploration', () => {
 
     // ── Step 5: Click Analytics tab and verify content loads ────────
     await page.locator('[data-testid="pt-tab-analytics"]').click();
-    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('aria-selected', 'true');
 
     const analyticsContent = page.locator('[data-testid="pt-analytics-content"]');
     await expect(analyticsContent).toBeVisible({ timeout: 10000 });
@@ -75,12 +75,12 @@ test.describe('FLOW-02: Paper Trading Dashboard Exploration', () => {
 
     // ── Step 6: Click Calendar tab and verify content renders ───────
     await page.locator('[data-testid="pt-tab-calendar"]').click();
-    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('aria-selected', 'true');
 
     // Calendar tab contains PTCalendarHeatmap + PTPeriodicTable
     // Just verify the content area has rendered and tab is active
     // Previous tabs should be inactive
-    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('data-state', 'inactive');
+    await expect(page.locator('[data-testid="pt-tab-analytics"]')).toHaveAttribute('aria-selected', 'false');
 
     // Wait for calendar content to render
     await page.waitForTimeout(1000);
@@ -95,13 +95,13 @@ test.describe('FLOW-02: Paper Trading Dashboard Exploration', () => {
 
     // Go to Calendar (last tab)
     await page.locator('[data-testid="pt-tab-calendar"]').click();
-    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('aria-selected', 'true');
 
     // Return to Overview
     await page.locator('[data-testid="pt-tab-overview"]').click();
-    await expect(page.locator('[data-testid="pt-tab-overview"]')).toHaveAttribute('data-state', 'active');
+    await expect(page.locator('[data-testid="pt-tab-overview"]')).toHaveAttribute('aria-selected', 'true');
 
     // Calendar should be inactive
-    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('data-state', 'inactive');
+    await expect(page.locator('[data-testid="pt-tab-calendar"]')).toHaveAttribute('aria-selected', 'false');
   });
 });

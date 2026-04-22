@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+
+const backendDir = path.resolve(__dirname, '../backend');
 
 export default defineConfig({
   testDir: './e2e',
@@ -23,8 +26,8 @@ export default defineConfig({
 
   webServer: [
     {
-      command: '../backend/.venv/Scripts/python -m uvicorn app.main:app --port 8001',
-      cwd: '../backend',
+      command: `${path.join(backendDir, '.venv', 'Scripts', 'python')} -m uvicorn app.main:app --port 8001`,
+      cwd: backendDir,
       url: 'http://localhost:8001/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
