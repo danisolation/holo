@@ -135,7 +135,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 33-01-PLAN.md — BacktestAnalyticsService + schemas + API endpoints
+- [x] 33-01-PLAN.md — BacktestAnalyticsService + schemas + API endpoints
 - [ ] 33-02-PLAN.md — Comprehensive tests for analytics service
 
 ### Phase 34: Backtest Dashboard
@@ -158,5 +158,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 32. Backtest Engine & Portfolio Simulation | 3/3 | ✅ Complete |  |
-| 33. Analytics & Benchmark Computation | 0/2 | Not started | - |
+| 33. Analytics & Benchmark Computation | 1/2 | In Progress|  |
 | 34. Backtest Dashboard | 0/0 | Not started | - |

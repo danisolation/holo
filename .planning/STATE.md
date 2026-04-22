@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: AI Backtesting Engine
-status: executing
-stopped_at: Phase 32 complete, starting Phase 33
-last_updated: "2026-04-22T06:30:00Z"
-last_activity: 2026-04-22 — Phase 32 complete (130 backtest tests, 689 total)
+status: completed
+stopped_at: Completed 33-01-PLAN.md
+last_updated: "2026-04-22T06:02:54.554Z"
+last_activity: 2026-04-22 — Phase 32 Backtest Engine & Portfolio Simulation complete
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 3
+  completed_phases: 0
+  total_plans: 5
   completed_plans: 3
-  percent: 33
+  percent: 60
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2025-07-21)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** v6.0 AI Backtesting Engine — Phase 32 complete, Phase 33 next
+**Current focus:** v6.0 AI Backtesting Engine — Phase 33 Plan 01 complete
 
 ## Current Position
 
-Phase: 33 — Analytics & Benchmark Computation (not started)
-Plan: 0 of TBD
-Status: Phase 32 complete — moving to Phase 33
-Last activity: 2026-04-22 — Phase 32 Backtest Engine & Portfolio Simulation complete
+Phase: 33 — Analytics & Benchmark Computation (in progress)
+Plan: 1 of 2
+Status: Plan 01 complete — BacktestAnalyticsService + API endpoints done
+Last activity: 2026-04-22 — Phase 33 Plan 01 complete
 
-Progress: ██████░░░░░░░░░░░░░░ 33% (1/3 phases, 3/3 plans)
+Progress: ████████████░░░░░░░░ 60% (1/3 phases, 4/5 plans)
 
 ## Shipped Milestones
 
@@ -58,6 +58,8 @@ All v1.0–v5.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 32]: BacktestAnalysisService overrides _store_analysis to use self.as_of_date (ignoring parent date.today())
 - [Phase 32]: Engine does NOT call fundamental/sentiment analysis — quarterly data same historically, sentiment unavailable
 - [Phase 32]: Timeout counts actual trading days via daily_prices COUNT query (not calendar days)
+- [Phase 33]: VN-Index benchmark uses try/except with None fallback — partial response on fetch failure
+- [Phase 33]: Holding days computed via PostgreSQL date subtraction (closed_date - entry_date)
 
 ### Pending Todos
 
@@ -72,6 +74,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T05:35:00Z
-Stopped at: Completed 32-02-PLAN.md
+Last session: 2026-04-22T06:02:54.548Z
+Stopped at: Completed 33-01-PLAN.md
 Resume file: None
