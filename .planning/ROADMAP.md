@@ -114,7 +114,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 - [x] **Phase 35: Database & Model Cleanup** - Remove dead tables, unused columns via Alembic migrations
 - [x] **Phase 36: Frontend Cleanup & Utility Extraction** - Remove dead components, consolidate format/config utilities
 - [x] **Phase 37: Backend Analytics Consolidation** - Extract shared analytics logic, composition pattern, merge schemas
-- [ ] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
+- [x] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
 - [ ] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
 - [ ] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
 - [ ] **Phase 41: Performance Optimization** - WebSocket off-hours scheduling, chart lazy-loading
@@ -169,7 +169,9 @@ Plans:
   1. AIAnalysisService (400+ LOC) is replaced by 4 focused classes: ContextBuilder (assembles data for prompts), GeminiClient (handles API calls), AnalysisStorage (persists results), AnalysisOrchestrator (coordinates the pipeline)
   2. BacktestEngine (300+ LOC) is replaced by 4 focused modules: BacktestRunner (orchestrates session replay), TradeActivator (opens positions from signals), PositionEvaluator (checks SL/TP/timeout), EquitySnapshot (tracks portfolio value)
   3. All existing API endpoints that used AIAnalysisService and BacktestEngine continue to work identically after the refactor — no behavior changes
-**Plans**: TBD
+**Plans**: 1/1 plans executed ✅
+Plans:
+- [x] 38-01-PLAN.md — Split AIAnalysisService into analysis/ package + BacktestEngine into backtest/ package
 
 ### Phase 39: AI Quality Upgrade
 **Goal**: AI analysis output is validated more rigorously — preventing hallucinated prices, inconsistent score-signal pairs, and malformed prompt inputs
@@ -221,7 +223,7 @@ Plans:
 | 35. Database & Model Cleanup | 2/2 | ✅ Complete | 2025-07-22 |
 | 36. Frontend Cleanup & Utility Extraction | 1/1 | ✅ Complete | 2025-07-22 |
 | 37. Backend Analytics Consolidation | 1/1 | ✅ Complete | 2025-07-22 |
-| 38. Backend Architecture Refactor | 0/0 | Not started | - |
+| 38. Backend Architecture Refactor | 1/1 | ✅ Complete | 2025-07-22 |
 | 39. AI Quality Upgrade | 0/0 | Not started | - |
 | 40. Frontend Component Consolidation | 0/0 | Not started | - |
 | 41. Performance Optimization | 0/0 | Not started | - |
