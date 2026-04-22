@@ -351,17 +351,16 @@ class TestEngineLifecycle:
     """Integration tests for engine lifecycle: complete, cancel, fail, empty dates."""
 
     def test_engine_has_internal_methods(self):
-        """Engine has all required internal methods."""
+        """Engine has all required internal methods and delegates."""
         engine = BacktestEngine()
         assert hasattr(engine, "_load_run")
         assert hasattr(engine, "_get_trading_dates")
         assert hasattr(engine, "_get_active_tickers")
         assert hasattr(engine, "_run_ai_pipeline")
-        assert hasattr(engine, "_activate_pending_trades")
-        assert hasattr(engine, "_evaluate_positions")
-        assert hasattr(engine, "_process_signals")
-        assert hasattr(engine, "_record_equity_snapshot")
-        assert hasattr(engine, "_check_timeout")
+        # Delegated to sub-modules
+        assert hasattr(engine, "_trade_activator")
+        assert hasattr(engine, "_position_evaluator")
+        assert hasattr(engine, "_equity_snapshot")
 
     def test_status_transitions_completed(self):
         """After successful loop, status transitions to COMPLETED."""
