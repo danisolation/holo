@@ -20,6 +20,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.backtest_analysis_service import BacktestAnalysisService
 from app.services.ai_analysis_service import AIAnalysisService
+from app.services.analysis.context_builder import BacktestContextBuilder
+from app.services.analysis.storage import BacktestStorage
 from app.models.backtest import BacktestAnalysis
 
 
@@ -102,14 +104,14 @@ class TestDateAwareContextMethods:
 
     def test_technical_context_source_uses_as_of_date(self):
         """_get_technical_context source code references self.as_of_date for filtering."""
-        source = inspect.getsource(BacktestAnalysisService._get_technical_context)
+        source = inspect.getsource(BacktestContextBuilder.get_technical_context)
         assert "self.as_of_date" in source
         # Must have date filter using <= as_of_date
         assert "<= self.as_of_date" in source or "self.as_of_date" in source
 
     def test_technical_context_source_no_date_today(self):
         """_get_technical_context must NOT use date.today() in code — causes lookahead bias."""
-        source = inspect.getsource(BacktestAnalysisService._get_technical_context)
+        source = inspect.getsource(BacktestContextBuilder.get_technical_context)
         code_lines = _extract_code_lines(source.split("\n"))
         code_only = "\n".join(code_lines)
         assert "date.today()" not in code_only
@@ -135,7 +137,7 @@ class TestDateAwareContextMethods:
 
     def test_combined_context_reads_backtest_analyses(self):
         """_get_combined_context source references BacktestAnalysis model (not AIAnalysis)."""
-        source = inspect.getsource(BacktestAnalysisService._get_combined_context)
+        source = inspect.getsource(BacktestContextBuilder.get_combined_context)
         assert "BacktestAnalysis" in source
         # Must NOT reference AIAnalysis model in executable code
         # Exclude docstrings and comments — only check actual code lines
@@ -162,7 +164,7 @@ class TestDateAwareContextMethods:
 
     def test_combined_context_filters_by_run_id(self):
         """_get_combined_context includes run_id filter."""
-        source = inspect.getsource(BacktestAnalysisService._get_combined_context)
+        source = inspect.getsource(BacktestContextBuilder.get_combined_context)
         assert "self.run_id" in source
 
     @pytest.mark.asyncio
@@ -193,7 +195,7 @@ class TestDateAwareContextMethods:
 
     def test_trading_signal_context_52week_relative(self):
         """_get_trading_signal_context uses as_of_date-relative 52-week window."""
-        source = inspect.getsource(BacktestAnalysisService._get_trading_signal_context)
+        source = inspect.getsource(BacktestContextBuilder.get_trading_signal_context)
         # Must reference as_of_date for 52-week computation
         assert "self.as_of_date" in source
         assert "timedelta" in source
@@ -205,7 +207,7 @@ class TestDateAwareContextMethods:
 
     def test_trading_signal_context_365_day_window(self):
         """52-week window uses as_of_date - timedelta(days=365)."""
-        source = inspect.getsource(BacktestAnalysisService._get_trading_signal_context)
+        source = inspect.getsource(BacktestContextBuilder.get_trading_signal_context)
         assert "365" in source
         assert "self.as_of_date - timedelta" in source or "self.as_of_date -" in source
 
@@ -220,7 +222,7 @@ class TestStoreAnalysisIsolation:
 
     def test_store_analysis_targets_backtest_table(self):
         """_store_analysis INSERT references 'backtest_analyses' table."""
-        source = inspect.getsource(BacktestAnalysisService._store_analysis)
+        source = inspect.getsource(BacktestStorage.store_analysis)
         assert "backtest_analyses" in source
 
     def test_never_writes_ai_analyses(self):
@@ -229,7 +231,7 @@ class TestStoreAnalysisIsolation:
         This is threat mitigation T-32-08: backtest data must be isolated.
         """
         import re
-        source = inspect.getsource(BacktestAnalysisService._store_analysis)
+        source = inspect.getsource(BacktestStorage.store_analysis)
         code_lines = _extract_code_lines(source.split("\n"))
         code_only = "\n".join(code_lines)
         # Find standalone 'ai_analyses' not preceded by 'backtest_'
@@ -240,12 +242,12 @@ class TestStoreAnalysisIsolation:
 
     def test_store_analysis_uses_as_of_date(self):
         """_store_analysis uses self.as_of_date as analysis_date, not the passed argument."""
-        source = inspect.getsource(BacktestAnalysisService._store_analysis)
+        source = inspect.getsource(BacktestStorage.store_analysis)
         assert "self.as_of_date" in source
 
     def test_store_analysis_includes_run_id(self):
         """_store_analysis includes run_id in the INSERT."""
-        source = inspect.getsource(BacktestAnalysisService._store_analysis)
+        source = inspect.getsource(BacktestStorage.store_analysis)
         assert "self.run_id" in source
 
     @pytest.mark.asyncio

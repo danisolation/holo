@@ -475,8 +475,8 @@ class TestStructuredOutputRetry:
         second_resp.parsed = valid_result
         second_resp.usage_metadata.total_token_count = 100
 
-        with patch.object(svc, "_call_gemini", new_callable=AsyncMock, side_effect=[first_resp, second_resp]) as mock_call:
-            result = await svc._analyze_technical_batch(self._MINIMAL_TECH_DATA)
+        with patch.object(svc.gemini_client, "_call_gemini", new_callable=AsyncMock, side_effect=[first_resp, second_resp]) as mock_call:
+            result = await svc.gemini_client.analyze_technical_batch(self._MINIMAL_TECH_DATA)
 
         assert result is valid_result
         assert mock_call.call_count == 2
@@ -495,8 +495,8 @@ class TestStructuredOutputRetry:
         resp.parsed = valid_result
         resp.usage_metadata.total_token_count = 100
 
-        with patch.object(svc, "_call_gemini", new_callable=AsyncMock, return_value=resp) as mock_call:
-            result = await svc._analyze_technical_batch(self._MINIMAL_TECH_DATA)
+        with patch.object(svc.gemini_client, "_call_gemini", new_callable=AsyncMock, return_value=resp) as mock_call:
+            result = await svc.gemini_client.analyze_technical_batch(self._MINIMAL_TECH_DATA)
 
         assert result is valid_result
         assert mock_call.call_count == 1
@@ -516,8 +516,8 @@ class TestStructuredOutputRetry:
         second_resp.text = '{"analyses": []}'
         second_resp.usage_metadata.total_token_count = 100
 
-        with patch.object(svc, "_call_gemini", new_callable=AsyncMock, side_effect=[first_resp, second_resp]) as mock_call:
-            result = await svc._analyze_technical_batch(self._MINIMAL_TECH_DATA)
+        with patch.object(svc.gemini_client, "_call_gemini", new_callable=AsyncMock, side_effect=[first_resp, second_resp]) as mock_call:
+            result = await svc.gemini_client.analyze_technical_batch(self._MINIMAL_TECH_DATA)
 
         assert mock_call.call_count == 2
         assert result is not None

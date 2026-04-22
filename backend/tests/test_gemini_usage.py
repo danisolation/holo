@@ -234,7 +234,7 @@ class TestAIServiceRecordsUsage:
         """_analyze_technical_batch should call record_usage after success."""
         with patch("app.services.ai_analysis_service.settings") as mock_settings, \
              patch("app.services.ai_analysis_service.genai") as mock_genai, \
-             patch("app.services.ai_analysis_service.GeminiUsageService") as MockUsageSvc:
+             patch("app.services.analysis.gemini_client.GeminiUsageService") as MockUsageSvc:
 
             mock_settings.gemini_api_key = "test-key"
             mock_settings.gemini_model = "gemini-2.0-flash"
@@ -262,10 +262,10 @@ class TestAIServiceRecordsUsage:
             from app.services.ai_analysis_service import AIAnalysisService
             svc = AIAnalysisService(mock_session, api_key="test-key")
 
-            # Patch _call_gemini and _build_technical_prompt to bypass prompt building
-            svc._call_gemini = AsyncMock(return_value=mock_response)
-            svc._build_technical_prompt = MagicMock(return_value="test prompt")
-            await svc._analyze_technical_batch({"VNM": {}})
+            # Patch gemini_client internals to bypass prompt building
+            svc.gemini_client._call_gemini = AsyncMock(return_value=mock_response)
+            svc.gemini_client.build_technical_prompt = MagicMock(return_value="test prompt")
+            await svc.gemini_client.analyze_technical_batch({"VNM": {}})
 
             mock_usage_svc_instance.record_usage.assert_called_once()
             call_kwargs = mock_usage_svc_instance.record_usage.call_args
