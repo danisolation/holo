@@ -1,65 +1,26 @@
 "use client";
 
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePaperEquityCurve, usePaperDrawdown } from "@/lib/hooks";
 import { formatVND, formatCompactVND } from "@/lib/format";
-
-interface CustomTooltipProps{
-  active?: boolean;
-  payload?: Array<{ payload: { date: string; daily_pnl: number; cumulative_pnl: number } }>;
-  label?: string;
-}
-
-function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
-  if (!active || !payload?.length || !label) return null;
-
-  const [year, month, day] = label.split("-");
-  const formattedDate = `${day}/${month}/${year}`;
-  const point = payload[0].payload;
-
-  return (
-    <div
-      className="rounded-md border shadow-md"
-      style={{
-        background: "var(--popover)",
-        borderColor: "var(--border)",
-        padding: "8px 12px",
-      }}
-    >
-      <p className="text-xs text-muted-foreground">{formattedDate}</p>
-      <p className="text-sm font-semibold font-mono">
-        P&L ngày:{" "}
-        <span className={point.daily_pnl >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}>
-          {point.daily_pnl >= 0 ? "+" : ""}
-          {formatVND(point.daily_pnl)} ₫
-        </span>
-      </p>
-      <p className="text-sm font-semibold font-mono">
-        Tích lũy:{" "}
-        <span className={point.cumulative_pnl >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}>
-          {point.cumulative_pnl >= 0 ? "+" : ""}
-          {formatVND(point.cumulative_pnl)} ₫
-        </span>
-      </p>
-    </div>
-  );
-}
+import { EquityCurveChart } from "@/components/shared/equity-curve-chart";
 
 export function PTEquityChart() {
   const { data: equityCurve, isLoading: loadingEquity } = usePaperEquityCurve();
   const { data: drawdown, isLoading: loadingDrawdown } = usePaperDrawdown();
 
   const isLoading = loadingEquity || loadingDrawdown;
+
+  const chartData = useMemo(
+    () =>
+      equityCurve?.data?.map((d) => ({
+        date: d.date,
+        value: d.cumulative_pnl,
+      })) ?? [],
+    [equityCurve],
+  );
 
   return (
     <Card>
@@ -69,7 +30,7 @@ export function PTEquityChart() {
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-80 w-full rounded-lg" />
-        ) : !equityCurve?.data?.length ? (
+        ) : chartData.length === 0 ? (
           <div className="flex items-center justify-center h-80">
             <p className="text-sm text-muted-foreground">
               Chưa có dữ liệu đường cong vốn.
@@ -77,38 +38,13 @@ export function PTEquityChart() {
           </div>
         ) : (
           <>
-            <ResponsiveContainer width="100%" height={320}>
-              <AreaChart data={equityCurve.data}>
-                <defs>
-                  <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                  tickFormatter={(d: string) => {
-                    const [, m, dd] = d.split("-");
-                    return `${dd}/${m}`;
-                  }}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-                  width={60}
-                  tickFormatter={formatCompactVND}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="cumulative_pnl"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fill="url(#equityGradient)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <EquityCurveChart
+              data={chartData}
+              label="Tích lũy"
+              height={320}
+              formatValue={(v) => `${formatVND(v)} ₫`}
+              formatYAxis={formatCompactVND}
+            />
 
             {/* Drawdown summary */}
             {drawdown && (

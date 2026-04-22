@@ -1,28 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  flexRender,
-  type ColumnDef,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, Filter, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GenericTradesTable } from "@/components/shared/generic-trades-table";
 import { useTradeHistory } from "@/lib/hooks";
 import type { TradeResponse } from "@/lib/api";
 import { TradeEditDialog } from "@/components/trade-edit-dialog";
@@ -40,8 +25,6 @@ export function TradeHistory() {
     side: sideFilter,
     limit: 50,
   });
-
-  const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns: ColumnDef<TradeResponse>[] = [
     {
@@ -142,25 +125,6 @@ export function TradeHistory() {
     },
   ];
 
-  const table = useReactTable({
-    data: data?.trades ?? [],
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="py-4">
-          <Skeleton className="h-48 w-full rounded-lg" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <>
     <Card>
@@ -205,40 +169,16 @@ export function TradeHistory() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {!data || data.trades.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground text-sm">
-            Chưa có giao dịch nào.
+        <GenericTradesTable
+          columns={columns}
+          data={data?.trades ?? []}
+          isLoading={isLoading}
+          emptyMessage="Chưa có giao dịch nào."
+        />
+        {!isLoading && data && data.trades.length > 0 && (
+          <div className="px-4 py-2 text-xs text-muted-foreground border-t">
+            {data.total} giao dịch
           </div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((hg) => (
-                  <TableRow key={hg.id}>
-                    {hg.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="px-4 py-2 text-xs text-muted-foreground border-t">
-              {data.total} giao dịch
-            </div>
-          </>
         )}
       </CardContent>
     </Card>

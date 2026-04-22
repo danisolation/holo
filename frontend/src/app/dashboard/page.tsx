@@ -5,9 +5,6 @@ import Link from "next/link";
 import {
   TrendingUp,
   TrendingDown,
-  BarChart3,
-  Brain,
-  Minus,
 } from "lucide-react";
 import {
   Card,
@@ -15,11 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ExchangeFilter } from "@/components/exchange-filter";
-import { useMarketOverview, useAnalysisSummary } from "@/lib/hooks";
-import { useWatchlistStore, useExchangeStore } from "@/lib/store";
+import { useMarketOverview } from "@/lib/hooks";
+import { useExchangeStore } from "@/lib/store";
 import {
   PieChart,
   Pie,
@@ -29,79 +24,6 @@ import {
   Legend,
 } from "recharts";
 
-/** Individual ticker summary card — fetches its own analysis */
-function TickerSummaryCard({ symbol }: { symbol: string }) {
-  const { data, isLoading } = useAnalysisSummary(symbol);
-  const combined = data?.combined;
-
-  if (isLoading) return <Skeleton className="h-32 rounded-xl" />;
-
-  if (!combined) {
-    return (
-      <Card size="sm">
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <Link
-              href={`/ticker/${symbol}`}
-              className="font-mono font-bold hover:underline"
-            >
-              {symbol}
-            </Link>
-            <span className="text-xs text-muted-foreground">
-              Chưa có phân tích
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const key = combined.signal.toLowerCase().replace(/\s+/g, "_");
-  const isBuy = ["buy", "strong_buy", "bullish", "mua", "strong", "good", "very_positive", "positive"].includes(key);
-  const isSell = ["sell", "strong_sell", "bearish", "ban", "weak", "critical", "very_negative", "negative"].includes(key);
-
-  return (
-    <Card size="sm">
-      <CardContent className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Link
-            href={`/ticker/${symbol}`}
-            className="font-mono font-bold hover:underline"
-          >
-            {symbol}
-          </Link>
-          <Badge
-            variant="secondary"
-            className={
-              isBuy
-                ? "text-[#26a69a] bg-[#26a69a]/10 gap-1"
-                : isSell
-                  ? "text-[#ef5350] bg-[#ef5350]/10 gap-1"
-                  : "gap-1"
-            }
-          >
-            {isBuy ? (
-              <TrendingUp className="size-3" />
-            ) : isSell ? (
-              <TrendingDown className="size-3" />
-            ) : (
-              <Minus className="size-3" />
-            )}
-            {combined.signal.toUpperCase().replace(/_/g, " ")}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Điểm:</span>
-          <span className="text-sm font-bold">{combined.score}/10</span>
-        </div>
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {combined.reasoning}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 const PIE_COLORS: Record<string, string> = {
   "Tăng": "#26a69a",
   "Giảm": "#ef5350",
@@ -109,9 +31,8 @@ const PIE_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { watchlist } = useWatchlistStore();
   const { exchange } = useExchangeStore();
-  const { data: marketData, isLoading } = useMarketOverview(exchange);
+  const { data: marketData } = useMarketOverview(exchange);
 
   const stats = useMemo(() => {
     if (!marketData) return null;
@@ -138,9 +59,6 @@ export default function DashboardPage() {
     ].filter((d) => d.value > 0);
 
     return {
-      gainers: gainers.length,
-      losers: losers.length,
-      unchanged,
       topGainers,
       topLosers,
       pieData,
@@ -153,7 +71,7 @@ export default function DashboardPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Bảng điều khiển</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Tổng quan danh mục và thị trường
+          Phân tích nhanh và top biến động
         </p>
       </div>
 
@@ -162,82 +80,7 @@ export default function DashboardPage() {
         <ExchangeFilter />
       </div>
 
-      {/* Section 1: Watchlist Summary */}
-      <section>
-        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <Brain className="size-5" />
-          Danh mục theo dõi
-          {watchlist.length > 0 && (
-            <Badge variant="secondary">{watchlist.length}</Badge>
-          )}
-        </h3>
-        {watchlist.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground text-sm">
-              Chưa có mã nào trong danh mục theo dõi.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {watchlist.map((symbol) => (
-              <TickerSummaryCard key={symbol} symbol={symbol} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Section 2: Market Stats */}
-      <section>
-        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <BarChart3 className="size-5" />
-          Thống kê thị trường
-        </h3>
-        {isLoading || !stats ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <Card size="sm">
-              <CardContent className="flex items-center gap-3">
-                <TrendingUp className="size-8 text-[#26a69a]" />
-                <div>
-                  <p className="text-2xl font-bold text-[#26a69a]">
-                    {stats.gainers}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Tăng giá</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card size="sm">
-              <CardContent className="flex items-center gap-3">
-                <TrendingDown className="size-8 text-[#ef5350]" />
-                <div>
-                  <p className="text-2xl font-bold text-[#ef5350]">
-                    {stats.losers}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Giảm giá</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card size="sm">
-              <CardContent className="flex items-center gap-3">
-                <div className="size-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
-                  =
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.unchanged}</p>
-                  <p className="text-xs text-muted-foreground">Đứng giá</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </section>
-
-      {/* Section 3: Signal Distribution Pie Chart */}
+      {/* Signal Distribution Pie Chart */}
       {stats && stats.pieData.length > 0 && (
         <section>
           <h3 className="text-lg font-semibold mb-3">Phân bổ tăng/giảm</h3>
@@ -280,7 +123,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Section 4: Top Movers */}
+      {/* Top Movers */}
       {stats && (
         <section>
           <h3 className="text-lg font-semibold mb-3">Top biến động</h3>

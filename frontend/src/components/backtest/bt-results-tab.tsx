@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Target,
   TrendingUp,
@@ -7,17 +8,6 @@ import {
   BarChart3,
   Hash,
 } from "lucide-react";
-import {
-  AreaChart,
-  Area,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -30,60 +20,7 @@ import type {
   BacktestAnalyticsResponse,
 } from "@/lib/api";
 import { formatVND } from "@/lib/format";
-
-// --- Equity Curve Tooltip ---
-
-interface EquityTooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    payload: {
-      date: string;
-      ai_return_pct: number;
-      vnindex_return_pct: number | null;
-    };
-  }>;
-  label?: string;
-}
-
-function EquityTooltip({ active, payload, label }: EquityTooltipProps) {
-  if (!active || !payload?.length || !label) return null;
-
-  const [year, month, day] = label.split("-");
-  const formattedDate = `${day}/${month}/${year}`;
-  const point = payload[0].payload;
-
-  return (
-    <div
-      className="rounded-md border shadow-md"
-      style={{
-        background: "var(--popover)",
-        borderColor: "var(--border)",
-        padding: "8px 12px",
-      }}
-    >
-      <p className="text-xs text-muted-foreground">{formattedDate}</p>
-      <p className="text-sm font-semibold font-mono">
-        AI:{" "}
-        <span
-          className={
-            point.ai_return_pct >= 0 ? "text-[#3b82f6]" : "text-[#ef5350]"
-          }
-        >
-          {point.ai_return_pct >= 0 ? "+" : ""}
-          {point.ai_return_pct.toFixed(2)}%
-        </span>
-      </p>
-      <p className="text-sm font-semibold font-mono">
-        VN-Index:{" "}
-        <span className="text-[#f59e0b]">
-          {point.vnindex_return_pct != null
-            ? `${point.vnindex_return_pct >= 0 ? "+" : ""}${point.vnindex_return_pct.toFixed(2)}%`
-            : "N/A"}
-        </span>
-      </p>
-    </div>
-  );
-}
+import { EquityCurveChart } from "@/components/shared/equity-curve-chart";
 
 // --- Equity Curve Card ---
 
@@ -94,6 +31,21 @@ function EquityCurveCard({
   benchmark: BenchmarkComparisonResponse | undefined;
   isLoading: boolean;
 }) {
+  const chartData = useMemo(
+    () =>
+      benchmark?.data?.map((d) => ({ date: d.date, value: d.ai_return_pct })) ??
+      [],
+    [benchmark],
+  );
+
+  const benchmarkChartData = useMemo(
+    () =>
+      benchmark?.data
+        ?.filter((d) => d.vnindex_return_pct != null)
+        .map((d) => ({ date: d.date, value: d.vnindex_return_pct! })) ?? [],
+    [benchmark],
+  );
+
   if (isLoading) {
     return <Skeleton className="h-[460px] rounded-xl" />;
   }
@@ -125,49 +77,15 @@ function EquityCurveCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={360}>
-          <AreaChart data={benchmark.data}>
-            <defs>
-              <linearGradient id="aiGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-              tickFormatter={(d: string) => {
-                const [, m, dd] = d.split("-");
-                return `${dd}/${m}`;
-              }}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-              width={50}
-              tickFormatter={(v: number) => `${v.toFixed(0)}%`}
-            />
-            <Tooltip content={<EquityTooltip />} />
-            <Legend />
-            <Area
-              type="monotone"
-              dataKey="ai_return_pct"
-              name="AI Strategy"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              fill="url(#aiGradient)"
-            />
-            <Line
-              type="monotone"
-              dataKey="vnindex_return_pct"
-              name="VN-Index"
-              stroke="#f59e0b"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <EquityCurveChart
+          data={chartData}
+          benchmarkData={benchmarkChartData}
+          label="AI Strategy"
+          benchmarkLabel="VN-Index"
+          height={360}
+          formatValue={(v) => `${v.toFixed(2)}%`}
+          formatYAxis={(v) => `${v.toFixed(0)}%`}
+        />
 
         {/* Benchmark summary */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">

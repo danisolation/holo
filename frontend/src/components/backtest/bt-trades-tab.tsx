@@ -1,28 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  flexRender,
-  type ColumnDef,
-  type SortingState,
-} from "@tanstack/react-table";
+import { type ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GenericTradesTable } from "@/components/shared/generic-trades-table";
 import { useBacktestLatest, useBacktestTrades } from "@/lib/hooks";
 import type { BacktestTradeResponse } from "@/lib/api";
 import { formatVND } from "@/lib/format";
@@ -206,7 +191,6 @@ const columns: ColumnDef<BacktestTradeResponse>[] = [
 export function BTTradesTab() {
   const [symbolFilter, setSymbolFilter] = useState("");
   const [directionFilter, setDirectionFilter] = useState<string | undefined>();
-  const [sorting, setSorting] = useState<SortingState>([]);
 
   const { data: latestRun } = useBacktestLatest(false);
 
@@ -228,15 +212,6 @@ export function BTTradesTab() {
     return trades;
   }, [data?.trades, symbolFilter, directionFilter]);
 
-  const table = useReactTable({
-    data: filteredTrades,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
   if (!latestRun || latestRun.status !== "completed") {
     return (
       <Card data-testid="bt-trades-table">
@@ -251,7 +226,11 @@ export function BTTradesTab() {
     return (
       <Card data-testid="bt-trades-table">
         <CardContent className="py-4">
-          <Skeleton className="h-48 w-full rounded-lg" />
+          <GenericTradesTable
+            columns={columns}
+            data={[]}
+            isLoading
+          />
         </CardContent>
       </Card>
     );
@@ -300,46 +279,15 @@ export function BTTradesTab() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {filteredTrades.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground text-sm">
-            Chưa có lệnh backtest nào.
+        <GenericTradesTable
+          columns={columns}
+          data={filteredTrades}
+          emptyMessage="Chưa có lệnh backtest nào."
+        />
+        {filteredTrades.length > 0 && (
+          <div className="px-4 py-2 text-xs text-muted-foreground border-t">
+            {data?.total ?? filteredTrades.length} lệnh
           </div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((hg) => (
-                  <TableRow key={hg.id}>
-                    {hg.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <div className="px-4 py-2 text-xs text-muted-foreground border-t">
-              {data?.total ?? filteredTrades.length} lệnh
-            </div>
-          </>
         )}
       </CardContent>
     </Card>
