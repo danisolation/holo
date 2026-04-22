@@ -12,7 +12,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v3.0 Smart Trading Signals** — Phases 17-21 (shipped 2026-04-20)
 - ✅ **v4.0 Paper Trading & Signal Verification** — Phases 22-26 (shipped 2025-07-20)
 - ✅ **v5.0 E2E Testing & Quality Assurance** — Phases 27-31 (shipped 2025-07-21)
-- 🚧 **v6.0 AI Backtesting Engine** — Phases 32-34 (in progress)
+- ✅ **v6.0 AI Backtesting Engine** — Phases 32-34 (shipped 2026-04-22)
 
 ## Phases
 
@@ -95,7 +95,7 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 </details>
 
-### 🚧 v6.0 AI Backtesting Engine (In Progress)
+### ✅ v6.0 AI Backtesting Engine (Shipped)
 
 **Milestone Goal:** Backtest hệ thống AI trên dữ liệu lịch sử 6 tháng (120 phiên) cho 400+ mã, gọi Gemini phân tích thật tại mỗi phiên, mô phỏng mở/đóng lệnh, tổng kết P&L so sánh với VN-Index — delivered via dedicated /backtest dashboard.
 
