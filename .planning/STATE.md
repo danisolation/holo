@@ -9,9 +9,9 @@ last_activity: 2026-04-22
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 67
+  total_plans: 7
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2025-07-21)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** v6.0 AI Backtesting Engine — Phase 34 Backtest Dashboard next
+**Current focus:** v6.0 AI Backtesting Engine — Phase 34 Plan 02 (trades + analytics tabs) next
 
 ## Current Position
 
-Phase: 34 — Backtest Dashboard (not started)
-Plan: 0 of TBD
-Status: Phases 32-33 complete, Phase 34 next
-Last activity: 2026-04-22 — Phase 33 Analytics & Benchmark complete
+Phase: 34 — Backtest Dashboard
+Plan: 1 of 2
+Status: Plan 01 complete, Plan 02 next
+Last activity: 2026-04-22 — Plan 01 page scaffold + config + results complete
 
-Progress: █████████████░░░░░░░ 67% (2/3 phases, 5/5 plans)
+Progress: █████████████░░░░░░░ 75% (2/3 phases, 6/7 plans)
 
 ## Shipped Milestones
 
@@ -61,6 +61,9 @@ All v1.0–v5.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 33]: VN-Index benchmark uses try/except with None fallback — partial response on fetch failure
 - [Phase 33]: Holding days computed via PostgreSQL date subtraction (closed_date - entry_date)
 - [Phase 33]: Used patch.object on _get_run to isolate service method tests from DB lookup
+- [Phase 34]: Used Tailwind div-based progress bar (shadcn Progress not installed)
+- [Phase 34]: Equity chart uses AreaChart+Line combo for AI vs VN-Index overlay
+- [Phase 34]: Polling 5s interval for running backtest via useBacktestLatest refetchInterval
 
 ### Pending Todos
 
@@ -75,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T06:09:10.334Z
-Stopped at: Completed 33-02-PLAN.md
+Last session: 2026-04-22T06:31:00Z
+Stopped at: Completed 34-01-PLAN.md
 Resume file: None
