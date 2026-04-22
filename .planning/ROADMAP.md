@@ -131,9 +131,9 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
   2. The daily_price table no longer has an adjusted_close column — all queries, models, and schemas that referenced it are updated
   3. The financial table no longer has revenue or net_profit columns — the Financial model and any API schemas reflect only actual columns
   4. The news_article table no longer has a source column — model and schemas are consistent with the migration
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 35-01-PLAN.md — Remove price_alerts table and news_article.source column (CLN-01, CLN-04)
+- [x] 35-01-PLAN.md — Remove price_alerts table and news_article.source column (CLN-01, CLN-04)
 - [ ] 35-02-PLAN.md — Remove adjusted_close and Financial revenue/net_profit columns (CLN-02, CLN-03)
 
 ### Phase 36: Frontend Cleanup & Utility Extraction
@@ -214,7 +214,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 35. Database & Model Cleanup | 0/0 | Not started | - |
+| 35. Database & Model Cleanup | 1/2 | In Progress|  |
 | 36. Frontend Cleanup & Utility Extraction | 0/0 | Not started | - |
 | 37. Backend Analytics Consolidation | 0/0 | Not started | - |
 | 38. Backend Architecture Refactor | 0/0 | Not started | - |
