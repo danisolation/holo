@@ -117,7 +117,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 - [x] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
 - [x] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
 - [x] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
-- [ ] **Phase 41: Performance Optimization** - WebSocket off-hours scheduling, chart lazy-loading
+- [x] **Phase 41: Performance Optimization** - WebSocket off-hours scheduling, chart lazy-loading
 - [ ] **Phase 42: Test Maintenance** - Update all unit tests and E2E tests after refactoring
 
 ## Phase Details
@@ -205,8 +205,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. WebSocket real-time price streaming automatically deactivates outside trading hours (9:00-15:00 VN weekdays) and reactivates when market opens — no manual intervention needed
   2. The lightweight-charts library (~150KB) is loaded only when the user navigates to /ticker/[symbol] — other pages do not include this bundle in their JavaScript payload
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 1/1 plans executed ✅
+Plans:
+- [x] 41-01-PLAN.md — WebSocket market hours guard + chart dynamic imports
 
 ### Phase 42: Test Maintenance
 **Goal**: All tests pass after the refactoring and consolidation changes — confirming zero regressions across the entire codebase
@@ -229,5 +230,5 @@ Plans:
 | 38. Backend Architecture Refactor | 1/1 | ✅ Complete | 2025-07-22 |
 | 39. AI Quality Upgrade | 1/1 | ✅ Complete | 2025-07-22 |
 | 40. Frontend Component Consolidation | 1/1 | ✅ Complete | 2025-07-22 |
-| 41. Performance Optimization | 0/0 | Not started | - |
+| 41. Performance Optimization | 1/1 | ✅ Complete | 2025-07-22 |
 | 42. Test Maintenance | 0/0 | Not started | - |
