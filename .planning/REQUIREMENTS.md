@@ -65,34 +65,34 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLN-01 | — | Pending |
-| CLN-02 | — | Pending |
-| CLN-03 | — | Pending |
-| CLN-04 | — | Pending |
-| CLN-05 | — | Pending |
-| CLN-06 | — | Pending |
-| BCK-01 | — | Pending |
-| BCK-02 | — | Pending |
-| BCK-03 | — | Pending |
-| BCK-04 | — | Pending |
-| BCK-05 | — | Pending |
-| FRN-01 | — | Pending |
-| FRN-02 | — | Pending |
-| FRN-03 | — | Pending |
-| FRN-04 | — | Pending |
-| FRN-05 | — | Pending |
-| AIQ-01 | — | Pending |
-| AIQ-02 | — | Pending |
-| AIQ-03 | — | Pending |
-| PRF-01 | — | Pending |
-| PRF-02 | — | Pending |
-| TST-01 | — | Pending |
-| TST-02 | — | Pending |
+| CLN-01 | Phase 35 | Pending |
+| CLN-02 | Phase 35 | Pending |
+| CLN-03 | Phase 35 | Pending |
+| CLN-04 | Phase 35 | Pending |
+| CLN-05 | Phase 36 | Pending |
+| CLN-06 | Phase 36 | Pending |
+| BCK-01 | Phase 37 | Pending |
+| BCK-02 | Phase 37 | Pending |
+| BCK-03 | Phase 37 | Pending |
+| BCK-04 | Phase 38 | Pending |
+| BCK-05 | Phase 38 | Pending |
+| FRN-01 | Phase 40 | Pending |
+| FRN-02 | Phase 40 | Pending |
+| FRN-03 | Phase 36 | Pending |
+| FRN-04 | Phase 40 | Pending |
+| FRN-05 | Phase 40 | Pending |
+| AIQ-01 | Phase 39 | Pending |
+| AIQ-02 | Phase 39 | Pending |
+| AIQ-03 | Phase 39 | Pending |
+| PRF-01 | Phase 41 | Pending |
+| PRF-02 | Phase 41 | Pending |
+| TST-01 | Phase 42 | Pending |
+| TST-02 | Phase 42 | Pending |
 
 **Coverage:**
 - v7.0 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️ (pending roadmap)
+- Mapped to phases: 23 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-22*

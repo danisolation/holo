@@ -13,6 +13,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v4.0 Paper Trading & Signal Verification** — Phases 22-26 (shipped 2025-07-20)
 - ✅ **v5.0 E2E Testing & Quality Assurance** — Phases 27-31 (shipped 2025-07-21)
 - ✅ **v6.0 AI Backtesting Engine** — Phases 32-34 (shipped 2026-04-22)
+- 🚧 **v7.0 Consolidation & Quality Upgrade** — Phases 35-42 (in progress)
 
 ## Phases
 
@@ -95,71 +96,126 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 </details>
 
-### ✅ v6.0 AI Backtesting Engine (Shipped)
+<details>
+<summary>✅ v6.0 AI Backtesting Engine (Phases 32-34) — SHIPPED 2026-04-22</summary>
 
-**Milestone Goal:** Backtest hệ thống AI trên dữ liệu lịch sử 6 tháng (120 phiên) cho 400+ mã, gọi Gemini phân tích thật tại mỗi phiên, mô phỏng mở/đóng lệnh, tổng kết P&L so sánh với VN-Index — delivered via dedicated /backtest dashboard.
+- [x] Phase 32: Backtest Engine & Portfolio Simulation (3/3 plans) — Historical session replay, Gemini AI calls, position management, checkpoint/resume
+- [x] Phase 33: Analytics & Benchmark Computation (2/2 plans) — AI equity vs VN-Index, win rate, drawdown, Sharpe, breakdowns
+- [x] Phase 34: Backtest Dashboard (2/2 plans) — /backtest page, config form, progress bar, equity chart, trade log
 
-- [x] **Phase 32: Backtest Engine & Portfolio Simulation** - Historical session replay with Gemini AI calls, virtual position management, checkpoint/resume, smart batching
-- [x] **Phase 33: Analytics & Benchmark Computation** - Post-backtest metrics: AI equity vs VN-Index, win rate, drawdown, Sharpe, sector/confidence/timeframe breakdowns (completed 2026-04-22)
-- [x] **Phase 34: Backtest Dashboard** - /backtest page with config form, real-time progress, equity chart, stats tables, breakdown charts (completed 2026-04-22)
+Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
+
+</details>
+
+### 🚧 v7.0 Consolidation & Quality Upgrade (In Progress)
+
+**Milestone Goal:** Audit toàn diện → xóa code dư thừa, gộp logic chồng chéo, nâng cấp AI validation và UX — giảm LOC, tăng maintainability và trải nghiệm dùng.
+
+- [ ] **Phase 35: Database & Model Cleanup** - Remove dead tables, unused columns via Alembic migrations
+- [ ] **Phase 36: Frontend Cleanup & Utility Extraction** - Remove dead components, consolidate format/config utilities
+- [ ] **Phase 37: Backend Analytics Consolidation** - Extract shared analytics logic, composition pattern, merge schemas
+- [ ] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
+- [ ] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
+- [ ] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
+- [ ] **Phase 41: Performance Optimization** - WebSocket off-hours scheduling, chart lazy-loading
+- [ ] **Phase 42: Test Maintenance** - Update all unit tests and E2E tests after refactoring
 
 ## Phase Details
 
-### Phase 32: Backtest Engine & Portfolio Simulation
-**Goal**: Complete backtest engine can replay historical sessions, call Gemini AI at each session, open/close virtual positions with position sizing and slippage, and track portfolio equity — with checkpoint/resume for the ~53-hour compute workload
-**Depends on**: Phase 31 (v5.0 shipped); reuses v4.0 paper trading logic (position sizing, SL/TP monitoring)
-**Requirements**: BT-01, BT-02, BT-03, BT-04, BT-05, BT-06, SIM-01, SIM-02, SIM-03, SIM-04
+### Phase 35: Database & Model Cleanup
+**Goal**: All dead database columns and unused tables are removed — the data model reflects only what the system actually uses
+**Depends on**: Phase 34 (v6.0 shipped)
+**Requirements**: CLN-01, CLN-02, CLN-03, CLN-04
 **Success Criteria** (what must be TRUE):
-  1. User can configure a backtest specifying time period (1-6 months), initial capital, and slippage percentage — configuration is persisted and validated before engine starts
-  2. Engine replays historical sessions sequentially, calling Gemini for technical + combined + trading signal analysis at each session, and opens virtual positions when signals meet entry criteria (using v4.0 position sizing logic with configurable slippage)
-  3. Open positions are monitored at each subsequent session for SL hit, TP hit, or timeout expiry — exits reflect configured slippage and P&L is computed per trade
-  4. Backtest progress is checkpointed to database — if interrupted (crash, rate limit, restart), user can resume from the last completed session without re-processing prior sessions
-  5. All 400+ tickers are processed with smart batching that respects 15 RPM Gemini rate limit, and per-session equity (cash balance, open positions value, cumulative P&L, % return) is tracked
-**Plans**: 3 plans
+  1. The price_alert table no longer exists in the database, and no backend code references PriceAlert model, service methods, or handler imports
+  2. The daily_price table no longer has an adjusted_close column — all queries, models, and schemas that referenced it are updated
+  3. The financial table no longer has revenue or net_profit columns — the Financial model and any API schemas reflect only actual columns
+  4. The news_article table no longer has a source column — model and schemas are consistent with the migration
+**Plans**: TBD
 
-Plans:
-- [x] 32-01-PLAN.md — Database models + Alembic migration + API layer
-- [x] 32-02-PLAN.md — Backtest engine core (analysis service + engine loop)
-- [x] 32-03-PLAN.md — Comprehensive tests + human verification
-
-### Phase 33: Analytics & Benchmark Computation
-**Goal**: After backtest completion, system computes comprehensive performance metrics and multi-dimensional breakdowns comparing AI strategy returns vs VN-Index buy-and-hold
-**Depends on**: Phase 32
-**Requirements**: BENCH-01, BENCH-02, BENCH-03, BENCH-04, BENCH-05
+### Phase 36: Frontend Cleanup & Utility Extraction
+**Goal**: Dead frontend components are removed and duplicated utility functions/config objects are consolidated into shared modules
+**Depends on**: Phase 35
+**Requirements**: CLN-05, CLN-06, FRN-03
 **Success Criteria** (what must be TRUE):
-  1. System computes AI strategy equity curve and VN-Index buy-and-hold equity curve over the same backtest period, stored as time-series data ready for charting
-  2. Core performance metrics are calculated and persisted: win rate, total P&L (absolute + %), max drawdown (absolute + %), Sharpe ratio, total trade count
-  3. Performance breakdown by sector shows win rate and average P&L per industry — revealing which sectors the AI analyzes most accurately
-  4. Performance breakdown by confidence level (buckets: 1-3, 4-6, 7-10) shows whether higher-confidence signals produce higher win rates
-  5. Performance breakdown by timeframe (short-term vs medium-term) shows which signal durations the AI predicts most accurately
-**Plans**: 2 plans
+  1. The DilutionBadge component file no longer exists and no imports reference it anywhere in the codebase
+  2. A single `src/lib/format.ts` module exports formatVND, formatCompactVND, formatDateVN — all components import from this shared module instead of local duplicates
+  3. STATUS_CONFIG and SIGNAL_CONFIG are defined once in `src/lib/constants.ts` — all components that used inline copies now import from the shared file
+**Plans**: TBD
+**UI hint**: yes
 
-Plans:
-- [x] 33-01-PLAN.md — BacktestAnalyticsService + schemas + API endpoints
-- [x] 33-02-PLAN.md — Comprehensive tests for analytics service
-
-### Phase 34: Backtest Dashboard
-**Goal**: Users can configure, launch, monitor progress, and review full backtest results through a dedicated /backtest page with interactive visualizations
-**Depends on**: Phase 32, Phase 33
-**Requirements**: DASH-01, DASH-02, DASH-03, DASH-04, DASH-05, DASH-06
+### Phase 37: Backend Analytics Consolidation
+**Goal**: Duplicated analytics logic between paper trading and backtesting is consolidated into shared abstractions with clean separation of concerns
+**Depends on**: Phase 36
+**Requirements**: BCK-01, BCK-02, BCK-03
 **Success Criteria** (what must be TRUE):
-  1. User can navigate to /backtest page and fill in a configuration form (time period, initial capital, slippage) then click "Run Backtest" to start the engine
-  2. While backtest is running, a real-time progress bar displays percentage completion, current session/ticker being processed, and estimated time remaining
-  3. After completion, an equity curve area chart (Recharts) overlays AI strategy returns vs VN-Index buy-and-hold returns for visual comparison
-  4. A summary statistics panel displays win rate, total P&L, max drawdown, Sharpe ratio, and total trade count in a clear card/table layout
-  5. User can browse a detailed trade log table (symbol, direction, entry/exit price, P&L, holding time) and view breakdown charts (bar/pie) by sector, confidence level, and timeframe
-**Plans**: 2 plans
+  1. An AnalyticsBase class provides shared computation methods (win rate, P&L, drawdown, sector breakdown, confidence breakdown, timeframe breakdown) — both BacktestAnalyticsService and PaperTradeAnalyticsService use it instead of duplicating logic
+  2. BacktestAnalysisService uses composition pattern with AnalysisContextStrategy (Live vs Backtest) instead of inheritance — context switching is explicit and testable
+  3. A TradeBaseResponse schema provides common fields (symbol, direction, entry/exit price, P&L, dates) — BacktestTradeResponse and PaperTradeResponse extend it with context-specific fields only
+**Plans**: TBD
 
-Plans:
-- [x] 34-01-PLAN.md — Page + API layer + Config tab + Progress + Results tab (equity chart + stats)
-- [x] 34-02-PLAN.md — Trade log table + Analytics breakdown charts
+### Phase 38: Backend Architecture Refactor
+**Goal**: The two largest service files are broken into focused, single-responsibility modules — easier to test, maintain, and extend
+**Depends on**: Phase 37
+**Requirements**: BCK-04, BCK-05
+**Success Criteria** (what must be TRUE):
+  1. AIAnalysisService (400+ LOC) is replaced by 4 focused classes: ContextBuilder (assembles data for prompts), GeminiClient (handles API calls), AnalysisStorage (persists results), AnalysisOrchestrator (coordinates the pipeline)
+  2. BacktestEngine (300+ LOC) is replaced by 4 focused modules: BacktestRunner (orchestrates session replay), TradeActivator (opens positions from signals), PositionEvaluator (checks SL/TP/timeout), EquitySnapshot (tracks portfolio value)
+  3. All existing API endpoints that used AIAnalysisService and BacktestEngine continue to work identically after the refactor — no behavior changes
+**Plans**: TBD
+
+### Phase 39: AI Quality Upgrade
+**Goal**: AI analysis output is validated more rigorously — preventing hallucinated prices, inconsistent score-signal pairs, and malformed prompt inputs
+**Depends on**: Phase 38 (AIAnalysisService refactored into modules)
+**Requirements**: AIQ-01, AIQ-02, AIQ-03
+**Success Criteria** (what must be TRUE):
+  1. When AI returns a score < 5, the signal cannot be buy or strong_buy — the system rejects or corrects inconsistent score-signal pairs automatically
+  2. Trading signal entry prices are validated against the ticker's 52-week high/low range — prices outside this range are flagged as invalid (score=0)
+  3. News titles are sanitized (control characters stripped, length enforced) before being sent to Gemini — preventing prompt corruption from malformed source data
+**Plans**: TBD
+
+### Phase 40: Frontend Component Consolidation
+**Goal**: Duplicated frontend components are replaced with shared, reusable components — and page roles are clearly differentiated so users know where to find what
+**Depends on**: Phase 36
+**Requirements**: FRN-01, FRN-02, FRN-04, FRN-05
+**Success Criteria** (what must be TRUE):
+  1. A single GenericTradesTable component renders trades for portfolio, paper-trading, and backtest pages — with context-specific columns configured via props, not three separate table implementations
+  2. A shared EquityCurveChart component renders equity curves on both paper-trading and backtest pages — replacing two separate chart implementations
+  3. Watchlist management happens exclusively on the /watchlist page — the /dashboard page no longer shows watchlist cards
+  4. The "/" route shows Market Overview (heatmap-focused) and "/dashboard" shows Portfolio Dashboard (portfolio-focused) — with no duplicated market stats between them
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 41: Performance Optimization
+**Goal**: System resources are used efficiently — no unnecessary WebSocket polling off-hours, no heavy chart library loaded on pages that don't need it
+**Depends on**: Phase 40
+**Requirements**: PRF-01, PRF-02
+**Success Criteria** (what must be TRUE):
+  1. WebSocket real-time price streaming automatically deactivates outside trading hours (9:00-15:00 VN weekdays) and reactivates when market opens — no manual intervention needed
+  2. The lightweight-charts library (~150KB) is loaded only when the user navigates to /ticker/[symbol] — other pages do not include this bundle in their JavaScript payload
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 42: Test Maintenance
+**Goal**: All tests pass after the refactoring and consolidation changes — confirming zero regressions across the entire codebase
+**Depends on**: Phase 41 (all code changes complete)
+**Requirements**: TST-01, TST-02
+**Success Criteria** (what must be TRUE):
+  1. All 560+ backend unit tests pass after the service refactoring — tests updated for new class/module structure (AnalyticsBase, composition pattern, split AIAnalysisService, split BacktestEngine)
+  2. All 119+ E2E tests pass after the frontend consolidation — tests updated for removed components (DilutionBadge, watchlist cards on dashboard), renamed imports, and page role changes
+**Plans**: TBD
 
 ## Progress
 
-**Execution Order:** 32 → 33 → 34
+**Execution Order:** 35 → 36 → 37 → 38 → 39 → 40 → 41 → 42
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 32. Backtest Engine & Portfolio Simulation | 3/3 | ✅ Complete |  |
-| 33. Analytics & Benchmark Computation | 2/2 | Complete   | 2026-04-22 |
-| 34. Backtest Dashboard | 2/2 | Complete   | 2026-04-22 |
+| 35. Database & Model Cleanup | 0/0 | Not started | - |
+| 36. Frontend Cleanup & Utility Extraction | 0/0 | Not started | - |
+| 37. Backend Analytics Consolidation | 0/0 | Not started | - |
+| 38. Backend Architecture Refactor | 0/0 | Not started | - |
+| 39. AI Quality Upgrade | 0/0 | Not started | - |
+| 40. Frontend Component Consolidation | 0/0 | Not started | - |
+| 41. Performance Optimization | 0/0 | Not started | - |
+| 42. Test Maintenance | 0/0 | Not started | - |
