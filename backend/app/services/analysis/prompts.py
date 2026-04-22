@@ -152,17 +152,27 @@ def _validate_trading_signal(
     signal: "TickerTradingSignal",
     current_price: float,
     atr: float,
+    week_52_high: float | None = None,
+    week_52_low: float | None = None,
 ) -> tuple[bool, str]:
     """Validate a single ticker's trading signal against price/ATR bounds.
 
     Returns (is_valid, reason). Checks BOTH long and bearish analysis plans.
     Per CONTEXT.md: entry ±5% of current_price, SL within 3×ATR, TP within 5×ATR.
+    Phase 39: entry must be within 52-week high/low range.
     """
     for analysis in [signal.long_analysis, signal.bearish_analysis]:
         plan = analysis.trading_plan
         # Entry within ±5% of current_price
         if current_price > 0 and abs(plan.entry_price - current_price) / current_price > 0.05:
             return False, f"Entry {plan.entry_price:.0f} outside ±5% of current {current_price:.0f}"
+        # Entry within 52-week range
+        if week_52_high is not None and week_52_low is not None:
+            if plan.entry_price > week_52_high or plan.entry_price < week_52_low:
+                return False, (
+                    f"Entry {plan.entry_price:.0f} outside 52-week range "
+                    f"[{week_52_low:.0f}, {week_52_high:.0f}]"
+                )
         # SL within 3×ATR of entry
         if atr > 0 and abs(plan.stop_loss - plan.entry_price) > 3 * atr:
             return False, f"SL {plan.stop_loss:.0f} exceeds 3×ATR ({3 * atr:.0f}) from entry {plan.entry_price:.0f}"

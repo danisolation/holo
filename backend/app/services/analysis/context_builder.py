@@ -3,6 +3,8 @@
 Extracted from AIAnalysisService: 5 _get_*_context methods.
 BacktestContextBuilder overrides 3 methods with date-aware queries.
 """
+import re
+import unicodedata
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
@@ -16,6 +18,15 @@ from app.models.daily_price import DailyPrice
 from app.models.financial import Financial
 from app.models.news_article import NewsArticle
 from app.models.technical_indicator import TechnicalIndicator
+
+
+def _sanitize_title(title: str, max_length: int = 300) -> str:
+    """Strip control characters and enforce length on a news title."""
+    title = "".join(c for c in title if not unicodedata.category(c).startswith("C"))
+    title = re.sub(r"\s+", " ", title).strip()
+    if len(title) > max_length:
+        title = title[:max_length] + "…"
+    return title
 
 
 class ContextBuilder:
@@ -165,7 +176,8 @@ class ContextBuilder:
             )
             .order_by(NewsArticle.published_at.desc())
         )
-        titles = [row[0] for row in result.all()]
+        titles = [_sanitize_title(row[0]) for row in result.all()]
+        titles = [t for t in titles if t]  # drop empty after sanitization
 
         return {
             "news_titles": titles,

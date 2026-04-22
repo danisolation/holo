@@ -484,7 +484,11 @@ class AIAnalysisService:
                             ctx = ticker_data.get(symbol, {})
                             current_price = ctx.get("current_price", 0)
                             atr = ctx.get("atr_14", 0)
-                            is_valid, reason = _validate_trading_signal(analysis, current_price, atr)
+                            is_valid, reason = _validate_trading_signal(
+                                analysis, current_price, atr,
+                                week_52_high=ctx.get("week_52_high"),
+                                week_52_low=ctx.get("week_52_low"),
+                            )
 
                             if is_valid:
                                 signal = analysis.recommended_direction.value
@@ -515,6 +519,27 @@ class AIAnalysisService:
                                 reasoning = f"Validation failed: {reason}"
                         else:
                             reasoning = analysis.reasoning
+
+                        # Score-signal consistency (AIQ-01): low score cannot be bullish
+                        BULLISH_SIGNALS = {
+                            AnalysisType.TECHNICAL: {"strong_buy", "buy"},
+                            AnalysisType.FUNDAMENTAL: {"strong", "good"},
+                            AnalysisType.SENTIMENT: {"very_positive", "positive"},
+                            AnalysisType.COMBINED: {"mua"},
+                        }
+                        bullish_set = BULLISH_SIGNALS.get(analysis_type, set())
+                        if score < 5 and signal in bullish_set:
+                            corrected = {
+                                AnalysisType.TECHNICAL: "neutral",
+                                AnalysisType.FUNDAMENTAL: "neutral",
+                                AnalysisType.SENTIMENT: "neutral",
+                                AnalysisType.COMBINED: "giu",
+                            }.get(analysis_type, "neutral")
+                            logger.warning(
+                                f"Score-signal mismatch for {symbol} ({analysis_type.value}): "
+                                f"score={score} with signal={signal} → corrected to {corrected}"
+                            )
+                            signal = corrected
 
                         await self.storage.store_analysis(
                             ticker_id=tid,
