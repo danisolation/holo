@@ -113,7 +113,7 @@ Full details: [milestones/v6.0-ROADMAP.md](milestones/v6.0-ROADMAP.md)
 
 - [x] **Phase 35: Database & Model Cleanup** - Remove dead tables, unused columns via Alembic migrations
 - [x] **Phase 36: Frontend Cleanup & Utility Extraction** - Remove dead components, consolidate format/config utilities
-- [ ] **Phase 37: Backend Analytics Consolidation** - Extract shared analytics logic, composition pattern, merge schemas
+- [x] **Phase 37: Backend Analytics Consolidation** - Extract shared analytics logic, composition pattern, merge schemas
 - [ ] **Phase 38: Backend Architecture Refactor** - Split AIAnalysisService and BacktestEngine into focused modules
 - [ ] **Phase 39: AI Quality Upgrade** - Anti-hallucination validation for scores, prices, and prompt input
 - [ ] **Phase 40: Frontend Component Consolidation** - Shared trade table, equity chart, watchlist & page role cleanup
@@ -157,7 +157,9 @@ Plans:
   1. An AnalyticsBase class provides shared computation methods (win rate, P&L, drawdown, sector breakdown, confidence breakdown, timeframe breakdown) — both BacktestAnalyticsService and PaperTradeAnalyticsService use it instead of duplicating logic
   2. BacktestAnalysisService uses composition pattern with AnalysisContextStrategy (Live vs Backtest) instead of inheritance — context switching is explicit and testable
   3. A TradeBaseResponse schema provides common fields (symbol, direction, entry/exit price, P&L, dates) — BacktestTradeResponse and PaperTradeResponse extend it with context-specific fields only
-**Plans**: TBD
+**Plans**: 1/1 plans executed ✅
+Plans:
+- [x] 37-01-PLAN.md — Extract TradeBaseResponse, AnalyticsBase shared utilities (BCK-02 deferred to Phase 38)
 
 ### Phase 38: Backend Architecture Refactor
 **Goal**: The two largest service files are broken into focused, single-responsibility modules — easier to test, maintain, and extend
@@ -218,7 +220,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 35. Database & Model Cleanup | 2/2 | ✅ Complete | 2025-07-22 |
 | 36. Frontend Cleanup & Utility Extraction | 1/1 | ✅ Complete | 2025-07-22 |
-| 37. Backend Analytics Consolidation | 0/0 | Not started | - |
+| 37. Backend Analytics Consolidation | 1/1 | ✅ Complete | 2025-07-22 |
 | 38. Backend Architecture Refactor | 0/0 | Not started | - |
 | 39. AI Quality Upgrade | 0/0 | Not started | - |
 | 40. Frontend Component Consolidation | 0/0 | Not started | - |
