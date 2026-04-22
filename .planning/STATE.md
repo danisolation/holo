@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: AI Backtesting Engine
-status: roadmap_complete
-stopped_at: Roadmap created — 3 phases (32-34), ready for Phase 32 planning
-last_updated: "2025-07-21"
-last_activity: 2025-07-21
+status: planning
+stopped_at: Completed 32-01-PLAN.md
+last_updated: "2026-04-22T05:25:18.134Z"
+last_activity: 2025-07-21 — Roadmap created
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -53,6 +53,9 @@ Progress: ░░░░░░░░░░░░░░░░░░░░ 0% (0/3 p
 
 All v1.0–v5.0 decisions archived in PROJECT.md Key Decisions table.
 
+- [Phase 32]: BacktestAnalysis.analysis_type uses String(20) not Enum to avoid enum dependency
+- [Phase 32]: BacktestTrade reuses TradeStatus/TradeDirection enums from paper_trade.py
+
 ### Pending Todos
 
 None yet.
@@ -66,6 +69,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2025-07-21
-Stopped at: Roadmap created — next step: /gsd-plan-phase 32
+Last session: 2026-04-22T05:25:18.129Z
+Stopped at: Completed 32-01-PLAN.md
 Resume file: None

@@ -118,7 +118,7 @@ Full details: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 **Plans**: 3 plans
 
 Plans:
-- [ ] 32-01-PLAN.md — Database models + Alembic migration + API layer
+- [x] 32-01-PLAN.md — Database models + Alembic migration + API layer
 - [ ] 32-02-PLAN.md — Backtest engine core (analysis service + engine loop)
 - [ ] 32-03-PLAN.md — Comprehensive tests + human verification
 
@@ -153,6 +153,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 32. Backtest Engine & Portfolio Simulation | 0/3 | In progress | - |
+| 32. Backtest Engine & Portfolio Simulation | 1/3 | In Progress|  |
 | 33. Analytics & Benchmark Computation | 0/0 | Not started | - |
 | 34. Backtest Dashboard | 0/0 | Not started | - |
