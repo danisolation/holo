@@ -6,7 +6,7 @@ Result endpoints return latest analysis for a ticker.
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
@@ -209,7 +209,7 @@ async def trigger_trading_signal_analysis(background_tasks: BackgroundTasks):
 # --- Result Endpoints ---
 
 @router.get("/{symbol}/indicators", response_model=list[IndicatorResponse])
-async def get_ticker_indicators(symbol: str, limit: int = 5):
+async def get_ticker_indicators(symbol: str, limit: int = 5, offset: int = 0):
     """Get latest technical indicator values for a ticker.
 
     Args:
@@ -226,6 +226,7 @@ async def get_ticker_indicators(symbol: str, limit: int = 5):
             .where(TechnicalIndicator.ticker_id == ticker.id)
             .order_by(TechnicalIndicator.date.desc())
             .limit(limit)
+            .offset(offset)
         )
         rows = result.scalars().all()
 
@@ -376,37 +377,43 @@ async def get_analysis_summary(symbol: str):
     async with async_session() as session:
         ticker = await _get_ticker_by_symbol(session, symbol)
 
-        summary_data: dict = {"ticker_symbol": symbol.upper()}
-
-        for analysis_type in [AnalysisType.TECHNICAL, AnalysisType.FUNDAMENTAL,
-                              AnalysisType.SENTIMENT, AnalysisType.COMBINED,
-                              AnalysisType.TRADING_SIGNAL]:  # Phase 19
-            result = await session.execute(
-                select(AIAnalysis)
-                .where(
-                    AIAnalysis.ticker_id == ticker.id,
-                    AIAnalysis.analysis_type == analysis_type,
+        # Single query: get latest analysis per type using window function (N+1 → 1)
+        subq = (
+            select(
+                AIAnalysis,
+                func.row_number()
+                .over(
+                    partition_by=AIAnalysis.analysis_type,
+                    order_by=AIAnalysis.analysis_date.desc(),
                 )
-                .order_by(AIAnalysis.analysis_date.desc())
-                .limit(1)
+                .label("rn"),
             )
-            analysis = result.scalar_one_or_none()
-            if analysis:
-                summary_data[analysis_type.value] = AnalysisResultResponse(
-                    ticker_symbol=symbol.upper(),
-                    analysis_type=analysis_type.value,
-                    analysis_date=analysis.analysis_date.isoformat(),
-                    signal=analysis.signal,
-                    score=analysis.score,
-                    reasoning=analysis.reasoning,
-                    model_version=analysis.model_version,
-                )
+            .where(AIAnalysis.ticker_id == ticker.id)
+            .subquery()
+        )
+        result = await session.execute(
+            select(subq).where(subq.c.rn == 1)
+        )
+        rows = result.mappings().all()
+
+        summary_data: dict = {"ticker_symbol": symbol.upper()}
+        for row in rows:
+            at = AnalysisType(row["analysis_type"])
+            summary_data[at.value] = AnalysisResultResponse(
+                ticker_symbol=symbol.upper(),
+                analysis_type=at.value,
+                analysis_date=row["analysis_date"].isoformat(),
+                signal=row["signal"],
+                score=row["score"],
+                reasoning=row["reasoning"],
+                model_version=row["model_version"],
+            )
 
         return SummaryResponse(**summary_data)
 
 
 @router.get("/{symbol}/news", response_model=list[NewsArticleResponse])
-async def get_ticker_news(symbol: str, limit: int = 10):
+async def get_ticker_news(symbol: str, limit: int = 10, offset: int = 0):
     """Get latest news articles for a ticker from CafeF.
 
     Args:
@@ -421,6 +428,7 @@ async def get_ticker_news(symbol: str, limit: int = 10):
             .where(NewsArticle.ticker_id == ticker.id)
             .order_by(NewsArticle.published_at.desc())
             .limit(limit)
+            .offset(offset)
         )
         rows = result.scalars().all()
         return [
