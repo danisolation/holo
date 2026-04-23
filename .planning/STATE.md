@@ -5,7 +5,7 @@ milestone_name: Consolidation & Quality Upgrade
 status: executing
 stopped_at: Phase 39 complete — advancing to Phase 40
 last_updated: "2026-04-22T17:30:00.000Z"
-last_activity: 2026-04-23 -- Completed quick task 260423-d83: Remove entire backtest feature
+last_activity: 2026-04-23 -- Completed quick task 260423-dqa: Remove portfolio, paper trading, telegram
 progress:
   total_phases: 8
   completed_phases: 5
@@ -63,9 +63,10 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260423-d83 | Remove entire backtest feature (backend + frontend + DB tables + tests) | 2026-04-23 | 194cad0 | [260423-d83-remove-entire-backtest-feature-backend-f](./quick/260423-d83-remove-entire-backtest-feature-backend-f/) |
+| 260423-dqa | Remove portfolio, paper trading, and telegram bot (backend + frontend + DB tables + tests) | 2026-04-23 | c6a0c7a | [260423-dqa-remove-portfolio-paper-trading-and-teleg](./quick/260423-dqa-remove-portfolio-paper-trading-and-teleg/) |
 
 ## Session Continuity
 
-Last session: 2026-04-22
-Stopped at: Roadmap created for v7.0 (8 phases, 23 requirements)
+Last session: 2026-04-23
+Stopped at: Completed quick task 260423-dqa: Remove portfolio, paper trading, telegram
 Resume file: None
