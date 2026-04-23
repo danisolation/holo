@@ -477,14 +477,60 @@ export async function fetchPipelineTimeline(days: number = 7): Promise<PipelineT
   return apiFetch<PipelineTimelineResponse>(`/health/pipeline-timeline?days=${days}`);
 }
 
+// --- Phase 45: Pick Performance Types ---
+
+export interface PickPerformanceResponse {
+  win_rate: number;
+  total_pnl: number;
+  avg_risk_reward: number;
+  current_streak: number;
+  total_closed: number;
+  total_winners: number;
+  total_losers: number;
+}
+
+export interface PickHistoryItem {
+  id: number;
+  pick_date: string;
+  ticker_symbol: string;
+  rank: number | null;
+  entry_price: number | null;
+  stop_loss: number | null;
+  take_profit_1: number | null;
+  pick_outcome: string;
+  actual_return_pct: number | null;
+  days_held: number | null;
+  has_trades: boolean;
+}
+
+export interface PickHistoryResponse {
+  items: PickHistoryItem[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
 // --- Phase 43: Daily Picks API ---
 
 export async function fetchDailyPicks(): Promise<DailyPicksResponse> {
   return apiFetch<DailyPicksResponse>("/picks/today");
 }
 
-export async function fetchPickHistory(days: number = 30): Promise<DailyPickResponse[]> {
-  return apiFetch<DailyPickResponse[]>(`/picks/history?days=${days}`);
+export async function fetchPickHistory(params?: {
+  page?: number;
+  per_page?: number;
+  status?: string;
+}): Promise<PickHistoryResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.per_page) searchParams.set("per_page", String(params.per_page));
+  if (params?.status && params.status !== "all") searchParams.set("status", params.status);
+  const qs = searchParams.toString();
+  return apiFetch<PickHistoryResponse>(`/picks/history${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchPickPerformance(): Promise<PickPerformanceResponse> {
+  return apiFetch<PickPerformanceResponse>("/picks/performance");
 }
 
 export async function fetchProfile(): Promise<ProfileResponse> {

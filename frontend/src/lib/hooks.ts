@@ -26,6 +26,8 @@ import {
   fetchTradeStats,
   createTrade,
   deleteTrade,
+  fetchPickHistory,
+  fetchPickPerformance,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -303,5 +305,23 @@ export function useDeleteTrade() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trades"] });
     },
+  });
+}
+
+// --- Phase 45: Pick Performance Hooks ---
+
+export function usePickHistory(params?: { page?: number; status?: string }) {
+  return useQuery({
+    queryKey: ["picks", "history", params?.page ?? 1, params?.status ?? "all"],
+    queryFn: () => fetchPickHistory({ page: params?.page, per_page: 20, status: params?.status }),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function usePickPerformance() {
+  return useQuery({
+    queryKey: ["picks", "performance"],
+    queryFn: () => fetchPickPerformance(),
+    staleTime: 5 * 60 * 1000,
   });
 }
