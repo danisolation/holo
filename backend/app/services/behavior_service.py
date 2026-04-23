@@ -41,7 +41,7 @@ def detect_premature_profit_taking(
     Returns:
         True if max post-sell price exceeds sell_price by >threshold_pct.
     """
-    if not prices_after_sell:
+    if not prices_after_sell or sell_price <= 0:
         return False
     max_after = max(prices_after_sell)
     rise_pct = ((max_after - sell_price) / sell_price) * 100
@@ -67,6 +67,8 @@ def detect_holding_losers(
     Returns:
         True if loss exceeds threshold AND held longer than min_days.
     """
+    if buy_price <= 0:
+        return False
     loss_pct = ((buy_price - current_price) / buy_price) * 100
     return loss_pct > loss_threshold_pct and days_held > min_days
 
@@ -313,6 +315,7 @@ class BehaviorService:
             select(Trade, Ticker.symbol)
             .join(Ticker, Trade.ticker_id == Ticker.id)
             .where(Trade.side == "BUY")
+            .where(Trade.created_at >= datetime.now() - timedelta(days=30))
         )
         buy_trades = buy_trades_result.all()
 
@@ -340,6 +343,15 @@ class BehaviorService:
         new_detections = 0
         for habit_type, detections in habits_found.items():
             for det in detections:
+                # Dedup: skip if same habit+trade already detected
+                existing = await self.session.execute(
+                    select(HabitDetection.id).where(
+                        HabitDetection.habit_type == habit_type,
+                        HabitDetection.trade_id == det["trade_id"],
+                    ).limit(1)
+                )
+                if existing.scalar_one_or_none() is not None:
+                    continue
                 detection = HabitDetection(
                     habit_type=habit_type,
                     ticker_id=det["ticker_id"],

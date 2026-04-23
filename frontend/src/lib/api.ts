@@ -681,7 +681,7 @@ export interface SectorPreferencesResponse {
 export interface BehaviorEventCreate {
   event_type: "ticker_view" | "search_click" | "pick_click";
   ticker_symbol?: string;
-  event_metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export async function fetchRiskSuggestion(): Promise<RiskSuggestionResponse | null> {
