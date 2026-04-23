@@ -26,6 +26,7 @@ interface TradesTableProps {
   onSortChange: (sort: string, order: string) => void;
   onPageChange: (page: number) => void;
   onDelete: (trade: TradeResponse) => void;
+  onCreateFirst?: () => void;
   isLoading: boolean;
 }
 
@@ -73,6 +74,7 @@ export function TradesTable({
   onSortChange,
   onPageChange,
   onDelete,
+  onCreateFirst,
   isLoading,
 }: TradesTableProps) {
   const totalPages = Math.ceil(total / pageSize);
@@ -108,6 +110,11 @@ export function TradesTable({
           <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
             Ghi lệnh mua/bán đầu tiên để bắt đầu theo dõi lãi lỗ.
           </p>
+          {onCreateFirst && (
+            <Button className="mt-4" onClick={onCreateFirst}>
+              Ghi lệnh đầu tiên
+            </Button>
+          )}
         </div>
       </Card>
     );
