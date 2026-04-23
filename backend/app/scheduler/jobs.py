@@ -558,6 +558,37 @@ async def daily_hnx_upcom_analysis():
             raise
 
 
+async def daily_pick_generation():
+    """Generate daily stock picks after all analysis completes.
+
+    Chains after daily_hnx_upcom_analysis. Scores existing trading signals,
+    filters by capital/safety, generates Vietnamese explanations via Gemini.
+    """
+    logger.info("=== DAILY PICK GENERATION START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_pick_generation")
+        try:
+            from app.services.pick_service import PickService
+
+            service = PickService(session)
+            result = await service.generate_daily_picks()
+            status = "success" if result.get("picked", 0) > 0 else "partial"
+            await job_svc.complete(
+                execution,
+                status=status,
+                result_summary=result,
+            )
+            await session.commit()
+            logger.info(f"=== DAILY PICK GENERATION DONE: {result} ===")
+        except Exception as e:
+            logger.error(f"Pick generation failed: {e}")
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            raise
+
+
 # ── Real-time WebSocket jobs (Phase 16) ─────────────────────────────────────
 
 

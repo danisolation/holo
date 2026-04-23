@@ -38,6 +38,8 @@ _JOB_NAMES = {
     "daily_corporate_action_check_triggered": "Daily Corporate Action Check",
     "daily_hnx_upcom_analysis": "Daily HNX/UPCOM Watchlist Analysis",
     "daily_hnx_upcom_analysis_triggered": "Daily HNX/UPCOM Watchlist Analysis",
+    "daily_pick_generation_triggered": "Daily Pick Generation",
+    "daily_pick_generation_manual": "Daily Pick Generation",
     "realtime_price_poll": "Real-Time Price Poll",
     "realtime_heartbeat": "Real-Time Heartbeat",
 }
@@ -131,6 +133,16 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_hnx_upcom_analysis,
             id="daily_hnx_upcom_analysis_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_hnx_upcom_analysis_triggered",):
+        # Phase 43: Chain daily pick generation (last step in pipeline)
+        from app.scheduler.jobs import daily_pick_generation
+        logger.info("Chaining: daily_hnx_upcom_analysis → daily_pick_generation")
+        scheduler.add_job(
+            daily_pick_generation,
+            id="daily_pick_generation_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -238,6 +250,6 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_upcom → [indicators → AI → news → sentiment → combined → trading_signal → hnx_upcom_analysis] + [corporate_action_check]"
+        "daily_price_crawl_upcom → [indicators → AI → news → sentiment → combined → trading_signal → hnx_upcom_analysis → pick_generation] + [corporate_action_check]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")
