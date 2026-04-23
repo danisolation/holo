@@ -209,7 +209,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 47-01-PLAN.md — Backend data layer: migration 023, ORM models, schemas, GoalService + tests
-- [ ] 47-02-PLAN.md — Backend API: 7 endpoints, 2 scheduler jobs, Gemini review generation
+- [x] 47-02-PLAN.md — Backend API: 7 endpoints, 2 scheduler jobs, Gemini review generation
 - [ ] 47-03-PLAN.md — Frontend: 4 components, coach page integration, human verification
 **UI hint**: yes
 
@@ -223,4 +223,4 @@ Plans:
 | 44. Trade Journal & P&L | 3/3 | Complete    | 2026-04-23 |
 | 45. Coach Dashboard & Pick Performance | 2/2 | Complete    | 2026-04-23 |
 | 46. Behavior Tracking & Adaptive Strategy | 3/3 | Complete   | 2026-04-23 |
-| 47. Goals & Weekly Reviews | 1/3 | In Progress|  |
+| 47. Goals & Weekly Reviews | 2/3 | In Progress|  |
