@@ -29,13 +29,13 @@
 
 ### Behavior Tracking (BEHV)
 
-- [ ] **BEHV-01**: Ghi nhận mã user xem nhiều nhất, thời điểm xem, tần suất — phát hiện thiên kiến vô thức
-- [ ] **BEHV-02**: Phát hiện trading habits: bán sớm khi lãi, giữ lâu khi lỗ, trade impulsive sau tin tức
+- [x] **BEHV-01**: Ghi nhận mã user xem nhiều nhất, thời điểm xem, tần suất — phát hiện thiên kiến vô thức
+- [x] **BEHV-02**: Phát hiện trading habits: bán sớm khi lãi, giữ lâu khi lỗ, trade impulsive sau tin tức
 
 ### Adaptive Strategy (ADPT)
 
-- [ ] **ADPT-01**: Duy trì risk_level (1-5) — sau 3 lần lỗ liên tiếp tự động suggest giảm risk, user confirm trước khi áp dụng
-- [ ] **ADPT-02**: Học sector preference từ kết quả trade — bias picks về ngành user thường lãi, giảm ngành thường lỗ
+- [x] **ADPT-01**: Duy trì risk_level (1-5) — sau 3 lần lỗ liên tiếp tự động suggest giảm risk, user confirm trước khi áp dụng
+- [x] **ADPT-02**: Học sector preference từ kết quả trade — bias picks về ngành user thường lãi, giảm ngành thường lỗ
 
 ### Goals & Weekly Review (GOAL)
 
@@ -77,10 +77,10 @@
 | CDSH-01 | Phase 45 | Complete |
 | CDSH-02 | Phase 45 | Complete |
 | CDSH-03 | Phase 45 | Complete |
-| BEHV-01 | Phase 46 | Pending |
-| BEHV-02 | Phase 46 | Pending |
-| ADPT-01 | Phase 46 | Pending |
-| ADPT-02 | Phase 46 | Pending |
+| BEHV-01 | Phase 46 | Complete |
+| BEHV-02 | Phase 46 | Complete |
+| ADPT-01 | Phase 46 | Complete |
+| ADPT-02 | Phase 46 | Complete |
 | GOAL-01 | Phase 47 | Pending |
 | GOAL-02 | Phase 47 | Pending |
 | GOAL-03 | Phase 47 | Pending |
