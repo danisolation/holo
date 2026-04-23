@@ -161,7 +161,11 @@ Plans:
   1. User can enter a buy or sell trade (ticker, price, quantity, date, fees) through a validated form on the journal page
   2. The app automatically calculates realized P&L using FIFO matching, including broker fees (0.15% each side) and mandatory sell tax (0.1%) per VN regulations — showing both gross and net P&L
   3. When logging a trade, user can optionally link it to a specific daily pick to track whether they followed the AI recommendation
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 44-01-PLAN.md — Backend data layer: migration 020, ORM models, FIFO service, API endpoints, unit tests
+- [ ] 44-02-PLAN.md — Frontend data layer + display components: API types, hooks, navbar, stats cards, filters, table, delete dialog
+- [ ] 44-03-PLAN.md — Trade entry dialog + /journal page assembly + human verification
 **UI hint**: yes
 
 ### Phase 45: Coach Dashboard & Pick Performance
