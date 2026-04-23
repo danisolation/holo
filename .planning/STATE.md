@@ -5,7 +5,7 @@ milestone_name: Consolidation & Quality Upgrade
 status: executing
 stopped_at: Phase 39 complete — advancing to Phase 40
 last_updated: "2026-04-22T17:30:00.000Z"
-last_activity: 2026-04-23 -- Completed quick task 260423-dqa: Remove portfolio, paper trading, telegram
+last_activity: 2026-04-23 -- Completed quick task 260423-epd: Tier 1 upgrades
 progress:
   total_phases: 8
   completed_phases: 5
@@ -64,9 +64,10 @@ None.
 |---|-------------|------|--------|-----------|
 | 260423-d83 | Remove entire backtest feature (backend + frontend + DB tables + tests) | 2026-04-23 | 194cad0 | [260423-d83-remove-entire-backtest-feature-backend-f](./quick/260423-d83-remove-entire-backtest-feature-backend-f/) |
 | 260423-dqa | Remove portfolio, paper trading, and telegram bot (backend + frontend + DB tables + tests) | 2026-04-23 | c6a0c7a | [260423-dqa-remove-portfolio-paper-trading-and-teleg](./quick/260423-dqa-remove-portfolio-paper-trading-and-teleg/) |
+| 260423-epd | Tier 1 upgrades: clean stale config, add news on ticker page, add trading signal label | 2026-04-23 | 3c6a4c5 | [260423-epd-tier-1-upgrades-clean-stale-config-add-d](./quick/260423-epd-tier-1-upgrades-clean-stale-config-add-d/) |
 
 ## Session Continuity
 
 Last session: 2026-04-23
-Stopped at: Completed quick task 260423-dqa: Remove portfolio, paper trading, telegram
+Stopped at: Completed quick task 260423-epd: Tier 1 upgrades
 Resume file: None
