@@ -716,3 +716,70 @@ async def daily_consecutive_loss_check():
             logger.error(f"Daily consecutive loss check failed: {e}")
             raise
 
+
+# ── Phase 47: Goals & weekly reviews ────────────────────────────────────────
+
+
+async def create_weekly_risk_prompt():
+    """Create weekly risk tolerance prompt for the user.
+
+    Per GOAL-02: runs Monday 8:00 AM via scheduler.
+    Creates a pending prompt (auto-expires previous unanswered ones).
+    """
+    logger.info("=== CREATE WEEKLY RISK PROMPT START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("create_weekly_risk_prompt")
+        try:
+            from app.services.goal_service import GoalService
+
+            service = GoalService(session)
+            prompt = await service.create_weekly_prompt()
+            await job_svc.complete(
+                execution,
+                status="success",
+                result_summary={
+                    "week_start": str(prompt.week_start),
+                    "risk_level_before": prompt.risk_level_before,
+                },
+            )
+            await session.commit()
+            logger.info(f"=== CREATE WEEKLY RISK PROMPT DONE: week_start={prompt.week_start} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"Create weekly risk prompt failed: {e}")
+            raise
+
+
+async def generate_weekly_review():
+    """Generate AI weekly performance review via Gemini.
+
+    Per GOAL-03: runs Sunday 21:00 via scheduler, also chained from
+    weekly_behavior_analysis (Sun 20:00). Gathers week's data and
+    calls Gemini with structured output for Vietnamese coaching review.
+    """
+    logger.info("=== GENERATE WEEKLY REVIEW START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("generate_weekly_review")
+        try:
+            from app.services.goal_service import GoalService
+
+            service = GoalService(session)
+            result = await service.generate_review()
+            await job_svc.complete(
+                execution,
+                status="success",
+                result_summary={"result": result},
+            )
+            await session.commit()
+            logger.info(f"=== GENERATE WEEKLY REVIEW DONE: {result[:80] if result else 'empty'}... ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"Generate weekly review failed: {e}")
+            raise
+

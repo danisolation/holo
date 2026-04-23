@@ -45,6 +45,9 @@ _JOB_NAMES = {
     "weekly_behavior_analysis": "Weekly Behavior Analysis",
     "daily_consecutive_loss_check": "Daily Consecutive Loss Check",
     "daily_consecutive_loss_check_triggered": "Daily Consecutive Loss Check",
+    "create_weekly_risk_prompt": "Weekly Risk Tolerance Prompt",
+    "generate_weekly_review": "AI Weekly Performance Review",
+    "generate_weekly_review_triggered": "AI Weekly Performance Review",
     "realtime_price_poll": "Real-Time Price Poll",
     "realtime_heartbeat": "Real-Time Heartbeat",
 }
@@ -171,6 +174,16 @@ def _on_job_executed(event: events.JobExecutionEvent):
             replace_existing=True,
             misfire_grace_time=3600,
         )
+    elif event.job_id == "weekly_behavior_analysis":
+        # Phase 47: Chain weekly review generation after behavior analysis
+        from app.scheduler.jobs import generate_weekly_review
+        logger.info("Chaining: weekly_behavior_analysis → generate_weekly_review")
+        scheduler.add_job(
+            generate_weekly_review,
+            id="generate_weekly_review_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
 
 
 def configure_jobs():
@@ -261,6 +274,40 @@ def configure_jobs():
     )
 
     logger.info("Behavior jobs: weekly_behavior_analysis (Sun 20:00), daily_consecutive_loss_check (chained)")
+
+    # ── Phase 47: Weekly risk prompt (Monday 8:00 AM) ─────────────────────
+    from app.scheduler.jobs import create_weekly_risk_prompt
+
+    scheduler.add_job(
+        create_weekly_risk_prompt,
+        trigger=CronTrigger(
+            day_of_week="mon",
+            hour=8, minute=0,
+            timezone=settings.timezone,
+        ),
+        id="create_weekly_risk_prompt",
+        name="Weekly Risk Tolerance Prompt",
+        replace_existing=True,
+        misfire_grace_time=7200,
+    )
+
+    # ── Phase 47: AI weekly review (Sunday 21:00) ─────────────────────────
+    from app.scheduler.jobs import generate_weekly_review
+
+    scheduler.add_job(
+        generate_weekly_review,
+        trigger=CronTrigger(
+            day_of_week="sun",
+            hour=21, minute=0,
+            timezone=settings.timezone,
+        ),
+        id="generate_weekly_review",
+        name="AI Weekly Performance Review",
+        replace_existing=True,
+        misfire_grace_time=7200,
+    )
+
+    logger.info("Goal jobs: create_weekly_risk_prompt (Mon 08:00), generate_weekly_review (Sun 21:00, also chained from weekly_behavior_analysis)")
 
     # ── Real-time WebSocket jobs (Phase 16) ──────────────────────────────────
     from app.scheduler.jobs import realtime_price_poll, realtime_heartbeat
