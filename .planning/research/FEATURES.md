@@ -1,220 +1,360 @@
-# Feature Landscape — v5.0 E2E Testing & Quality Assurance
+# Feature Landscape — v8.0 AI Trading Coach
 
-**Domain:** End-to-end testing for stock intelligence dashboard (Next.js 16 + FastAPI)
+**Domain:** Personal AI trading coach for Vietnamese stock market beginners (< 50M VND capital)
 **Researched:** 2025-07-21
-**Overall confidence:** HIGH — Playwright is mature, patterns well-established for this stack
+**Overall confidence:** MEDIUM — based on domain knowledge of trading apps (Edgewonk, Tradervue, MarketSmith, Simplize, FireAnt, TCInvest) + existing Holo system analysis. No external search tools available; findings drawn from training data + codebase inspection.
 
-## Context: What We're Testing
+## Context: What Exists vs What's New
 
-**Pages (8 routes):**
-- `/` — Market overview heatmap with exchange filter, stats cards (800+ ticker cells)
-- `/watchlist` — localStorage-backed watchlist table with real-time prices, signal badges
-- `/dashboard` — Bảng điều khiển (dashboard hub, likely redirects or minimal content)
-- `/dashboard/portfolio` — Trade form dialog, holdings table, P&L summary cards, performance/allocation charts, CSV import dialog
-- `/dashboard/paper-trading` — 5-tab interface (overview, trades, analytics, calendar, settings)
-- `/dashboard/corporate-events` — Corporate event calendar table
-- `/dashboard/health` — Job status cards, Gemini usage, data freshness table, error rate chart, DB pool, pipeline timeline, job trigger buttons
-- `/ticker/[symbol]` — Candlestick chart (lightweight-charts canvas), indicator charts, 4 analysis cards, trading plan panel, signal outcomes, watchlist star, analyze-now button
+### Existing Foundation (already built — DO NOT rebuild)
 
-**API surface:** 55 REST endpoints across 7 routers + 1 WebSocket endpoint (`/ws/prices`)
-- `system` router: health check, scheduler status, crawl triggers, backfill
-- `tickers` router: list, prices, market-overview
-- `analysis` router: indicators, 5 analysis types, summary, trading-signal, 7 manual triggers
-- `portfolio` router: CRUD trades, holdings, summary, performance, allocation, CSV import
-- `health` router: jobs, data-freshness, errors, db-pool, summary, trigger, pipeline-timeline, gemini-usage
-- `corporate_events` router: event list
-- `paper_trading` router: trades CRUD, follow, config, 12 analytics endpoints, calendar
+| Existing Feature | How v8.0 Builds On It |
+|------------------|----------------------|
+| AI analysis (tech + fundamental + sentiment + combined) across 800+ tickers | Daily Picks engine filters from these scores — picks are a curated subset, not new analysis |
+| Trading signals with entry/SL/TP/R:R/position sizing | Picks inherit signal structure — same `TradingPlanDetail` schema for concrete price targets |
+| 27 technical indicators (ATR, ADX, Stochastic, pivot, Fibonacci, etc.) | Safety scoring uses volatility (ATR) and trend strength (ADX) to filter risky tickers |
+| Real-time WebSocket price streaming (30s polling) | Pick performance tracking — show live P&L for active picks |
+| News integration (CafeF) | Educational explanations reference current news to explain "why this stock?" |
+| Market overview heatmap, ticker detail pages | Picks link to existing ticker detail — no need for duplicate analysis views |
+| Scheduled job pipeline (crawl → indicators → analysis → signals) | Daily Picks generation chains after existing signal pipeline |
+| `raw_response` JSONB on `ai_analyses` table | Proven pattern for storing structured AI output — reuse for picks |
+| Gemini structured output via Pydantic schemas | Pick generation uses same `google-genai` → Pydantic pattern |
+| Job execution tracking + dead letter queue | Pick generation job integrates into existing monitoring |
 
-**Interactive elements:** Trade form dialog (6 fields), CSV import dialog (multi-step with drag-drop), paper trade manual follow, settings form (3 fields), trade edit/delete dialogs, ticker search command palette (⌘K with 800+ tickers), exchange filter buttons, tab navigation, table column sorting, watchlist add/remove star, theme toggle, time range selector on charts, adjusted/raw price toggle
+### What Was Removed (v7.0) — Relevant Context
 
-**Data visualization:** Candlestick chart (lightweight-charts canvas), MA/BB/MACD overlays (lightweight-charts), Recharts line/bar/area charts (performance, allocation, error rate, equity curve), calendar heatmap (react-activity-calendar), market heatmap (custom div grid), @tanstack/react-table data tables (6+ instances)
-
-**Real-time:** WebSocket price streaming with exponential backoff reconnect (1s→30s), market-hours awareness, ConnectionStatusIndicator, PriceFlashCell animations
-
-**Existing test coverage:** 560 backend unit tests across 34 test files, 0 frontend/E2E tests
+Portfolio, paper trading, and backtest features were removed. Trade Journal in v8.0 is their **replacement** — simpler, focused on actual trades, not simulation. This is a fresh start, not a migration.
 
 ---
 
 ## Table Stakes
 
-Features that any serious E2E test suite for this application MUST have. Without these, the test suite doesn't justify its existence.
+Features that a personal trading coach MUST have. Without these, the product is just another signal dashboard (which Holo already is).
 
-| Feature | Why Expected | Complexity | Dependencies |
-|---------|-------------|------------|--------------|
-| **Page smoke tests (all 8 routes)** | Most basic validation — every page loads without crash, renders heading + key structural elements. Catches broken imports, missing env vars, API failures that blank the page. | Low | Running Next.js + FastAPI, database with some data |
-| **Navigation flow tests** | Verify all 7 navbar links work, ⌘K ticker search navigates to `/ticker/[symbol]`, back button from ticker detail, row clicks in tables navigate correctly | Low | Navbar has 7 links + ⌘K command palette |
-| **API health check tests (all 55 endpoints)** | Backend has 560 unit tests but ZERO integration tests verifying the HTTP/routing layer works. API health checks catch: wrong status codes, broken router registration, serialization errors, database connection issues. Single parametrized test → massive coverage. | Medium | Running FastAPI + database with seed data |
-| **Form submission tests** | Portfolio trade form (BUY/SELL with 6 fields), paper trading manual follow, settings form — these are the primary write operations. Form bugs are the #1 class of frontend bug in CRUD apps. | Medium | Portfolio & paper trading API endpoints + seed data for valid tickers |
-| **Data table interaction tests** | Column sorting (watchlist, holdings, trade history, paper trades all use @tanstack/react-table with sortable columns), row click navigation to ticker detail | Medium | Tables need data rows to sort — requires seed data |
-| **Error state handling tests** | Empty watchlist message, API error cards, loading skeletons, 404/500 on invalid ticker symbol. Users hit these states regularly. | Low | Mock API responses via `page.route()` intercepts |
-| **Tab navigation tests** | Paper trading 5 tabs (overview, trades, analytics, calendar, settings) — verify each tab renders its content, switching doesn't lose state | Low | Paper trading page with seed data |
-| **Dialog/modal lifecycle tests** | Trade form dialog (open → fill → submit → closes), CSV import (multi-step: upload → preview → confirm), trade edit dialog, delete confirmation — verify full open/interact/close cycle | Medium | Dialog components, valid form data |
-| **Mobile responsive smoke tests** | App has responsive breakpoints — mobile hamburger menu (Sheet), hidden table columns (sm: classes), grid layout changes (lg:cols-5 → single column) | Low | Playwright viewport config at 375px width |
-| **Theme toggle test** | Dark/light mode via next-themes — verify button toggles, theme persists on reload, no invisible text on either theme | Low | Theme provider in root layout |
+| Feature | Why Expected | Complexity | Depends On (Existing) | Notes |
+|---------|-------------|------------|----------------------|-------|
+| **Daily Picks (3-5 stocks/day)** | The core promise. User opens app → sees "buy these today." Without this, there's no "coach." | High | AI analysis scores, trading signals, ticker data, Gemini API | New Gemini prompt that selects top candidates from pre-analyzed pool. NOT re-analyzing 800 tickers — filter from existing scores. |
+| **Capital-aware filtering (< 50M VND)** | A beginner with 50M can't buy blue chips at 80K+/share in meaningful quantity. Picks must be buyable. | Medium | Ticker data (price), daily_prices | Filter by price × min lot (100 shares for HOSE). At 50M: max ~500K/share if buying 100 shares. Realistically 2-3 positions. |
+| **Safety-first pick scoring** | Beginners lose money from volatility. Coach must prioritize low-risk picks over high-return speculative ones. | Medium | ATR, ADX, volume, fundamental health score | Penalize high-ATR (volatile), low-ADX (no trend), low-volume (illiquid), weak fundamentals. Favor: stable trends, adequate liquidity, solid financials. |
+| **Educational explanation per pick** | "Buy VNM" is useless for a beginner. "Buy VNM because RSI bounced off oversold, strong Q4 earnings, sector rotation into consumer staples" teaches. | Medium | All analysis types (tech + fundamental + sentiment), news | Gemini generates Vietnamese explanation combining all dimensions. Max 200-300 words, conversational tone. |
+| **Entry/SL/TP per pick** | A coach tells you exactly when to get in, when to cut losses, and when to take profit. Vague "buy" signals are useless. | Low | Trading signal pipeline (already generates these) | Inherit from existing `TradingPlanDetail`. Possibly adjust position_size_pct for small capital. |
+| **Trade Journal — log actual trades** | The bridge between "what AI suggested" and "what I actually did." Without this, no learning happens. | Medium | New DB tables | Fields: ticker, direction (buy/sell), price, quantity, date, fees, linked_pick_id (nullable), notes. |
+| **Auto P&L calculation** | Manual P&L math is tedious and error-prone. Auto-calculate from buy/sell pairs. | Medium | Trade journal entries, daily_prices for unrealized P&L | Match buy→sell by FIFO. Realized P&L = (sell_price - buy_price) × quantity - fees. Unrealized = current_price vs avg_cost. |
+| **Pick history / track record** | "Did yesterday's picks work?" User needs to see historical pick performance to build trust in the AI. | Medium | Daily picks stored with outcomes, daily_prices | Track: pick date, entry hit?, SL hit?, TP hit?, actual return after N days. |
+| **Performance summary** | Win rate, total P&L, average R:R — the scoreboard. | Low | Trade journal data, pick outcomes | Aggregate stats from journal + pick tracking. Simple cards, no complex charts needed initially. |
+| **Coach dashboard page** | A single page where beginner opens the app and sees: today's picks, recent performance, active trades. | Medium | All above features | New route `/coach` — the primary landing page for v8.0. Replaces the need to navigate between multiple pages. |
 
 ---
 
 ## Differentiators
 
-Features that elevate the test suite from "basic coverage" to "actually catches bugs and prevents regressions." Disproportionate value for the investment.
+Features that transform this from "daily picks app" to "personal trading coach that learns." High value, some technically challenging.
 
-| Feature | Value Proposition | Complexity | Dependencies |
-|---------|------------------|------------|--------------|
-| **Visual regression testing (4-5 key pages)** | Catches CSS regressions, layout shifts, invisible text, broken chart containers that functional tests miss entirely. Critical for data-dense dashboard where a misaligned column or collapsed section is a real bug. Use Playwright's built-in `toHaveScreenshot()` with `maxDiffPixelRatio` tolerance. | Medium | Baseline screenshots, deterministic data (mock API for visual tests or use seed data) |
-| **Critical user flow E2E tests** | Multi-page journeys that prove the app works as a system: (1) Heatmap → click ticker → view analysis → star to watchlist → navigate to watchlist → verify ticker appears. (2) Portfolio → add trade → verify holdings table updates → check P&L card. (3) Paper trading overview → view analytics → calendar tab. These catch integration bugs invisible to page-level tests. | High | Full stack running, seed data, localStorage management for watchlist |
-| **Chart rendering verification** | lightweight-charts renders to `<canvas>` — verify container has non-zero dimensions, canvas element exists, time range buttons (1T/3T/6T/1N/2N) switch data range. Can't assert chart content but CAN catch: blank chart, missing canvas, crashed rendering, button click failures. | Medium | Ticker with price data, lightweight-charts loaded |
-| **WebSocket connection status test** | Verify ConnectionStatusIndicator shows appropriate state. When backend is running → should show connected/market_closed. This covers the entire real-time infrastructure visibility without needing live market data. | Low-Medium | Backend WebSocket endpoint running |
-| **API response contract tests** | Verify API responses have required fields with correct types. Catches backend schema drift (field renamed, type changed, field removed) before frontend renders "undefined" or crashes on null access. Parametrized test across key endpoints. | Medium | Direct API calls via Playwright `request` context |
-| **Accessibility (a11y) audit** | Run axe-core on each page to catch missing ARIA labels, contrast issues, keyboard traps. Vietnamese text with special characters makes label accessibility extra important. Low effort — add `@axe-core/playwright`, call `checkA11y()` in each smoke test. | Low | `@axe-core/playwright` npm package |
-| **Cross-browser smoke (Firefox)** | lightweight-charts canvas rendering can behave differently in Firefox. Smoke test subset in Firefox catches engine-specific issues. Playwright supports Firefox natively — just add project config. | Low | Playwright Firefox browser install |
-| **Performance baseline assertions** | Assert key pages load within threshold. Heatmap with 800+ ticker divs is the stress test. Ticker detail with candlestick chart + 4 analysis cards is the complexity test. Simple: `expect(loadTime).toBeLessThan(5000)`. | Low-Medium | Playwright navigation timing |
-| **Exchange filter interaction test** | Heatmap and watchlist both have HOSE/HNX/UPCOM/All filter buttons. Verify filter changes visible data. Catches: filter not applied, wrong exchange shown, filter state not persisted (Zustand store). | Low | Market overview data with mixed exchanges |
+| Feature | Value Proposition | Complexity | Depends On (Existing) | Notes |
+|---------|------------------|------------|----------------------|-------|
+| **Behavior tracking — viewing patterns** | Track which tickers user browses most, at what times, how long. Reveals unconscious biases (e.g., always looking at bank stocks). | Medium | Frontend event tracking → backend API | Log: ticker views, time-on-page, search queries. Store in new `user_behavior` table. Privacy non-issue (single user). |
+| **Behavior tracking — trading habits** | Detect patterns: "sells winners too early," "holds losers too long," "trades impulsively after news." | High | Trade journal with timestamps, pick data | Compare: actual sell time vs optimal exit (TP). Calculate: avg hold time for winners vs losers. Gemini can generate natural-language habit analysis. |
+| **Adaptive strategy — risk scaling** | After 3 consecutive losses, AI shifts to more conservative picks. After sustained wins, gradually allows slightly more aggressive picks. | High | Trade journal P&L history, pick generation | Maintain a "risk_level" state (1-5 scale). Recent P&L adjusts it. Risk level feeds into pick generation prompt as context. |
+| **Adaptive strategy — sector preference learning** | If user consistently profits from bank stocks and loses on real estate, bias picks toward banks. | Medium | Trade journal with sector data from ticker table | Compute per-sector win rate from journal. Feed top/bottom sectors into pick generation prompt. |
+| **Goal setting — monthly profit target** | User sets "I want to make 2M VND this month." App tracks progress. Creates accountability. | Low | Trade journal P&L, new `goals` table | Simple CRUD: target_amount, month, progress_amount (computed). Progress bar on coach dashboard. |
+| **Weekly risk tolerance review** | Every Sunday: "Last week you lost 500K. Do you want to: stay the course / reduce risk / take a break?" | Medium | Trade journal, scheduled job, user_settings | Popup/card on coach dashboard. User response adjusts risk_level for next week's picks. Can be a simple 3-option selector, not a chatbot. |
+| **Weekly performance review** | AI-generated summary: "This week: 3 trades, 2 wins, +800K. You held VNM 2 days longer than suggested. Consider tighter exits." | Medium | Trade journal, pick data, Gemini API | Gemini generates review from week's data. Store as a weekly report. Displayed on coach dashboard. |
+| **Pick-to-trade linkage** | When logging a trade, optionally link it to a daily pick. Enables: "did I follow the pick?" and "how do my deviations perform vs following exactly?" | Low | Trade journal + picks table foreign key | Optional `pick_id` on trade. Analytics: "Trades following picks: 65% win rate. Trades deviating: 40% win rate." |
+| **Position sizing for small capital** | Beginner doesn't know how much to buy. AI says "buy 200 shares of XYZ = 12M VND = 24% of your 50M." | Medium | Capital setting, trading signals | Adjust existing `position_size_pct` for absolute VND amounts. Show: "Mua 200 cổ XYZ × 60,000 = 12,000,000 VND (24% vốn)." |
+| **"Why not this stock?" explanations** | When a popular stock ISN'T picked, briefly explain why. Prevents FOMO. "HPG not picked today: RSI overbought at 78, wait for pullback." | Medium | AI analysis of non-picked tickers | For top 5-10 "near-miss" tickers, include a 1-sentence rejection reason. Helps beginner learn selection criteria. |
 
 ---
 
 ## Anti-Features
 
-Features to explicitly NOT build. Each sounds useful but costs more than it delivers for a personal project.
+Features to explicitly NOT build. Each sounds useful but is wrong for a solo beginner with < 50M VND.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |-------------|-----------|-------------------|
-| **Full WebSocket message testing** | Would need: market-hours timing, subscribe/unsubscribe sequence validation, reconnect scenario simulation with controlled disconnects, price update assertion against known data — massive infrastructure for a 30s polling mechanism | Test connection status indicator UI only. Backend WebSocket is covered by `test_realtime_prices.py` (existing unit test). |
-| **Pixel-perfect chart assertion** | lightweight-charts renders to `<canvas>` — pixel comparison is flaky across OS/GPU/font rendering. Chart data changes with real market data. Anti-aliasing differs between CI and local. | Verify chart container renders with non-zero dimensions + canvas element exists. Visual regression at page level catches gross layout breakage. |
-| **Screenshot testing every page × viewport × theme** | Combinatorial explosion: 8 pages × 3 viewports × 2 themes = 48 baselines. Each baseline needs updating when data or styles change. Maintenance burden exceeds value. | Visual regression on 4-5 key pages at desktop viewport, light theme only. Separate theme toggle test verifies dark mode isn't broken. |
-| **Database state verification in tests** | E2E tests that query PostgreSQL directly to verify writes couple tests to internal schema. Schema changes break tests even when UI works correctly. Creates test-only DB connection management. | Verify through UI: submit form → check that table/card shows new data. Or verify through API response after action. |
-| **Mocking entire backend (MSW/full stub)** | Building mock handlers for 55 endpoints creates a parallel API to maintain. When backend changes, must update both real API and mock. Defeats E2E purpose. | Run against real FastAPI + PostgreSQL with seed data. Mock only for specific error state tests via `page.route()` intercepts. |
-| **Test retry/quarantine infrastructure** | Auto-retry, test quarantine queues, parallel sharding, flaky test tracking — CI engineering suited for teams, not solo developer. | Run tests sequentially. Fix flaky tests immediately. Use Playwright's built-in `retries: 1` in CI config only. |
-| **100% endpoint contract validation** | Validating response shape of all 55 endpoints is 55 individual assertions to maintain. Many endpoints are simple GET-list that are implicitly tested by page smoke tests. | Contract test the 10-15 most critical/complex endpoints. Others are validated implicitly when pages render their data correctly. |
-| **Performance benchmark trends** | Historical performance tracking with graphs, percentile analysis, regression detection over time — monitoring infrastructure for a personal project. | Simple threshold assertion: page loads in < N seconds. Check once per test run, no history. |
-| **Load/stress testing** | Single-user app. No concurrent user scenarios. No CDN, no load balancer, no connection pool exhaustion under normal use. | One performance smoke test for heaviest page (heatmap with 800+ tickers). |
-| **Component-level unit tests (React Testing Library)** | Different testing layer, different tooling, different milestone. RTL tests individual components in isolation — complementary to E2E but separate scope. | Stay focused on E2E. If component tests are needed later, that's a separate effort. |
+| **Auto-trading / order execution** | Legal risk (no broker API license), financial risk (bugs = real money lost), explicitly out of scope in PROJECT.md. VN brokers don't offer public trading APIs for retail. | Show picks with prices → user manually executes on their broker app (SSI, VnDirect, TCBS). |
+| **Complex portfolio analytics** | Removed in v7.0 for good reason. Beginners don't need Sharpe ratios, beta, correlation matrices. Overcomplicates the coaching experience. | Simple P&L, win rate, streak. That's enough for a beginner to learn. |
+| **Social features / community** | Single-user app. Social comparison creates FOMO and emotional trading — the exact thing the coach should prevent. | Personal journal with private reflection. |
+| **Gamification / badges / XP** | Creates wrong incentives. "Badge for 10 trades this week" encourages overtrading. Beginners should trade LESS, not more. | Celebrate restraint: "You skipped 2 impulsive trades this week — that's discipline." via weekly review. |
+| **AI chat / conversational interface** | Massive complexity (conversation state, NLU, context management) for minimal value. A personal coach app isn't a chatbot — it's a structured decision-support tool. | Pre-structured cards and panels. AI generates text content, but UX is widget-based, not conversational. |
+| **Intraday / scalping picks** | VN market has T+2.5 settlement. Intraday strategies are irrelevant for a beginner with small capital. Commission per trade (0.15-0.35%) makes frequent trading unprofitable. | Swing (3-15 days) and position (weeks+) timeframes only — already enforced in existing `Timeframe` enum. |
+| **Multi-account / family sharing** | Single user, single capital base. Multi-user adds auth, data isolation, RBAC — all explicitly out of scope. | Single user, localStorage + server state as-is. |
+| **Notification fatigue (real-time pick alerts)** | Telegram bot was already removed in v7.0. Push notifications for picks encourage impulsive action. Beginner should check picks once at market open, not react to alerts throughout the day. | Coach dashboard shows today's picks. User checks it during their morning routine. No push. |
+| **Options / derivatives** | VN retail market has extremely limited derivatives access (VN30F futures only, high margin requirements). Irrelevant for beginner with 50M VND. | Stocks only. |
+| **Technical indicator customization** | Beginners don't know what RSI period to use. Letting them customize creates analysis paralysis and false sophistication. | AI uses pre-tuned indicators (already 27 configured). User sees conclusions, not knobs. |
+| **Backtesting picks** | Removed in v7.0. Backtesting creates hindsight bias ("I would have bought that!"). Forward performance tracking is more honest and useful. | Track actual pick performance going forward. Show: "Last 30 days, picks had 62% hit rate." |
 
 ---
 
 ## Feature Dependencies
 
 ```
-Infrastructure (config, seed data, helpers)
+Existing Pipeline (crawl → indicators → analysis → signals)
   │
-  ├─→ Page Smoke Tests (all 8 routes)
-  │     ├─→ Visual Regression (screenshots of smoke-tested pages)
-  │     ├─→ Accessibility Audit (axe-core in each smoke test)
-  │     └─→ Performance Baselines (timing in smoke tests)
+  ├─→ [NEW] Daily Picks Engine
+  │     ├─ Capital-aware filtering
+  │     ├─ Safety scoring
+  │     ├─ Educational explanation generation
+  │     ├─ Entry/SL/TP (inherited from signals)
+  │     └─ Pick storage (new table)
   │
-  ├─→ Navigation Tests (navbar, search, row clicks)
-  │     └─→ Critical User Flow Tests (multi-page journeys that include navigation)
+  ├─→ [NEW] Trade Journal
+  │     ├─ Log trades (buy/sell)
+  │     ├─ Auto P&L calculation
+  │     ├─ Pick-to-trade linkage (optional FK)
+  │     └─ Trade history
   │
-  ├─→ API Health Checks (all 55 endpoints)
-  │     └─→ API Contract Tests (response shape validation on subset)
+  ├─→ [NEW] Pick Performance Tracking
+  │     ├─ Monitor active picks vs market prices
+  │     ├─ Detect TP/SL hits
+  │     └─ Pick track record / history
   │
-  ├─→ Form Tests (trade, follow, settings, CSV)
-  │     └─→ Critical User Flow Tests (form submit → verify result in UI)
+  ├─→ [NEW] Performance Summary
+  │     ├─ Aggregates from journal + picks
+  │     └─ Win rate, P&L, streaks
   │
-  ├─→ Table Interaction Tests (sort, row click)
+  ├─→ [NEW] Behavior Tracking (depends on journal + frontend events)
+  │     ├─ Viewing patterns
+  │     └─ Trading habit analysis
   │
-  ├─→ Tab/Dialog/Theme/Filter Tests
+  ├─→ [NEW] Adaptive Strategy (depends on journal + behavior + picks)
+  │     ├─ Risk level state machine
+  │     ├─ Sector preference learning
+  │     └─ Feeds back into Pick generation prompt
   │
-  ├─→ Chart Rendering Tests (canvas, time range buttons)
-  │     └─→ Visual Regression (ticker detail page screenshot includes chart)
+  ├─→ [NEW] Goal Setting & Review (depends on journal + picks)
+  │     ├─ Monthly profit target
+  │     ├─ Weekly risk review
+  │     └─ Weekly AI-generated performance review
   │
-  ├─→ WebSocket Status Test
-  │
-  └─→ Error State Tests (mocked API failures)
-  
-Cross-browser (Firefox): runs smoke test subset
-Mobile viewport: runs smoke test subset at 375px
+  └─→ [NEW] Coach Dashboard (depends on all above)
+        ├─ Today's picks card
+        ├─ Active trades card
+        ├─ Performance summary
+        ├─ Goal progress
+        └─ Weekly review card
 ```
 
-### Infrastructure Prerequisites
+### Critical Path
 
-| Prerequisite | What | Why |
-|-------------|------|-----|
-| **Playwright config** | `playwright.config.ts` with `webServer` for both Next.js dev server + FastAPI | Tests need both servers running before any test executes |
-| **Seed data** | Python script or fixture that creates deterministic tickers, prices, trades, analysis, paper trades | Tests need predictable data — "VNM" should exist, have prices, have analysis results |
-| **Test helpers** | `navigateTo()`, `waitForDataLoad()`, `openDialog()`, common selectors | Reduce duplication across test files, make tests readable |
-| **Global setup/teardown** | Start backend, run seed data, verify connectivity before test suite | Playwright `globalSetup` handles this |
-| **CI config** | GitHub Actions workflow: install deps, start servers, run tests, upload artifacts | "CI-ready" is explicit project goal |
+```
+1. Pick Storage Schema + Trade Journal Schema (DB foundation)
+   ↓
+2. Daily Picks Engine (core feature, generates data for everything else)
+   ↓
+3. Trade Journal (CRUD for actual trades)
+   ↓
+4. Pick Performance Tracking (monitors picks against market)
+   ↓
+5. Coach Dashboard (displays 2 + 3 + 4)
+   ↓
+6. Behavior Tracking + Adaptive Strategy (requires journal data to exist)
+   ↓
+7. Goal Setting & Weekly Review (polish layer)
+```
 
 ---
 
 ## Detailed Feature Specifications
 
-### Holo-Specific Testing Concerns
+### 1. Daily Picks Engine
 
-These are testing challenges unique to this application's architecture:
+**What:** Every trading day after the analysis pipeline runs, a new Gemini call selects 3-5 stocks optimized for a beginner with < 50M VND.
 
-| Concern | Why It Matters | Testing Approach |
-|---------|---------------|-----------------|
-| **Vietnamese text rendering** | All UI text is Vietnamese (diacritics: ắ, ể, ố, ụ, etc.). Assertion strings must use exact Vietnamese. Wrong encoding = invisible text bugs. | Use exact Vietnamese strings in assertions: `expect(heading).toContainText('Tổng quan thị trường')` |
-| **localStorage watchlist** | Watchlist is stored in localStorage, not API. Tests that add/remove watchlist items affect other tests. | `page.evaluate(() => localStorage.clear())` in test setup. Or use `storageState` in Playwright fixtures. |
-| **Canvas-based charts** | lightweight-charts renders to `<canvas>` — no DOM nodes for chart content. Can't assert "candlestick shows VNM price at 82,500". | Assert container div exists + has non-zero `offsetHeight`. Assert `<canvas>` child element exists. Visual regression for gross failures. |
-| **Recharts SVG charts** | Recharts renders to SVG — slightly more testable than canvas. Can assert SVG exists, has paths, but not specific data values. | Assert `<svg>` element inside chart container. Visual regression for appearance. |
-| **Exchange filter state (Zustand)** | Exchange filter uses Zustand store — persisted state could leak between tests. | Reset between tests or use fresh browser context per test. |
-| **API cooldowns** | On-demand analysis has 5-minute server-side cooldown (`429` response). Tests that trigger analysis will hit cooldown on reruns. | Don't test actual analysis triggering (that's backend logic). Test the button UI state and error handling for 429. |
-| **Dynamic data** | Market data changes daily. Tests against production data will have different numbers each day. | Seed data for deterministic tests. Or use `toContainText()` patterns instead of exact value matching. |
-| **WebSocket market-hours awareness** | WebSocket shows `market_closed` outside trading hours (9:00-15:00 ICT). Test behavior depends on when tests run. | Assert either `connected` or `market_closed` — both are valid. Don't assert specific state. |
+**How it works:**
+1. Existing pipeline runs: crawl → indicators → analysis → signals (already happens)
+2. New job chains after signals: `generate_daily_picks`
+3. Job queries today's analysis results: combined score, trading signal confidence, ATR, volume, price
+4. Filters: price ≤ 500K (100 shares buyable with 50M budget), volume > 50K/day (liquid), ADX > 20 (has trend), fundamental health ≥ "neutral"
+5. Top ~20 candidates sent to Gemini with prompt: "From these pre-analyzed tickers, select 3-5 best for a beginner. Prioritize safety. Explain each pick in Vietnamese."
+6. Gemini returns structured response (Pydantic schema)
+7. Stored in new `daily_picks` table with JSONB `raw_response`
+
+**New Pydantic schema:**
+```python
+class DailyPick(BaseModel):
+    ticker: str
+    pick_reason: str  # Vietnamese, 100-200 words educational
+    risk_level: Literal["low", "medium"]  # No "high" for beginners
+    entry_price: float
+    stop_loss: float
+    take_profit: float
+    position_size_vnd: int  # Absolute VND, not percentage
+    confidence: int  # 1-10
+    
+class DailyPicksResponse(BaseModel):
+    picks: list[DailyPick]
+    market_context: str  # Overall market condition today
+    avoidance_notes: list[str]  # "Avoid real estate sector today because..."
+```
+
+**Gemini API cost:** 1 extra call/day (within 15 RPM free tier — current pipeline uses ~12-13 RPM at peak).
+
+### 2. Trade Journal
+
+**What:** CRUD for logging actual trades the user executes on their broker.
+
+**DB schema (new table `trades`):**
+```
+id: BigInteger PK
+ticker_id: FK → tickers.id
+direction: Enum('buy', 'sell')
+price: Float
+quantity: Integer
+total_amount: Float (computed: price × quantity)
+fees: Float (default 0)
+executed_at: DateTime
+pick_id: FK → daily_picks.id (nullable — not all trades follow picks)
+notes: Text (nullable)
+created_at: Timestamp
+```
+
+**P&L calculation:**
+- FIFO matching: first buy matched with first sell
+- Realized P&L: sell_total - buy_total - total_fees
+- Unrealized P&L: (current_price - avg_buy_price) × remaining_quantity
+- Uses existing `daily_prices` or real-time WebSocket price for current price
+
+**API endpoints:**
+- `POST /api/trades` — log new trade
+- `GET /api/trades` — list trades (with filters: date range, ticker, direction)
+- `GET /api/trades/summary` — P&L summary (realized, unrealized, win rate)
+- `PUT /api/trades/{id}` — edit trade
+- `DELETE /api/trades/{id}` — delete trade
+
+### 3. Pick Performance Tracking
+
+**What:** Scheduled job monitors active picks against real market prices.
+
+**Logic:**
+- After market close each day, check all active picks (issued within their timeframe window)
+- Compare day's high/low against pick's TP and SL
+- If high ≥ TP → mark pick as "hit_tp" (success)
+- If low ≤ SL → mark pick as "hit_sl" (stopped out)
+- If timeframe expired → mark as "expired" with final P&L
+- Store outcome on `daily_picks` table: `status` enum (active/hit_tp/hit_sl/expired), `outcome_pct`, `resolved_at`
+
+### 4. Behavior Tracking
+
+**What:** Frontend sends lightweight events; backend aggregates patterns.
+
+**Events tracked:**
+- `ticker_view`: user visits `/ticker/[symbol]` — log symbol + timestamp
+- `pick_viewed`: user expands a daily pick for details
+- `trade_logged`: user logs a trade (already captured via journal)
+- `time_on_coach`: how long user spends on `/coach` page
+
+**Storage:** New `user_events` table (event_type, payload JSONB, created_at). Lightweight — no heavy analytics infra.
+
+**Habit analysis (Gemini):** Weekly job queries events + journal, sends to Gemini with prompt: "Analyze this trader's behavior patterns. Identify: impulsive trading, loss aversion, confirmation bias, FOMO. Provide 2-3 specific observations in Vietnamese."
+
+### 5. Adaptive Strategy
+
+**What:** Risk level state machine that adjusts pick aggressiveness.
+
+**State: `risk_level` (1-5 scale)**
+- 1 = Ultra-conservative (only "low" risk picks)
+- 3 = Balanced (default for new user)
+- 5 = Moderate growth (still no "high" risk — beginner constraint)
+
+**Transitions:**
+- 3 consecutive losing trades → risk_level decreases by 1
+- Week with > 3% portfolio loss → risk_level decreases by 1
+- 2 consecutive winning weeks → risk_level increases by 1
+- User manually overrides via weekly review → set directly
+- Never exceeds 5 (no aggressive mode for beginners)
+
+**How it feeds picks:** Risk level is injected into the daily picks Gemini prompt as context:
+- Level 1-2: "Select ONLY stocks with ATR < 2%, strong fundamentals, high liquidity"
+- Level 3: "Balance safety and opportunity"
+- Level 4-5: "Can include moderately volatile stocks with strong technical setups"
+
+**Storage:** `user_settings` table or simple key-value config. Single value, updated by automated rules + user override.
+
+### 6. Goal Setting & Weekly Review
+
+**What:** User sets monthly profit target; weekly AI-generated review.
+
+**Goal:**
+- `goals` table: `id`, `month` (YYYY-MM), `target_amount` (VND), `created_at`
+- Progress computed from trade journal P&L for that month
+- Displayed as progress bar on coach dashboard
+
+**Weekly Review:**
+- Scheduled job runs every Sunday
+- Collects: week's trades, pick outcomes, behavior events
+- Sends to Gemini: "Generate a weekly trading review for this beginner trader. Be encouraging but honest. In Vietnamese."
+- Stored in `weekly_reviews` table (week_start, review_text, stats_json)
+- Includes risk tolerance question: "Tuần tới bạn muốn: (1) Giảm rủi ro (2) Giữ nguyên (3) Tăng nhẹ"
+- User's answer updates risk_level for adaptive strategy
 
 ---
 
 ## MVP Recommendation
 
-### Phase 1 — Infrastructure (must have before any tests)
-1. Playwright setup + config (`webServer` for Next.js + FastAPI)
-2. Seed data script (deterministic tickers, prices, trades, analysis)
-3. Test helpers / common patterns
+**Prioritize (Phase 1-3):**
+1. **Daily Picks Engine** — this IS the core feature; everything else is secondary
+2. **Trade Journal with P&L** — connects picks to reality; minimal but complete CRUD
+3. **Pick Performance Tracking** — builds trust in AI; answers "does this actually work?"
+4. **Coach Dashboard** — single page that ties 1+2+3 together
 
-### Phase 2 — Smoke & Health (highest ROI per test line)
-4. Page smoke tests for all 8 routes (verify load + key elements)
-5. API health checks for all 55 endpoints (parametrized)
-6. Navigation flow tests (navbar + search + row clicks)
+**Defer to later phases:**
+- **Behavior Tracking:** Needs journal data to exist first. At least 2 weeks of trade data before patterns are detectable. Build after core loop is working.
+- **Adaptive Strategy:** Needs pick + journal history. Meaningful after ~1 month of data. Can start with a simple manual risk toggle before implementing the full state machine.
+- **Goal Setting & Weekly Review:** Polish feature. The system works without goals. Add after the core coaching loop proves itself.
+- **"Why not this stock?" explanations:** Nice-to-have differentiator. Requires additional Gemini calls. Defer unless Gemini rate limit budget allows.
 
-### Phase 3 — Interaction Tests (catches most form/table bugs)
-7. Form submission tests (portfolio trade, paper trading follow, settings update)
-8. Data table interaction tests (column sort, row click)
-9. Tab navigation + dialog lifecycle tests
-10. Error state tests (mocked API failures → verify error UI)
-
-### Phase 4 — Visual & Advanced (regression prevention + polish)
-11. Visual regression on 4-5 key pages
-12. Chart rendering verification (canvas + time range)
-13. Critical user flow tests (2-3 multi-page journeys)
-14. Accessibility audit (axe-core)
-15. Mobile responsive smoke + theme toggle
-16. Cross-browser smoke (Firefox)
-17. WebSocket status + exchange filter tests
-18. Performance baselines + API contract tests
-
-### Phase ordering rationale
-- **Infrastructure first** — literally cannot write tests without Playwright config and seed data
-- **Smoke tests second** — maximum bug discovery per line of test code. If heatmap page 500s, we find out immediately.
-- **Interaction tests third** — form/table bugs are the most common class of frontend bugs in CRUD dashboards, and are invisible to smoke tests
-- **Visual/advanced last** — depend on stable pages that don't change between runs, require baseline management, are additive value not foundational
+**Build order rationale:** The core coaching loop is: AI picks → user trades → results tracked → AI adapts. Each phase should complete one link in this chain. Don't build adaptive strategy before there's data to adapt on.
 
 ---
 
-## Scope Estimate
+## Vietnamese Stock Market Constraints (Inform All Features)
 
-| Category | Est. Test Count | Est. Effort | Priority |
-|---------|----------------|-------------|----------|
-| Infrastructure (config, seed, helpers) | — | 4-6 hours | P1 |
-| Page smoke tests | 8-10 | 1-2 hours | P2 |
-| API health checks | 1 parametrized (55 cases) | 2-3 hours | P2 |
-| Navigation tests | 5-8 | 1-2 hours | P2 |
-| Form submission tests | 6-8 | 3-4 hours | P3 |
-| Table/tab/dialog tests | 8-12 | 3-4 hours | P3 |
-| Error state tests | 4-6 | 2-3 hours | P3 |
-| Visual regression | 4-5 screenshots | 2-3 hours | P4 |
-| Chart rendering tests | 3-4 | 1-2 hours | P4 |
-| Critical user flows | 2-3 | 3-4 hours | P4 |
-| A11y + theme + mobile + cross-browser | 5-8 | 2-3 hours | P4 |
-| WebSocket + filter + perf + contracts | 5-8 | 3-4 hours | P4 |
-| **Total** | **~55-75 tests** | **~27-38 hours** | — |
+| Constraint | Impact on Feature Design |
+|-----------|------------------------|
+| T+2.5 settlement | No day-trading picks. Minimum hold period is effectively 3 days. Timeframe enum already enforces swing/position only. |
+| No short selling (retail) | All picks are BUY only. BEARISH direction in existing signals becomes "avoid" guidance, not actionable picks. |
+| Floor/ceiling limits (±7% HOSE, ±10% HNX, ±15% UPCOM) | SL/TP must respect daily price limits. Can't hit 8% SL intraday on HOSE. |
+| Lot size: 100 shares (HOSE), 100 shares (HNX), 1 share (UPCOM) | Capital-aware filtering must account for lot sizes. 50M / price / 100 = max lots buyable. |
+| Commission: 0.15-0.35% per trade (broker-dependent) | P&L calculation should include configurable fee rate. Default to 0.25%. |
+| Market hours: 9:00-15:00 (VN time, UTC+7) | Picks should be ready before 9:00 AM. Generate during post-close pipeline (after 15:00), displayed next morning. |
+| Tax: 0.1% on sell transactions | Include in P&L calculations. Sell tax = 0.1% × sell_amount. |
 
 ---
 
-## Sources
+## Gemini API Budget Analysis
 
-- **Codebase analysis** (HIGH confidence): Inventoried all 8 routes (`frontend/src/app/`), 55 API endpoints (`backend/app/api/*.py`), 35+ components (`frontend/src/components/`), 34 backend test files (560 tests)
-- **Playwright capabilities** (HIGH confidence): `toHaveScreenshot()`, `webServer`, `request` context, `page.route()` interception, axe-core integration — all stable, well-documented features
-- **@axe-core/playwright** (HIGH confidence): Standard accessibility integration, trivial setup
-- **Domain knowledge** (HIGH confidence): Financial dashboard testing patterns — canvas chart verification, real-time data handling, form-heavy CRUD operations, Vietnamese text encoding considerations
+**Current usage (existing pipeline):**
+- Crawl: 0 Gemini calls
+- Indicators: 0 Gemini calls
+- Technical analysis: ~54 calls (800 tickers / 15 per batch)
+- Fundamental analysis: ~54 calls
+- Sentiment analysis: ~54 calls
+- Combined analysis: ~54 calls
+- Trading signals: ~54 calls (batch size 15)
+- **Total: ~270 calls/day** (spread across scheduled batches with 4s delays)
+
+**New v8.0 calls:**
+- Daily picks generation: **1 call/day** (small — top 20 candidates in one prompt)
+- Weekly behavior analysis: **1 call/week**
+- Weekly review generation: **1 call/week**
+- "Why not" explanations: **1 call/day** (if implemented)
+- **Total new: ~2 calls/day + 2/week = negligible**
+
+**Verdict:** v8.0 features add < 1% to Gemini usage. Well within free tier limits. No rate limiting concerns.
+
+---
+
+## Sources & Confidence
+
+| Claim | Source | Confidence |
+|-------|--------|------------|
+| VN market T+2.5 settlement, no retail short selling | Training data (well-established VN market rules) | HIGH |
+| HOSE lot size 100, floor/ceiling ±7% | Training data (standard VN exchange rules) | HIGH |
+| Commission range 0.15-0.35% | Training data (typical VN broker fees) | MEDIUM |
+| Sell tax 0.1% | Training data (VN stock transaction tax) | HIGH |
+| Trade journal feature patterns (Edgewonk, Tradervue) | Training data (domain knowledge of trading journal apps) | MEDIUM |
+| Behavior tracking patterns | Training data (general app analytics patterns) | MEDIUM |
+| Adaptive strategy concept | Training data (risk management best practices) | MEDIUM |
+| Existing Holo codebase analysis | Direct code inspection — schemas, models, APIs | HIGH |
+| Gemini API budget analysis | Calculated from existing batch sizes in codebase | HIGH |
+| Daily picks as filtered subset (not re-analysis) | Architecture decision based on existing pipeline efficiency | HIGH |

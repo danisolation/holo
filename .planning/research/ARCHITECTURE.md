@@ -1,816 +1,731 @@
-# Architecture: Playwright E2E Testing Integration
+# Architecture Patterns — AI Trading Coach Integration
 
-**Domain:** E2E testing infrastructure for Next.js 16 + FastAPI monorepo
-**Researched:** 2025-07-20
-**Confidence:** HIGH — architecture derived from verified codebase analysis + Playwright 1.59 docs
+**Domain:** AI Trading Coach features for existing stock intelligence platform
+**Researched:** 2026-04-23
+**Overall confidence:** HIGH — based on direct codebase inspection of existing architecture
 
 ## Recommended Architecture
 
-Playwright E2E tests live in the **frontend** directory as a peer to `src/`, using Playwright's built-in `webServer` array to orchestrate **both** backend (FastAPI on :8000) and frontend (Next.js on :3000) startup. Tests run against the **live production database** (Aiven PostgreSQL) in read-only mode — no seed/reset needed because the app is single-user with 800+ tickers of real data already present. This is the simplest architecture that works for a personal-use app with no auth.
+### Design Principle: Extension Over Modification
 
-### Design Philosophy
-
-- **Test against real data** — 800+ tickers, real analyses, real paper trades already exist. No mocking needed for read flows.
-- **Read-mostly testing** — most E2E flows are read operations (view heatmap, view ticker, view portfolio). Write tests (create trade, follow signal) use real API and clean up after themselves.
-- **No Docker** — runs natively on Windows. Playwright handles server lifecycle.
-- **No auth** — single-user app, no login flows to test.
-- **Canvas-aware** — lightweight-charts renders to `<canvas>`. Use screenshot comparison, not DOM assertions.
-
-### System Overview
+The existing Holo architecture is well-structured as a monolith with clear separation (ContextBuilder → GeminiClient → AnalysisStorage → AIAnalysisService). The AI Trading Coach features integrate as **new modules alongside existing ones**, not as modifications to the existing AI pipeline.
 
 ```
-PLAYWRIGHT TEST RUNNER (npx playwright test)
-│
-├── webServer[0]: cd ../backend && python -m uvicorn app.main:app --port 8000
-│                 (waits for http://localhost:8000/)
-│
-├── webServer[1]: npm run dev  (Next.js on port 3000)
-│                 (waits for http://localhost:3000)
-│
-└── Test Files:
-    ├── e2e/                        ← Page-level E2E tests
-    │   ├── home.spec.ts            ← Market overview heatmap
-    │   ├── dashboard.spec.ts       ← Dashboard page
-    │   ├── ticker.spec.ts          ← Ticker detail /ticker/[symbol]
-    │   ├── watchlist.spec.ts       ← Watchlist (localStorage)
-    │   ├── portfolio.spec.ts       ← Portfolio CRUD
-    │   ├── paper-trading.spec.ts   ← Paper trading + analytics tabs
-    │   ├── health.spec.ts          ← System health dashboard
-    │   └── corporate-events.spec.ts
-    ├── e2e/api/                    ← API-level tests (no browser)
-    │   ├── health-check.spec.ts    ← All /api/* endpoints respond
-    │   ├── tickers-api.spec.ts     ← /api/tickers, /api/tickers/{symbol}/prices
-    │   └── websocket.spec.ts       ← WebSocket subscribe/unsubscribe
-    ├── e2e/flows/                  ← Multi-page critical flows
-    │   └── ticker-to-paper-trade.spec.ts  ← Browse → signal → follow → paper trade
-    └── e2e/visual/                 ← Visual regression snapshots
-        ├── home.visual.spec.ts
-        └── ticker-chart.visual.spec.ts
+┌─────────────────────────────────────────────────────────────────────┐
+│                        EXISTING (unchanged)                         │
+│  VnstockCrawler → PriceService → IndicatorService → AIAnalysis     │
+│  (OHLCV)         (daily_prices)  (technical_indicator) (ai_analyses)│
+│                                                                     │
+│  CafeF → NewsArticle → SentimentAnalysis → CombinedAnalysis        │
+│                                           → TradingSignal           │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │ reads from
+┌────────────────────────────▼────────────────────────────────────────┐
+│                      NEW: AI Trading Coach                          │
+│                                                                     │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐  │
+│  │ DailyPick    │───▶│ TradeJournal │───▶│ BehaviorTracker      │  │
+│  │ Generator    │    │ Service      │    │                      │  │
+│  │              │    │              │    │ (event aggregation)  │  │
+│  └──────┬───────┘    └──────┬───────┘    └──────────┬───────────┘  │
+│         │                   │                       │              │
+│         │                   ▼                       ▼              │
+│         │            ┌──────────────┐    ┌──────────────────────┐  │
+│         │            │ P&L Engine   │    │ Adaptive Strategy    │  │
+│         │            │ (auto-calc)  │    │ Engine               │  │
+│         │            └──────────────┘    │ (risk adjustment)    │  │
+│         │                               └──────────┬───────────┘  │
+│         │                                          │              │
+│         ▼                                          ▼              │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                   Goal & Review System                        │  │
+│  │  (monthly targets, weekly check-ins, progress tracking)      │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Component Boundaries
 
-## Component Boundaries
+| Component | Responsibility | New/Extended | Communicates With |
+|-----------|---------------|--------------|-------------------|
+| **DailyPickGenerator** | Rank 800+ tickers → select top 3-5 daily picks with entry/SL rationale | **NEW service** | Reads: `ai_analyses`, `daily_prices`, `technical_indicator`. Reads: `user_risk_profile`. Writes: `daily_picks` |
+| **DailyPickContextBuilder** | Gather ranking signals (combined score, trading signal, volume, momentum) for pick selection | **NEW** (extends pattern) | Reads: `ai_analyses`, `technical_indicator`, `daily_prices` |
+| **TradeJournalService** | CRUD for manual trade entries, auto-link to daily picks | **NEW service** | Reads/writes: `trade_journal`. Reads: `daily_picks`, `daily_prices` |
+| **PnLEngine** | Calculate realized/unrealized P&L, costs, fees | **NEW** (pure logic) | Reads: `trade_journal`, `daily_prices` |
+| **BehaviorTracker** | Record and aggregate user behavior events (views, trades, timing patterns) | **NEW service** | Writes: `behavior_events`. Reads: `trade_journal`, `daily_picks` |
+| **AdaptiveStrategyEngine** | Adjust risk profile based on trading history and P&L patterns | **NEW service** | Reads: `trade_journal`, `behavior_events`, `user_risk_profile`. Writes: `user_risk_profile` |
+| **GoalReviewService** | Monthly targets, weekly progress snapshots, review generation | **NEW service** | Reads: `trade_journal`, `goals`. Writes: `goals`, `weekly_reviews` |
+| **CoachPromptBuilder** | Build Gemini prompts for personalized coaching insights (weekly review, pick rationale) | **NEW** (extends GeminiClient pattern) | Reads: aggregated data from other services |
+| **Scheduler (manager.py)** | Add daily_pick_generation job to chain | **EXTENDED** | Chains after `daily_trading_signal` |
+| **API Router** | New `/api/coach/*` routes | **NEW router** | All new services |
+| **Frontend** | New pages: `/coach`, `/journal`, `/goals` | **NEW pages** | New API endpoints |
 
-| Component | Responsibility | Location | New/Modified |
-|-----------|---------------|----------|--------------|
-| **playwright.config.ts** | Test configuration, webServer array, projects | `frontend/playwright.config.ts` | **NEW** |
-| **E2E test specs** | Page + flow + API + visual tests | `frontend/e2e/**/*.spec.ts` | **NEW** |
-| **Test fixtures** | Shared page objects, helpers, localStorage seeds | `frontend/e2e/fixtures/` | **NEW** |
-| **package.json** | Add Playwright devDep + test scripts | `frontend/package.json` | **MODIFIED** |
-| **.gitignore** | Ignore test-results, playwright-report, blob-report | `frontend/.gitignore` | **MODIFIED** |
-| **Backend .env** | No changes needed — tests use same prod DB | `backend/.env` | **UNCHANGED** |
-| **next.config.ts** | No changes needed — no rewrites, direct API calls | `frontend/next.config.ts` | **UNCHANGED** |
+## Data Model — New Tables
 
----
+### Core Tables
 
-## Detailed Architecture
+```sql
+-- 1. daily_picks: AI-selected daily trading recommendations
+CREATE TABLE daily_picks (
+    id BIGSERIAL PRIMARY KEY,
+    pick_date DATE NOT NULL,
+    ticker_id INTEGER NOT NULL REFERENCES tickers(id),
+    rank INTEGER NOT NULL,              -- 1-5 (pick position)
+    entry_price NUMERIC(12,2) NOT NULL,
+    stop_loss NUMERIC(12,2) NOT NULL,
+    take_profit_1 NUMERIC(12,2),
+    take_profit_2 NUMERIC(12,2),
+    risk_reward_ratio NUMERIC(4,2),
+    reasoning TEXT NOT NULL,            -- Vietnamese explanation
+    source_analysis_id BIGINT REFERENCES ai_analyses(id),  -- link to trading_signal
+    composite_score NUMERIC(6,2) NOT NULL,  -- ranking score used for selection
+    score_breakdown JSONB,              -- {technical: 8, fundamental: 7, ...}
+    status VARCHAR(20) DEFAULT 'active', -- active/expired/followed
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(pick_date, ticker_id)
+);
 
-### 1. Playwright Configuration — Dual webServer
+-- 2. trade_journal: Manual trade entries
+CREATE TABLE trade_journal (
+    id BIGSERIAL PRIMARY KEY,
+    ticker_id INTEGER NOT NULL REFERENCES tickers(id),
+    trade_type VARCHAR(10) NOT NULL,    -- 'buy' or 'sell'
+    entry_date DATE NOT NULL,
+    entry_price NUMERIC(12,2) NOT NULL,
+    quantity INTEGER NOT NULL,
+    exit_date DATE,
+    exit_price NUMERIC(12,2),
+    fees NUMERIC(12,2) DEFAULT 0,       -- VN: 0.15% buy + 0.15% sell + 0.1% tax
+    realized_pnl NUMERIC(14,2),         -- auto-calculated on close
+    realized_pnl_pct NUMERIC(8,4),
+    notes TEXT,
+    linked_pick_id BIGINT REFERENCES daily_picks(id),  -- optional link
+    tags JSONB DEFAULT '[]',            -- user-defined tags
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-The critical design decision: Playwright's `webServer` config accepts an **array** of server definitions. This launches both backend and frontend before any test runs.
+-- 3. user_risk_profile: Single-row, evolving risk preferences
+CREATE TABLE user_risk_profile (
+    id INTEGER PRIMARY KEY DEFAULT 1,   -- single user
+    risk_level VARCHAR(20) NOT NULL DEFAULT 'moderate',  -- conservative/moderate/aggressive
+    max_position_pct INTEGER DEFAULT 20,    -- max % of portfolio per position
+    max_daily_picks INTEGER DEFAULT 5,
+    preferred_sectors JSONB DEFAULT '[]',
+    avoided_sectors JSONB DEFAULT '[]',
+    min_rr_ratio NUMERIC(4,2) DEFAULT 1.5,
+    preferred_timeframe VARCHAR(20) DEFAULT 'swing',
+    last_adjusted_at TIMESTAMPTZ DEFAULT NOW(),
+    adjustment_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. behavior_events: Raw event tracking
+CREATE TABLE behavior_events (
+    id BIGSERIAL PRIMARY KEY,
+    event_type VARCHAR(50) NOT NULL,    -- 'ticker_view', 'pick_followed', 'trade_opened', etc.
+    event_data JSONB NOT NULL,          -- {ticker: 'VNM', source: 'heatmap', ...}
+    occurred_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. goals: Monthly trading goals
+CREATE TABLE goals (
+    id BIGSERIAL PRIMARY KEY,
+    month DATE NOT NULL UNIQUE,         -- first day of month
+    target_pnl_pct NUMERIC(8,4),        -- target return %
+    target_win_rate NUMERIC(5,2),
+    max_drawdown_pct NUMERIC(8,4),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. weekly_reviews: AI-generated weekly coaching reviews
+CREATE TABLE weekly_reviews (
+    id BIGSERIAL PRIMARY KEY,
+    week_start DATE NOT NULL UNIQUE,
+    trades_count INTEGER DEFAULT 0,
+    realized_pnl NUMERIC(14,2) DEFAULT 0,
+    win_rate NUMERIC(5,2),
+    picks_followed INTEGER DEFAULT 0,
+    picks_total INTEGER DEFAULT 0,
+    behavior_summary JSONB,             -- aggregated behavior metrics
+    ai_review TEXT,                      -- Gemini-generated coaching text
+    risk_adjustment TEXT,               -- suggested risk level change
+    model_version VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Indexes
+
+```sql
+CREATE INDEX idx_daily_picks_date ON daily_picks(pick_date DESC);
+CREATE INDEX idx_daily_picks_ticker_date ON daily_picks(ticker_id, pick_date DESC);
+CREATE INDEX idx_trade_journal_ticker ON trade_journal(ticker_id);
+CREATE INDEX idx_trade_journal_entry_date ON trade_journal(entry_date DESC);
+CREATE INDEX idx_trade_journal_exit_date ON trade_journal(exit_date DESC) WHERE exit_date IS NOT NULL;
+CREATE INDEX idx_behavior_events_type_date ON behavior_events(event_type, occurred_at DESC);
+CREATE INDEX idx_behavior_events_occurred ON behavior_events(occurred_at DESC);
+CREATE INDEX idx_weekly_reviews_week ON weekly_reviews(week_start DESC);
+```
+
+## Data Flow
+
+### Flow 1: Daily Pick Generation (automated, chains after trading_signal)
+
+```
+Existing Pipeline (unchanged):
+  HOSE crawl → HNX crawl → UPCOM crawl
+  → indicator_compute → ai_analysis (tech/fund)
+  → news_crawl → sentiment → combined → trading_signal
+  → hnx_upcom_analysis
+                    │
+                    ▼ NEW chain link
+  daily_pick_generation (NEW job)
+    │
+    ├─ 1. Query today's ai_analyses: combined scores + trading signals
+    │     for ALL tickers with score ≥ 6 and valid trading_signal
+    │
+    ├─ 2. Compute composite_score per ticker:
+    │     = 0.35 × combined_score + 0.30 × trading_signal_confidence
+    │       + 0.20 × volume_surge_score + 0.15 × sector_momentum
+    │
+    ├─ 3. Apply risk profile filters:
+    │     - Skip avoided_sectors
+    │     - Prefer preferred_sectors (boost +1)
+    │     - Filter by min_rr_ratio from trading_signal
+    │     - If risk_level='conservative': require combined ≥ 7
+    │
+    ├─ 4. Rank and select top N (from user_risk_profile.max_daily_picks)
+    │
+    ├─ 5. For each pick: extract entry/SL/TP from trading_signal.raw_response
+    │     Build reasoning via Gemini (WHY this pick today, in Vietnamese)
+    │     Store to daily_picks table
+    │
+    └─ 6. Mark yesterday's picks as 'expired' if not followed
+```
+
+**Scheduler integration** — Add to `manager.py._on_job_executed`:
+```python
+elif event.job_id in ("daily_hnx_upcom_analysis_triggered",):
+    # Chain: hnx_upcom_analysis → daily_pick_generation
+    from app.scheduler.jobs import daily_pick_generation
+    scheduler.add_job(daily_pick_generation, id="daily_pick_generation_triggered", ...)
+```
+
+**Gemini budget impact**: 1 additional API call/day (batch of 5 picks for reasoning). Negligible vs. existing 800+ ticker analysis.
+
+### Flow 2: Trade Journal → P&L Calculation
+
+```
+User Action (frontend form):
+  POST /api/coach/journal/trades
+    │
+    ├─ Validate: ticker exists, price reasonable (±5% of last close)
+    ├─ Auto-link: if ticker has today's daily_pick → set linked_pick_id
+    ├─ Store to trade_journal
+    └─ Track behavior_event: {type: 'trade_opened', ticker, entry_price}
+
+Trade Close (frontend form):
+  PATCH /api/coach/journal/trades/{id}/close
+    │
+    ├─ Set exit_date, exit_price
+    ├─ Calculate realized_pnl:
+    │     pnl = (exit_price - entry_price) × quantity - fees
+    │     fees = entry_value × 0.0015 + exit_value × 0.0025  (VN market)
+    │     pnl_pct = pnl / (entry_price × quantity) × 100
+    ├─ Store realized_pnl, realized_pnl_pct
+    └─ Track behavior_event: {type: 'trade_closed', pnl, hold_days}
+
+Auto P&L (daily job, optional):
+  For open trades: compute unrealized_pnl using latest daily_prices.close
+  → Serves display only, NOT stored (avoids stale data)
+```
+
+### Flow 3: Behavior Tracking → Adaptive Strategy
+
+```
+Behavior Events Collected:
+  ┌─────────────────────────────────────────┐
+  │ ticker_view      — from frontend visits  │
+  │ pick_viewed      — daily pick card click │
+  │ pick_followed    — trade linked to pick  │
+  │ pick_ignored     — pick expired unfollowed│
+  │ trade_opened     — journal entry created │
+  │ trade_closed     — journal entry closed  │
+  │ analysis_viewed  — AI analysis page visit│
+  │ heatmap_click    — market overview click │
+  └─────────────────────────┬───────────────┘
+                            │
+         Weekly Aggregation (scheduled job, Sunday evening)
+                            │
+                            ▼
+  BehaviorTracker.aggregate_weekly():
+    ├─ Most viewed tickers (top 10)
+    ├─ Average trade duration (days)
+    ├─ Trading frequency (trades/week)
+    ├─ Pick follow rate (followed/total)
+    ├─ Preferred trading hours (from timestamps)
+    ├─ Sector concentration (% per sector)
+    └─ Win/loss streak detection
+
+         Weekly Review Generation (chains after aggregation)
+                            │
+                            ▼
+  AdaptiveStrategyEngine.evaluate():
+    │
+    ├─ IF win_rate < 40% over last 4 weeks:
+    │     → Suggest risk_level downgrade (aggressive→moderate, moderate→conservative)
+    │     → Increase min_rr_ratio by 0.5
+    │
+    ├─ IF win_rate > 65% over last 4 weeks AND avg_pnl_pct > 3%:
+    │     → Suggest risk_level upgrade
+    │     → Allow higher position sizes
+    │
+    ├─ IF sector_concentration > 60% in one sector:
+    │     → Add diversification warning to review
+    │
+    ├─ IF pick_follow_rate < 20%:
+    │     → Suggest reviewing pick criteria (maybe too conservative)
+    │
+    └─ Generate risk_adjustment recommendation
+        → Store to weekly_reviews.risk_adjustment
+        → User CONFIRMS or REJECTS via frontend
+           (risk_profile only changes on explicit confirmation)
+```
+
+### Flow 4: Goal & Review System
+
+```
+Goal Setting (frontend form):
+  POST /api/coach/goals
+    │
+    ├─ Store monthly target: target_pnl_pct, target_win_rate, max_drawdown
+    └─ Calculate baseline from last 3 months of trading history
+
+Weekly Check-in (automated, Sunday 20:00):
+  daily_weekly_review job:
+    │
+    ├─ 1. Aggregate week's trades from trade_journal
+    ├─ 2. Calculate: realized_pnl, win_rate, picks_followed
+    ├─ 3. Aggregate behavior metrics from behavior_events
+    ├─ 4. Run AdaptiveStrategyEngine.evaluate()
+    ├─ 5. Build Gemini prompt with:
+    │     - Week summary (trades, P&L)
+    │     - Behavior patterns
+    │     - Current vs target progress
+    │     - Risk adjustment suggestion
+    │
+    ├─ 6. Call Gemini for coaching review (Vietnamese text)
+    │     System instruction: "Act as a trading coach..."
+    │     Structured output: {review_text, risk_suggestion, action_items}
+    │
+    └─ 7. Store to weekly_reviews table
+
+Monthly Review:
+  → Same flow but comparing month-end vs goals
+  → Auto-suggest next month's goals based on trend
+```
+
+## Component Details
+
+### New Backend Services
+
+#### `services/coach/pick_generator.py` — DailyPickGenerator
+
+```python
+class DailyPickGenerator:
+    """Selects top daily picks from today's analysis results.
+    
+    Follows the ContextBuilder → GeminiClient → Storage pattern.
+    """
+    def __init__(self, session: AsyncSession):
+        self.session = session
+    
+    async def generate_daily_picks(self) -> list[DailyPick]:
+        """Main entry point. Called by scheduler job."""
+        # 1. Load risk profile
+        profile = await self._get_risk_profile()
+        # 2. Get candidates (combined score ≥ 6 + valid trading signal)
+        candidates = await self._get_candidates(profile)
+        # 3. Compute composite scores
+        ranked = self._rank_candidates(candidates, profile)
+        # 4. Select top N
+        picks = ranked[:profile.max_daily_picks]
+        # 5. Generate reasoning via Gemini
+        picks_with_reasoning = await self._generate_reasoning(picks)
+        # 6. Store
+        await self._store_picks(picks_with_reasoning)
+        # 7. Expire yesterday's unfollowed
+        await self._expire_old_picks()
+        return picks_with_reasoning
+```
+
+#### `services/coach/trade_journal_service.py` — TradeJournalService
+
+```python
+class TradeJournalService:
+    """CRUD + P&L for trade journal entries."""
+    
+    async def open_trade(self, ticker_symbol: str, entry_price: float, 
+                         quantity: int, notes: str = None) -> TradeJournal:
+        """Create a new trade. Auto-links to daily pick if applicable."""
+    
+    async def close_trade(self, trade_id: int, exit_price: float, 
+                          exit_date: date = None) -> TradeJournal:
+        """Close trade, calculate realized P&L with VN fees."""
+    
+    async def get_open_trades(self) -> list[TradeJournal]:
+        """All trades without exit_date."""
+    
+    async def get_trade_history(self, days: int = 30) -> list[TradeJournal]:
+        """Closed trades within period."""
+    
+    async def get_unrealized_pnl(self) -> list[dict]:
+        """Open trades with current market value from daily_prices."""
+```
+
+#### `services/coach/behavior_tracker.py` — BehaviorTracker
+
+```python
+class BehaviorTracker:
+    """Records and aggregates user behavior events."""
+    
+    async def track_event(self, event_type: str, event_data: dict) -> None:
+        """Record a single behavior event. Called from API endpoints."""
+    
+    async def aggregate_weekly(self, week_start: date) -> dict:
+        """Aggregate behavior metrics for a given week."""
+        # Returns: {top_tickers, avg_trade_duration, trade_frequency, 
+        #           pick_follow_rate, sector_concentration, ...}
+    
+    async def cleanup_old_events(self, days: int = 90) -> int:
+        """Purge events older than N days. behavior_events is high-volume."""
+```
+
+#### `services/coach/adaptive_strategy.py` — AdaptiveStrategyEngine
+
+```python
+class AdaptiveStrategyEngine:
+    """Evaluates trading performance and suggests risk adjustments."""
+    
+    async def evaluate(self, lookback_weeks: int = 4) -> StrategyAdjustment:
+        """Analyze recent performance and suggest risk profile changes.
+        
+        Returns StrategyAdjustment with:
+        - suggested_risk_level
+        - suggested_min_rr_ratio  
+        - reasoning (why this change)
+        - requires_confirmation: True (user must accept)
+        """
+    
+    async def apply_adjustment(self, adjustment_id: int) -> UserRiskProfile:
+        """User confirmed — apply the suggested changes to risk profile."""
+    
+    async def reject_adjustment(self, adjustment_id: int) -> None:
+        """User rejected — log and keep current profile."""
+```
+
+### New API Routes
+
+```python
+# app/api/coach.py — NEW router
+router = APIRouter(prefix="/coach", tags=["coach"])
+
+# Daily Picks
+GET  /coach/picks/today           → list[DailyPickResponse]
+GET  /coach/picks/history?days=30 → list[DailyPickResponse]
+POST /coach/picks/{id}/follow     → mark pick as followed
+
+# Trade Journal
+GET    /coach/journal/trades                → list[TradeJournalResponse]
+GET    /coach/journal/trades/open           → list[TradeJournalResponse]  
+POST   /coach/journal/trades                → TradeJournalResponse
+PATCH  /coach/journal/trades/{id}/close     → TradeJournalResponse
+DELETE /coach/journal/trades/{id}           → confirmation
+GET    /coach/journal/summary?period=month  → TradeSummaryResponse
+
+# Behavior (frontend calls this transparently)
+POST /coach/behavior/track        → {ok: true}
+
+# Risk Profile
+GET   /coach/profile              → UserRiskProfileResponse
+PATCH /coach/profile              → UserRiskProfileResponse
+
+# Goals & Reviews
+GET  /coach/goals/current         → GoalResponse
+POST /coach/goals                 → GoalResponse
+GET  /coach/reviews/weekly        → list[WeeklyReviewResponse]
+GET  /coach/reviews/latest        → WeeklyReviewResponse
+
+# Strategy Adjustments
+GET  /coach/adjustments/pending   → StrategyAdjustmentResponse | null
+POST /coach/adjustments/{id}/accept → UserRiskProfileResponse
+POST /coach/adjustments/{id}/reject → confirmation
+```
+
+### New Scheduler Jobs
+
+```python
+# Added to scheduler/jobs.py
+
+async def daily_pick_generation():
+    """Generate daily picks. Chains after hnx_upcom_analysis.
+    Runs Mon-Fri ~18:00+ (after full pipeline completes)."""
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_pick_generation")
+        try:
+            generator = DailyPickGenerator(session)
+            picks = await generator.generate_daily_picks()
+            await job_svc.complete(execution, status="success", 
+                                   result_summary={"picks": len(picks)})
+            await session.commit()
+        except Exception as e:
+            await job_svc.fail(execution, error=str(e))
+            await session.commit()
+            raise
+
+async def weekly_review_generation():
+    """Generate weekly coaching review. Runs Sunday 20:00."""
+    async with async_session() as session:
+        # 1. Aggregate behavior
+        tracker = BehaviorTracker(session)
+        behavior = await tracker.aggregate_weekly(get_last_monday())
+        # 2. Evaluate strategy  
+        engine = AdaptiveStrategyEngine(session)
+        adjustment = await engine.evaluate()
+        # 3. Generate review via Gemini
+        review_service = GoalReviewService(session)
+        await review_service.generate_weekly_review(behavior, adjustment)
+        await session.commit()
+
+async def behavior_cleanup():
+    """Purge old behavior events. Runs monthly."""
+    async with async_session() as session:
+        tracker = BehaviorTracker(session)
+        deleted = await tracker.cleanup_old_events(days=90)
+```
+
+### Frontend New Pages & Components
+
+```
+src/app/
+  coach/                    # NEW: Daily picks dashboard
+    page.tsx                # Today's picks + pick history
+  journal/                  # NEW: Trade journal
+    page.tsx                # Trade list + open positions + P&L summary
+  goals/                    # NEW: Goals & reviews
+    page.tsx                # Monthly goals + weekly reviews + strategy
+
+src/components/
+  daily-pick-card.tsx       # Single pick with entry/SL/TP, follow button
+  trade-form.tsx            # Open/close trade form (modal or inline)
+  pnl-summary-card.tsx      # Realized + unrealized P&L
+  weekly-review-card.tsx    # AI coaching review display
+  risk-profile-badge.tsx    # Current risk level indicator
+  goal-progress-chart.tsx   # Progress toward monthly goal (Recharts)
+  pick-follow-rate.tsx      # Pick follow rate visualization
+  strategy-adjustment-banner.tsx  # Pending risk adjustment CTA
+```
+
+### Zustand Store Extensions
 
 ```typescript
-// frontend/playwright.config.ts
-import { defineConfig, devices } from '@playwright/test';
-
-export default defineConfig({
-  testDir: './e2e',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html', { open: 'never' }],
-    ['list'],
-  ],
-  use: {
-    baseURL: 'http://localhost:3000',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-  },
-
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    // Mobile viewport for responsive testing
-    {
-      name: 'mobile',
-      use: { ...devices['iPhone 14'] },
-    },
-  ],
-
-  webServer: [
-    {
-      // Backend: FastAPI
-      command: 'cd ../backend && .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000',
-      url: 'http://127.0.0.1:8000/',
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    },
-    {
-      // Frontend: Next.js dev server
-      command: 'npm run dev',
-      url: 'http://127.0.0.1:3000',
-      reuseExistingServer: !process.env.CI,
-      timeout: 60_000,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    },
-  ],
-});
-```
-
-**Key decisions:**
-
-| Decision | Rationale |
-|----------|-----------|
-| `reuseExistingServer: !process.env.CI` | Dev: use already-running servers. CI: start fresh. |
-| Backend command uses `.venv/Scripts/python.exe` | Windows path. CI would use `python -m uvicorn`. |
-| Backend health URL is `http://127.0.0.1:8000/` | Root returns `{"status": "ok"}` — verified in `main.py`. |
-| `fullyParallel: true` | Tests are read-mostly, safe to parallelize. |
-| Mobile project included | App claims responsive layout (DASH-05). Test it. |
-| `timeout: 30_000` for backend | Backend starts scheduler + Telegram bot on startup; needs time. |
-
-### 2. Test Directory Structure
-
-```
-frontend/
-├── e2e/
-│   ├── fixtures/
-│   │   ├── test-base.ts          ← Extended test with custom fixtures
-│   │   ├── watchlist.setup.ts    ← Global setup: seed localStorage watchlist
-│   │   └── known-tickers.ts     ← Constants: VNM, FPT, HPG (known good tickers)
-│   │
-│   ├── home.spec.ts              ← / route — heatmap, market stats
-│   ├── dashboard.spec.ts         ← /dashboard — watchlist summary, top movers
-│   ├── ticker.spec.ts            ← /ticker/VNM — chart, indicators, analysis
-│   ├── watchlist.spec.ts         ← /watchlist — add/remove, localStorage
-│   ├── portfolio.spec.ts         ← /dashboard/portfolio — CRUD trades
-│   ├── paper-trading.spec.ts     ← /dashboard/paper-trading — all tabs
-│   ├── health.spec.ts            ← /dashboard/health — job status, freshness
-│   ├── corporate-events.spec.ts  ← /dashboard/corporate-events
-│   ├── navigation.spec.ts        ← Navbar links, mobile hamburger menu
-│   │
-│   ├── api/
-│   │   ├── health-check.spec.ts  ← GET all /api/* endpoints, verify 200s
-│   │   ├── tickers-api.spec.ts   ← /api/tickers, /api/tickers/VNM/prices
-│   │   └── websocket.spec.ts     ← WS connect, subscribe, receive data
-│   │
-│   ├── flows/
-│   │   └── ticker-to-paper-trade.spec.ts
-│   │
-│   └── visual/
-│       ├── home.visual.spec.ts
-│       └── ticker-chart.visual.spec.ts
-│
-├── playwright.config.ts
-├── package.json                   ← Updated with Playwright
-└── src/                          ← Existing frontend code (unchanged)
-```
-
-### 3. Fixture & Test Base Architecture
-
-```typescript
-// frontend/e2e/fixtures/known-tickers.ts
-/**
- * Known tickers guaranteed to exist in the database with price data.
- * Used across all tests that need a real ticker symbol.
- */
-export const KNOWN_TICKERS = {
-  /** HOSE blue-chip with high activity */
-  VNM: 'VNM',
-  FPT: 'FPT',
-  HPG: 'HPG',
-  /** Used for testing exchange filter */
-  HOSE_TICKER: 'VNM',
-  HNX_TICKER: 'SHS',  // Verify this exists
-  UPCOM_TICKER: 'BSR', // Verify this exists
-} as const;
-```
-
-```typescript
-// frontend/e2e/fixtures/test-base.ts
-import { test as base, expect } from '@playwright/test';
-
-/**
- * Extended test fixture that:
- * 1. Seeds localStorage with a watchlist (for tests that need it)
- * 2. Provides helper methods for common assertions
- */
-export const test = base.extend<{
-  /** Seed watchlist with known tickers before test */
-  seededWatchlist: void;
-}>({
-  seededWatchlist: async ({ page }, use) => {
-    // Seed zustand's persisted watchlist before navigating
-    await page.addInitScript(() => {
-      const watchlistData = {
-        state: { watchlist: ['VNM', 'FPT', 'HPG'] },
-        version: 0,
-      };
-      localStorage.setItem('holo-watchlist', JSON.stringify(watchlistData));
-    });
-    await use();
-  },
-});
-
-export { expect };
-```
-
-### 4. Database Strategy — Read Against Production
-
-**Why no test database:**
-- Aiven PostgreSQL is remote — can't spin up a local instance quickly
-- App has 800+ tickers with historical prices, indicators, AI analyses — seeding this from scratch is impractical
-- Single user, no authentication — no risk of data pollution from other users
-- Most tests are read operations (view pages, check data loads)
-
-**Strategy:**
-
-| Test Category | DB Interaction | Approach |
-|---------------|---------------|----------|
-| Page rendering (heatmap, dashboard, ticker) | READ | Assert data loads, elements visible |
-| Watchlist | localStorage only | Seed via `addInitScript`, no DB needed |
-| Portfolio trades | READ + WRITE | Create test trade → verify → delete (cleanup) |
-| Paper trading | READ | View existing paper trades (already 1000+ in DB) |
-| API health checks | READ | Verify endpoints return 200 |
-| WebSocket | READ | Connect, subscribe to VNM, verify messages arrive |
-
-**For write tests (portfolio):**
-```typescript
-test('create and delete trade', async ({ request }) => {
-  // Create
-  const response = await request.post('http://127.0.0.1:8000/api/portfolio/trades', {
-    data: {
-      symbol: 'VNM',
-      side: 'buy',
-      quantity: 100,
-      price: 80000,
-      trade_date: '2025-01-01',
-    },
-  });
-  const trade = await response.json();
-
-  // ... assert ...
-
-  // Cleanup: delete the trade we just created
-  await request.delete(`http://127.0.0.1:8000/api/portfolio/trades/${trade.id}`);
-});
-```
-
-### 5. WebSocket Testing Architecture
-
-The app uses a custom WebSocket at `ws://localhost:8000/ws/prices` with a subscribe/unsubscribe protocol. Playwright has native WebSocket support via page events.
-
-```typescript
-// frontend/e2e/api/websocket.spec.ts
-import { test, expect } from '@playwright/test';
-
-test('WebSocket connects and receives subscription confirmation', async ({ page }) => {
-  // Navigate to a page that opens WebSocket (layout has RealtimePriceProvider)
-  await page.goto('/');
-
-  // Wait for WebSocket connection
-  const wsPromise = page.waitForEvent('websocket');
-  const ws = await wsPromise;
-  expect(ws.url()).toContain('/ws/prices');
-
-  // Check the connection status indicator shows connected
-  await expect(page.locator('[data-testid="connection-status"]').or(
-    page.getByText('connected', { exact: false })
-  )).toBeVisible({ timeout: 10_000 });
-});
-
-test('WebSocket subscribe/unsubscribe protocol', async ({ page }) => {
-  const messages: string[] = [];
-
-  // Intercept WebSocket
-  page.on('websocket', (ws) => {
-    ws.on('framereceived', (event) => {
-      messages.push(event.payload as string);
-    });
-  });
-
-  // Navigate to ticker page (triggers subscribe for that ticker)
-  await page.goto('/ticker/VNM');
-  await page.waitForTimeout(2000);
-
-  // Verify subscription happened
-  const subMsg = messages.find(m => {
-    try {
-      const parsed = JSON.parse(m);
-      return parsed.type === 'subscribed';
-    } catch { return false; }
-  });
-  expect(subMsg).toBeDefined();
-});
-```
-
-**Alternative: Direct WebSocket testing without browser (using ws library):**
-```typescript
-test.describe('WebSocket API direct', () => {
-  test('raw WebSocket protocol', async ({}) => {
-    const WebSocket = (await import('ws')).default;
-    const ws = new WebSocket('ws://127.0.0.1:8000/ws/prices');
-
-    const connected = new Promise<void>((resolve) => ws.on('open', resolve));
-    await connected;
-
-    ws.send(JSON.stringify({ type: 'subscribe', symbols: ['VNM'] }));
-
-    const response = await new Promise<string>((resolve) => {
-      ws.on('message', (data) => resolve(data.toString()));
-    });
-
-    const parsed = JSON.parse(response);
-    expect(parsed.type).toBe('subscribed');
-    expect(parsed.symbols).toContain('VNM');
-
-    ws.close();
-  });
-});
-```
-
-### 6. Visual Regression Testing
-
-lightweight-charts renders to `<canvas>` — impossible to assert DOM elements for chart content. Use Playwright's screenshot comparison.
-
-```typescript
-// frontend/e2e/visual/ticker-chart.visual.spec.ts
-import { test, expect } from '@playwright/test';
-
-test('ticker chart renders correctly', async ({ page }) => {
-  await page.goto('/ticker/VNM');
-
-  // Wait for chart to fully render (canvas + data loaded)
-  await page.waitForSelector('canvas', { state: 'attached' });
-  await page.waitForTimeout(2000); // Allow chart animation to settle
-
-  // Screenshot the chart container (not full page — less flaky)
-  const chartContainer = page.locator('.candlestick-chart-container').or(
-    page.locator('[data-testid="chart-container"]')
-  );
-  await expect(chartContainer).toHaveScreenshot('vnm-chart.png', {
-    maxDiffPixelRatio: 0.05, // Allow 5% pixel difference (prices change daily)
-  });
-});
-```
-
-**Important:** Visual regression for financial charts is inherently flaky because prices change daily. Set high `maxDiffPixelRatio` (5-10%) or limit visual tests to layout structure rather than data values. Consider using `mask` to hide price-sensitive areas.
-
-### 7. Environment Configuration
-
-```
-# No new .env files needed for tests!
-
-# Backend uses its existing .env (same prod Aiven DB)
-# Frontend uses its existing .env.local (NEXT_PUBLIC_API_URL=http://localhost:8000/api)
-
-# For CI, set these in the CI environment:
-# DATABASE_URL=postgresql+asyncpg://...?ssl=require  (same Aiven)
-# GEMINI_API_KEY=...  (needed for backend startup)
-# TELEGRAM_BOT_TOKEN=...  (optional — backend handles missing gracefully)
-# TELEGRAM_CHAT_ID=...  (optional)
-```
-
-**The backend already handles missing Telegram token gracefully** (see `main.py` line 29-30: try/except around `telegram_bot.start()`). No special test config needed.
-
-### 8. CI Pipeline Structure (GitHub Actions)
-
-```yaml
-# .github/workflows/e2e.yml
-name: E2E Tests
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  e2e:
-    runs-on: ubuntu-latest  # Or windows-latest to match dev env
-    steps:
-      - uses: actions/checkout@v4
-
-      # Python setup for backend
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install backend deps
-        run: |
-          cd backend
-          pip install -r requirements.txt
-
-      # Node setup for frontend + Playwright
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install frontend deps
-        run: |
-          cd frontend
-          npm ci
-
-      # Playwright browsers
-      - name: Install Playwright browsers
-        run: cd frontend && npx playwright install --with-deps chromium
-
-      # Run E2E tests (Playwright handles server startup via webServer config)
-      - name: Run E2E tests
-        run: cd frontend && npx playwright test
-        env:
-          CI: true
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NEXT_PUBLIC_API_URL: http://localhost:8000/api
-
-      # Upload report on failure
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: frontend/playwright-report/
-          retention-days: 7
-```
-
-**Key CI considerations:**
-- Install only `chromium` (not all 3 browsers) to speed up CI
-- Backend webServer command in CI uses `python` not `.venv/Scripts/python.exe`
-- Same Aiven database — CI connects to same prod DB (acceptable for single-user personal app)
-
----
-
-## Data Flow: How a Test Executes
-
-```
-1. `npx playwright test e2e/ticker.spec.ts`
-2. Playwright reads playwright.config.ts
-3. webServer[0]: Start FastAPI → wait for http://127.0.0.1:8000/
-   - APScheduler starts (but doesn't run jobs immediately)
-   - Telegram bot attempts start (may fail gracefully)
-4. webServer[1]: Start Next.js dev → wait for http://127.0.0.1:3000
-5. For each test:
-   a. Launch Chromium browser context
-   b. Execute test (navigate, interact, assert)
-   c. On failure: capture screenshot + trace
-   d. Close browser context
-6. After all tests: Playwright stops webServers
-7. Generate HTML report → frontend/playwright-report/
-```
-
----
-
-## Test Pattern Examples
-
-### Pattern 1: Page Load + Data Verification
-
-```typescript
-// e2e/home.spec.ts
-import { test, expect } from '@playwright/test';
-
-test.describe('Home — Market Overview', () => {
-  test('loads heatmap with ticker data', async ({ page }) => {
-    await page.goto('/');
-
-    // Page title
-    await expect(page.getByRole('heading', { name: /Tổng quan thị trường/i })).toBeVisible();
-
-    // Market stat cards load (not skeleton)
-    await expect(page.getByText(/Tổng mã/)).toBeVisible({ timeout: 15_000 });
-
-    // Heatmap has ticker cells (at least one ticker visible)
-    await expect(page.locator('[class*="heatmap"]').or(
-      page.getByText('VNM')
-    )).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('exchange filter changes displayed data', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('text=Tổng mã');
-
-    // Click HNX filter
-    await page.getByRole('button', { name: /HNX/i }).click();
-
-    // Total should change (HNX has fewer tickers than "all")
-    await expect(page.getByText(/Tổng mã/)).toBeVisible();
-  });
-});
-```
-
-### Pattern 2: localStorage-Dependent Tests (Watchlist)
-
-```typescript
-// e2e/watchlist.spec.ts
-import { test, expect } from './fixtures/test-base';
-
-test.describe('Watchlist', () => {
-  test('shows seeded watchlist tickers', async ({ page, seededWatchlist }) => {
-    await page.goto('/watchlist');
-
-    await expect(page.getByText('VNM')).toBeVisible();
-    await expect(page.getByText('FPT')).toBeVisible();
-    await expect(page.getByText('HPG')).toBeVisible();
-    await expect(page.getByText('3 mã')).toBeVisible();
-  });
-
-  test('add ticker to watchlist from ticker page', async ({ page }) => {
-    await page.goto('/ticker/VNM');
-
-    // Find and click the star/watchlist button
-    const starButton = page.getByRole('button', { name: /theo dõi|watchlist|star/i });
-    await starButton.click();
-
-    // Navigate to watchlist and verify
-    await page.goto('/watchlist');
-    await expect(page.getByText('VNM')).toBeVisible();
-  });
-});
-```
-
-### Pattern 3: API-Only Tests (No Browser)
-
-```typescript
-// e2e/api/health-check.spec.ts
-import { test, expect } from '@playwright/test';
-
-const API_BASE = 'http://127.0.0.1:8000/api';
-
-const ENDPOINTS = [
-  { path: '/system/health', name: 'System health' },
-  { path: '/tickers', name: 'Tickers list' },
-  { path: '/tickers/VNM/prices', name: 'VNM prices' },
-  { path: '/health/jobs', name: 'Job statuses' },
-  { path: '/health/data-freshness', name: 'Data freshness' },
-  { path: '/health/db-pool', name: 'DB pool' },
-  { path: '/portfolio/summary', name: 'Portfolio summary' },
-  { path: '/paper-trading/trades?limit=5', name: 'Paper trades' },
-  { path: '/paper-trading/analytics/summary', name: 'Paper analytics' },
-];
-
-for (const endpoint of ENDPOINTS) {
-  test(`API: ${endpoint.name} (${endpoint.path}) returns 200`, async ({ request }) => {
-    const response = await request.get(`${API_BASE}${endpoint.path}`);
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body).toBeTruthy();
-  });
+// New store: src/lib/coach-store.ts
+interface CoachState {
+  riskProfile: RiskProfile | null;
+  setRiskProfile: (profile: RiskProfile) => void;
+  
+  // Behavior tracking (fire-and-forget)
+  trackEvent: (type: string, data: Record<string, unknown>) => void;
 }
 ```
 
-### Pattern 4: Canvas Chart Testing
+Behavior tracking uses fire-and-forget POST — failures are silently ignored (behavior data is supplementary, not critical).
 
-```typescript
-// e2e/ticker.spec.ts
-test('candlestick chart renders on ticker page', async ({ page }) => {
-  await page.goto('/ticker/VNM');
+## Patterns to Follow
 
-  // Wait for canvas to appear (lightweight-charts creates a <canvas>)
-  const canvas = page.locator('canvas').first();
-  await expect(canvas).toBeVisible({ timeout: 15_000 });
+### Pattern 1: Compose Services Like AIAnalysisService
 
-  // Verify canvas has non-zero dimensions (chart actually rendered)
-  const box = await canvas.boundingBox();
-  expect(box).toBeTruthy();
-  expect(box!.width).toBeGreaterThan(100);
-  expect(box!.height).toBeGreaterThan(100);
+**What:** The existing AIAnalysisService composes ContextBuilder + GeminiClient + AnalysisStorage. New coach services follow the same composition pattern.
 
-  // Verify time range buttons are present
-  await expect(page.getByRole('button', { name: '1T' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '1N' })).toBeVisible();
-});
+**When:** Any service that touches multiple data sources or calls Gemini.
+
+**Example:** DailyPickGenerator composes:
+- `DailyPickContextBuilder` (reads ai_analyses, prices, indicators)
+- `GeminiClient` (reuse existing, add `analyze_pick_reasoning_batch`)
+- `DailyPickStorage` (writes daily_picks)
+
+### Pattern 2: Job Chaining via EVENT_JOB_EXECUTED
+
+**What:** The scheduler chains jobs via `_on_job_executed` listener. New jobs chain into the existing pipeline.
+
+**When:** Daily pick generation must run AFTER the full analysis pipeline completes.
+
+**Integration point:** Chain `daily_pick_generation` after `daily_hnx_upcom_analysis_triggered` in `manager.py`. This is the last job in the current chain.
+
+### Pattern 3: Background Tasks for Non-Blocking Operations
+
+**What:** Behavior tracking and event recording use FastAPI's `BackgroundTasks` to avoid blocking the user's request.
+
+**When:** Any write operation that the user doesn't need to wait for.
+
+**Example:**
+```python
+@router.post("/coach/behavior/track")
+async def track_behavior(event: BehaviorEventRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(_record_event, event)
+    return {"ok": True}
 ```
 
-### Pattern 5: Write Operations with Cleanup
+### Pattern 4: Gemini Lock for New AI Calls
 
-```typescript
-// e2e/portfolio.spec.ts
-test.describe('Portfolio — Trade CRUD', () => {
-  let createdTradeId: number | null = null;
+**What:** The existing `_gemini_lock` serializes all Gemini access. New Gemini calls (pick reasoning, weekly review) must also acquire this lock.
 
-  test.afterEach(async ({ request }) => {
-    // Cleanup: delete test trade if created
-    if (createdTradeId) {
-      await request.delete(`http://127.0.0.1:8000/api/portfolio/trades/${createdTradeId}`);
-      createdTradeId = null;
-    }
-  });
+**When:** Any new Gemini API call.
 
-  test('create trade via API and verify in UI', async ({ page, request }) => {
-    // Create via API
-    const response = await request.post('http://127.0.0.1:8000/api/portfolio/trades', {
-      data: {
-        symbol: 'VNM',
-        side: 'buy',
-        quantity: 100,
-        price: 80000,
-        trade_date: '2025-01-01',
-      },
-    });
-    const trade = await response.json();
-    createdTradeId = trade.id;
+**Implementation:** Import `_gemini_lock` from `ai_analysis_service` or move it to a shared module. All new Gemini calls acquire the lock.
 
-    // Verify in UI
-    await page.goto('/dashboard/portfolio');
-    await expect(page.getByText('VNM')).toBeVisible({ timeout: 10_000 });
-  });
-});
-```
+### Pattern 5: Single-User Simplification
 
----
+**What:** No auth, no multi-user concerns. `user_risk_profile` is a single-row table. Trade journal has no user_id column.
+
+**When:** All new features. Don't add user scoping — this is a personal tool (per PROJECT.md constraints).
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Separate Test Database
-**What:** Creating a second PostgreSQL database for tests, seeding it with fixture data.
-**Why bad:** Impractical with Aiven remote DB. Seeding 800+ tickers with price history, indicators, and AI analyses would be enormous. The real data IS the fixture.
-**Instead:** Test against production DB in read mode. Write tests create and clean up.
+### Anti-Pattern 1: Modifying Existing AI Pipeline
 
-### Anti-Pattern 2: Mocking API Responses in E2E Tests
-**What:** Using `page.route()` to intercept API calls and return canned data.
-**Why bad:** Defeats the purpose of E2E testing. Misses real integration bugs (serialization, CORS, query params).
-**Instead:** Hit the real backend. If a specific API state is needed, use API calls to set it up, not mocks.
+**What:** Don't change how existing analysis types (technical, fundamental, sentiment, combined, trading_signal) work.
 
-### Anti-Pattern 3: Testing Canvas Content with DOM Assertions
-**What:** Trying to find text or elements inside `<canvas>` elements (lightweight-charts, Recharts).
-**Why bad:** Canvas renders pixels, not DOM nodes. `page.getByText()` will never find chart labels.
-**Instead:** Assert canvas exists, has dimensions, and optionally use screenshot comparison. Test surrounding UI (time range buttons, legends) with DOM selectors.
+**Why bad:** The existing pipeline processes 800+ tickers daily with delicate rate limiting, batch sizing, and chaining. Any modification risks breaking the core analysis flow.
 
-### Anti-Pattern 4: Hardcoded Prices in Assertions
-**What:** `expect(page.getByText('82,500')).toBeVisible()` for a stock price.
-**Why bad:** Prices change daily. Test will fail tomorrow.
-**Instead:** Assert structural elements: "price element exists and contains a number", not "price equals X".
+**Instead:** Daily picks READ from existing ai_analyses table. They don't modify the analysis pipeline — they consume its output.
 
-### Anti-Pattern 5: Full Page Screenshots for Visual Regression
-**What:** `await expect(page).toHaveScreenshot()` on pages with dynamic data.
-**Why bad:** Prices, percentages, timestamps change constantly → every test run produces diffs.
-**Instead:** Screenshot specific UI components (chart container, empty states) or use `mask` option to hide dynamic areas.
+### Anti-Pattern 2: Real-Time Behavior Tracking via WebSocket
 
-### Anti-Pattern 6: Running Backend Tests Through Playwright
-**What:** Adding Python backend unit tests to the Playwright suite.
-**Why bad:** Backend already has 560 pytest tests. E2E tests should test integration, not duplicate unit tests.
-**Instead:** Keep pytest for backend logic. Playwright tests the full stack: browser → Next.js → FastAPI → PostgreSQL.
+**What:** Don't try to stream behavior events over WebSocket.
 
----
+**Why bad:** The existing WebSocket (`/ws/prices`) is purpose-built for price streaming with 30s polling. Mixing behavior tracking into it adds complexity for negligible benefit.
 
-## Integration Points — New vs Modified Files
+**Instead:** Use simple POST requests for behavior events. They're low-volume (maybe 20-50 events/day for a single user). Fire-and-forget with `BackgroundTasks`.
 
-### New Files (18 files)
+### Anti-Pattern 3: Auto-Adjusting Risk Profile Without Confirmation
 
-| File | Purpose |
-|------|---------|
-| `frontend/playwright.config.ts` | Playwright configuration with dual webServer |
-| `frontend/e2e/fixtures/test-base.ts` | Extended test with localStorage seeding |
-| `frontend/e2e/fixtures/known-tickers.ts` | Shared constants for known good tickers |
-| `frontend/e2e/home.spec.ts` | Home page tests |
-| `frontend/e2e/dashboard.spec.ts` | Dashboard page tests |
-| `frontend/e2e/ticker.spec.ts` | Ticker detail page tests |
-| `frontend/e2e/watchlist.spec.ts` | Watchlist tests (localStorage) |
-| `frontend/e2e/portfolio.spec.ts` | Portfolio CRUD tests |
-| `frontend/e2e/paper-trading.spec.ts` | Paper trading page tests |
-| `frontend/e2e/health.spec.ts` | Health dashboard tests |
-| `frontend/e2e/corporate-events.spec.ts` | Corporate events page tests |
-| `frontend/e2e/navigation.spec.ts` | Navbar, routing, mobile menu tests |
-| `frontend/e2e/api/health-check.spec.ts` | API endpoint health checks |
-| `frontend/e2e/api/tickers-api.spec.ts` | Ticker API tests |
-| `frontend/e2e/api/websocket.spec.ts` | WebSocket protocol tests |
-| `frontend/e2e/flows/ticker-to-paper-trade.spec.ts` | Critical flow test |
-| `frontend/e2e/visual/home.visual.spec.ts` | Visual regression — home |
-| `frontend/e2e/visual/ticker-chart.visual.spec.ts` | Visual regression — chart |
+**What:** Don't let the AdaptiveStrategyEngine silently change the user's risk profile.
 
-### Modified Files (2 files)
+**Why bad:** Trading involves real money. Silently changing risk parameters could lead to unexpected position sizes or pick criteria. The user must stay in control.
 
-| File | Change |
-|------|--------|
-| `frontend/package.json` | Add `@playwright/test` devDep + scripts (`test:e2e`, `test:e2e:ui`, `test:e2e:report`) |
-| `frontend/.gitignore` | Add `test-results/`, `playwright-report/`, `blob-report/`, `playwright/.cache/` |
+**Instead:** AdaptiveStrategyEngine SUGGESTS changes → stored as pending → user CONFIRMS or REJECTS via frontend button. Risk profile only changes on explicit action.
 
-### Unchanged Files
+### Anti-Pattern 4: Storing Unrealized P&L in the Database
 
-Everything in `backend/` and `frontend/src/` remains unchanged. E2E tests are additive — zero modifications to application code.
+**What:** Don't store unrealized P&L as a column in trade_journal.
 
-**Exception:** Some components may benefit from `data-testid` attributes for stable selectors (e.g., chart containers, connection status indicator). These are tiny, non-breaking additions made during test writing, not upfront.
+**Why bad:** Unrealized P&L changes every day with price movements. Storing it creates stale data that must be recomputed anyway.
 
----
+**Instead:** Calculate unrealized P&L on-the-fly by joining `trade_journal` (open trades) with latest `daily_prices.close`. Return in API response, never persist.
 
-## Package Changes
+### Anti-Pattern 5: Over-Calling Gemini for Coaching
 
-```json
-// frontend/package.json additions
-{
-  "scripts": {
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report",
-    "test:e2e:codegen": "playwright codegen http://localhost:3000"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.59.1"
-  }
-}
-```
+**What:** Don't call Gemini for every minor coaching insight (per-trade feedback, daily tips, etc.).
 
-**Installation:**
-```bash
-cd frontend
-npm install -D @playwright/test@^1.59.1
-npx playwright install chromium
-```
+**Why bad:** Free tier is 15 RPM / 1500 RPD. The existing pipeline already uses most of this budget for 800+ ticker analysis.
 
-**Only install Chromium** — not Firefox/WebKit. Single browser is sufficient for a personal-use app. Reduces install time from ~500MB to ~150MB.
+**Instead:** Limit NEW Gemini calls to:
+1. Daily pick reasoning: 1 call/day (batch of 5 picks)
+2. Weekly review: 1 call/week
+3. Total new budget: ~8 calls/week. Minimal impact.
 
----
+### Anti-Pattern 6: Complex Trade Matching Logic
 
-## Windows-Specific Considerations
+**What:** Don't implement FIFO/LIFO/average-cost matching for multiple lots of the same ticker.
 
-| Concern | Solution |
-|---------|----------|
-| Backend venv path | `../backend/.venv/Scripts/python.exe -m uvicorn` (not `python3`) |
-| Path separators | Playwright handles cross-platform. Config uses forward slashes. |
-| `cd ../backend` in webServer command | Works in PowerShell and cmd. Playwright spawns process correctly. |
-| Line endings | `.gitattributes` should have `*.ts text eol=lf` for consistent snapshots |
-| Playwright cache | Stored in `%LOCALAPPDATA%/ms-playwright` on Windows |
-| Port conflicts | `reuseExistingServer: true` in dev avoids port-already-in-use errors |
-| SSL for Aiven | Backend `config.py` already patches SSL globally — works in test too |
+**Why bad:** VN market trades are typically simple (buy → sell one lot). Over-engineering trade matching adds complexity for a single user who knows their own trades.
 
----
+**Instead:** Each trade_journal entry is one buy→sell cycle. If user buys VNM twice, they create two journal entries. Keep it simple.
 
-## Timeout Strategy
+## Integration Points Summary
 
-| Component | Timeout | Rationale |
-|-----------|---------|-----------|
-| Backend webServer startup | 30s | APScheduler + Telegram init takes ~5-10s |
-| Frontend webServer startup | 60s | Next.js dev server cold start compiles pages |
-| Individual test timeout | 30s (default) | Most page loads complete in <5s with 15s wait for API data |
-| API data loading assertions | 15s | Remote Aiven DB can have ~1-3s latency |
-| WebSocket connection | 10s | Should connect in <1s, but allow for backend polling interval |
-| Visual regression | 30s | Chart rendering + animation settle time |
+### Existing Components That Get Extended
 
----
+| File | Change | Scope |
+|------|--------|-------|
+| `scheduler/manager.py` | Add chain link: `hnx_upcom → daily_pick_generation` | ~10 lines |
+| `scheduler/manager.py` | Add `weekly_review_generation` cron job (Sunday 20:00) | ~15 lines |
+| `scheduler/manager.py` | Add `behavior_cleanup` monthly job | ~10 lines |
+| `scheduler/jobs.py` | Add 3 new job functions | ~100 lines |
+| `api/router.py` | Include new `coach_router` | 2 lines |
+| `models/__init__.py` | Import new models | 6 lines |
+| `frontend/src/components/navbar.tsx` | Add Coach/Journal/Goals nav links | ~5 lines |
+| `frontend/src/lib/api.ts` | Add new fetch functions for coach endpoints | ~80 lines |
+| `frontend/src/lib/hooks.ts` | Add new React Query hooks | ~60 lines |
 
-## Build Order (Dependency-Driven)
+### Existing Components That Stay Untouched
+
+- `services/analysis/*` — All existing AI analysis code
+- `services/ai_analysis_service.py` — Orchestration stays the same
+- `crawlers/*` — Data crawling unchanged
+- `ws/prices.py` — WebSocket unchanged
+- All existing models — No column changes
+- All existing API endpoints — No modifications
+- All existing frontend components — No changes
+
+## Scalability Considerations
+
+| Concern | Current (800 tickers) | At 2000 tickers | Notes |
+|---------|----------------------|------------------|-------|
+| Pick generation time | <10s (queries + 1 Gemini call) | <15s | Bottleneck is Gemini call, not DB queries |
+| behavior_events volume | ~50 rows/day | ~200 rows/day | Cleanup job keeps <90 days. Add partition by month if needed later |
+| trade_journal volume | ~5-10 rows/week | Same (single user) | Tiny table, no concern |
+| Weekly review Gemini call | 1 call/week | 1 call/week | Fixed, not per-ticker |
+| Aiven connection pool (5+3) | Adequate | Adequate | New services use same `async_session()` pattern |
+
+## Build Order (Dependency-Based)
 
 ```
-Phase 1: Infrastructure Setup
-├── Install @playwright/test + Chromium
-├── Create playwright.config.ts (dual webServer)
-├── Create e2e/fixtures/ (test-base, known-tickers)
-├── Add scripts to package.json
-├── Update .gitignore
-├── Verify: `npx playwright test --list` shows test structure
-└── Verify: webServer starts both backend and frontend
+Phase 1: Data Foundation
+  ├─ DB migrations (6 new tables)
+  ├─ SQLAlchemy models  
+  ├─ Pydantic schemas
+  └─ user_risk_profile with defaults (must exist before picks)
 
-Phase 2: API Health Checks (no browser needed)
-├── e2e/api/health-check.spec.ts (all endpoints return 200)
-├── e2e/api/tickers-api.spec.ts (verify data shape)
-├── e2e/api/websocket.spec.ts (protocol test)
-└── This phase catches backend integration issues early
+Phase 2: Daily Picks
+  ├─ DailyPickContextBuilder (reads existing ai_analyses)
+  ├─ DailyPickGenerator service
+  ├─ Scheduler chain integration
+  ├─ API endpoints (GET picks)
+  └─ Frontend: /coach page with pick cards
 
-Phase 3: Core Page Tests
-├── e2e/home.spec.ts (heatmap loads)
-├── e2e/navigation.spec.ts (all navbar links work)
-├── e2e/ticker.spec.ts (chart renders, indicators load, analysis shows)
-├── e2e/dashboard.spec.ts (watchlist summary, market stats)
-└── e2e/watchlist.spec.ts (localStorage seeding, add/remove)
+Phase 3: Trade Journal  
+  ├─ TradeJournalService (CRUD)
+  ├─ PnLEngine (fee calculation, P&L)
+  ├─ Auto-link to daily picks
+  ├─ API endpoints (CRUD trades)
+  └─ Frontend: /journal page
 
-Phase 4: Feature Page Tests
-├── e2e/portfolio.spec.ts (CRUD with cleanup)
-├── e2e/paper-trading.spec.ts (all 5 tabs)
-├── e2e/health.spec.ts (job status, data freshness)
-├── e2e/corporate-events.spec.ts
-└── e2e/flows/ticker-to-paper-trade.spec.ts (critical flow)
+Phase 4: Behavior Tracking + Adaptive Strategy
+  ├─ BehaviorTracker service
+  ├─ Frontend event tracking integration
+  ├─ AdaptiveStrategyEngine
+  ├─ Risk profile adjustment flow
+  └─ Frontend: strategy adjustment banner
 
-Phase 5: Visual Regression + CI
-├── e2e/visual/ snapshot tests
-├── .github/workflows/e2e.yml
-├── Update visual baselines
-└── Bug discovery & fix cycle
+Phase 5: Goal & Review System
+  ├─ GoalReviewService
+  ├─ Weekly review Gemini prompt
+  ├─ Scheduler: weekly_review_generation job
+  ├─ API endpoints (goals, reviews)
+  └─ Frontend: /goals page
 ```
 
-**Rationale:** Infrastructure → API (fast, catches backend issues) → Core pages (high value) → Feature pages (breadth) → Visual + CI (polish). Each phase is independently runnable.
-
----
+**Rationale:** Phase 1 creates the schema everything depends on. Phase 2 (picks) is the core value — users see picks immediately. Phase 3 (journal) lets users act on picks. Phase 4 (behavior + strategy) requires journal data to be meaningful. Phase 5 (goals) requires all previous phases for comprehensive reviews.
 
 ## Sources
 
-| Claim | Source | Confidence |
-|-------|--------|------------|
-| Playwright 1.59.1 is latest stable | `npm view @playwright/test dist-tags` — verified 2025-07-20 | HIGH |
-| `webServer` accepts array for multi-server | Playwright docs: test configuration > webServer | HIGH |
-| `reuseExistingServer` option exists | Playwright docs | HIGH |
-| Backend root returns `{"status": "ok"}` | `backend/app/main.py` line 89-90 | HIGH |
-| Frontend API_BASE defaults to `http://localhost:8000/api` | `frontend/src/lib/api.ts` line 1 | HIGH |
-| WebSocket URL derivation | `frontend/src/lib/use-realtime-prices.ts` line 42-49 | HIGH |
-| WS protocol: subscribe/unsubscribe | `backend/app/ws/prices.py` line 130-158 | HIGH |
-| Telegram bot fails gracefully | `backend/app/main.py` line 29-30 | HIGH |
-| localStorage watchlist key = `holo-watchlist` | `frontend/src/lib/store.ts` line 37 | HIGH |
-| NAV_LINKS array = 7 routes | `frontend/src/components/navbar.tsx` line 22-30 | HIGH |
-| 560 existing backend pytest tests | `PROJECT.md` line 16 | HIGH |
-| Zustand persist format (state + version) | Zustand docs + zustand/middleware persist | HIGH |
-| Canvas rendering for lightweight-charts | `frontend/src/components/candlestick-chart.tsx` line 6 | HIGH |
-| Exchange filter zustand key = `holo-exchange-filter` | `frontend/src/lib/store.ts` line 55 | HIGH |
-| No authentication in app | PROJECT.md "Scope: Dùng cá nhân — không cần auth" | HIGH |
-| CORS allows localhost:3000 | `backend/app/main.py` line 52-58 | HIGH |
-| Pool size=5, max_overflow=3 | `backend/app/database.py` line 7-8 | HIGH |
+- Direct codebase inspection of all referenced files (HIGH confidence)
+- Existing patterns from `services/analysis/` module (established in v1.0-v3.0)
+- Scheduler chaining pattern from `scheduler/manager.py` (established in v1.0)
+- VN market fee structure: 0.15% brokerage + 0.1% selling tax (MEDIUM confidence — varies by broker)
+- Gemini free tier limits from PROJECT.md constraints (HIGH confidence)
