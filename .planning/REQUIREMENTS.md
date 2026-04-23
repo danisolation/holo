@@ -64,13 +64,32 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | (Updated during roadmap creation) |
+| PICK-01 | Phase 43 | Pending |
+| PICK-02 | Phase 43 | Pending |
+| PICK-03 | Phase 43 | Pending |
+| PICK-04 | Phase 43 | Pending |
+| PICK-05 | Phase 43 | Pending |
+| PICK-06 | Phase 43 | Pending |
+| PICK-07 | Phase 43 | Pending |
+| JRNL-01 | Phase 44 | Pending |
+| JRNL-02 | Phase 44 | Pending |
+| JRNL-03 | Phase 44 | Pending |
+| CDSH-01 | Phase 45 | Pending |
+| CDSH-02 | Phase 45 | Pending |
+| CDSH-03 | Phase 45 | Pending |
+| BEHV-01 | Phase 46 | Pending |
+| BEHV-02 | Phase 46 | Pending |
+| ADPT-01 | Phase 46 | Pending |
+| ADPT-02 | Phase 46 | Pending |
+| GOAL-01 | Phase 47 | Pending |
+| GOAL-02 | Phase 47 | Pending |
+| GOAL-03 | Phase 47 | Pending |
 
 **Coverage:**
 - v8.0 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️
+- Mapped to phases: 20 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-23*
-*Last updated: 2026-04-23 after initial definition*
+*Last updated: 2025-07-24 — traceability updated after roadmap creation*

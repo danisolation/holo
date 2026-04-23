@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: AI Trading Coach
-status: defining-requirements
-stopped_at: Milestone v8.0 started — defining requirements
-last_updated: "2026-04-23T11:38:00.000Z"
-last_activity: 2026-04-23 -- Milestone v8.0 AI Trading Coach started
+status: ready-to-plan
+stopped_at: Roadmap created — 5 phases (43-47), 20 requirements mapped
+last_updated: "2025-07-24"
+last_activity: 2025-07-24 -- Roadmap created for v8.0 AI Trading Coach
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,15 +20,17 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-04-23)
 
-**Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua Telegram.
-**Current focus:** Defining requirements for v8.0
+**Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
+**Current focus:** Phase 43 — Daily Picks Engine
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-23 — Milestone v8.0 started
+Phase: 43 of 47 (Daily Picks Engine)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2025-07-24 — Roadmap created for v8.0
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Shipped Milestones
 
@@ -41,12 +43,21 @@ Last activity: 2026-04-23 — Milestone v8.0 started
 | v4.0 | Paper Trading & Signal Verification | 5 | 10 | 2025-07-20 |
 | v5.0 | E2E Testing & Quality Assurance | 5 | 9 | 2025-07-21 |
 | v6.0 | AI Backtesting Engine | 3 | 7 | 2026-04-22 |
+| v7.0 | Consolidation & Quality Upgrade | 8 | 9 | 2025-07-22 |
 
 ## Accumulated Context
 
 ### Decisions
 
-All v1.0–v6.0 decisions archived in PROJECT.md Key Decisions table.
+All v1.0–v7.0 decisions archived in PROJECT.md Key Decisions table.
+
+### Research Context (v8.0)
+
+- Build VNMarketRules utility FIRST (P&L, picks validation, position sizing depend on it)
+- Daily picks = ranking layer on existing AI analysis, NOT re-analysis (~1 Gemini call/day)
+- Adaptive strategy needs ~20 trades before activation — build last
+- 6 new DB tables: daily_picks, trade_journal, user_risk_profile, behavior_events, goals, weekly_reviews
+- Zero new Python packages. 5 new frontend npm packages (react-hook-form, zod, react-day-picker, sonner, @hookform/resolvers)
 
 ### Pending Todos
 
@@ -69,6 +80,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23
-Stopped at: Completed quick task 260423-fuy: TIER 2 Batch C
+Last session: 2025-07-24
+Stopped at: Roadmap created for v8.0 — ready to plan Phase 43
 Resume file: None
