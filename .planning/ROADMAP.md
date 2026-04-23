@@ -132,7 +132,7 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
 - [x] **Phase 44: Trade Journal & P&L** - User logs real trades with auto-calculated P&L including VN fees/tax, optionally linked to AI picks (completed 2026-04-23)
 - [x] **Phase 45: Coach Dashboard & Pick Performance** - Single-page coach view with today's picks, open trades, performance cards, and full pick history with outcome tracking (completed 2026-04-23)
 - [x] **Phase 46: Behavior Tracking & Adaptive Strategy** - Track viewing habits and trading patterns, maintain risk level with suggest-then-confirm adjustments and sector preference learning (completed 2026-04-23)
-- [ ] **Phase 47: Goals & Weekly Reviews** - Monthly profit targets with progress tracking, weekly risk tolerance prompt, and AI-generated coaching reviews
+- [x] **Phase 47: Goals & Weekly Reviews** - Monthly profit targets with progress tracking, weekly risk tolerance prompt, and AI-generated coaching reviews (completed 2026-04-23)
 
 ## Phase Details
 
@@ -210,7 +210,7 @@ Plans:
 Plans:
 - [x] 47-01-PLAN.md — Backend data layer: migration 023, ORM models, schemas, GoalService + tests
 - [x] 47-02-PLAN.md — Backend API: 7 endpoints, 2 scheduler jobs, Gemini review generation
-- [ ] 47-03-PLAN.md — Frontend: 4 components, coach page integration, human verification
+- [x] 47-03-PLAN.md — Frontend: 4 components, coach page integration, human verification
 **UI hint**: yes
 
 ## Progress
@@ -223,4 +223,4 @@ Plans:
 | 44. Trade Journal & P&L | 3/3 | Complete    | 2026-04-23 |
 | 45. Coach Dashboard & Pick Performance | 2/2 | Complete    | 2026-04-23 |
 | 46. Behavior Tracking & Adaptive Strategy | 3/3 | Complete   | 2026-04-23 |
-| 47. Goals & Weekly Reviews | 2/3 | In Progress|  |
+| 47. Goals & Weekly Reviews | 3/3 | Complete   | 2026-04-23 |
