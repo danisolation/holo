@@ -194,7 +194,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 46-01-PLAN.md — Backend data layer: migration 022, ORM models, schemas, BehaviorService + unit tests
-- [ ] 46-02-PLAN.md — Backend API: 6 behavior endpoints, scheduler jobs, PickService sector bias
+- [x] 46-02-PLAN.md — Backend API: 6 behavior endpoints, scheduler jobs, PickService sector bias
 - [ ] 46-03-PLAN.md — Frontend: behavior tracking hook, 4 new components, coach page integration
 **UI hint**: yes
 
@@ -218,5 +218,5 @@ Plans:
 | 43. Daily Picks Engine | 3/3 | Complete    | 2026-04-23 |
 | 44. Trade Journal & P&L | 3/3 | Complete    | 2026-04-23 |
 | 45. Coach Dashboard & Pick Performance | 2/2 | Complete    | 2026-04-23 |
-| 46. Behavior Tracking & Adaptive Strategy | 1/3 | In Progress|  |
+| 46. Behavior Tracking & Adaptive Strategy | 2/3 | In Progress|  |
 | 47. Goals & Weekly Reviews | 0/TBD | Not started | - |
