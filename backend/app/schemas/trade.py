@@ -1,4 +1,4 @@
-"""Shared trade response schema used by both paper-trading and backtest modules."""
+"""Shared trade response schema used by the paper-trading module."""
 from pydantic import BaseModel
 
 

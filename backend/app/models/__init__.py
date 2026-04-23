@@ -21,6 +21,5 @@ from app.models.lot import Lot  # noqa: E402
 from app.models.gemini_usage import GeminiUsage  # noqa: E402
 from app.models.paper_trade import PaperTrade, TradeStatus, TradeDirection  # noqa: E402
 from app.models.simulation_config import SimulationConfig  # noqa: E402
-from app.models.backtest import BacktestRun, BacktestTrade, BacktestEquity, BacktestAnalysis, BacktestStatus  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot", "GeminiUsage", "PaperTrade", "TradeStatus", "TradeDirection", "SimulationConfig", "BacktestRun", "BacktestTrade", "BacktestEquity", "BacktestAnalysis", "BacktestStatus"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot", "GeminiUsage", "PaperTrade", "TradeStatus", "TradeDirection", "SimulationConfig"]

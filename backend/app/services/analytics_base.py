@@ -1,4 +1,4 @@
-"""Shared analytics utilities used by both backtest and paper-trade analytics services."""
+"""Shared analytics utilities used by the paper-trade analytics service."""
 from app.models.paper_trade import TradeStatus
 
 
