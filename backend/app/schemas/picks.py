@@ -42,3 +42,40 @@ class ProfileUpdate(BaseModel):
     """PUT /api/profile request body."""
     capital: int = Field(gt=0, description="Investment capital in VND, must be positive")
     risk_level: int = Field(ge=1, le=5, description="Risk level 1-5")
+
+
+# ── Phase 45: Pick history + performance schemas ─────────────────────────────
+
+
+class PickHistoryItem(BaseModel):
+    """Single pick in history with outcome tracking."""
+    id: int
+    pick_date: str
+    ticker_symbol: str
+    rank: int | None
+    entry_price: float | None
+    stop_loss: float | None
+    take_profit_1: float | None
+    pick_outcome: str  # "pending" | "winner" | "loser" | "expired"
+    actual_return_pct: float | None
+    days_held: int | None
+    has_trades: bool
+
+
+class PickHistoryListResponse(BaseModel):
+    """Paginated pick history response."""
+    items: list[PickHistoryItem]
+    total: int
+    page: int
+    per_page: int
+
+
+class PickPerformanceResponse(BaseModel):
+    """Aggregated performance metrics for performance cards."""
+    win_rate: float  # percentage e.g. 68.5
+    total_pnl: float  # VND, realized from linked trades
+    avg_risk_reward: float  # e.g. 2.4
+    current_streak: int  # positive = wins, negative = losses
+    total_closed: int
+    total_winners: int
+    total_losers: int

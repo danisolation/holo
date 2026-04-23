@@ -21,6 +21,7 @@ from app.models.daily_pick import DailyPick, PickOutcome, PickStatus
 from app.models.daily_price import DailyPrice
 from app.models.technical_indicator import TechnicalIndicator
 from app.models.ticker import Ticker
+from app.models.trade import Trade
 from app.models.user_risk_profile import UserRiskProfile
 from app.schemas.picks import DailyPickResponse, DailyPicksResponse
 
@@ -634,31 +635,248 @@ class PickService:
             almost_selected=almost_list,
         )
 
-    async def get_pick_history(self, days: int = 30) -> list[dict]:
-        """Get pick history for the last N days. Cap at 365 per T-43-06."""
-        days = min(days, 365)
-        today = date.today()
+    async def get_pick_history(
+        self, page: int = 1, per_page: int = 20, status: str = "all"
+    ) -> dict:
+        """Get paginated pick history with outcome data and has_trades flag.
 
+        Args:
+            page: Page number (1-based).
+            per_page: Items per page (capped at 100 per T-45-02).
+            status: Filter by outcome status. "all" or one of "winner","loser","expired","pending".
+
+        Returns dict matching PickHistoryListResponse schema.
+        """
+        per_page = min(per_page, 100)
+        offset = (page - 1) * per_page
+
+        # Subquery: pick IDs that have at least one trade linked
+        traded_picks_sq = (
+            select(Trade.daily_pick_id)
+            .where(Trade.daily_pick_id.isnot(None))
+            .distinct()
+            .subquery()
+        )
+
+        # Base query: only "picked" status picks (not "almost")
+        base_filter = [DailyPick.status == PickStatus.PICKED.value]
+        if status != "all":
+            base_filter.append(DailyPick.pick_outcome == status)
+
+        # Count total
+        count_query = (
+            select(func.count(DailyPick.id))
+            .where(*base_filter)
+        )
+        total = (await self.session.execute(count_query)).scalar() or 0
+
+        # Main query with LEFT JOIN for has_trades
         query = (
-            select(DailyPick, Ticker.symbol, Ticker.name)
-            .join(Ticker, Ticker.id == DailyPick.ticker_id)
-            .where(
-                DailyPick.pick_date >= func.current_date() - days,
-                DailyPick.status == PickStatus.PICKED.value,
+            select(
+                DailyPick,
+                Ticker.symbol,
+                traded_picks_sq.c.daily_pick_id.label("traded_pick_id"),
             )
+            .join(Ticker, Ticker.id == DailyPick.ticker_id)
+            .outerjoin(traded_picks_sq, traded_picks_sq.c.daily_pick_id == DailyPick.id)
+            .where(*base_filter)
             .order_by(DailyPick.pick_date.desc(), DailyPick.rank)
+            .offset(offset)
+            .limit(per_page)
         )
         rows = (await self.session.execute(query)).all()
 
-        history = []
-        for pick, symbol, name in rows:
-            history.append({
+        items = []
+        for pick, symbol, traded_pick_id in rows:
+            items.append({
+                "id": pick.id,
                 "pick_date": str(pick.pick_date),
                 "ticker_symbol": symbol,
-                "ticker_name": name,
                 "rank": pick.rank,
-                "composite_score": float(pick.composite_score),
                 "entry_price": float(pick.entry_price) if pick.entry_price else None,
-                "status": pick.status,
+                "stop_loss": float(pick.stop_loss) if pick.stop_loss else None,
+                "take_profit_1": float(pick.take_profit_1) if pick.take_profit_1 else None,
+                "pick_outcome": pick.pick_outcome,
+                "actual_return_pct": float(pick.actual_return_pct) if pick.actual_return_pct is not None else None,
+                "days_held": pick.days_held,
+                "has_trades": traded_pick_id is not None,
             })
-        return history
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+        }
+
+    async def get_performance_stats(self) -> dict:
+        """Compute aggregated performance metrics for performance cards.
+
+        Returns dict matching PickPerformanceResponse schema fields:
+        win_rate, total_pnl, avg_risk_reward, current_streak,
+        total_closed, total_winners, total_losers.
+        """
+        # ── Win rate + counts ────────────────────────────────────────────
+        resolved_filter = DailyPick.pick_outcome.in_([
+            PickOutcome.WINNER.value,
+            PickOutcome.LOSER.value,
+            PickOutcome.EXPIRED.value,
+        ])
+        picked_filter = DailyPick.status == PickStatus.PICKED.value
+
+        count_query = select(
+            func.count(DailyPick.id).label("total_closed"),
+            func.count(DailyPick.id).filter(
+                DailyPick.pick_outcome == PickOutcome.WINNER.value
+            ).label("total_winners"),
+            func.count(DailyPick.id).filter(
+                DailyPick.pick_outcome == PickOutcome.LOSER.value
+            ).label("total_losers"),
+        ).where(picked_filter, resolved_filter)
+
+        counts = (await self.session.execute(count_query)).one()
+        total_closed = counts.total_closed or 0
+        total_winners = counts.total_winners or 0
+        total_losers = counts.total_losers or 0
+
+        win_rate = (total_winners / total_closed * 100) if total_closed > 0 else 0.0
+
+        # ── Total P&L (realized from linked trades — SELL trades only) ───
+        pnl_query = select(
+            func.coalesce(func.sum(Trade.net_pnl), 0)
+        ).where(
+            Trade.daily_pick_id.isnot(None),
+            Trade.side == "SELL",
+        )
+        total_pnl = float((await self.session.execute(pnl_query)).scalar() or 0)
+
+        # ── Average R:R ──────────────────────────────────────────────────
+        # R:R = actual_return_pct / abs((entry_price - stop_loss) / entry_price * 100)
+        # Only for resolved picks with valid prices
+        rr_query = select(
+            DailyPick.actual_return_pct,
+            DailyPick.entry_price,
+            DailyPick.stop_loss,
+        ).where(
+            picked_filter,
+            resolved_filter,
+            DailyPick.actual_return_pct.isnot(None),
+            DailyPick.entry_price.isnot(None),
+            DailyPick.stop_loss.isnot(None),
+            DailyPick.entry_price != DailyPick.stop_loss,  # prevent division by zero
+        )
+        rr_rows = (await self.session.execute(rr_query)).all()
+
+        if rr_rows:
+            rr_values = []
+            for actual_ret, entry, sl in rr_rows:
+                risk_pct = abs(float(entry) - float(sl)) / float(entry) * 100
+                if risk_pct > 0:
+                    rr_values.append(float(actual_ret) / risk_pct)
+            avg_risk_reward = round(sum(rr_values) / len(rr_values), 2) if rr_values else 0.0
+        else:
+            avg_risk_reward = 0.0
+
+        # ── Current streak ───────────────────────────────────────────────
+        # Count consecutive same outcomes from most recent resolved pick backward
+        streak_query = (
+            select(DailyPick.pick_outcome)
+            .where(picked_filter, resolved_filter)
+            .order_by(DailyPick.pick_date.desc(), DailyPick.rank.asc())
+        )
+        streak_rows = (await self.session.execute(streak_query)).all()
+
+        current_streak = 0
+        if streak_rows:
+            first_outcome = streak_rows[0].pick_outcome
+            for row in streak_rows:
+                if row.pick_outcome == first_outcome:
+                    current_streak += 1
+                else:
+                    break
+            # Positive for wins, negative for losses; expired = 0 (breaks streak)
+            if first_outcome == PickOutcome.LOSER.value:
+                current_streak = -current_streak
+            elif first_outcome == PickOutcome.EXPIRED.value:
+                current_streak = 0
+
+        return {
+            "win_rate": round(win_rate, 1),
+            "total_pnl": total_pnl,
+            "avg_risk_reward": avg_risk_reward,
+            "current_streak": current_streak,
+            "total_closed": total_closed,
+            "total_winners": total_winners,
+            "total_losers": total_losers,
+        }
+
+    async def compute_pick_outcomes(self) -> dict:
+        """Batch-process all pending picked picks and update outcomes.
+
+        Queries DailyPrice data for each pending pick and calls
+        compute_pick_outcome to determine the result. Idempotent —
+        only touches picks with pick_outcome='pending'.
+
+        Returns: {"processed": N, "updated": M, "still_pending": K}
+        """
+        # Only picked status with pending outcome AND valid prices
+        pending_query = (
+            select(DailyPick)
+            .where(
+                DailyPick.status == PickStatus.PICKED.value,
+                DailyPick.pick_outcome == PickOutcome.PENDING.value,
+                DailyPick.entry_price.isnot(None),
+                DailyPick.stop_loss.isnot(None),
+                DailyPick.take_profit_1.isnot(None),
+            )
+        )
+        pending_picks = (await self.session.execute(pending_query)).scalars().all()
+
+        processed = 0
+        updated = 0
+        still_pending = 0
+
+        for pick in pending_picks:
+            processed += 1
+
+            # Get daily close prices after pick date
+            price_query = (
+                select(DailyPrice.date, DailyPrice.close)
+                .where(
+                    DailyPrice.ticker_id == pick.ticker_id,
+                    DailyPrice.date > pick.pick_date,
+                )
+                .order_by(DailyPrice.date.asc())
+            )
+            price_rows = (await self.session.execute(price_query)).all()
+            daily_closes = [(row.date, float(row.close)) for row in price_rows]
+
+            result = compute_pick_outcome(
+                entry_price=float(pick.entry_price),
+                stop_loss=float(pick.stop_loss),
+                take_profit_1=float(pick.take_profit_1),
+                take_profit_2=float(pick.take_profit_2) if pick.take_profit_2 else None,
+                daily_closes=daily_closes,
+            )
+
+            if result["outcome"] != PickOutcome.PENDING:
+                pick.pick_outcome = result["outcome"].value
+                pick.days_held = result["days_held"]
+                pick.hit_stop_loss = result.get("hit_stop_loss", False)
+                pick.hit_take_profit_1 = result.get("hit_take_profit_1", False)
+                pick.hit_take_profit_2 = result.get("hit_take_profit_2", False)
+                pick.actual_return_pct = (
+                    Decimal(str(result["actual_return_pct"]))
+                    if result.get("actual_return_pct") is not None
+                    else None
+                )
+                updated += 1
+            else:
+                # Still pending — update days_held for progress tracking
+                pick.days_held = result["days_held"]
+                still_pending += 1
+
+        if processed > 0:
+            await self.session.commit()
+
+        return {"processed": processed, "updated": updated, "still_pending": still_pending}

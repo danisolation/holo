@@ -589,6 +589,24 @@ async def daily_pick_generation():
             raise
 
 
+# ── Phase 45: Pick outcome tracking ─────────────────────────────────────────
+
+
+async def daily_pick_outcome_check():
+    """Check pending picks and update outcomes from DailyPrice data.
+
+    Chains after daily_pick_generation. Idempotent — only updates picks
+    still in 'pending' status. No external API calls, just DB reads/writes.
+    """
+    logger.info("=== DAILY PICK OUTCOME CHECK START ===")
+    async with async_session() as session:
+        from app.services.pick_service import PickService
+
+        service = PickService(session)
+        result = await service.compute_pick_outcomes()
+        logger.info(f"=== DAILY PICK OUTCOME CHECK DONE: {result} ===")
+
+
 # ── Real-time WebSocket jobs (Phase 16) ─────────────────────────────────────
 
 

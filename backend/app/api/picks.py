@@ -1,14 +1,23 @@
 """Daily picks and user profile API endpoints."""
 from datetime import date
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from app.database import async_session
 from app.services.pick_service import PickService
-from app.schemas.picks import DailyPicksResponse, ProfileResponse, ProfileUpdate
+from app.schemas.picks import (
+    DailyPicksResponse,
+    PickHistoryListResponse,
+    PickPerformanceResponse,
+    ProfileResponse,
+    ProfileUpdate,
+)
 
 router = APIRouter(tags=["picks"])
+
+# Valid outcome status values for filtering
+_VALID_STATUSES = {"all", "winner", "loser", "expired", "pending"}
 
 
 @router.get("/picks/today", response_model=DailyPicksResponse)
@@ -21,12 +30,30 @@ async def get_today_picks():
         return result
 
 
-@router.get("/picks/history")
-async def get_pick_history(days: int = 30):
-    """Get pick history for the last N days. Placeholder for Phase 45."""
+@router.get("/picks/history", response_model=PickHistoryListResponse)
+async def get_pick_history(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    per_page: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
+    status: str = Query(default="all", description="Filter by outcome status"),
+):
+    """Get paginated pick history with outcome data."""
+    if status not in _VALID_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid status '{status}'. Must be one of: {', '.join(sorted(_VALID_STATUSES))}",
+        )
     async with async_session() as session:
         service = PickService(session)
-        result = await service.get_pick_history(days=days)
+        result = await service.get_pick_history(page=page, per_page=per_page, status=status)
+        return result
+
+
+@router.get("/picks/performance", response_model=PickPerformanceResponse)
+async def get_pick_performance():
+    """Get aggregated performance stats for performance cards."""
+    async with async_session() as session:
+        service = PickService(session)
+        result = await service.get_performance_stats()
         return result
 
 

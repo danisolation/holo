@@ -6,6 +6,8 @@ pending (empty closes), TP2 bonus flag detection.
 """
 from datetime import date
 
+import pytest
+
 from app.models.daily_pick import PickOutcome
 from app.services.pick_service import compute_pick_outcome
 
@@ -146,6 +148,78 @@ class TestComputePickOutcome:
         assert result["outcome"] == PickOutcome.WINNER
         assert result["hit_take_profit_1"] is True
 
+    def test_sl_and_tp1_same_candle_sl_wins(self):
+        """Close <= SL and >= TP1 is impossible, but if SL check first → LOSER.
+        Edge case: close exactly at SL boundary takes priority."""
+        result = compute_pick_outcome(
+            entry_price=100.0,
+            stop_loss=90.0,
+            take_profit_1=115.0,
+            take_profit_2=None,
+            daily_closes=[(date(2026, 1, 2), 85.0)],  # Clearly SL
+        )
+        assert result["outcome"] == PickOutcome.LOSER
+        assert result["hit_stop_loss"] is True
 
-# Need pytest import for approx
-import pytest
+
+class TestSchemaValidation:
+    """Test Pydantic schemas validate correctly."""
+
+    def test_pick_performance_response_validates(self):
+        from app.schemas.picks import PickPerformanceResponse
+        data = PickPerformanceResponse(
+            win_rate=68.5,
+            total_pnl=1500000.0,
+            avg_risk_reward=2.4,
+            current_streak=3,
+            total_closed=20,
+            total_winners=14,
+            total_losers=5,
+        )
+        assert data.win_rate == 68.5
+        assert data.total_pnl == 1500000.0
+        assert data.current_streak == 3
+
+    def test_pick_history_item_validates(self):
+        from app.schemas.picks import PickHistoryItem
+        item = PickHistoryItem(
+            id=1,
+            pick_date="2026-01-15",
+            ticker_symbol="VNM",
+            rank=1,
+            entry_price=85.5,
+            stop_loss=80.0,
+            take_profit_1=95.0,
+            pick_outcome="winner",
+            actual_return_pct=11.1,
+            days_held=3,
+            has_trades=True,
+        )
+        assert item.ticker_symbol == "VNM"
+        assert item.has_trades is True
+        assert item.pick_outcome == "winner"
+
+    def test_pick_history_list_response_validates(self):
+        from app.schemas.picks import PickHistoryListResponse, PickHistoryItem
+        resp = PickHistoryListResponse(
+            items=[
+                PickHistoryItem(
+                    id=1,
+                    pick_date="2026-01-15",
+                    ticker_symbol="VNM",
+                    rank=1,
+                    entry_price=85.5,
+                    stop_loss=80.0,
+                    take_profit_1=95.0,
+                    pick_outcome="pending",
+                    actual_return_pct=None,
+                    days_held=None,
+                    has_trades=False,
+                ),
+            ],
+            total=1,
+            page=1,
+            per_page=20,
+        )
+        assert resp.total == 1
+        assert len(resp.items) == 1
