@@ -106,6 +106,45 @@ export interface TickerTradingSignal {
   bearish_analysis: DirectionAnalysis;
 }
 
+// --- Phase 43: Daily Picks Types ---
+
+export interface DailyPickResponse {
+  pick_date: string;
+  ticker_symbol: string;
+  ticker_name: string;
+  rank: number | null;
+  composite_score: number;
+  entry_price: number | null;
+  stop_loss: number | null;
+  take_profit_1: number | null;
+  take_profit_2: number | null;
+  risk_reward: number | null;
+  position_size_shares: number | null;
+  position_size_vnd: number | null;
+  position_size_pct: number | null;
+  explanation: string | null;
+  status: "picked" | "almost";
+  rejection_reason: string | null;
+}
+
+export interface DailyPicksResponse {
+  date: string;
+  capital: number;
+  picks: DailyPickResponse[];
+  almost_selected: DailyPickResponse[];
+}
+
+export interface ProfileResponse {
+  capital: number;
+  risk_level: number;
+  broker_fee_pct: number;
+}
+
+export interface ProfileUpdate {
+  capital: number;
+  risk_level: number;
+}
+
 // --- API Error ---
 
 export class ApiError extends Error {
@@ -431,4 +470,25 @@ export async function fetchGeminiUsage(days: number = 7): Promise<GeminiUsageRes
 
 export async function fetchPipelineTimeline(days: number = 7): Promise<PipelineTimelineResponse> {
   return apiFetch<PipelineTimelineResponse>(`/health/pipeline-timeline?days=${days}`);
+}
+
+// --- Phase 43: Daily Picks API ---
+
+export async function fetchDailyPicks(): Promise<DailyPicksResponse> {
+  return apiFetch<DailyPicksResponse>("/picks/today");
+}
+
+export async function fetchPickHistory(days: number = 30): Promise<DailyPickResponse[]> {
+  return apiFetch<DailyPickResponse[]>(`/picks/history?days=${days}`);
+}
+
+export async function fetchProfile(): Promise<ProfileResponse> {
+  return apiFetch<ProfileResponse>("/profile");
+}
+
+export async function updateProfile(data: ProfileUpdate): Promise<ProfileResponse> {
+  return apiFetch<ProfileResponse>("/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 }

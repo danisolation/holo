@@ -23,6 +23,7 @@ const NAV_LINKS = [
   { href: "/", label: "Tổng quan" },
   { href: "/watchlist", label: "Danh mục" },
   { href: "/dashboard", label: "Bảng điều khiển" },
+  { href: "/coach", label: "Huấn luyện" },
   { href: "/dashboard/corporate-events", label: "Sự kiện" },
   { href: "/dashboard/health", label: "Hệ thống" },
 ];

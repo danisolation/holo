@@ -19,7 +19,11 @@ import {
   fetchCorporateEvents,
   fetchGeminiUsage,
   fetchPipelineTimeline,
+  fetchDailyPicks,
+  fetchProfile,
+  updateProfile,
 } from "@/lib/api";
+import type { ProfileUpdate } from "@/lib/api";
 
 /**
  * Fetch all active tickers, optionally filtered by sector.
@@ -210,5 +214,46 @@ export function useTradingSignal(symbol: string | undefined) {
     enabled: !!symbol,
     staleTime: 60 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
+  });
+}
+
+// --- Phase 43: Daily Picks Hooks ---
+
+/**
+ * Fetch today's daily picks (3-5 selected + 5-10 almost-selected).
+ * staleTime: 5 minutes — picks update once per day after analysis.
+ */
+export function useDailyPicks() {
+  return useQuery({
+    queryKey: ["picks", "today"],
+    queryFn: () => fetchDailyPicks(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch user risk profile (capital, risk level).
+ * staleTime: 10 minutes — rarely changes.
+ */
+export function useProfile() {
+  return useQuery({
+    queryKey: ["profile"],
+    queryFn: () => fetchProfile(),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+/**
+ * Update user risk profile. Invalidates profile + today's picks
+ * (picks depend on capital for position sizing).
+ */
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ProfileUpdate) => updateProfile(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["picks", "today"] });
+    },
   });
 }
