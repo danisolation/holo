@@ -22,5 +22,9 @@ from app.models.user_risk_profile import UserRiskProfile  # noqa: E402
 from app.models.trade import Trade  # noqa: E402
 from app.models.lot import Lot  # noqa: E402
 from app.models.lot_match import LotMatch  # noqa: E402
+from app.models.behavior_event import BehaviorEvent  # noqa: E402
+from app.models.habit_detection import HabitDetection  # noqa: E402
+from app.models.risk_suggestion import RiskSuggestion  # noqa: E402
+from app.models.sector_preference import SectorPreference  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "BehaviorEvent", "HabitDetection", "RiskSuggestion", "SectorPreference"]
