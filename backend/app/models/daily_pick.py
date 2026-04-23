@@ -7,7 +7,7 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Integer, BigInteger, String, Text, Date, Numeric, ForeignKey, UniqueConstraint
+from sqlalchemy import Boolean, Integer, BigInteger, String, Text, Date, Numeric, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 from sqlalchemy.types import TIMESTAMP
@@ -18,6 +18,13 @@ from app.models import Base
 class PickStatus(str, enum.Enum):
     PICKED = "picked"
     ALMOST = "almost"
+
+
+class PickOutcome(str, enum.Enum):
+    PENDING = "pending"
+    WINNER = "winner"
+    LOSER = "loser"
+    EXPIRED = "expired"
 
 
 class DailyPick(Base):
@@ -38,6 +45,13 @@ class DailyPick(Base):
     position_size_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 1), nullable=True)
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(10), nullable=False)  # "picked" or "almost"
+    # ── Outcome tracking columns (Phase 45, migration 021) ────────────────
+    pick_outcome: Mapped[str] = mapped_column(String(10), nullable=False, server_default="pending")
+    days_held: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    hit_stop_loss: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    hit_take_profit_1: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    hit_take_profit_2: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    actual_return_pct: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
 

@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.ai_analysis import AIAnalysis, AnalysisType
-from app.models.daily_pick import DailyPick, PickStatus
+from app.models.daily_pick import DailyPick, PickOutcome, PickStatus
 from app.models.daily_price import DailyPrice
 from app.models.technical_indicator import TechnicalIndicator
 from app.models.ticker import Ticker
@@ -26,6 +26,76 @@ from app.schemas.picks import DailyPickResponse, DailyPicksResponse
 
 
 # ── Pure computation functions ───────────────────────────────────────────────
+
+
+def compute_pick_outcome(
+    entry_price: float,
+    stop_loss: float,
+    take_profit_1: float,
+    take_profit_2: float | None,
+    daily_closes: list[tuple[date, float]],
+    max_trading_days: int = 10,
+) -> dict:
+    """Compute pick outcome from daily close prices after pick date.
+
+    Pure function — no DB access. Returns dict with:
+    outcome (PickOutcome), days_held (int), hit_stop_loss (bool),
+    hit_take_profit_1 (bool), hit_take_profit_2 (bool), actual_return_pct (float|None).
+
+    Logic (per CONTEXT.md locked decisions):
+    - Iterate daily_closes sorted by date ascending
+    - close <= stop_loss → LOSER
+    - close >= take_profit_1 → WINNER (also check TP2)
+    - len(closes) >= max_trading_days without trigger → EXPIRED
+    - Otherwise → PENDING
+    """
+    if not daily_closes:
+        return {"outcome": PickOutcome.PENDING, "days_held": 0, "actual_return_pct": None}
+
+    sorted_closes = sorted(daily_closes, key=lambda x: x[0])
+
+    for i, (d, close) in enumerate(sorted_closes):
+        days = i + 1
+
+        if close <= stop_loss:
+            return {
+                "outcome": PickOutcome.LOSER,
+                "days_held": days,
+                "hit_stop_loss": True,
+                "hit_take_profit_1": False,
+                "hit_take_profit_2": False,
+                "actual_return_pct": round(((close - entry_price) / entry_price) * 100, 2),
+            }
+
+        if close >= take_profit_1:
+            hit_tp2 = (close >= take_profit_2) if take_profit_2 else False
+            return {
+                "outcome": PickOutcome.WINNER,
+                "days_held": days,
+                "hit_stop_loss": False,
+                "hit_take_profit_1": True,
+                "hit_take_profit_2": hit_tp2,
+                "actual_return_pct": round(((close - entry_price) / entry_price) * 100, 2),
+            }
+
+    # If we have enough days without hitting either level → EXPIRED
+    if len(sorted_closes) >= max_trading_days:
+        last_close = sorted_closes[-1][1]
+        return {
+            "outcome": PickOutcome.EXPIRED,
+            "days_held": len(sorted_closes),
+            "hit_stop_loss": False,
+            "hit_take_profit_1": False,
+            "hit_take_profit_2": False,
+            "actual_return_pct": round(((last_close - entry_price) / entry_price) * 100, 2),
+        }
+
+    # Not enough data yet → PENDING
+    return {
+        "outcome": PickOutcome.PENDING,
+        "days_held": len(sorted_closes),
+        "actual_return_pct": None,
+    }
 
 
 def compute_composite_score(
