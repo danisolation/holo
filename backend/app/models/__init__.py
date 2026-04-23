@@ -26,5 +26,8 @@ from app.models.behavior_event import BehaviorEvent  # noqa: E402
 from app.models.habit_detection import HabitDetection  # noqa: E402
 from app.models.risk_suggestion import RiskSuggestion  # noqa: E402
 from app.models.sector_preference import SectorPreference  # noqa: E402
+from app.models.trading_goal import TradingGoal  # noqa: E402
+from app.models.weekly_prompt import WeeklyPrompt  # noqa: E402
+from app.models.weekly_review import WeeklyReview  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "BehaviorEvent", "HabitDetection", "RiskSuggestion", "SectorPreference"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "BehaviorEvent", "HabitDetection", "RiskSuggestion", "SectorPreference", "TradingGoal", "WeeklyPrompt", "WeeklyReview"]
