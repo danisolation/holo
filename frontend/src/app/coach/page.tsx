@@ -20,6 +20,9 @@ import { RiskSuggestionBanner } from "@/components/risk-suggestion-banner";
 import { HabitDetectionCard } from "@/components/habit-detection-card";
 import { ViewingStatsCard } from "@/components/viewing-stats-card";
 import { SectorPreferencesCard } from "@/components/sector-preferences-card";
+import { MonthlyGoalCard } from "@/components/monthly-goal-card";
+import { WeeklyPromptCard } from "@/components/weekly-prompt-card";
+import { WeeklyReviewCard } from "@/components/weekly-review-card";
 
 export default function CoachPage() {
   const { data: picksData, isLoading, isError, refetch } = useDailyPicks();
@@ -151,7 +154,15 @@ export default function CoachPage() {
       {/* Section 4 — Pick History */}
       <PickHistoryTable />
 
-      {/* Section 5 — Behavior Insights (Phase 46) */}
+      {/* Section 5 — Goals & Weekly Reviews (Phase 47) */}
+      <div className="space-y-6">
+        <h2 className="text-base font-bold">Mục tiêu & Nhận xét</h2>
+        <MonthlyGoalCard />
+        <WeeklyPromptCard />
+        <WeeklyReviewCard />
+      </div>
+
+      {/* Section 6 — Behavior Insights (Phase 46) */}
       <div className="space-y-6">
         <h2 className="text-lg font-bold">Phân tích hành vi</h2>
         <HabitDetectionCard />
