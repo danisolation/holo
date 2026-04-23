@@ -209,7 +209,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 43. Daily Picks Engine | 3/3 | Complete    | 2026-04-23 |
-| 44. Trade Journal & P&L | 3/3 | Complete   | 2026-04-23 |
+| 44. Trade Journal & P&L | 3/3 | Complete    | 2026-04-23 |
 | 45. Coach Dashboard & Pick Performance | 0/TBD | Not started | - |
 | 46. Behavior Tracking & Adaptive Strategy | 0/TBD | Not started | - |
 | 47. Goals & Weekly Reviews | 0/TBD | Not started | - |
