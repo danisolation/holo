@@ -76,6 +76,7 @@ const FILTER_OPTIONS = [
   { label: "Tất cả", value: "all" },
   { label: "Thắng", value: "winner" },
   { label: "Thua", value: "loser" },
+  { label: "Hết hạn", value: "expired" },
   { label: "Đang theo dõi", value: "pending" },
 ] as const;
 
