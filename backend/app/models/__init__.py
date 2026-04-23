@@ -19,5 +19,8 @@ from app.models.corporate_event import CorporateEvent  # noqa: E402
 from app.models.gemini_usage import GeminiUsage  # noqa: E402
 from app.models.daily_pick import DailyPick, PickStatus  # noqa: E402
 from app.models.user_risk_profile import UserRiskProfile  # noqa: E402
+from app.models.trade import Trade  # noqa: E402
+from app.models.lot import Lot  # noqa: E402
+from app.models.lot_match import LotMatch  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch"]
