@@ -5,7 +5,7 @@ milestone_name: Consolidation & Quality Upgrade
 status: executing
 stopped_at: Phase 39 complete — advancing to Phase 40
 last_updated: "2026-04-22T17:30:00.000Z"
-last_activity: 2026-04-22 -- Phase 39 AI Quality Upgrade complete
+last_activity: 2026-04-23 -- Completed quick task 260423-d83: Remove entire backtest feature
 progress:
   total_phases: 8
   completed_phases: 5
@@ -56,10 +56,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- DB migrations (Phase 35): Removing columns requires careful Alembic migration — test on dev DB first
-- Service refactoring (Phases 37-38): Ensure 560 unit tests still pass after restructuring
-- Frontend consolidation (Phase 40): Removing components/pages will break E2E tests — Phase 42 handles cleanup
-- AIQ depends on BCK-04: AI quality validation builds on refactored AIAnalysisService modules
+None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260423-d83 | Remove entire backtest feature (backend + frontend + DB tables + tests) | 2026-04-23 | 194cad0 | [260423-d83-remove-entire-backtest-feature-backend-f](./quick/260423-d83-remove-entire-backtest-feature-backend-f/) |
 
 ## Session Continuity
 
