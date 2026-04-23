@@ -3,7 +3,6 @@
 Uses AsyncIOScheduler (APScheduler 3.11) embedded in FastAPI process.
 No external broker needed — jobs run in-process.
 """
-import asyncio
 
 from apscheduler import events
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -12,7 +11,6 @@ from apscheduler.triggers.interval import IntervalTrigger
 from loguru import logger
 
 from app.config import settings
-from app.telegram.formatter import MessageFormatter
 
 # Single scheduler instance — shared across the application
 scheduler = AsyncIOScheduler(timezone=settings.timezone)
@@ -37,42 +35,19 @@ _JOB_NAMES = {
     "daily_combined_manual": "Daily Combined Analysis",
     "daily_trading_signal_triggered": "Daily Trading Signal Analysis",
     "daily_trading_signal_manual": "Daily Trading Signal Analysis",
-    "daily_signal_alert_check_triggered": "Daily Signal Alert Check",
     "daily_corporate_action_check_triggered": "Daily Corporate Action Check",
-    "daily_exdate_alert_check_triggered": "Daily Ex-Date Alert Check",
-    "daily_summary_send": "Daily Market Summary",
     "daily_hnx_upcom_analysis": "Daily HNX/UPCOM Watchlist Analysis",
     "daily_hnx_upcom_analysis_triggered": "Daily HNX/UPCOM Watchlist Analysis",
-    "health_alert_check": "Health Alert Check",
     "realtime_price_poll": "Real-Time Price Poll",
     "realtime_heartbeat": "Real-Time Heartbeat",
-    "paper_trade_auto_track_triggered": "Paper Trade Auto-Track",
-    "paper_position_monitor_triggered": "Paper Position Monitor",
 }
 
 
 def _on_job_error(event: events.JobExecutionEvent):
-    """Send Telegram notification on complete job failure (D-10).
-
-    Per D-11: Uses existing bot.send_message() pattern (2-retry, never-raises).
-    Per D-10: Only fires on complete failure (EVENT_JOB_ERROR), not partial.
-    Also logs the alert content as fallback (Pitfall 5 mitigation).
-    """
-    from app.telegram.bot import telegram_bot
-
+    """Log complete job failure (formerly sent Telegram notification)."""
     job_name = _JOB_NAMES.get(event.job_id, event.job_id.replace("_", " ").title())
     error_msg = str(event.exception)[:200] if event.exception else "Unknown error"
-    message = MessageFormatter.job_failure_alert(job_name, error_msg)
-
-    # Log the alert content so it's not lost even if Telegram fails (Pitfall 5)
     logger.error(f"CRITICAL FAILURE ALERT: {job_name} — {error_msg}")
-
-    if telegram_bot.is_configured:
-        try:
-            loop = asyncio.get_event_loop()
-            loop.create_task(telegram_bot.send_message(message))
-        except RuntimeError:
-            logger.warning("Could not send Telegram alert: no running event loop")
 
 
 def _on_job_executed(event: events.JobExecutionEvent):
@@ -100,25 +75,6 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_corporate_action_check,
             id="daily_corporate_action_check_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-        # Phase 23: Position monitor (parallel with indicator_compute, alerts, corp actions)
-        from app.scheduler.jobs import paper_position_monitor
-        logger.info("Chaining: daily_price_crawl_upcom → paper_position_monitor")
-        scheduler.add_job(
-            paper_position_monitor,
-            id="paper_position_monitor_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-    elif event.job_id == "daily_corporate_action_check_triggered":
-        # Chain: corporate_action_check → exdate_alert_check (CORP-07)
-        from app.scheduler.jobs import daily_exdate_alert_check
-        logger.info("Chaining: daily_corporate_action_check → daily_exdate_alert_check")
-        scheduler.add_job(
-            daily_exdate_alert_check,
-            id="daily_exdate_alert_check_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -169,30 +125,12 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_trading_signal_triggered",):
-        # Phase 19: After trading signals, chain to existing alert checks
-        from app.scheduler.jobs import daily_signal_alert_check
-        logger.info("Chaining: daily_trading_signal → daily_signal_alert_check")
-        scheduler.add_job(
-            daily_signal_alert_check,
-            id="daily_signal_alert_check_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-        # Chain HNX/UPCOM watchlist analysis (parallel with signal alerts)
+        # Chain HNX/UPCOM watchlist analysis
         from app.scheduler.jobs import daily_hnx_upcom_analysis
         logger.info("Chaining: daily_trading_signal → daily_hnx_upcom_analysis")
         scheduler.add_job(
             daily_hnx_upcom_analysis,
             id="daily_hnx_upcom_analysis_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-        # Phase 23: Paper trade auto-tracking (parallel with signal alerts)
-        from app.scheduler.jobs import paper_trade_auto_track
-        logger.info("Chaining: daily_trading_signal → paper_trade_auto_track")
-        scheduler.add_job(
-            paper_trade_auto_track,
-            id="paper_trade_auto_track_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -262,44 +200,10 @@ def configure_jobs():
         misfire_grace_time=7200,
     )
 
-    # Daily market summary at 18:30 UTC+7 (after full pipeline with 3 staggered crawls)
-    from app.scheduler.jobs import daily_summary_send
-
-    scheduler.add_job(
-        daily_summary_send,
-        trigger=CronTrigger(
-            hour=18,
-            minute=30,
-            day_of_week="mon-fri",
-            timezone=settings.timezone,
-        ),
-        id="daily_summary_send",
-        name="Daily Market Summary via Telegram",
-        replace_existing=True,
-        misfire_grace_time=3600,
-    )
-
-    # Health alert check every 30 minutes — all day, every day (D-15-05)
-    from app.scheduler.jobs import health_alert_check
-
-    scheduler.add_job(
-        health_alert_check,
-        trigger=CronTrigger(
-            minute="*/30",
-            timezone=settings.timezone,
-        ),
-        id="health_alert_check",
-        name="Health Alert Check",
-        replace_existing=True,
-        misfire_grace_time=1800,
-    )
-
     logger.info(
         f"Scheduled jobs: daily_price_crawl_hose (Mon-Fri 15:30 {settings.timezone}), "
         f"daily_price_crawl_hnx (Mon-Fri 16:00), daily_price_crawl_upcom (Mon-Fri 16:30), "
-        f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00), "
-        f"daily_summary_send (Mon-Fri 18:30 {settings.timezone}), "
-        f"health_alert_check (every 30min)"
+        f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00)"
     )
 
     # ── Real-time WebSocket jobs (Phase 16) ──────────────────────────────────
@@ -334,7 +238,6 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_upcom → [indicators → AI → news → sentiment → combined → trading_signal → signal_alerts + hnx_upcom_analysis] + [corporate_action_check → exdate_alert_check], "
-        "daily_summary_send (cron 18:30)"
+        "daily_price_crawl_upcom → [indicators → AI → news → sentiment → combined → trading_signal → hnx_upcom_analysis] + [corporate_action_check]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")

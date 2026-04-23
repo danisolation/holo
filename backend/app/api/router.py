@@ -4,16 +4,12 @@ from fastapi import APIRouter
 from app.api.system import router as system_router
 from app.api.analysis import router as analysis_router
 from app.api.tickers import router as tickers_router
-from app.api.portfolio import router as portfolio_router
 from app.api.health import router as health_router
 from app.api.corporate_events import router as corporate_events_router
-from app.api.paper_trading import router as paper_trading_router
 
 api_router = APIRouter()
 api_router.include_router(system_router)
 api_router.include_router(analysis_router)
 api_router.include_router(tickers_router)
-api_router.include_router(portfolio_router)
 api_router.include_router(health_router)
 api_router.include_router(corporate_events_router)
-api_router.include_router(paper_trading_router)

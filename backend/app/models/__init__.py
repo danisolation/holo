@@ -16,10 +16,6 @@ from app.models.user_watchlist import UserWatchlist  # noqa: E402
 from app.models.job_execution import JobExecution  # noqa: E402
 from app.models.failed_job import FailedJob  # noqa: E402
 from app.models.corporate_event import CorporateEvent  # noqa: E402
-from app.models.trade import Trade  # noqa: E402
-from app.models.lot import Lot  # noqa: E402
 from app.models.gemini_usage import GeminiUsage  # noqa: E402
-from app.models.paper_trade import PaperTrade, TradeStatus, TradeDirection  # noqa: E402
-from app.models.simulation_config import SimulationConfig  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "Trade", "Lot", "GeminiUsage", "PaperTrade", "TradeStatus", "TradeDirection", "SimulationConfig"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage"]

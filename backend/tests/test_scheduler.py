@@ -22,7 +22,7 @@ class TestSchedulerManager:
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
     def test_configure_jobs_registers_six_jobs(self):
-        """configure_jobs must register 3 exchange crawls + weekly ticker + weekly financial + summary + health alert."""
+        """configure_jobs must register 3 exchange crawls + weekly ticker + weekly financial + realtime poll + realtime heartbeat."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         # Remove any existing jobs first
@@ -36,11 +36,9 @@ class TestSchedulerManager:
         assert "daily_price_crawl_upcom" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
-        assert "daily_summary_send" in job_ids
-        assert "health_alert_check" in job_ids
         assert "realtime_price_poll" in job_ids
         assert "realtime_heartbeat" in job_ids
-        assert len(job_ids) == 9
+        assert len(job_ids) == 7
 
         # Clean up
         scheduler.remove_all_jobs()
@@ -172,7 +170,7 @@ class TestJobChaining:
 
         with patch.object(scheduler, "add_job") as mock_add:
             _on_job_executed(mock_event)
-            assert mock_add.call_count == 3
+            assert mock_add.call_count == 2
             call_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in mock_add.call_args_list]
             assert "daily_indicator_compute_triggered" in call_ids
             assert "daily_corporate_action_check_triggered" in call_ids
@@ -205,7 +203,7 @@ class TestJobChaining:
             mock_add.assert_not_called()
 
     def test_configure_jobs_still_registers_original_jobs(self):
-        """configure_jobs must register the staggered exchange crawls plus weekly and summary jobs."""
+        """configure_jobs must register the staggered exchange crawls plus weekly jobs."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         scheduler.remove_all_jobs()
@@ -220,7 +218,6 @@ class TestJobChaining:
         assert "daily_price_crawl_upcom" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
-        assert "daily_summary_send" in job_ids
 
         scheduler.remove_all_jobs()
         scheduler._listeners = []
