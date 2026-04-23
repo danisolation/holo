@@ -50,14 +50,16 @@ Exceptions: none
 | Role | Size | Weight | Line Height | Tailwind Class |
 |------|------|--------|-------------|----------------|
 | Body | 14px | 400 (regular) | 1.6 | `text-sm leading-relaxed` |
-| Label | 12px | 500 (medium) | 1.4 | `text-xs font-medium` |
+| Label | 12px | 400 (regular) | 1.4 | `text-xs` |
 | Heading | 24px | 700 (bold) | 1.25 | `text-2xl font-bold tracking-tight` |
-| Mono | 14px | 600 (semibold) | 1.4 | `font-mono text-sm font-semibold` |
+| Mono | 14px | 700 (bold) | 1.4 | `font-mono text-sm font-bold` |
+
+Weights: **2 only** — 400 (regular) for body text, labels, and secondary copy + 700 (bold) for headings, mono/numeric values, and emphasis.
 
 Notes:
 - Body text uses `text-sm` (14px) consistently across existing components (analysis-card, trading-plan-panel)
-- Mono weight for all price/number values, matching existing `font-mono text-sm font-semibold` pattern in trading-plan-panel.tsx
-- Labels use `text-xs font-medium text-muted-foreground` matching existing pattern
+- Mono weight for all price/number values: `font-mono text-sm font-bold` (upgraded from semibold to stay on 2-weight system)
+- Labels use `text-xs text-muted-foreground` at regular weight (dropped font-medium to stay on 2-weight system)
 - Heading matches home page `text-2xl font-bold tracking-tight`
 - Vietnamese explanation text: `text-sm leading-relaxed text-muted-foreground` (200-300 words needs generous line height)
 
@@ -82,6 +84,12 @@ Notes:
 | Muted | `var(--muted-foreground)` | Labels, secondary text, "almost selected" explanations |
 
 Accent reserved for: pick rank badges (#1-#5), entry price values, take-profit values, positive unrealized P&L badges, composite score bar (≥7 range)
+
+---
+
+## Visual Focal Point
+
+**Focal point: Pick card grid** — the ranked pick cards are the primary visual anchor on `/coach`. The 3-column grid of `PickCard` components dominates the viewport, drawing the eye with rank badges, color-coded prices, and live P&L badges. All other elements (page header, almost-selected accordion, profile settings) are secondary to this grid.
 
 ---
 
@@ -197,21 +205,21 @@ Accent reserved for: pick rank badges (#1-#5), entry price values, take-profit v
 
 | Pick Card Section | Spec |
 |-------------------|------|
-| Header row 1 | Rank badge (`Badge variant="secondary"` with bullish tint) + symbol (`font-mono text-sm font-semibold`) + company name (`text-sm text-muted-foreground truncate`) + composite score (`ScoreBar` right-aligned) |
+| Header row 1 | Rank badge (`Badge variant="secondary"` with bullish tint) + symbol (`font-mono text-sm font-bold`) + company name (`text-sm text-muted-foreground truncate`) + composite score (`ScoreBar` right-aligned) |
 | Header row 2 | Direction badge (`Badge` with `text-[#26a69a] bg-[#26a69a]/10`) showing "MUA" + timeframe badge (`Badge variant="outline"`) |
 | Explanation | `text-sm leading-relaxed text-muted-foreground` — full Vietnamese paragraph |
-| Price rows | Label (`text-xs font-medium text-muted-foreground`) + value (`font-mono text-sm font-semibold`). Entry: default color. SL: `text-[#ef5350]`. TP1/TP2: `text-[#26a69a]`. Matches existing trading-plan-panel pattern exactly. |
-| Position sizing | Single line badge or highlighted box: `bg-muted rounded-lg p-3 text-sm font-medium` — "Mua 200 cổ × 60,000đ = 12,000,000 VND (24% vốn)" |
-| Live price | `font-mono text-sm font-semibold` for price + color-coded P&L badge: bullish green if ≥0%, bearish red if <0%. Uses WebSocket `RealtimePriceProvider`. Show `—` if market closed or no data. |
+| Price rows | Label (`text-xs text-muted-foreground`) + value (`font-mono text-sm font-bold`). Entry: default color. SL: `text-[#ef5350]`. TP1/TP2: `text-[#26a69a]`. Matches existing trading-plan-panel pattern exactly. |
+| Position sizing | Single line badge or highlighted box: `bg-muted rounded-lg p-4 text-sm` — "Mua 200 cổ × 60,000đ = 12,000,000 VND (24% vốn)" |
+| Live price | `font-mono text-sm font-bold` for price + color-coded P&L badge: bullish green if ≥0%, bearish red if <0%. Uses WebSocket `RealtimePriceProvider`. Show `—` if market closed or no data. |
 
 ### Almost-Selected Section
 
 | Property | Value |
 |----------|-------|
 | Container | `Accordion` (single item, collapsed by default) |
-| Trigger text | `"Mã suýt được chọn (N mã)"` — `text-sm font-medium` |
+| Trigger text | `"Mã suýt được chọn (N mã)"` — `text-sm` |
 | Item rows | `flex justify-between py-2 border-b border-border/50 last:border-0` |
-| Symbol | `font-mono text-sm font-semibold` |
+| Symbol | `font-mono text-sm font-bold` |
 | Rejection reason | `text-sm text-muted-foreground` — single line, e.g. "RSI overbought (78), chờ pullback" |
 
 ### Profile Settings (accessed via gear icon in page header)
@@ -245,7 +253,7 @@ Displayed when `GET /api/picks/today` returns 0 picks.
 |---------|------|
 | Container | `Card` centered within grid area |
 | Icon | `Calendar` (lucide) `size-12 text-muted-foreground/40` |
-| Heading | "Chưa có gợi ý hôm nay" — `text-lg font-semibold` |
+| Heading | "Chưa có gợi ý hôm nay" — `text-lg font-bold` |
 | Body | "Gợi ý sẽ được tạo sau khi phân tích AI chạy xong (~17:00 mỗi ngày giao dịch)." — `text-sm text-muted-foreground mt-2 max-w-md text-center` |
 | Action | None (automated process, no user action needed) |
 
@@ -257,7 +265,7 @@ Displayed when `GET /api/picks/today` returns error.
 |---------|------|
 | Container | `Card` centered within grid area |
 | Icon | `AlertTriangle` (lucide) `size-12 text-destructive/60` |
-| Heading | "Không thể tải gợi ý" — `text-lg font-semibold` |
+| Heading | "Không thể tải gợi ý" — `text-lg font-bold` |
 | Body | "Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại." — `text-sm text-muted-foreground mt-2` |
 | Action | `Button variant="outline"` label "Thử lại" — calls `refetch()` |
 
@@ -265,7 +273,7 @@ Displayed when `GET /api/picks/today` returns error.
 
 | State | Display |
 |-------|---------|
-| Connected + price available | `font-mono text-sm font-semibold` + colored P&L badge |
+| Connected + price available | `font-mono text-sm font-bold` + colored P&L badge |
 | Connected + positive P&L | Price in default color + `Badge` with `text-[#26a69a] bg-[#26a69a]/10`: "▲ +2.3%" |
 | Connected + negative P&L | Price in default color + `Badge` with `text-[#ef5350] bg-[#ef5350]/10`: "▼ -1.2%" |
 | Connected + zero P&L | Price in default color + `Badge variant="outline"`: "— 0.0%" |
