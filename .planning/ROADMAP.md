@@ -128,7 +128,7 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
 
 **Milestone Goal:** Biến Holo thành huấn luyện viên trading cá nhân — mỗi ngày gợi ý cụ thể mua mã nào, ghi nhận kết quả, học từ thói quen, và điều chỉnh chiến lược theo thời gian.
 
-- [ ] **Phase 43: Daily Picks Engine** - AI selects 3-5 daily stock picks with entry/SL/TP, position sizing, safety scoring, and Vietnamese explanations
+- [x] **Phase 43: Daily Picks Engine** - AI selects 3-5 daily stock picks with entry/SL/TP, position sizing, safety scoring, and Vietnamese explanations (completed 2026-04-23)
 - [ ] **Phase 44: Trade Journal & P&L** - User logs real trades with auto-calculated P&L including VN fees/tax, optionally linked to AI picks
 - [ ] **Phase 45: Coach Dashboard & Pick Performance** - Single-page coach view with today's picks, open trades, performance cards, and full pick history with outcome tracking
 - [ ] **Phase 46: Behavior Tracking & Adaptive Strategy** - Track viewing habits and trading patterns, maintain risk level with suggest-then-confirm adjustments and sector preference learning
@@ -148,9 +148,9 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
   5. Below the main picks, 5-10 "almost selected" tickers are shown with a one-line explanation of why they weren't chosen
 **Plans**: 3 plans
 Plans:
-- [ ] 43-01-PLAN.md — DB models, migration, schemas, test scaffold
-- [ ] 43-02-PLAN.md — PickService, API endpoints, scheduler job chain
-- [ ] 43-03-PLAN.md — Frontend /coach page, components, hooks, navbar
+- [x] 43-01-PLAN.md — DB models, migration, schemas, test scaffold
+- [x] 43-02-PLAN.md — PickService, API endpoints, scheduler job chain
+- [x] 43-03-PLAN.md — Frontend /coach page, components, hooks, navbar
 **UI hint**: yes
 
 ### Phase 44: Trade Journal & P&L
@@ -204,7 +204,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 43. Daily Picks Engine | 0/3 | Not started | - |
+| 43. Daily Picks Engine | 3/3 | Complete    | 2026-04-23 |
 | 44. Trade Journal & P&L | 0/TBD | Not started | - |
 | 45. Coach Dashboard & Pick Performance | 0/TBD | Not started | - |
 | 46. Behavior Tracking & Adaptive Strategy | 0/TBD | Not started | - |
