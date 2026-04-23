@@ -533,6 +533,7 @@ class PickService:
                 sizing = {"shares": None, "total_vnd": None, "capital_pct": None}
 
             item = DailyPickResponse(
+                id=pick.id,
                 pick_date=str(pick.pick_date),
                 ticker_symbol=symbol,
                 ticker_name=name,

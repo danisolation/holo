@@ -109,6 +109,7 @@ export interface TickerTradingSignal {
 // --- Phase 43: Daily Picks Types ---
 
 export interface DailyPickResponse {
+  id: number;
   pick_date: string;
   ticker_symbol: string;
   ticker_name: string;

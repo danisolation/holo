@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 class DailyPickResponse(BaseModel):
     """Single pick or almost-selected ticker."""
+    id: int
     pick_date: str
     ticker_symbol: str
     ticker_name: str
