@@ -21,6 +21,7 @@ from app.config import settings
 from app.models.daily_pick import DailyPick
 from app.models.habit_detection import HabitDetection
 from app.models.trade import Trade
+from app.models.ticker import Ticker
 from app.models.trading_goal import TradingGoal
 from app.models.user_risk_profile import UserRiskProfile
 from app.models.weekly_prompt import WeeklyPrompt
@@ -440,27 +441,40 @@ class GoalService:
         week_end = today
         week_start = today - timedelta(days=6)
 
-        # Gather week's trades
+        # Idempotency guard: skip if review already exists for this week
+        existing = await self.session.execute(
+            select(WeeklyReview.id).where(
+                WeeklyReview.week_start == week_start,
+                WeeklyReview.week_end == week_end,
+            ).limit(1)
+        )
+        if existing.scalar_one_or_none() is not None:
+            logger.info(f"Weekly review already exists for {week_start}–{week_end}, skipping")
+            return ""
+
+        # Gather week's trades with ticker symbols
         trades_result = await self.session.execute(
-            select(Trade).where(
+            select(Trade, Ticker.symbol)
+            .join(Ticker, Trade.ticker_id == Ticker.id)
+            .where(
                 Trade.trade_date >= week_start,
                 Trade.trade_date <= week_end,
             )
         )
-        trades = trades_result.scalars().all()
+        trades_rows = trades_result.all()
         trades_data = [
             {
-                "ticker": str(t.ticker_id),  # ticker_id — API layer can resolve to symbol
-                "side": t.side,
-                "pnl": float(t.net_pnl) if t.net_pnl else 0,
+                "ticker": row.symbol,
+                "side": row.Trade.side,
+                "pnl": float(row.Trade.net_pnl) if row.Trade.net_pnl else 0,
             }
-            for t in trades
+            for row in trades_rows
         ]
 
         # Trade stats
-        trades_count = len(trades)
-        win_count = sum(1 for t in trades if t.side == "SELL" and t.net_pnl and t.net_pnl > 0)
-        total_pnl = sum(float(t.net_pnl or 0) for t in trades if t.side == "SELL")
+        trades_count = len(trades_rows)
+        win_count = sum(1 for row in trades_rows if row.Trade.side == "SELL" and row.Trade.net_pnl and row.Trade.net_pnl > 0)
+        total_pnl = sum(float(row.Trade.net_pnl or 0) for row in trades_rows if row.Trade.side == "SELL")
 
         # Gather habit detections (this week's)
         habits_result = await self.session.execute(
@@ -469,8 +483,16 @@ class GoalService:
             )
         )
         habits = habits_result.scalars().all()
+        # Resolve ticker symbols for habit data
+        habit_ticker_ids = list({h.ticker_id for h in habits if h.ticker_id})
+        habit_symbols = {}
+        if habit_ticker_ids:
+            sym_result = await self.session.execute(
+                select(Ticker.id, Ticker.symbol).where(Ticker.id.in_(habit_ticker_ids))
+            )
+            habit_symbols = {row.id: row.symbol for row in sym_result.all()}
         habit_data = [
-            {"habit_type": h.habit_type, "ticker": str(h.ticker_id)}
+            {"habit_type": h.habit_type, "ticker": habit_symbols.get(h.ticker_id, str(h.ticker_id))}
             for h in habits
         ]
 
@@ -482,8 +504,15 @@ class GoalService:
             )
         )
         picks = picks_result.scalars().all()
+        pick_ticker_ids = list({p.ticker_id for p in picks if p.ticker_id})
+        pick_symbols = {}
+        if pick_ticker_ids:
+            sym_result = await self.session.execute(
+                select(Ticker.id, Ticker.symbol).where(Ticker.id.in_(pick_ticker_ids))
+            )
+            pick_symbols = {row.id: row.symbol for row in sym_result.all()}
         pick_outcomes = [
-            {"ticker": str(p.ticker_id), "outcome": p.outcome or "pending"}
+            {"ticker": pick_symbols.get(p.ticker_id, str(p.ticker_id)), "outcome": p.outcome or "pending"}
             for p in picks
         ]
 
