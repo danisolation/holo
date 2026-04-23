@@ -308,6 +308,7 @@ class PickService:
                 AIAnalysis.raw_response,
                 Ticker.symbol,
                 Ticker.name,
+                Ticker.sector,
             )
             .join(Ticker, Ticker.id == AIAnalysis.ticker_id)
             .where(
@@ -438,6 +439,7 @@ class PickService:
                 "ticker_id": row.ticker_id,
                 "symbol": row.symbol,
                 "name": row.name,
+                "sector": row.sector,
                 "composite_score": composite,
                 "entry_price": entry_price,
                 "stop_loss": plan.get("stop_loss"),
@@ -454,6 +456,27 @@ class PickService:
 
         # --- Step 6: Filter by affordability ---
         candidates = [c for c in candidates if is_affordable(capital, c["entry_price"])]
+
+        # --- Step 6.5: Apply sector bias (ADPT-02) ---
+        # Load sector preferences (min 3 trades per sector per CONTEXT.md)
+        from app.models.sector_preference import SectorPreference
+        sector_prefs: dict[str, float] = {}
+        pref_result = await self.session.execute(
+            select(SectorPreference).where(SectorPreference.total_trades >= 3)
+        )
+        for pref in pref_result.scalars():
+            sector_prefs[pref.sector] = float(pref.preference_score)
+
+        if sector_prefs:
+            for c in candidates:
+                ticker_sector = c.get("sector")
+                if ticker_sector and ticker_sector in sector_prefs:
+                    bias = sector_prefs[ticker_sector]
+                    # Per CONTEXT.md formula: multiply composite_score by (1 + preference_score × 0.1)
+                    # Preference_score is centered (can be negative) so poor sectors get penalized
+                    # Max bias is ±10% of composite_score (Pitfall 4)
+                    c["composite_score"] *= (1 + bias * 0.1)
+            logger.info(f"Applied sector bias from {len(sector_prefs)} sectors to {len(candidates)} candidates")
 
         # --- Step 7: Sort and select ---
         candidates.sort(key=lambda c: c["composite_score"], reverse=True)

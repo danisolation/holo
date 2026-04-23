@@ -651,3 +651,68 @@ async def realtime_heartbeat():
 
     await connection_manager.send_heartbeat()
 
+
+# ── Phase 46: Behavior tracking & adaptive strategy ─────────────────────────
+
+
+async def weekly_behavior_analysis():
+    """Weekly batch: detect trading habits + refresh sector preferences.
+
+    Per CONTEXT.md: runs Sunday 20:00 via scheduler.
+    Step 1: Detect all trading habits (BEHV-02)
+    Step 2: Compute sector preferences (ADPT-02)
+    """
+    logger.info("=== WEEKLY BEHAVIOR ANALYSIS START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("weekly_behavior_analysis")
+        try:
+            from app.services.behavior_service import BehaviorService
+
+            service = BehaviorService(session)
+            # Step 1: Detect all trading habits (BEHV-02)
+            habit_result = await service.detect_all_habits()
+            # Step 2: Compute sector preferences (ADPT-02)
+            sector_result = await service.compute_sector_preferences()
+            summary = {
+                "habits_detected": habit_result,
+                "sectors_updated": len(sector_result),
+            }
+            await job_svc.complete(execution, status="success", result_summary=summary)
+            await session.commit()
+            logger.info(f"=== WEEKLY BEHAVIOR ANALYSIS DONE: {summary} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"Weekly behavior analysis failed: {e}")
+            raise
+
+
+async def daily_consecutive_loss_check():
+    """Daily: check if last 3 SELL trades are all losses → create risk suggestion.
+
+    Per CONTEXT.md: chains after daily_pick_outcome_check. ADPT-01.
+    """
+    logger.info("=== DAILY CONSECUTIVE LOSS CHECK START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_consecutive_loss_check")
+        try:
+            from app.services.behavior_service import BehaviorService
+
+            service = BehaviorService(session)
+            suggestion = await service.check_consecutive_losses()
+            summary = {"suggestion_created": suggestion is not None}
+            if suggestion:
+                summary["suggestion"] = suggestion
+            await job_svc.complete(execution, status="success", result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY CONSECUTIVE LOSS CHECK DONE: {summary} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"Daily consecutive loss check failed: {e}")
+            raise
+
