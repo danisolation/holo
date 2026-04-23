@@ -191,7 +191,11 @@ Plans:
   2. The app detects trading habit patterns: selling too early when in profit, holding too long when in loss, and impulsive trading after news events
   3. A risk level (1-5) is maintained — after 3 consecutive losses, the app suggests reducing risk level and requires explicit user confirmation before applying the change
   4. The app learns sector preferences from trade results — biasing future picks toward sectors where the user typically profits and away from sectors with consistent losses
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 46-01-PLAN.md — Backend data layer: migration 022, ORM models, schemas, BehaviorService + unit tests
+- [ ] 46-02-PLAN.md — Backend API: 6 behavior endpoints, scheduler jobs, PickService sector bias
+- [ ] 46-03-PLAN.md — Frontend: behavior tracking hook, 4 new components, coach page integration
 **UI hint**: yes
 
 ### Phase 47: Goals & Weekly Reviews
