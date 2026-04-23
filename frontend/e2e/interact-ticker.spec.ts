@@ -100,6 +100,28 @@ test.describe('INTERACT-05: Ticker Detail Page Interactions', () => {
     await expect(page.getByText('Phân tích AI đa chiều')).toBeVisible({ timeout: 10000 });
   });
 
+  test('news section visible on ticker page', async ({ page }) => {
+    // "Tin tức CafeF" heading should be rendered (even if no articles)
+    const newsHeading = page.getByText('Tin tức CafeF');
+    await expect(newsHeading).toBeVisible({ timeout: 15000 });
+  });
+
+  test('news articles render with external links', async ({ page }) => {
+    // Wait for news section to load
+    const newsHeading = page.getByText('Tin tức CafeF');
+    await expect(newsHeading).toBeVisible({ timeout: 15000 });
+
+    // Check for news links — either articles exist or empty state shows
+    const newsSection = newsHeading.locator('..').locator('..');
+    const articleLinks = newsSection.locator('a[target="_blank"]');
+    const emptyState = newsSection.getByText('Chưa có tin tức cho mã này');
+
+    // One of these should be visible: articles or empty message
+    const hasArticles = await articleLinks.count() > 0;
+    const hasEmpty = await emptyState.isVisible().catch(() => false);
+    expect(hasArticles || hasEmpty).toBeTruthy();
+  });
+
   test('page does not crash after rapid time range switching', async ({ page }) => {
     const chartSection = page.locator('[data-testid="ticker-chart"]');
     await expect(chartSection).toBeVisible({ timeout: 15000 });
