@@ -16,6 +16,10 @@ import { PickPerformanceCards } from "@/components/pick-performance-cards";
 import { PickHistoryTable } from "@/components/pick-history-table";
 import { TradesTable } from "@/components/trades-table";
 import { DeleteTradeDialog } from "@/components/delete-trade-dialog";
+import { RiskSuggestionBanner } from "@/components/risk-suggestion-banner";
+import { HabitDetectionCard } from "@/components/habit-detection-card";
+import { ViewingStatsCard } from "@/components/viewing-stats-card";
+import { SectorPreferencesCard } from "@/components/sector-preferences-card";
 
 export default function CoachPage() {
   const { data: picksData, isLoading, isError, refetch } = useDailyPicks();
@@ -53,6 +57,9 @@ export default function CoachPage() {
 
   return (
     <div className="space-y-8">
+      {/* Risk Suggestion Banner (conditional, Phase 46) */}
+      <RiskSuggestionBanner />
+
       {/* Section 0 — Page header */}
       <div className="flex items-center justify-between">
         <div>
@@ -143,6 +150,16 @@ export default function CoachPage() {
 
       {/* Section 4 — Pick History */}
       <PickHistoryTable />
+
+      {/* Section 5 — Behavior Insights (Phase 46) */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-bold">Phân tích hành vi</h2>
+        <HabitDetectionCard />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ViewingStatsCard />
+          <SectorPreferencesCard />
+        </div>
+      </div>
 
       {/* Delete confirmation dialog */}
       <DeleteTradeDialog
