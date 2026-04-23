@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: AI Trading Coach
 status: executing
-stopped_at: Completed 44-03-PLAN.md
-last_updated: "2026-04-23T10:16:39.902Z"
+stopped_at: Completed 45-01-PLAN.md
+last_updated: "2026-04-23T10:47:26.505Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 8
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 ## Current Position
 
 Phase: 45
-Plan: Not started
-Status: Executing Phase 43
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-23
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Shipped Milestones
 
@@ -59,6 +59,8 @@ All v1.0–v7.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 44]: Added id to DailyPickResponse for pick linking (backend + frontend)
 - [Phase 44]: Popover+Command combo for ticker autocomplete in trade entry
 - [Phase 44]: onCreateFirst prop on TradesTable for empty state CTA
+- [Phase 45]: compute_pick_outcome as pure function in pick_service.py, SL check before TP1
+- [Phase 45]: Streak treats expired picks as streak-breaker (current_streak=0)
 
 ### Research Context (v8.0)
 
@@ -89,6 +91,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T10:07:29.447Z
-Stopped at: Completed 44-03-PLAN.md
+Last session: 2026-04-23T10:47:26.499Z
+Stopped at: Completed 45-01-PLAN.md
 Resume file: None

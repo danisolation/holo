@@ -24,8 +24,8 @@
 ### Coach Dashboard (CDSH)
 
 - [ ] **CDSH-01**: Trang /coach hiển thị picks hôm nay, trades đang mở, và performance summary trên 1 trang duy nhất
-- [ ] **CDSH-02**: Lịch sử picks với kết quả thực tế (entry hit?, SL hit?, TP hit?, return sau N ngày) — track TẤT CẢ picks kể cả không trade
-- [ ] **CDSH-03**: Performance cards: win rate, total P&L, average R:R, streak hiện tại
+- [x] **CDSH-02**: Lịch sử picks với kết quả thực tế (entry hit?, SL hit?, TP hit?, return sau N ngày) — track TẤT CẢ picks kể cả không trade
+- [x] **CDSH-03**: Performance cards: win rate, total P&L, average R:R, streak hiện tại
 
 ### Behavior Tracking (BEHV)
 
@@ -75,8 +75,8 @@
 | JRNL-02 | Phase 44 | Complete |
 | JRNL-03 | Phase 44 | Complete |
 | CDSH-01 | Phase 45 | Pending |
-| CDSH-02 | Phase 45 | Pending |
-| CDSH-03 | Phase 45 | Pending |
+| CDSH-02 | Phase 45 | Complete |
+| CDSH-03 | Phase 45 | Complete |
 | BEHV-01 | Phase 46 | Pending |
 | BEHV-02 | Phase 46 | Pending |
 | ADPT-01 | Phase 46 | Pending |
