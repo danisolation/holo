@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: AI Trading Coach
 status: verifying
-stopped_at: Completed 46-03-PLAN.md
-last_updated: "2026-04-23T11:57:06.667Z"
+stopped_at: Completed 47-01-PLAN.md
+last_updated: "2026-04-23T12:43:49.249Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_plans: 14
+  completed_plans: 12
+  percent: 86
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-23)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** Phase 43 — daily-picks-engine
+**Current focus:** Phase 47 — goals-weekly-reviews
 
 ## Current Position
 
-Phase: 46
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 47
+Plan: 1 of 3
+Status: Executing phase
 Last activity: 2026-04-23
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 86%
 
 ## Shipped Milestones
 
@@ -71,6 +71,9 @@ All v1.0–v7.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 46]: Sector bias as multiplicative factor (1 + preference_score * 0.1) bounded to +-10% impact
 - [Phase 46]: Used event_metadata (not metadata) in BehaviorEventCreate to match 46-01 deviation
 - [Phase 46]: Added onClick to PickCard for pick_click tracking (no prior click handler)
+- [Phase 47]: Gemini review uses WeeklyReviewOutput Pydantic model for structured output with 3-stage fallback
+- [Phase 47]: GoalService follows BehaviorService pattern: module-level pure functions + async class
+- [Phase 47]: Include sector preference data in weekly review prompts for richer coaching
 
 ### Research Context (v8.0)
 
@@ -101,6 +104,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T11:57:06.662Z
-Stopped at: Completed 46-03-PLAN.md
+Last session: 2026-04-23T12:43:49.244Z
+Stopped at: Completed 47-01-PLAN.md
 Resume file: None

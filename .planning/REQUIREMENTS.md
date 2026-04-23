@@ -39,9 +39,9 @@
 
 ### Goals & Weekly Review (GOAL)
 
-- [ ] **GOAL-01**: User đặt mục tiêu lãi/tháng, app track tiến độ bằng progress bar trên coach dashboard
-- [ ] **GOAL-02**: Mỗi tuần app hỏi: "Bạn muốn thận trọng hơn hay mạo hiểm hơn?" — response điều chỉnh risk_level cho tuần sau
-- [ ] **GOAL-03**: AI tạo weekly performance review: tóm tắt tuần, highlight thói quen tốt/xấu, gợi ý cải thiện
+- [x] **GOAL-01**: User đặt mục tiêu lãi/tháng, app track tiến độ bằng progress bar trên coach dashboard
+- [x] **GOAL-02**: Mỗi tuần app hỏi: "Bạn muốn thận trọng hơn hay mạo hiểm hơn?" — response điều chỉnh risk_level cho tuần sau
+- [x] **GOAL-03**: AI tạo weekly performance review: tóm tắt tuần, highlight thói quen tốt/xấu, gợi ý cải thiện
 
 ## Future Requirements (deferred)
 
@@ -81,9 +81,9 @@
 | BEHV-02 | Phase 46 | Complete |
 | ADPT-01 | Phase 46 | Complete |
 | ADPT-02 | Phase 46 | Complete |
-| GOAL-01 | Phase 47 | Pending |
-| GOAL-02 | Phase 47 | Pending |
-| GOAL-03 | Phase 47 | Pending |
+| GOAL-01 | Phase 47 | Complete |
+| GOAL-02 | Phase 47 | Complete |
+| GOAL-03 | Phase 47 | Complete |
 
 **Coverage:**
 - v8.0 requirements: 20 total
