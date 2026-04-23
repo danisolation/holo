@@ -17,5 +17,7 @@ from app.models.job_execution import JobExecution  # noqa: E402
 from app.models.failed_job import FailedJob  # noqa: E402
 from app.models.corporate_event import CorporateEvent  # noqa: E402
 from app.models.gemini_usage import GeminiUsage  # noqa: E402
+from app.models.daily_pick import DailyPick, PickStatus  # noqa: E402
+from app.models.user_risk_profile import UserRiskProfile  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "CorporateEvent", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile"]
