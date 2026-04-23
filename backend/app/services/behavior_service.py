@@ -366,6 +366,53 @@ class BehaviorService:
             "total": new_detections,
         }
 
+    async def get_habit_detections(self) -> dict:
+        """Read stored habit detections from DB (not re-detect).
+
+        Returns dict matching HabitDetectionsResponse schema.
+        Used by GET /api/behavior/habits — weekly batch job writes, this reads.
+        """
+        result = await self.session.execute(
+            select(
+                HabitDetection.habit_type,
+                func.count().label("count"),
+                func.max(HabitDetection.detected_at).label("latest_date"),
+            )
+            .group_by(HabitDetection.habit_type)
+        )
+        rows = result.all()
+
+        # Get latest ticker for each habit type
+        habits = []
+        for row in rows:
+            # Get the latest detection's ticker symbol
+            latest_result = await self.session.execute(
+                select(Ticker.symbol)
+                .join(HabitDetection, HabitDetection.ticker_id == Ticker.id)
+                .where(HabitDetection.habit_type == row.habit_type)
+                .order_by(HabitDetection.detected_at.desc())
+                .limit(1)
+            )
+            latest_ticker = latest_result.scalar_one_or_none()
+
+            habits.append({
+                "habit_type": row.habit_type,
+                "count": row.count,
+                "latest_ticker": latest_ticker,
+                "latest_date": row.latest_date.isoformat() if row.latest_date else None,
+            })
+
+        # Get the most recent analysis date
+        analysis_date_result = await self.session.execute(
+            select(func.max(HabitDetection.detected_at))
+        )
+        analysis_date_raw = analysis_date_result.scalar_one_or_none()
+
+        return {
+            "habits": habits,
+            "analysis_date": analysis_date_raw.isoformat() if analysis_date_raw else None,
+        }
+
     async def check_consecutive_losses(self) -> dict | None:
         """Check if last 3 SELL trades are all losses. Create risk_suggestion if so.
 
