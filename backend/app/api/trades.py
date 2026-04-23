@@ -90,4 +90,6 @@ async def delete_trade(trade_id: int):
         try:
             await service.delete_trade(trade_id)
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            msg = str(e)
+            status = 404 if "not found" in msg.lower() else 400
+            raise HTTPException(status_code=status, detail=msg)
