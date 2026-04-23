@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: AI Trading Coach
-status: executing
-stopped_at: Completed 45-01-PLAN.md
-last_updated: "2026-04-23T10:47:26.505Z"
+status: verifying
+stopped_at: Completed 45-02-PLAN.md
+last_updated: "2026-04-23T10:53:53.973Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 7
-  percent: 88
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Phase: 45
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-23
 
 Progress: [█████░░░░░] 50%
@@ -61,6 +61,9 @@ All v1.0–v7.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 44]: onCreateFirst prop on TradesTable for empty state CTA
 - [Phase 45]: compute_pick_outcome as pure function in pick_service.py, SL check before TP1
 - [Phase 45]: Streak treats expired picks as streak-breaker (current_streak=0)
+- [Phase 45]: PickPerformanceCards and PickHistoryTable are self-contained (own hooks internally)
+- [Phase 45]: Open trades section hidden entirely when no BUY trades exist
+- [Phase 45]: Performance cards show dashes on error (graceful degradation, not blocking)
 
 ### Research Context (v8.0)
 
@@ -91,6 +94,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T10:47:26.499Z
-Stopped at: Completed 45-01-PLAN.md
+Last session: 2026-04-23T10:53:53.967Z
+Stopped at: Completed 45-02-PLAN.md
 Resume file: None

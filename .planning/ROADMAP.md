@@ -130,7 +130,7 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
 
 - [x] **Phase 43: Daily Picks Engine** - AI selects 3-5 daily stock picks with entry/SL/TP, position sizing, safety scoring, and Vietnamese explanations (completed 2026-04-23)
 - [x] **Phase 44: Trade Journal & P&L** - User logs real trades with auto-calculated P&L including VN fees/tax, optionally linked to AI picks (completed 2026-04-23)
-- [ ] **Phase 45: Coach Dashboard & Pick Performance** - Single-page coach view with today's picks, open trades, performance cards, and full pick history with outcome tracking
+- [x] **Phase 45: Coach Dashboard & Pick Performance** - Single-page coach view with today's picks, open trades, performance cards, and full pick history with outcome tracking (completed 2026-04-23)
 - [ ] **Phase 46: Behavior Tracking & Adaptive Strategy** - Track viewing habits and trading patterns, maintain risk level with suggest-then-confirm adjustments and sector preference learning
 - [ ] **Phase 47: Goals & Weekly Reviews** - Monthly profit targets with progress tracking, weekly risk tolerance prompt, and AI-generated coaching reviews
 
@@ -179,7 +179,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 45-01-PLAN.md — Backend: migration 021, outcome computation, API endpoints, scheduler job
-- [ ] 45-02-PLAN.md — Frontend: performance cards, pick history table, coach page restructure
+- [x] 45-02-PLAN.md — Frontend: performance cards, pick history table, coach page restructure
 **UI hint**: yes
 
 ### Phase 46: Behavior Tracking & Adaptive Strategy
@@ -213,6 +213,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 43. Daily Picks Engine | 3/3 | Complete    | 2026-04-23 |
 | 44. Trade Journal & P&L | 3/3 | Complete    | 2026-04-23 |
-| 45. Coach Dashboard & Pick Performance | 1/2 | In Progress|  |
+| 45. Coach Dashboard & Pick Performance | 2/2 | Complete   | 2026-04-23 |
 | 46. Behavior Tracking & Adaptive Strategy | 0/TBD | Not started | - |
 | 47. Goals & Weekly Reviews | 0/TBD | Not started | - |
