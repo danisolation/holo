@@ -51,6 +51,7 @@ Exceptions: Weekly review prose content uses `p-6` (24px) internal padding for c
 |------|------|--------|-------------|----------------|
 | Body | 14px | 400 (regular) | 1.6 | `text-sm leading-relaxed` |
 | Label | 12px | 400 (regular) | 1.4 | `text-xs` |
+| Sub-heading | 16px | 700 (bold) | 1.4 | `text-base font-bold` |
 | Heading | 24px | 700 (bold) | 1.25 | `text-2xl font-bold tracking-tight` |
 | Mono | 14px | 700 (bold) | 1.4 | `font-mono text-sm font-bold` |
 
@@ -65,7 +66,7 @@ Notes:
 - Weekly review summary prose uses `text-sm leading-relaxed` (body role) for comfortable reading
 - Weekly review highlights/suggestions use `text-sm` in list format
 - Goal dialog input label uses `text-sm font-bold`, input uses `font-mono` for VND amounts
-- Section headings ("Mục tiêu & Nhận xét") use `text-lg font-bold` (same as Phase 45/46 section headings)
+- Section headings ("Mục tiêu & Nhận xét") use `text-base font-bold` (consolidated to 4-size scale: 12, 14, 16, 24)
 
 ---
 
@@ -216,7 +217,7 @@ Accent reserved for: goal achievement (≥100% progress bar + badge), positive P
 
 | Property | Value |
 |----------|-------|
-| Section heading | `text-lg font-bold`: "Mục tiêu & Nhận xét" |
+| Section heading | `text-base font-bold`: "Mục tiêu & Nhận xét" |
 | Layout | `space-y-6` between heading and cards |
 | Full-width card 1 | `MonthlyGoalCard` (always visible — shows "set goal" CTA if no goal exists) |
 | Full-width card 2 | `WeeklyPromptCard` (conditional — only rendered when pending prompt exists) |
