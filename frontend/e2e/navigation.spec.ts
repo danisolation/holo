@@ -14,17 +14,13 @@ test.describe('Navigation', () => {
     await page.locator('[data-testid="nav-desktop"]').getByText('Bảng điều khiển').click();
     await expect(page).toHaveURL(/\/dashboard/);
 
-    // Click "Paper Trading" nav link
-    await page.locator('[data-testid="nav-desktop"]').getByText('Paper Trading').click();
-    await expect(page).toHaveURL(/\/dashboard\/paper-trading/);
-
     // Click back to home "Tổng quan"
     await page.locator('[data-testid="nav-desktop"]').getByText('Tổng quan').click();
     await expect(page).toHaveURL(/^\/$|\/$/);
   });
 
   test('Navbar is visible on all pages', async ({ page }) => {
-    const routes = ['/', '/watchlist', '/dashboard', '/dashboard/paper-trading', '/dashboard/health'];
+    const routes = ['/', '/watchlist', '/dashboard', '/dashboard/health'];
     for (const route of routes) {
       await page.goto(route);
       await expectNavbarVisible(page);

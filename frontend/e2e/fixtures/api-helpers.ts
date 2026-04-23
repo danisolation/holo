@@ -29,24 +29,6 @@ export class ApiHelpers {
     return { ok: response.ok(), data: response.ok() ? await response.json() : null };
   }
 
-  /** Get paper trading config */
-  async getPaperSettings() {
-    const response = await this.request.get(`${API_BASE}/paper-trading/config`);
-    return { ok: response.ok(), data: response.ok() ? await response.json() : null };
-  }
-
-  /** Get paper trades list */
-  async getPaperTrades() {
-    const response = await this.request.get(`${API_BASE}/paper-trading/trades`);
-    return { ok: response.ok(), data: response.ok() ? await response.json() : null };
-  }
-
-  /** Get paper trading analytics summary */
-  async getPaperAnalytics() {
-    const response = await this.request.get(`${API_BASE}/paper-trading/analytics/summary`);
-    return { ok: response.ok(), data: response.ok() ? await response.json() : null };
-  }
-
   /** Get watchlist (client-side feature — endpoint for future use) */
   async getWatchlist() {
     const response = await this.request.get(`${API_BASE}/watchlist`);

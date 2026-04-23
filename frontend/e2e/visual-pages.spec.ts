@@ -57,27 +57,6 @@ test.describe('Visual regression — Page screenshots', () => {
     );
   });
 
-  test('VIS-01: Paper Trading page baseline', async ({ page }) => {
-    await navigateAndWait(page, '/dashboard/paper-trading');
-    // Overview tab loads by default — wait for stat cards
-    await page.waitForTimeout(1000);
-
-    await expect(page).toHaveScreenshot(
-      'paper-trading.png',
-      screenshotOpts(page, 'paper-trading'),
-    );
-  });
-
-  test('VIS-01: Portfolio page baseline', async ({ page }) => {
-    await navigateAndWait(page, '/dashboard/portfolio');
-    await page.waitForTimeout(1000);
-
-    await expect(page).toHaveScreenshot(
-      'portfolio.png',
-      screenshotOpts(page, 'portfolio'),
-    );
-  });
-
   test('VIS-01: Watchlist page baseline', async ({ page }) => {
     await navigateAndWait(page, '/watchlist');
     await page.waitForTimeout(500);

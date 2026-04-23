@@ -40,7 +40,6 @@ import {
   CombinedRecommendationCard,
 } from "@/components/analysis-card";
 import { TradingPlanPanel } from "@/components/trading-plan-panel";
-import { PTSignalOutcomes } from "@/components/paper-trading/pt-signal-outcomes";
 import {
   usePrices,
   useIndicators,
@@ -340,11 +339,6 @@ export default function TickerDetailPage({
           <TradingPlanPanel data={tradingSignal} symbol={upperSymbol} />
         </section>
       ) : null}
-
-      {/* Signal Outcome History — Phase 25 (UI-05) */}
-      <section>
-        <PTSignalOutcomes symbol={upperSymbol} />
-      </section>
 
       {/* Analysis Cards Grid */}
       <section>

@@ -25,12 +25,6 @@ test.describe('Key Components Render', () => {
     await expect(page.locator('main, [role="main"], .container').first()).toBeVisible();
   });
 
-  test('Paper Trading renders tabs', async ({ page }) => {
-    await page.goto('/dashboard/paper-trading');
-    await expect(page.locator('[data-testid="pt-tabs"]')).toBeVisible();
-    await expect(page.locator('[data-testid="pt-tab-overview"]')).toBeVisible();
-  });
-
   test('Watchlist page renders table', async ({ page }) => {
     await page.goto('/watchlist');
     await expect(page.locator('[data-testid="watchlist-page"]')).toBeVisible();
@@ -49,12 +43,6 @@ test.describe('Key Components Render', () => {
 
   test('Corporate Events page renders content', async ({ page }) => {
     await page.goto('/dashboard/corporate-events');
-    await expectNavbarVisible(page);
-    await expect(page.locator('main, [role="main"], .container').first()).toBeVisible();
-  });
-
-  test('Portfolio page renders content', async ({ page }) => {
-    await page.goto('/dashboard/portfolio');
     await expectNavbarVisible(page);
     await expect(page.locator('main, [role="main"], .container').first()).toBeVisible();
   });

@@ -2,11 +2,8 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ScoreBar } from "@/components/analysis-card";
 import { cn } from "@/lib/utils";
-import { useCreateManualFollow } from "@/lib/hooks";
-import { Check, Loader2 } from "lucide-react";
 import type { TickerTradingSignal, DirectionAnalysis } from "@/lib/api";
 
 const fmt = (v: number) => Math.round(v).toLocaleString("vi-VN");
@@ -20,14 +17,11 @@ const TIMEFRAME_LABELS: Record<string, string> = {
 function DirectionColumn({
   analysis,
   isRecommended,
-  symbol,
 }: {
   analysis: DirectionAnalysis;
   isRecommended: boolean;
-  symbol: string;
 }) {
   const isLong = analysis.direction === "long";
-  const followMutation = useCreateManualFollow();
 
   const borderColor = isLong ? "border-[#26a69a]" : "border-[#ef5350]";
   const bgTint = isLong ? "bg-[#26a69a]/5" : "bg-[#ef5350]/5";
@@ -143,36 +137,6 @@ function DirectionColumn({
               {analysis.reasoning}
             </p>
           </div>
-
-          {/* PT-09: Follow button */}
-          <div className="mt-3">
-            <Button
-              size="sm"
-              variant={followMutation.isSuccess ? "outline" : "default"}
-              className="w-full"
-              disabled={followMutation.isPending || followMutation.isSuccess}
-              onClick={() =>
-                followMutation.mutate({
-                  symbol,
-                  direction: analysis.direction,
-                  entry_price: plan.entry_price,
-                  stop_loss: plan.stop_loss,
-                  take_profit_1: plan.take_profit_1,
-                  take_profit_2: plan.take_profit_2,
-                  timeframe: plan.timeframe,
-                  confidence: analysis.confidence,
-                  position_size_pct: plan.position_size_pct,
-                })
-              }
-            >
-              {followMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin mr-1" />
-              ) : followMutation.isSuccess ? (
-                <Check className="size-4 mr-1" />
-              ) : null}
-              {followMutation.isSuccess ? "Đã follow" : "Follow"}
-            </Button>
-          </div>
         </>
       )}
     </div>
@@ -185,7 +149,7 @@ interface TradingPlanPanelProps {
   symbol: string;
 }
 
-export function TradingPlanPanel({ data, symbol }: TradingPlanPanelProps) {
+export function TradingPlanPanel({ data }: TradingPlanPanelProps) {
   return (
     <Card>
       <CardHeader>
@@ -198,12 +162,10 @@ export function TradingPlanPanel({ data, symbol }: TradingPlanPanelProps) {
           <DirectionColumn
             analysis={data.long_analysis}
             isRecommended={data.recommended_direction === "long"}
-            symbol={symbol}
           />
           <DirectionColumn
             analysis={data.bearish_analysis}
             isRecommended={data.recommended_direction === "bearish"}
-            symbol={symbol}
           />
         </div>
       </CardContent>

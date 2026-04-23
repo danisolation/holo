@@ -53,29 +53,6 @@ test.describe('Visual regression — Mobile responsive (375px)', () => {
     });
   });
 
-  test('VIS-04: Paper Trading renders at mobile viewport without overflow', async ({ page }) => {
-    await navigateAndWait(page, '/dashboard/paper-trading');
-    await page.waitForTimeout(1000);
-
-    await expectNoHorizontalOverflow(page);
-    await expectMobileNavVisible(page);
-
-    // Verify tabs are still accessible at mobile width
-    const tabsList = page.locator('[data-testid="pt-tab-overview"]');
-    await expect(tabsList).toBeVisible();
-
-    await expect(page).toHaveScreenshot('mobile-paper-trading.png', {
-      animations: 'disabled',
-      mask: [
-        page.locator('.font-mono'),
-        page.locator('[class*="text-\\[#26a69a\\]"]'),
-        page.locator('[class*="text-\\[#ef5350\\]"]'),
-      ],
-      maxDiffPixelRatio: 0.05,
-      fullPage: true,
-    });
-  });
-
   test('VIS-04: Watchlist renders at mobile viewport without overflow', async ({ page }) => {
     await navigateAndWait(page, '/watchlist');
     await page.waitForTimeout(500);
@@ -115,26 +92,6 @@ test.describe('Visual regression — Mobile responsive (375px)', () => {
       mask: [
         page.locator('canvas'),
         page.locator('.font-mono'),
-        page.locator('[class*="text-\\[#26a69a\\]"]'),
-        page.locator('[class*="text-\\[#ef5350\\]"]'),
-      ],
-      maxDiffPixelRatio: 0.05,
-      fullPage: true,
-    });
-  });
-
-  test('VIS-04: Portfolio renders at mobile viewport without overflow', async ({ page }) => {
-    await navigateAndWait(page, '/dashboard/portfolio');
-    await page.waitForTimeout(1000);
-
-    await expectNoHorizontalOverflow(page);
-    await expectMobileNavVisible(page);
-
-    await expect(page).toHaveScreenshot('mobile-portfolio.png', {
-      animations: 'disabled',
-      mask: [
-        page.locator('.font-mono'),
-        page.locator('.recharts-responsive-container'),
         page.locator('[class*="text-\\[#26a69a\\]"]'),
         page.locator('[class*="text-\\[#ef5350\\]"]'),
       ],

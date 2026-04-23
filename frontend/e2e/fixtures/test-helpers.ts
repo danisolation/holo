@@ -28,8 +28,6 @@ export const APP_ROUTES = [
   { path: '/', name: 'Home / Overview' },
   { path: '/watchlist', name: 'Watchlist' },
   { path: '/dashboard', name: 'Dashboard' },
-  { path: '/dashboard/paper-trading', name: 'Paper Trading' },
-  { path: '/dashboard/portfolio', name: 'Portfolio' },
   { path: '/dashboard/health', name: 'System Health' },
   { path: '/dashboard/corporate-events', name: 'Corporate Events' },
 ] as const;

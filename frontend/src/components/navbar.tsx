@@ -23,8 +23,6 @@ const NAV_LINKS = [
   { href: "/", label: "Tổng quan" },
   { href: "/watchlist", label: "Danh mục" },
   { href: "/dashboard", label: "Bảng điều khiển" },
-  { href: "/dashboard/portfolio", label: "Đầu tư" },
-  { href: "/dashboard/paper-trading", label: "Paper Trading" },
   { href: "/dashboard/corporate-events", label: "Sự kiện" },
   { href: "/dashboard/health", label: "Hệ thống" },
 ];
