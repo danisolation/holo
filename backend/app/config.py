@@ -80,6 +80,7 @@ class Settings(BaseSettings):
     # Real-time WebSocket (Phase 16)
     realtime_poll_interval: int = 30  # seconds between VCI price polls
     realtime_max_symbols: int = 50  # max symbols per poll request
+    realtime_priority_exchanges: list[str] = ["HOSE", "HNX", "UPCOM"]  # exchange priority for symbol selection
 
     # Trading Signal Pipeline (Phase 19)
     trading_signal_batch_size: int = 15    # Reduced from 25 — larger output per ticker

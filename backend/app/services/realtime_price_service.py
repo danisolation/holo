@@ -77,10 +77,15 @@ class RealtimePriceService:
     updates internal cache, and broadcasts to WebSocket clients.
     """
 
-    def __init__(self, crawler: VnstockCrawler, connection_manager) -> None:
+    def __init__(self, crawler: VnstockCrawler, connection_manager, exchange_map: dict[str, str] | None = None) -> None:
         self._crawler = crawler
         self._connection_manager = connection_manager
         self._latest_prices: dict[str, dict] = {}
+        self._exchange_map: dict[str, str] = exchange_map or {}
+
+    def set_exchange_map(self, exchange_map: dict[str, str]) -> None:
+        """Update the symbol → exchange mapping for priority sorting."""
+        self._exchange_map = exchange_map
 
     async def poll_and_broadcast(self) -> None:
         """Fetch latest prices from VCI and broadcast to WebSocket clients.
@@ -93,8 +98,18 @@ class RealtimePriceService:
             logger.debug("No subscribed symbols — skipping price poll")
             return
 
-        # Limit to max symbols
-        symbols_list = sorted(symbols)[:settings.realtime_max_symbols]
+        # Sort by exchange priority, then alphabetically within each exchange
+        priority = settings.realtime_priority_exchanges
+
+        def _sort_key(sym: str) -> tuple[int, str]:
+            exc = self._exchange_map.get(sym, "")
+            try:
+                rank = priority.index(exc)
+            except ValueError:
+                rank = len(priority)  # unknown exchange goes last
+            return (rank, sym)
+
+        symbols_list = sorted(symbols, key=_sort_key)[:settings.realtime_max_symbols]
 
         try:
             prices = await self._crawler.fetch_price_board(symbols_list)

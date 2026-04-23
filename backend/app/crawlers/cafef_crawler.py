@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from app.config import settings
+from app.crawlers.types import NewsCrawlResult
 from app.models.news_article import NewsArticle
 from app.resilience import cafef_breaker
 from app.services.ticker_service import TickerService
@@ -49,7 +50,7 @@ class CafeFCrawler:
             "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
         }
 
-    async def crawl_all_tickers(self) -> dict:
+    async def crawl_all_tickers(self) -> NewsCrawlResult:
         """Scrape news for all active tickers.
 
         Returns: {success: int, failed: int, total_articles: int, failed_symbols: list[str]}

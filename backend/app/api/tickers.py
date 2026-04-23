@@ -53,6 +53,8 @@ ALLOWED_EXCHANGES = {"HOSE", "HNX", "UPCOM"}
 async def list_tickers(
     sector: str | None = Query(None, description="Filter by sector"),
     exchange: str | None = Query(None, description="Filter by exchange: HOSE, HNX, UPCOM"),
+    limit: int = Query(100, ge=1, le=500, description="Max results to return"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
 ):
     """List all active tickers, optionally filtered by sector and/or exchange."""
     if exchange and exchange not in ALLOWED_EXCHANGES:
@@ -66,7 +68,7 @@ async def list_tickers(
             stmt = stmt.where(Ticker.sector == sector)
         if exchange:
             stmt = stmt.where(Ticker.exchange == exchange)
-        stmt = stmt.order_by(Ticker.symbol)
+        stmt = stmt.order_by(Ticker.symbol).offset(offset).limit(limit)
         result = await session.execute(stmt)
         tickers = result.scalars().all()
 
