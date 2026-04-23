@@ -176,7 +176,10 @@ Plans:
   1. The /coach page displays today's picks, currently open trades, and a performance summary all on a single page
   2. Pick history shows actual outcomes for every pick — whether entry was hit, SL was hit, TP was hit, and return after N days — including picks the user didn't trade
   3. Performance cards display win rate, total P&L, average risk-to-reward ratio, and current winning/losing streak
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 45-01-PLAN.md — Backend: migration 021, outcome computation, API endpoints, scheduler job
+- [ ] 45-02-PLAN.md — Frontend: performance cards, pick history table, coach page restructure
 **UI hint**: yes
 
 ### Phase 46: Behavior Tracking & Adaptive Strategy
@@ -210,6 +213,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 43. Daily Picks Engine | 3/3 | Complete    | 2026-04-23 |
 | 44. Trade Journal & P&L | 3/3 | Complete    | 2026-04-23 |
-| 45. Coach Dashboard & Pick Performance | 0/TBD | Not started | - |
+| 45. Coach Dashboard & Pick Performance | 0/2 | Not started | - |
 | 46. Behavior Tracking & Adaptive Strategy | 0/TBD | Not started | - |
 | 47. Goals & Weekly Reviews | 0/TBD | Not started | - |
