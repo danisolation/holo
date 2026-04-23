@@ -492,3 +492,83 @@ export async function updateProfile(data: ProfileUpdate): Promise<ProfileRespons
     body: JSON.stringify(data),
   });
 }
+
+// --- Phase 44: Trade Journal Types ---
+
+export interface TradeResponse {
+  id: number;
+  ticker_symbol: string;
+  ticker_name: string;
+  daily_pick_id: number | null;
+  side: "BUY" | "SELL";
+  quantity: number;
+  price: number;
+  broker_fee: number;
+  sell_tax: number;
+  total_fee: number;
+  gross_pnl: number | null;
+  net_pnl: number | null;
+  trade_date: string;
+  user_notes: string | null;
+  created_at: string;
+}
+
+export interface TradeStatsResponse {
+  total_trades: number;
+  realized_gross_pnl: number;
+  realized_net_pnl: number;
+  open_positions: number;
+}
+
+export interface TradesListResponse {
+  trades: TradeResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface TradeCreate {
+  ticker_symbol: string;
+  side: "BUY" | "SELL";
+  quantity: number;
+  price: number;
+  trade_date: string;
+  user_notes?: string;
+  daily_pick_id?: number | null;
+  broker_fee_override?: number;
+  sell_tax_override?: number;
+}
+
+// --- Phase 44: Trade Journal Fetch Functions ---
+
+export async function fetchTrades(params?: {
+  page?: number;
+  ticker?: string;
+  side?: string;
+  sort?: string;
+  order?: string;
+}): Promise<TradesListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.ticker) searchParams.set("ticker", params.ticker);
+  if (params?.side) searchParams.set("side", params.side);
+  if (params?.sort) searchParams.set("sort", params.sort);
+  if (params?.order) searchParams.set("order", params.order);
+  const qs = searchParams.toString();
+  return apiFetch<TradesListResponse>(`/trades${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchTradeStats(): Promise<TradeStatsResponse> {
+  return apiFetch<TradeStatsResponse>("/trades/stats");
+}
+
+export async function createTrade(data: TradeCreate): Promise<TradeResponse> {
+  return apiFetch<TradeResponse>("/trades", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTrade(id: number): Promise<void> {
+  await apiFetch<void>(`/trades/${id}`, { method: "DELETE" });
+}

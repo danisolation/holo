@@ -22,8 +22,12 @@ import {
   fetchDailyPicks,
   fetchProfile,
   updateProfile,
+  fetchTrades,
+  fetchTradeStats,
+  createTrade,
+  deleteTrade,
 } from "@/lib/api";
-import type { ProfileUpdate } from "@/lib/api";
+import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
 /**
  * Fetch all active tickers, optionally filtered by sector.
@@ -254,6 +258,50 @@ export function useUpdateProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["picks", "today"] });
+    },
+  });
+}
+
+// --- Phase 44: Trade Journal Hooks ---
+
+export function useTrades(params?: {
+  page?: number;
+  ticker?: string;
+  side?: string;
+  sort?: string;
+  order?: string;
+}) {
+  return useQuery({
+    queryKey: ["trades", params?.page ?? 1, params?.ticker ?? "", params?.side ?? "", params?.sort ?? "trade_date", params?.order ?? "desc"],
+    queryFn: () => fetchTrades(params),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useTradeStats() {
+  return useQuery({
+    queryKey: ["trades", "stats"],
+    queryFn: () => fetchTradeStats(),
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useCreateTrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: TradeCreate) => createTrade(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trades"] });
+    },
+  });
+}
+
+export function useDeleteTrade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteTrade(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trades"] });
     },
   });
 }
