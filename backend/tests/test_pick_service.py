@@ -165,13 +165,14 @@ class TestPositionSizing:
     """PICK-06: Position sizing in 100-share lots, round down."""
 
     def test_position_sizing_normal(self):
-        """50M capital, 60k price, 8% position → lots=6, shares=600."""
+        """50M capital, 60k price, 8% position → min 1 lot, shares=100."""
         from app.services.pick_service import compute_position_sizing
         result = compute_position_sizing(
             capital=50_000_000, entry_price=60_000, position_pct=8,
         )
-        assert result["shares"] == 600      # floor(4M / 6M_per_lot) * 100 = 6 * 100
-        assert result["total_vnd"] == 36_000_000  # 600 × 60,000
+        # max_spend = 50M * 8% = 4M. lots = floor(4M / (60k*100)) = floor(0.67) = 0 → min 1
+        assert result["shares"] == 100      # minimum 1 lot
+        assert result["total_vnd"] == 6_000_000  # 100 × 60,000
         assert 0 < result["capital_pct"] <= 100
 
     def test_position_sizing_minimum_lot(self):
