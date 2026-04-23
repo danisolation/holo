@@ -17,9 +17,9 @@
 
 ### Trade Journal (JRNL)
 
-- [ ] **JRNL-01**: User nhập lệnh mua/bán thực tế (mã, giá, số lượng, ngày, phí) vào app
-- [ ] **JRNL-02**: App tự tính P&L theo FIFO, bao gồm phí môi giới (0.15%) và thuế bán (0.1%) theo quy định VN
-- [ ] **JRNL-03**: Khi log trade, user có thể link đến daily pick tương ứng để theo dõi "có follow AI không?"
+- [x] **JRNL-01**: User nhập lệnh mua/bán thực tế (mã, giá, số lượng, ngày, phí) vào app
+- [x] **JRNL-02**: App tự tính P&L theo FIFO, bao gồm phí môi giới (0.15%) và thuế bán (0.1%) theo quy định VN
+- [x] **JRNL-03**: Khi log trade, user có thể link đến daily pick tương ứng để theo dõi "có follow AI không?"
 
 ### Coach Dashboard (CDSH)
 
@@ -71,9 +71,9 @@
 | PICK-05 | Phase 43 | Pending |
 | PICK-06 | Phase 43 | Pending |
 | PICK-07 | Phase 43 | Pending |
-| JRNL-01 | Phase 44 | Pending |
-| JRNL-02 | Phase 44 | Pending |
-| JRNL-03 | Phase 44 | Pending |
+| JRNL-01 | Phase 44 | Complete |
+| JRNL-02 | Phase 44 | Complete |
+| JRNL-03 | Phase 44 | Complete |
 | CDSH-01 | Phase 45 | Pending |
 | CDSH-02 | Phase 45 | Pending |
 | CDSH-03 | Phase 45 | Pending |

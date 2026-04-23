@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: AI Trading Coach
 status: executing
-stopped_at: Phase 43 UI-SPEC approved
-last_updated: "2026-04-23T09:07:37.883Z"
+stopped_at: Completed 44-01-PLAN.md
+last_updated: "2026-04-23T09:53:30.088Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 6
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State
@@ -51,6 +51,10 @@ Progress: [░░░░░░░░░░] 0%
 
 All v1.0–v7.0 decisions archived in PROJECT.md Key Decisions table.
 
+- [Phase 44]: lot_matches junction table for SELL reversal tracking
+- [Phase 44]: Proportional buy-side broker fee allocation on SELL
+- [Phase 44]: Sort/order whitelist mitigates injection (T-44-05)
+
 ### Research Context (v8.0)
 
 - Build VNMarketRules utility FIRST (P&L, picks validation, position sizing depend on it)
@@ -80,6 +84,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T07:53:43.812Z
-Stopped at: Phase 43 UI-SPEC approved
-Resume file: .planning/phases/43-daily-picks-engine/43-UI-SPEC.md
+Last session: 2026-04-23T09:53:30.082Z
+Stopped at: Completed 44-01-PLAN.md
+Resume file: None
