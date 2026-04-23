@@ -158,9 +158,12 @@ export async function fetchPrices(
 export async function fetchIndicators(
   symbol: string,
   limit: number = 100,
+  offset: number = 0,
 ): Promise<IndicatorData[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (offset > 0) params.set("offset", String(offset));
   return apiFetch<IndicatorData[]>(
-    `/analysis/${encodeURIComponent(symbol)}/indicators?limit=${limit}`,
+    `/analysis/${encodeURIComponent(symbol)}/indicators?${params}`,
   );
 }
 
@@ -175,9 +178,12 @@ export async function fetchAnalysisSummary(
 export async function fetchTickerNews(
   symbol: string,
   limit: number = 10,
+  offset: number = 0,
 ): Promise<NewsArticleResponse[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (offset > 0) params.set("offset", String(offset));
   return apiFetch<NewsArticleResponse[]>(
-    `/analysis/${encodeURIComponent(symbol)}/news?limit=${limit}`,
+    `/analysis/${encodeURIComponent(symbol)}/news?${params}`,
   );
 }
 

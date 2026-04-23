@@ -50,10 +50,10 @@ export function usePrices(symbol: string | undefined, days: number = 365) {
  * Fetch technical indicator data for a single ticker.
  * staleTime: 5 minutes.
  */
-export function useIndicators(symbol: string | undefined, limit: number = 100) {
+export function useIndicators(symbol: string | undefined, limit: number = 100, offset: number = 0) {
   return useQuery({
-    queryKey: ["indicators", symbol, limit],
-    queryFn: () => fetchIndicators(symbol!, limit),
+    queryKey: ["indicators", symbol, limit, offset],
+    queryFn: () => fetchIndicators(symbol!, limit, offset),
     enabled: !!symbol,
     staleTime: 5 * 60 * 1000,
   });
@@ -68,7 +68,8 @@ export function useAnalysisSummary(symbol: string | undefined) {
     queryKey: ["analysis-summary", symbol],
     queryFn: () => fetchAnalysisSummary(symbol!),
     enabled: !!symbol,
-    staleTime: 30 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 }
 
@@ -76,10 +77,10 @@ export function useAnalysisSummary(symbol: string | undefined) {
  * Fetch recent news articles for a ticker.
  * staleTime: 10 minutes — news updates infrequently.
  */
-export function useTickerNews(symbol: string | undefined) {
+export function useTickerNews(symbol: string | undefined, offset: number = 0) {
   return useQuery({
-    queryKey: ["ticker-news", symbol],
-    queryFn: () => fetchTickerNews(symbol!),
+    queryKey: ["ticker-news", symbol, offset],
+    queryFn: () => fetchTickerNews(symbol!, 10, offset),
     enabled: !!symbol,
     staleTime: 10 * 60 * 1000,
   });
@@ -207,6 +208,7 @@ export function useTradingSignal(symbol: string | undefined) {
     queryKey: ["trading-signal", symbol],
     queryFn: () => fetchTradingSignal(symbol!),
     enabled: !!symbol,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 }

@@ -123,6 +123,23 @@ function AnalyzeNowButton({ symbol, exchange, isWatchlisted, hasRecentAnalysis }
   );
 }
 
+/** Inline error card for individual sections */
+function SectionError({ error, onRetry }: { error: Error; onRetry: () => void }) {
+  return (
+    <Card>
+      <CardContent className="flex items-center justify-between py-4">
+        <p className="text-sm text-destructive">
+          {error.message || "Lỗi không xác định"}
+        </p>
+        <Button variant="ghost" size="xs" onClick={onRetry} className="gap-1 text-destructive">
+          <RefreshCw className="size-3" />
+          Thử lại
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function TickerDetailPage({
   params,
 }: {
@@ -143,13 +160,27 @@ export default function TickerDetailPage({
   const {
     data: indicatorData,
     isLoading: indicatorsLoading,
+    error: indicatorsError,
+    refetch: refetchIndicators,
   } = useIndicators(upperSymbol, 365);
   const {
     data: analysisSummary,
     isLoading: analysisLoading,
+    error: analysisError,
+    refetch: refetchAnalysis,
   } = useAnalysisSummary(upperSymbol);
-  const { data: tradingSignal, isLoading: tradingSignalLoading } = useTradingSignal(upperSymbol);
-  const { data: newsArticles, isLoading: newsLoading } = useTickerNews(upperSymbol);
+  const {
+    data: tradingSignal,
+    isLoading: tradingSignalLoading,
+    error: tradingSignalError,
+    refetch: refetchTradingSignal,
+  } = useTradingSignal(upperSymbol);
+  const {
+    data: newsArticles,
+    isLoading: newsLoading,
+    error: newsError,
+    refetch: refetchNews,
+  } = useTickerNews(upperSymbol);
 
   // Derive recommended direction's trading plan for chart overlay
   const tradingPlanForChart = useMemo(() => {
@@ -300,6 +331,8 @@ export default function TickerDetailPage({
             <Skeleton className="h-[160px] rounded-lg" />
             <Skeleton className="h-[160px] rounded-lg" />
           </div>
+        ) : indicatorsError ? (
+          <SectionError error={indicatorsError} onRetry={() => refetchIndicators()} />
         ) : indicatorData ? (
           <IndicatorChart indicatorData={indicatorData} />
         ) : (
@@ -314,6 +347,8 @@ export default function TickerDetailPage({
         <h2 className="text-lg font-semibold mb-3">Hỗ trợ & Kháng cự</h2>
         {indicatorsLoading ? (
           <Skeleton className="h-[220px] rounded-xl" />
+        ) : indicatorsError ? (
+          <SectionError error={indicatorsError} onRetry={() => refetchIndicators()} />
         ) : indicatorData ? (
           <SupportResistanceCard indicatorData={indicatorData} />
         ) : (
@@ -328,6 +363,8 @@ export default function TickerDetailPage({
       {/* Combined Recommendation */}
       {analysisLoading ? (
         <Skeleton className="h-32 rounded-xl" />
+      ) : analysisError ? (
+        <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
       ) : analysisSummary?.combined ? (
         <section>
           <CombinedRecommendationCard analysis={analysisSummary.combined} />
@@ -337,6 +374,8 @@ export default function TickerDetailPage({
       {/* Trading Plan Panel — Phase 20 */}
       {tradingSignalLoading ? (
         <Skeleton className="h-[320px] rounded-xl" />
+      ) : tradingSignalError ? (
+        <SectionError error={tradingSignalError} onRetry={() => refetchTradingSignal()} />
       ) : tradingSignal ? (
         <section>
           <TradingPlanPanel data={tradingSignal} symbol={upperSymbol} />
@@ -362,6 +401,8 @@ export default function TickerDetailPage({
               <Skeleton key={i} className="h-48 rounded-xl" />
             ))}
           </div>
+        ) : analysisError ? (
+          <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
         ) : analysisSummary ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {analysisSummary.technical && (
@@ -397,6 +438,8 @@ export default function TickerDetailPage({
         <h2 className="text-lg font-semibold mb-3">Tin tức CafeF</h2>
         {newsLoading ? (
           <Skeleton className="h-[200px] rounded-xl" />
+        ) : newsError ? (
+          <SectionError error={newsError} onRetry={() => refetchNews()} />
         ) : newsArticles && newsArticles.length > 0 ? (
           <NewsList articles={newsArticles} />
         ) : null}
