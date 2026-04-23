@@ -33,6 +33,11 @@ import {
   fetchHabitDetections,
   fetchViewingStats,
   fetchSectorPreferences,
+  fetchCurrentGoal,
+  setGoal,
+  fetchWeeklyPrompt,
+  respondWeeklyPrompt,
+  fetchLatestReview,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -376,6 +381,54 @@ export function useSectorPreferences() {
   return useQuery({
     queryKey: ["behavior", "sector-preferences"],
     queryFn: fetchSectorPreferences,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+// --- Phase 47: Goals & Weekly Reviews Hooks ---
+
+export function useCurrentGoal() {
+  return useQuery({
+    queryKey: ["goals", "current"],
+    queryFn: fetchCurrentGoal,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useSetGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (target_pnl: number) => setGoal(target_pnl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals", "current"] });
+    },
+  });
+}
+
+export function useWeeklyPrompt() {
+  return useQuery({
+    queryKey: ["goals", "weekly-prompt"],
+    queryFn: fetchWeeklyPrompt,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRespondWeeklyPrompt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, response }: { id: number; response: string }) =>
+      respondWeeklyPrompt(id, response),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals", "weekly-prompt"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
+export function useLatestReview() {
+  return useQuery({
+    queryKey: ["goals", "weekly-review"],
+    queryFn: fetchLatestReview,
     staleTime: 10 * 60 * 1000,
   });
 }

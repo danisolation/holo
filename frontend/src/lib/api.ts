@@ -718,3 +718,71 @@ export async function postBehaviorEvent(data: BehaviorEventCreate): Promise<void
   });
   // Fire-and-forget: don't check res.ok, don't throw
 }
+
+// --- Phase 47: Goals & Weekly Reviews Types ---
+
+export interface GoalResponse {
+  id: number;
+  target_pnl: number;
+  actual_pnl: number;
+  month: string;               // "2026-04-01"
+  status: "active" | "completed" | "missed";
+  progress_pct: number;        // e.g. 50.0
+  progress_color: string;      // "green" | "amber" | "red"
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeeklyPromptResponse {
+  id: number;
+  week_start: string;
+  prompt_type: "risk_tolerance";
+  response: string | null;     // null = pending
+  risk_level_before: number;
+  risk_level_after: number | null;
+  created_at: string;
+}
+
+export interface WeeklyReviewResponse {
+  id: number;
+  week_start: string;
+  week_end: string;
+  summary_text: string;
+  highlights: { good: string[]; bad: string[] };
+  suggestions: string[];
+  trades_count: number;
+  win_count: number;
+  total_pnl: number;
+  created_at: string;
+}
+
+// --- Phase 47: Goals & Weekly Reviews Fetch Functions ---
+
+export async function fetchCurrentGoal(): Promise<GoalResponse | null> {
+  return apiFetch<GoalResponse | null>("/goals/current");
+}
+
+export async function setGoal(target_pnl: number): Promise<GoalResponse> {
+  return apiFetch<GoalResponse>("/goals", {
+    method: "POST",
+    body: JSON.stringify({ target_pnl }),
+  });
+}
+
+export async function fetchWeeklyPrompt(): Promise<WeeklyPromptResponse | null> {
+  return apiFetch<WeeklyPromptResponse | null>("/goals/weekly-prompt");
+}
+
+export async function respondWeeklyPrompt(
+  id: number,
+  response: string,
+): Promise<WeeklyPromptResponse> {
+  return apiFetch<WeeklyPromptResponse>(
+    `/goals/weekly-prompt/${id}/respond`,
+    { method: "POST", body: JSON.stringify({ response }) },
+  );
+}
+
+export async function fetchLatestReview(): Promise<WeeklyReviewResponse | null> {
+  return apiFetch<WeeklyReviewResponse | null>("/goals/weekly-review");
+}
