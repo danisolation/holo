@@ -25,10 +25,10 @@ import {
  * Fetch all active tickers, optionally filtered by sector.
  * staleTime: 5 minutes — ticker list rarely changes.
  */
-export function useTickers(sector?: string, exchange?: string) {
+export function useTickers(sector?: string, exchange?: string, limit?: number, offset?: number) {
   return useQuery({
-    queryKey: ["tickers", sector ?? "all", exchange ?? "all"],
-    queryFn: () => fetchTickers(sector, exchange),
+    queryKey: ["tickers", sector ?? "all", exchange ?? "all", limit ?? "default", offset ?? 0],
+    queryFn: () => fetchTickers(sector, exchange, limit, offset),
     staleTime: 5 * 60 * 1000,
   });
 }

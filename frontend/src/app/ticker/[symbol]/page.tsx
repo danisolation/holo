@@ -53,6 +53,7 @@ import { useWatchlistStore } from "@/lib/store";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { PriceFlashCell } from "@/components/price-flash-cell";
 import { NewsList } from "@/components/news-list";
+import { NewsListSkeleton } from "@/components/news-list-skeleton";
 
 /** AnalyzeNow button — shows for non-watchlisted HNX/UPCOM tickers without recent analysis */
 function AnalyzeNowButton({ symbol, exchange, isWatchlisted, hasRecentAnalysis }: {
@@ -437,7 +438,7 @@ export default function TickerDetailPage({
       <section>
         <h2 className="text-lg font-semibold mb-3">Tin tức CafeF</h2>
         {newsLoading ? (
-          <Skeleton className="h-[200px] rounded-xl" />
+          <NewsListSkeleton />
         ) : newsError ? (
           <SectionError error={newsError} onRetry={() => refetchNews()} />
         ) : newsArticles && newsArticles.length > 0 ? (

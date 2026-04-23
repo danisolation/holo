@@ -138,10 +138,17 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // --- Fetch Functions ---
 
-export async function fetchTickers(sector?: string, exchange?: string): Promise<Ticker[]> {
+export async function fetchTickers(
+  sector?: string,
+  exchange?: string,
+  limit?: number,
+  offset?: number,
+): Promise<Ticker[]> {
   const params = new URLSearchParams();
   if (sector) params.set("sector", sector);
   if (exchange && exchange !== "all") params.set("exchange", exchange);
+  if (limit !== undefined) params.set("limit", String(limit));
+  if (offset !== undefined) params.set("offset", String(offset));
   const qs = params.toString();
   return apiFetch<Ticker[]>(`/tickers/${qs ? `?${qs}` : ""}`);
 }
