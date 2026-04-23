@@ -213,9 +213,23 @@ export interface MarketTicker {
   change_pct: number | null;
 }
 
-export async function fetchMarketOverview(exchange?: string): Promise<MarketTicker[]> {
-  const params = exchange && exchange !== "all" ? `?exchange=${encodeURIComponent(exchange)}` : "";
-  return apiFetch<MarketTicker[]>(`/tickers/market-overview${params}`);
+export interface MarketOverviewParams {
+  exchange?: string;
+  sort?: "change_pct" | "market_cap" | "symbol";
+  order?: "desc" | "asc";
+  top?: number;
+}
+
+export async function fetchMarketOverview(params?: MarketOverviewParams): Promise<MarketTicker[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.exchange && params.exchange !== "all") {
+    searchParams.set("exchange", params.exchange);
+  }
+  if (params?.sort) searchParams.set("sort", params.sort);
+  if (params?.order) searchParams.set("order", params.order);
+  if (params?.top) searchParams.set("top", String(params.top));
+  const qs = searchParams.toString();
+  return apiFetch<MarketTicker[]>(`/tickers/market-overview${qs ? `?${qs}` : ""}`);
 }
 
 export async function triggerOnDemandAnalysis(symbol: string): Promise<{ message: string; triggered: boolean }> {

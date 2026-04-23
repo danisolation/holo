@@ -90,10 +90,10 @@ export function useTickerNews(symbol: string | undefined, offset: number = 0) {
  * Fetch market overview: all active tickers with latest price + daily change %.
  * staleTime: 5 minutes.
  */
-export function useMarketOverview(exchange?: string) {
+export function useMarketOverview(exchange?: string, opts?: { sort?: "change_pct" | "market_cap" | "symbol"; order?: "desc" | "asc"; top?: number }) {
   return useQuery({
-    queryKey: ["market-overview", exchange ?? "all"],
-    queryFn: () => fetchMarketOverview(exchange),
+    queryKey: ["market-overview", exchange ?? "all", opts?.sort ?? "change_pct", opts?.order ?? "desc", opts?.top ?? "all"],
+    queryFn: () => fetchMarketOverview({ exchange, ...opts }),
     staleTime: 5 * 60 * 1000,
   });
 }
