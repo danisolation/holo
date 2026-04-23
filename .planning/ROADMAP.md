@@ -14,7 +14,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v5.0 E2E Testing & Quality Assurance** — Phases 27-31 (shipped 2025-07-21)
 - ✅ **v6.0 AI Backtesting Engine** — Phases 32-34 (shipped 2026-04-22)
 - ✅ **v7.0 Consolidation & Quality Upgrade** — Phases 35-42 (shipped 2025-07-22)
-- 🚧 **v8.0 AI Trading Coach** — Phases 43-47 (in progress)
+- ✅ **v8.0 AI Trading Coach** — Phases 43-47 (shipped 2026-04-23)
 
 ## Phases
 
@@ -124,7 +124,7 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
 
 </details>
 
-### 🚧 v8.0 AI Trading Coach (In Progress)
+### ✅ v8.0 AI Trading Coach (Completed 2026-04-23)
 
 **Milestone Goal:** Biến Holo thành huấn luyện viên trading cá nhân — mỗi ngày gợi ý cụ thể mua mã nào, ghi nhận kết quả, học từ thói quen, và điều chỉnh chiến lược theo thời gian.
 
