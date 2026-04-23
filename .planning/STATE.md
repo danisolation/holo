@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: AI Trading Coach
 status: executing
-stopped_at: Completed 44-01-PLAN.md
-last_updated: "2026-04-23T09:53:30.088Z"
+stopped_at: Completed 44-02-PLAN.md
+last_updated: "2026-04-23T09:59:16.941Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
-  percent: 67
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State
@@ -54,6 +54,8 @@ All v1.0–v7.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 44]: lot_matches junction table for SELL reversal tracking
 - [Phase 44]: Proportional buy-side broker fee allocation on SELL
 - [Phase 44]: Sort/order whitelist mitigates injection (T-44-05)
+- [Phase 44]: Sparkles wrapped in span for title tooltip (lucide lacks title prop)
+- [Phase 44]: Invalidating queryKey ['trades'] cascades to both list and stats caches
 
 ### Research Context (v8.0)
 
@@ -84,6 +86,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T09:53:30.082Z
-Stopped at: Completed 44-01-PLAN.md
+Last session: 2026-04-23T09:59:16.936Z
+Stopped at: Completed 44-02-PLAN.md
 Resume file: None

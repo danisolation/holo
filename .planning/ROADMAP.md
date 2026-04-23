@@ -164,7 +164,7 @@ Plans:
 **Plans**: 3 plans
 Plans:
 - [x] 44-01-PLAN.md — Backend data layer: migration 020, ORM models, FIFO service, API endpoints, unit tests
-- [ ] 44-02-PLAN.md — Frontend data layer + display components: API types, hooks, navbar, stats cards, filters, table, delete dialog
+- [x] 44-02-PLAN.md — Frontend data layer + display components: API types, hooks, navbar, stats cards, filters, table, delete dialog
 - [ ] 44-03-PLAN.md — Trade entry dialog + /journal page assembly + human verification
 **UI hint**: yes
 
@@ -209,7 +209,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 43. Daily Picks Engine | 3/3 | Complete    | 2026-04-23 |
-| 44. Trade Journal & P&L | 1/3 | In Progress|  |
+| 44. Trade Journal & P&L | 2/3 | In Progress|  |
 | 45. Coach Dashboard & Pick Performance | 0/TBD | Not started | - |
 | 46. Behavior Tracking & Adaptive Strategy | 0/TBD | Not started | - |
 | 47. Goals & Weekly Reviews | 0/TBD | Not started | - |
