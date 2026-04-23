@@ -124,9 +124,16 @@ async def get_ticker_prices(
     return result_prices
 
 
+ALLOWED_SORTS = {"change_pct", "market_cap", "symbol"}
+ALLOWED_ORDERS = {"desc", "asc"}
+
+
 @router.get("/market-overview", response_model=list[MarketTickerResponse])
 async def market_overview(
     exchange: str | None = Query(None, description="Filter by exchange: HOSE, HNX, UPCOM"),
+    sort: str = Query("change_pct", description="Sort by: change_pct, market_cap, symbol"),
+    order: str = Query("desc", description="Order: desc, asc"),
+    top: int | None = Query(None, description="Limit to top N results", ge=1, le=500),
 ):
     """Return all active tickers with latest price and daily change %.
 
@@ -137,6 +144,16 @@ async def market_overview(
         raise HTTPException(
             status_code=400,
             detail=f"Invalid exchange. Must be one of: {', '.join(sorted(ALLOWED_EXCHANGES))}",
+        )
+    if sort not in ALLOWED_SORTS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid sort. Must be one of: {', '.join(sorted(ALLOWED_SORTS))}",
+        )
+    if order not in ALLOWED_ORDERS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid order. Must be one of: {', '.join(sorted(ALLOWED_ORDERS))}",
         )
     async with async_session() as session:
         # Subquery: rank prices per ticker by date desc, keep top 2
@@ -191,7 +208,6 @@ async def market_overview(
         )
         if exchange:
             stmt = stmt.where(Ticker.exchange == exchange)
-        stmt = stmt.order_by(Ticker.symbol)
 
         result = await session.execute(stmt)
         rows = result.all()
@@ -214,4 +230,17 @@ async def market_overview(
                 change_pct=change_pct,
             )
         )
+
+    # Python-level sorting (change_pct is computed, not in SQL)
+    if sort == "change_pct":
+        items.sort(key=lambda t: (t.change_pct is None, t.change_pct or 0), reverse=(order == "desc"))
+    elif sort == "market_cap":
+        items.sort(key=lambda t: (t.market_cap is None, t.market_cap or 0), reverse=(order == "desc"))
+    elif sort == "symbol":
+        items.sort(key=lambda t: t.symbol, reverse=(order == "desc"))
+
+    # Limit results
+    if top is not None:
+        items = items[:top]
+
     return items

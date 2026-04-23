@@ -17,11 +17,21 @@ from bs4 import BeautifulSoup
 from loguru import logger
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 from app.config import settings
 from app.models.news_article import NewsArticle
 from app.resilience import cafef_breaker
 from app.services.ticker_service import TickerService
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Retry on transient HTTP failures only."""
+    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code >= 500:
+        return True
+    return False
 
 
 class CafeFCrawler:
@@ -91,6 +101,17 @@ class CafeFCrawler:
         logger.info(f"CafeF news crawl complete: {result}")
         return result
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=8),
+        retry=retry_if_exception(_is_retryable),
+        before_sleep=lambda retry_state: logger.debug(
+            f"CafeF retry {retry_state.attempt_number} for "
+            f"{retry_state.args[2] if len(retry_state.args) > 2 else '?'}: "
+            f"{retry_state.outcome.exception()}"
+        ),
+        reraise=True,
+    )
     async def _fetch_news_raw(self, client: httpx.AsyncClient, symbol: str) -> list[dict]:
         """Internal: raw HTTP fetch without circuit breaker."""
         params = {

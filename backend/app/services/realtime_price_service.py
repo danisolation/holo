@@ -102,12 +102,21 @@ class RealtimePriceService:
             logger.warning(f"Price board poll failed: {e}")
             return
 
-        # Update cache
-        self._latest_prices.update(prices)
-        logger.debug(f"Price cache updated for {len(prices)} symbols")
+        # Diff detection: only broadcast changed prices
+        changed: dict[str, dict] = {}
+        for sym, price_data in prices.items():
+            cached = self._latest_prices.get(sym)
+            if cached != price_data:
+                changed[sym] = price_data
 
-        # Broadcast to connected clients
-        await self._connection_manager.broadcast(prices)
+        # Always update full cache (for get_latest_prices endpoint)
+        self._latest_prices.update(prices)
+
+        if changed:
+            logger.debug(f"{len(changed)} of {len(prices)} symbols changed — broadcasting")
+            await self._connection_manager.broadcast(changed)
+        else:
+            logger.debug(f"0 of {len(prices)} symbols changed — skipping broadcast")
 
     def get_latest_prices(self, symbols: list[str]) -> dict[str, dict]:
         """Return cached prices for requested symbols only."""
