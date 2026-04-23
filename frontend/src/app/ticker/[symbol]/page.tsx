@@ -45,12 +45,14 @@ import {
   useIndicators,
   useAnalysisSummary,
   useTradingSignal,
+  useTickerNews,
   useTickers,
   useTriggerAnalysis,
 } from "@/lib/hooks";
 import { useWatchlistStore } from "@/lib/store";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { PriceFlashCell } from "@/components/price-flash-cell";
+import { NewsList } from "@/components/news-list";
 
 /** AnalyzeNow button — shows for non-watchlisted HNX/UPCOM tickers without recent analysis */
 function AnalyzeNowButton({ symbol, exchange, isWatchlisted, hasRecentAnalysis }: {
@@ -147,6 +149,7 @@ export default function TickerDetailPage({
     isLoading: analysisLoading,
   } = useAnalysisSummary(upperSymbol);
   const { data: tradingSignal, isLoading: tradingSignalLoading } = useTradingSignal(upperSymbol);
+  const { data: newsArticles, isLoading: newsLoading } = useTickerNews(upperSymbol);
 
   // Derive recommended direction's trading plan for chart overlay
   const tradingPlanForChart = useMemo(() => {
@@ -387,6 +390,16 @@ export default function TickerDetailPage({
             </CardContent>
           </Card>
         )}
+      </section>
+
+      {/* Recent News from CafeF */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Tin tức CafeF</h2>
+        {newsLoading ? (
+          <Skeleton className="h-[200px] rounded-xl" />
+        ) : newsArticles && newsArticles.length > 0 ? (
+          <NewsList articles={newsArticles} />
+        ) : null}
       </section>
     </div>
   );

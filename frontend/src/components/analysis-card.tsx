@@ -11,6 +11,7 @@ import {
   Globe,
   MessageSquare,
   Brain,
+  Target,
 } from "lucide-react";
 
 const TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -18,6 +19,7 @@ const TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
   fundamental: { label: "Phân tích cơ bản", icon: <Globe className="size-4" /> },
   sentiment: { label: "Tâm lý thị trường", icon: <MessageSquare className="size-4" /> },
   combined: { label: "Khuyến nghị tổng hợp", icon: <Brain className="size-4" /> },
+  trading_signal: { label: "Kế hoạch giao dịch", icon: <Target className="size-4" /> },
 };
 
 const SIGNAL_CONFIG: Record<

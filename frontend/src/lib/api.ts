@@ -74,6 +74,12 @@ export interface AnalysisSummary {
   trading_signal?: AnalysisResult;  // Phase 20
 }
 
+export interface NewsArticleResponse {
+  title: string;
+  url: string;
+  published_at: string;
+}
+
 // --- Phase 20: Trading Plan Types ---
 
 export interface TradingPlanDetail {
@@ -163,6 +169,15 @@ export async function fetchAnalysisSummary(
 ): Promise<AnalysisSummary> {
   return apiFetch<AnalysisSummary>(
     `/analysis/${encodeURIComponent(symbol)}/summary`,
+  );
+}
+
+export async function fetchTickerNews(
+  symbol: string,
+  limit: number = 10,
+): Promise<NewsArticleResponse[]> {
+  return apiFetch<NewsArticleResponse[]>(
+    `/analysis/${encodeURIComponent(symbol)}/news?limit=${limit}`,
   );
 }
 

@@ -7,6 +7,7 @@ import {
   fetchIndicators,
   fetchAnalysisSummary,
   fetchTradingSignal,
+  fetchTickerNews,
   fetchMarketOverview,
   triggerOnDemandAnalysis,
   fetchJobStatuses,
@@ -68,6 +69,19 @@ export function useAnalysisSummary(symbol: string | undefined) {
     queryFn: () => fetchAnalysisSummary(symbol!),
     enabled: !!symbol,
     staleTime: 30 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch recent news articles for a ticker.
+ * staleTime: 10 minutes — news updates infrequently.
+ */
+export function useTickerNews(symbol: string | undefined) {
+  return useQuery({
+    queryKey: ["ticker-news", symbol],
+    queryFn: () => fetchTickerNews(symbol!),
+    enabled: !!symbol,
+    staleTime: 10 * 60 * 1000,
   });
 }
 
