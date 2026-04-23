@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ExchangeBadge } from "@/components/exchange-badge";
 import { useTickers } from "@/lib/hooks";
+import { postBehaviorEvent } from "@/lib/api";
 
 export function TickerSearch() {
   const [open, setOpen] = useState(false);
@@ -24,6 +25,7 @@ export function TickerSearch() {
   const handleSelect = useCallback(
     (symbol: string) => {
       setOpen(false);
+      postBehaviorEvent({ event_type: "search_click", ticker_symbol: symbol }).catch(() => {});
       router.push(`/ticker/${symbol}`);
     },
     [router]

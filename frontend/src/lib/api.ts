@@ -623,3 +623,98 @@ export async function createTrade(data: TradeCreate): Promise<TradeResponse> {
 export async function deleteTrade(id: number): Promise<void> {
   await apiFetch<void>(`/trades/${id}`, { method: "DELETE" });
 }
+
+// --- Phase 46: Behavior Tracking Types & API ---
+
+export interface RiskSuggestionResponse {
+  id: number;
+  current_level: number;
+  suggested_level: number;
+  reason: string;
+  status: "pending" | "accepted" | "rejected";
+  created_at: string;
+}
+
+export interface RiskSuggestionRespondRequest {
+  action: "accept" | "reject";
+}
+
+export interface HabitDetection {
+  habit_type: "premature_sell" | "holding_losers" | "impulsive_trade";
+  count: number;
+  latest_ticker: string | null;
+  latest_date: string | null;
+}
+
+export interface HabitDetectionsResponse {
+  habits: HabitDetection[];
+  analysis_date: string | null;
+}
+
+export interface ViewingStatItem {
+  ticker_symbol: string;
+  sector: string | null;
+  view_count: number;
+  last_viewed: string;
+}
+
+export interface ViewingStatsResponse {
+  items: ViewingStatItem[];
+  total_views: number;
+}
+
+export interface SectorPreference {
+  sector: string;
+  total_trades: number;
+  win_count: number;
+  loss_count: number;
+  net_pnl: number;
+  win_rate: number;
+  preference_score: number;
+}
+
+export interface SectorPreferencesResponse {
+  sectors: SectorPreference[];
+  insufficient_count: number;
+}
+
+export interface BehaviorEventCreate {
+  event_type: "ticker_view" | "search_click" | "pick_click";
+  ticker_symbol?: string;
+  event_metadata?: Record<string, unknown>;
+}
+
+export async function fetchRiskSuggestion(): Promise<RiskSuggestionResponse | null> {
+  return apiFetch<RiskSuggestionResponse | null>("/behavior/risk-suggestion");
+}
+
+export async function respondRiskSuggestion(
+  id: number,
+  data: RiskSuggestionRespondRequest
+): Promise<RiskSuggestionResponse> {
+  return apiFetch<RiskSuggestionResponse>(
+    `/behavior/risk-suggestion/${id}/respond`,
+    { method: "POST", body: JSON.stringify(data) }
+  );
+}
+
+export async function fetchHabitDetections(): Promise<HabitDetectionsResponse> {
+  return apiFetch<HabitDetectionsResponse>("/behavior/habits");
+}
+
+export async function fetchViewingStats(): Promise<ViewingStatsResponse> {
+  return apiFetch<ViewingStatsResponse>("/behavior/viewing-stats");
+}
+
+export async function fetchSectorPreferences(): Promise<SectorPreferencesResponse> {
+  return apiFetch<SectorPreferencesResponse>("/behavior/sector-preferences");
+}
+
+export async function postBehaviorEvent(data: BehaviorEventCreate): Promise<void> {
+  await fetch(`${API_BASE}/behavior/event`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  // Fire-and-forget: don't check res.ok, don't throw
+}

@@ -51,6 +51,7 @@ import {
 } from "@/lib/hooks";
 import { useWatchlistStore } from "@/lib/store";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
+import { useBehaviorTracking } from "@/lib/use-behavior-tracking";
 import { PriceFlashCell } from "@/components/price-flash-cell";
 import { NewsList } from "@/components/news-list";
 import { NewsListSkeleton } from "@/components/news-list-skeleton";
@@ -152,6 +153,7 @@ export default function TickerDetailPage({
 
   // Data hooks
   const { data: tickers } = useTickers();
+  useBehaviorTracking("ticker_view", upperSymbol);
   const {
     data: priceData,
     isLoading: pricesLoading,

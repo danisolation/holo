@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreBar } from "@/components/analysis-card";
 import { formatVND } from "@/lib/format";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
+import { postBehaviorEvent } from "@/lib/api";
 import type { DailyPickResponse } from "@/lib/api";
 
 interface PickCardProps {
@@ -24,7 +25,11 @@ export function PickCard({ pick }: PickCardProps) {
   }
 
   return (
-    <Card aria-label={`${pick.ticker_symbol} — gợi ý #${pick.rank}`}>
+    <Card
+      aria-label={`${pick.ticker_symbol} — gợi ý #${pick.rank}`}
+      className="cursor-pointer"
+      onClick={() => postBehaviorEvent({ event_type: "pick_click", ticker_symbol: pick.ticker_symbol }).catch(() => {})}
+    >
       <CardHeader>
         {/* Row 1: Rank + Symbol + Name + Score */}
         <div className="flex items-center gap-2">

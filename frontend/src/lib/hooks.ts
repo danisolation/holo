@@ -28,6 +28,11 @@ import {
   deleteTrade,
   fetchPickHistory,
   fetchPickPerformance,
+  fetchRiskSuggestion,
+  respondRiskSuggestion,
+  fetchHabitDetections,
+  fetchViewingStats,
+  fetchSectorPreferences,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -323,5 +328,54 @@ export function usePickPerformance() {
     queryKey: ["picks", "performance"],
     queryFn: () => fetchPickPerformance(),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// --- Phase 46: Behavior Tracking Hooks ---
+
+export function useRiskSuggestion() {
+  return useQuery({
+    queryKey: ["behavior", "risk-suggestion"],
+    queryFn: fetchRiskSuggestion,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRespondRiskSuggestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: number; action: "accept" | "reject" }) =>
+      respondRiskSuggestion(id, { action }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["behavior", "risk-suggestion"] });
+      if (variables.action === "accept") {
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+        queryClient.invalidateQueries({ queryKey: ["picks", "today"] });
+      }
+    },
+  });
+}
+
+export function useHabitDetections() {
+  return useQuery({
+    queryKey: ["behavior", "habits"],
+    queryFn: fetchHabitDetections,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useViewingStats() {
+  return useQuery({
+    queryKey: ["behavior", "viewing-stats"],
+    queryFn: fetchViewingStats,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useSectorPreferences() {
+  return useQuery({
+    queryKey: ["behavior", "sector-preferences"],
+    queryFn: fetchSectorPreferences,
+    staleTime: 10 * 60 * 1000,
   });
 }
