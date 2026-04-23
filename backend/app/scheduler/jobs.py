@@ -481,11 +481,10 @@ async def daily_trading_signal_analysis():
             raise
 
 
-async def daily_hnx_upcom_analysis():
+async def daily_corporate_action_check():
     """Crawl corporate events from VNDirect.
 
     Triggered after daily_price_crawl via job chaining.
-    Chains to exdate_alert_check on completion.
     """
     logger.info("=== DAILY CORPORATE ACTION CHECK START ===")
     async with async_session() as session:
