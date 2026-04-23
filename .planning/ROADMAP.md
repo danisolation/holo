@@ -146,7 +146,11 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
   3. Every pick shows position sizing in absolute terms: "Mua X cổ × Y đồng = Z VND (N% vốn)" — based on the user's capital (<50M VND) and 100-share lot sizes
   4. Picks are filtered by affordability (user can buy at least 1 lot of 100 shares) and scored with safety bias — high-ATR, low-ADX, and low-volume tickers are penalized in ranking
   5. Below the main picks, 5-10 "almost selected" tickers are shown with a one-line explanation of why they weren't chosen
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 43-01-PLAN.md — DB models, migration, schemas, test scaffold
+- [ ] 43-02-PLAN.md — PickService, API endpoints, scheduler job chain
+- [ ] 43-03-PLAN.md — Frontend /coach page, components, hooks, navbar
 **UI hint**: yes
 
 ### Phase 44: Trade Journal & P&L
@@ -200,7 +204,7 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 43. Daily Picks Engine | 0/TBD | Not started | - |
+| 43. Daily Picks Engine | 0/3 | Not started | - |
 | 44. Trade Journal & P&L | 0/TBD | Not started | - |
 | 45. Coach Dashboard & Pick Performance | 0/TBD | Not started | - |
 | 46. Behavior Tracking & Adaptive Strategy | 0/TBD | Not started | - |
