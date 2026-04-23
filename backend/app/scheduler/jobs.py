@@ -7,7 +7,7 @@ Resilience pattern per CONTEXT.md decisions:
 - D-06: Retry failed tickers once (re-batch only failures)
 - D-07: Retry inside job functions, not wrapping them
 - D-08/D-09: Permanently failed items go to dead-letter queue
-- D-10: Complete failure raises → EVENT_JOB_ERROR → Telegram alert
+- D-10: Complete failure raises → EVENT_JOB_ERROR → logged as CRITICAL
 - D-13/D-14: One job_executions row per run, not per ticker
 - Pitfall 2: Partial failure returns normally (chain continues);
   complete failure raises (chain breaks)

@@ -207,6 +207,13 @@ class IndicatorResponse(BaseModel):
     fib_618: float | None = None
 
 
+class NewsArticleResponse(BaseModel):
+    """API response for a single news article."""
+    title: str
+    url: str
+    published_at: str
+
+
 class SummaryResponse(BaseModel):
     """API response for full analysis summary (all dimensions)."""
     ticker_symbol: str

@@ -12,6 +12,7 @@ from loguru import logger
 
 from app.database import async_session
 from app.models.ticker import Ticker
+from app.models.news_article import NewsArticle
 from app.models.technical_indicator import TechnicalIndicator
 from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.schemas.analysis import (
@@ -19,6 +20,7 @@ from app.schemas.analysis import (
     AnalysisResultResponse,
     IndicatorResponse,
     SummaryResponse,
+    NewsArticleResponse,
 )
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
@@ -401,6 +403,34 @@ async def get_analysis_summary(symbol: str):
                 )
 
         return SummaryResponse(**summary_data)
+
+
+@router.get("/{symbol}/news", response_model=list[NewsArticleResponse])
+async def get_ticker_news(symbol: str, limit: int = 10):
+    """Get latest news articles for a ticker from CafeF.
+
+    Args:
+        symbol: Ticker symbol (e.g., 'VNM', 'FPT')
+        limit: Number of articles to return (default 10, max 50)
+    """
+    limit = min(limit, 50)
+    async with async_session() as session:
+        ticker = await _get_ticker_by_symbol(session, symbol)
+        result = await session.execute(
+            select(NewsArticle)
+            .where(NewsArticle.ticker_id == ticker.id)
+            .order_by(NewsArticle.published_at.desc())
+            .limit(limit)
+        )
+        rows = result.scalars().all()
+        return [
+            NewsArticleResponse(
+                title=row.title,
+                url=row.url,
+                published_at=row.published_at.isoformat(),
+            )
+            for row in rows
+        ]
 
 
 # --- Helpers ---

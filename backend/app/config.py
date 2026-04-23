@@ -65,10 +65,6 @@ class Settings(BaseSettings):
     cafef_delay_seconds: float = 1.0  # Delay between requests per CONTEXT.md
     cafef_news_days: int = 7  # Scrape news from last N days per CONTEXT.md
 
-    # Telegram Bot (Phase 4)
-    telegram_bot_token: str = ""  # Required for bot — get from @BotFather on Telegram
-    telegram_chat_id: str = ""  # Your personal chat ID — get from @userinfobot
-
     # Circuit Breaker (Phase 6)
     circuit_breaker_fail_max: int = 3
     circuit_breaker_reset_timeout: float = 120.0  # 2 minutes cooldown
@@ -91,7 +87,7 @@ class Settings(BaseSettings):
     trading_signal_max_tokens: int = 32768     # Doubled from 16384 — ~300 tokens/ticker × 15 tickers
 
     # Test Mode (Phase 27 — E2E testing)
-    holo_test_mode: bool = False  # Set True to skip scheduler + telegram in tests
+    holo_test_mode: bool = False  # Set True to skip scheduler in tests
 
 
 settings = Settings()
