@@ -142,7 +142,7 @@ Full details: [milestones/v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md)
 
 **Milestone Goal:** Đơn giản hóa Holo — bỏ features không cần (corporate events, HNX/UPCOM), redesign luồng sử dụng cho rõ ràng, cải thiện AI output dài và hữu ích hơn.
 
-- [ ] **Phase 48: Backend Cleanup & Scheduler Simplification** - Remove corporate events, HNX/UPCOM, dead telegram dependency; simplify scheduler to HOSE-only pipeline (2 plans)
+- [x] **Phase 48: Backend Cleanup & Scheduler Simplification** - Remove corporate events, HNX/UPCOM, dead telegram dependency; simplify scheduler to HOSE-only pipeline (2 plans) (completed 2026-04-24)
 - [ ] **Phase 49: Navigation & Watchlist Migration** - Reduce nav to 4-5 items, migrate watchlist from localStorage to PostgreSQL, show AI signals on watchlist
 - [ ] **Phase 50: Coach Page Restructure & Trade Flow** - Tab-based Coach layout, pick card trade recording, post-trade next steps
 - [ ] **Phase 51: AI Analysis Improvement** - Longer structured AI output, reduced batch sizes, frontend structured rendering
@@ -161,8 +161,8 @@ Full details: [milestones/v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md)
 **Plans**: 2 plans
 
 Plans:
-- [ ] 48-01-PLAN.md — Scheduler rewire (HOSE-only chain) + backend dead code removal (corporate events, deps, tests)
-- [ ] 48-02-PLAN.md — Frontend dead feature removal (corporate events page, exchange components, HNX/UPCOM references)
+- [x] 48-01-PLAN.md — Scheduler rewire (HOSE-only chain) + backend dead code removal (corporate events, deps, tests)
+- [x] 48-02-PLAN.md — Frontend dead feature removal (corporate events page, exchange components, HNX/UPCOM references)
 **UI hint**: yes
 
 ### Phase 49: Navigation & Watchlist Migration
@@ -205,7 +205,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 48. Backend Cleanup & Scheduler Simplification | 0/0 | Not started | - |
+| 48. Backend Cleanup & Scheduler Simplification | 2/2 | Complete    | 2026-04-24 |
 | 49. Navigation & Watchlist Migration | 0/0 | Not started | - |
 | 50. Coach Page Restructure & Trade Flow | 0/0 | Not started | - |
 | 51. AI Analysis Improvement | 0/0 | Not started | - |
