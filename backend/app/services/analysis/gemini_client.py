@@ -208,7 +208,11 @@ class GeminiClient:
         temp = ANALYSIS_TEMPERATURES[AnalysisType.COMBINED]
         sys_instr = COMBINED_SYSTEM_INSTRUCTION
 
-        response = await self._call_gemini(prompt, CombinedBatchResponse, temp, sys_instr)
+        response = await self._call_gemini(
+            prompt, CombinedBatchResponse, temp, sys_instr,
+            max_output_tokens=settings.combined_max_tokens,
+            thinking_budget=settings.combined_thinking_budget,
+        )
         if response.usage_metadata:
             logger.debug(
                 f"Gemini combined tokens: {response.usage_metadata.total_token_count}"
@@ -218,7 +222,11 @@ class GeminiClient:
 
         if result is None and response.text:
             logger.warning("response.parsed is None, retrying at temperature=0.05")
-            response = await self._call_gemini(prompt, CombinedBatchResponse, 0.05, sys_instr)
+            response = await self._call_gemini(
+                prompt, CombinedBatchResponse, 0.05, sys_instr,
+                max_output_tokens=settings.combined_max_tokens,
+                thinking_budget=settings.combined_thinking_budget,
+            )
             result = response.parsed
 
         if result is None and response.text:

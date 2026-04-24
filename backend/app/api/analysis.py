@@ -340,6 +340,7 @@ async def get_combined_analysis(symbol: str):
             score=analysis.score,
             reasoning=analysis.reasoning,
             model_version=analysis.model_version,
+            raw_response=analysis.raw_response,
         )
 
 
@@ -407,6 +408,7 @@ async def get_analysis_summary(symbol: str):
                 score=row["score"],
                 reasoning=row["reasoning"],
                 model_version=row["model_version"],
+                raw_response=row["raw_response"],
             )
 
         return SummaryResponse(**summary_data)

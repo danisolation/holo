@@ -507,7 +507,12 @@ class AIAnalysisService:
 
                         # Extract reasoning based on analysis type
                         if analysis_type == AnalysisType.COMBINED:
-                            reasoning = analysis.explanation
+                            reasoning = (
+                                f"## Tóm tắt\n{analysis.summary}\n\n"
+                                f"## Mức giá quan trọng\n{analysis.key_levels}\n\n"
+                                f"## Rủi ro\n{analysis.risks}\n\n"
+                                f"## Hành động cụ thể\n{analysis.action}"
+                            )
                         elif analysis_type == AnalysisType.TRADING_SIGNAL:
                             if signal != "invalid":
                                 reasoning = (
