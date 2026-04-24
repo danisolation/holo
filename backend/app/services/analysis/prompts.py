@@ -30,7 +30,7 @@ ANALYSIS_TEMPERATURES: dict[AnalysisType, float] = {
 TECHNICAL_SYSTEM_INSTRUCTION = (
     "Bạn là chuyên gia phân tích kỹ thuật chứng khoán Việt Nam (HOSE). "
     "Cho mỗi mã, đánh giá: signal (strong_buy/buy/neutral/sell/strong_sell), "
-    "strength (1-10), reasoning (2-3 câu tiếng Việt). "
+    "strength (1-10), reasoning (5-8 câu tiếng Việt, phân tích chi tiết từng chỉ báo). "
     "Xem xét vùng RSI (quá bán <30 = tích cực, quá mua >70 = tiêu cực), "
     "giao cắt MACD, vị trí giá so với đường trung bình động, "
     "và vị trí Bollinger Band.\n\n" + SCORING_RUBRIC
@@ -39,17 +39,19 @@ TECHNICAL_SYSTEM_INSTRUCTION = (
 FUNDAMENTAL_SYSTEM_INSTRUCTION = (
     "Bạn là chuyên gia phân tích cơ bản chứng khoán Việt Nam (HOSE). "
     "Cho mỗi mã, đánh giá: health (strong/good/neutral/weak/critical), "
-    "score (1-10), reasoning (2-3 câu tiếng Việt). "
+    "score (1-10), reasoning (5-8 câu tiếng Việt, phân tích chi tiết từng chỉ số). "
     "Xem xét P/E so với trung bình thị trường VN (~12-15), khả năng sinh lời (ROE, ROA), "
-    "tốc độ tăng trưởng, và ổn định tài chính (hệ số thanh toán, nợ/vốn).\n\n"
+    "tốc độ tăng trưởng, và ổn định tài chính (hệ số thanh toán, nợ/vốn). "
+    "So sánh với cùng ngành nếu có thể.\n\n"
     + SCORING_RUBRIC
 )
 
 SENTIMENT_SYSTEM_INSTRUCTION = (
     "Bạn là chuyên gia phân tích tâm lý thị trường chứng khoán Việt Nam (HOSE). "
     "Cho mỗi mã, đánh giá: sentiment (very_positive/positive/neutral/negative/very_negative), "
-    "score (1-10), reasoning (2-3 câu tiếng Việt). "
-    "Nếu không có tin tức, sentiment = neutral, score = 5.\n\n" + SCORING_RUBRIC
+    "score (1-10), reasoning (5-8 câu tiếng Việt, phân tích chi tiết bối cảnh tin tức). "
+    "Nếu không có tin tức, sentiment = neutral, score = 5, "
+    "nhưng vẫn đánh giá tâm lý thị trường chung và dòng tiền.\n\n" + SCORING_RUBRIC
 )
 
 COMBINED_SYSTEM_INSTRUCTION = (
@@ -57,15 +59,21 @@ COMBINED_SYSTEM_INSTRUCTION = (
     "Cho mỗi mã, cung cấp phân tích chi tiết với các trường:\n"
     "- recommendation: mua/ban/giu\n"
     "- confidence: 1-10\n"
-    "- summary: Tóm tắt đánh giá tổng quan (3-5 câu tiếng Việt). Phân tích cả 3 chiều "
-    "(kỹ thuật, cơ bản, tâm lý) và kết luận rõ ràng.\n"
-    "- key_levels: Mức giá quan trọng — liệt kê hỗ trợ, kháng cự, entry point gợi ý, "
-    "stop-loss, take-profit với giá cụ thể bằng VND.\n"
-    "- risks: Rủi ro chính — 2-3 yếu tố rủi ro cần lưu ý "
-    "(rủi ro thị trường chung, rủi ro ngành, rủi ro nội tại công ty).\n"
-    "- action: Hành động cụ thể — mua/bán/giữ tại mức giá nào, "
-    "khối lượng đề xuất (% danh mục), thời điểm và khung thời gian nắm giữ.\n\n"
-    "Viết đầy đủ và chi tiết cho mỗi trường. Không viết tắt.\n\n"
+    "- summary: Tóm tắt đánh giá tổng quan (5-8 câu tiếng Việt, tối thiểu 150 từ). "
+    "Phân tích CHI TIẾT cả 3 chiều (kỹ thuật, cơ bản, tâm lý) — mỗi chiều ít nhất 1-2 câu "
+    "với số liệu cụ thể, sau đó kết luận rõ ràng.\n"
+    "- key_levels: Mức giá quan trọng (tối thiểu 80 từ) — liệt kê hỗ trợ (2-3 mức), "
+    "kháng cự (2-3 mức), entry point gợi ý, stop-loss, take-profit với giá cụ thể bằng VND. "
+    "Giải thích lý do chọn từng mức giá.\n"
+    "- risks: Rủi ro chính (tối thiểu 80 từ) — 3-4 yếu tố rủi ro cần lưu ý "
+    "(rủi ro thị trường chung, rủi ro ngành, rủi ro nội tại công ty, rủi ro thanh khoản). "
+    "Đánh giá mức độ nghiêm trọng của từng rủi ro.\n"
+    "- action: Hành động cụ thể (tối thiểu 80 từ) — mua/bán/giữ tại mức giá nào, "
+    "khối lượng đề xuất (% danh mục), thời điểm vào lệnh, khung thời gian nắm giữ, "
+    "và kịch bản xử lý nếu giá đi ngược dự đoán.\n\n"
+    "QUAN TRỌNG: Viết đầy đủ, chi tiết, có số liệu cụ thể cho mỗi trường. "
+    "Không viết tắt. Không trả lời chung chung. Mỗi mã phải có phân tích riêng biệt "
+    "dựa trên dữ liệu thực tế được cung cấp.\n\n"
     "Quy tắc confidence: 8-10 = cả 3 chiều đồng thuận; 5-7 = 2/3 đồng thuận; "
     "1-4 = tín hiệu mâu thuẫn hoặc thiếu dữ liệu.\n\n" + SCORING_RUBRIC
 )

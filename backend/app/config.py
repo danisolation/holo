@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # Gemini AI (Phase 2)
     gemini_api_key: str = ""  # Required — get from https://aistudio.google.com/apikey
     gemini_model: str = "gemini-2.5-flash-lite"
-    gemini_batch_size: int = 15  # Reduced from 25 — avoid truncation with longer prompts
+    gemini_batch_size: int = 8  # Reduced from 15 — more tokens per ticker for detailed analysis
     gemini_delay_seconds: float = 4.0  # Delay between batches for rate-limit safety
     gemini_max_retries: int = 3
 
@@ -83,7 +83,7 @@ class Settings(BaseSettings):
     realtime_priority_exchanges: list[str] = ["HOSE", "HNX", "UPCOM"]  # exchange priority for symbol selection
 
     # Trading Signal Pipeline (Phase 19)
-    trading_signal_batch_size: int = 15    # Reduced from 25 — larger output per ticker
+    trading_signal_batch_size: int = 8     # Reduced from 15 — more tokens per ticker
     trading_signal_thinking_budget: int = 2048  # Doubled from 1024 — complex dual-direction reasoning
     trading_signal_max_tokens: int = 32768     # Doubled from 16384 — ~300 tokens/ticker × 15 tickers
 
