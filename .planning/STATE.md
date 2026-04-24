@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: UX Rework & Simplification
-status: defining-requirements
+status: ready-to-plan
 stopped_at: null
-last_updated: "2026-04-24T04:44:04.460Z"
+last_updated: "2026-04-24T05:00:00.000Z"
 last_activity: 2026-04-24
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,17 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** Defining requirements for v9.0 UX Rework & Simplification
+**Current focus:** Phase 48 — Backend Cleanup & Scheduler Simplification
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 48 of 51 (Backend Cleanup & Scheduler Simplification)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-24 — Milestone v9.0 started
-Last activity: 2026-04-23
+Status: Ready to plan
+Last activity: 2026-04-24 — Roadmap created for v9.0
 
-Progress: [████████░░] 86%
+Progress: [░░░░░░░░░░] 0%
 
 ## Shipped Milestones
 
@@ -45,49 +44,21 @@ Progress: [████████░░] 86%
 | v5.0 | E2E Testing & Quality Assurance | 5 | 9 | 2025-07-21 |
 | v6.0 | AI Backtesting Engine | 3 | 7 | 2026-04-22 |
 | v7.0 | Consolidation & Quality Upgrade | 8 | 9 | 2025-07-22 |
+| v8.0 | AI Trading Coach | 5 | 14 | 2026-04-23 |
 
 ## Accumulated Context
 
 ### Decisions
 
-All v1.0–v7.0 decisions archived in PROJECT.md Key Decisions table.
+All v1.0–v8.0 decisions archived in PROJECT.md Key Decisions table.
 
-- [Phase 44]: lot_matches junction table for SELL reversal tracking
-- [Phase 44]: Proportional buy-side broker fee allocation on SELL
-- [Phase 44]: Sort/order whitelist mitigates injection (T-44-05)
-- [Phase 44]: Sparkles wrapped in span for title tooltip (lucide lacks title prop)
-- [Phase 44]: Invalidating queryKey ['trades'] cascades to both list and stats caches
-- [Phase 44]: Added id to DailyPickResponse for pick linking (backend + frontend)
-- [Phase 44]: Popover+Command combo for ticker autocomplete in trade entry
-- [Phase 44]: onCreateFirst prop on TradesTable for empty state CTA
-- [Phase 45]: compute_pick_outcome as pure function in pick_service.py, SL check before TP1
-- [Phase 45]: Streak treats expired picks as streak-breaker (current_streak=0)
-- [Phase 45]: PickPerformanceCards and PickHistoryTable are self-contained (own hooks internally)
-- [Phase 45]: Open trades section hidden entirely when no BUY trades exist
-- [Phase 45]: Performance cards show dashes on error (graceful degradation, not blocking)
-- [Phase 46]: Renamed metadata to event_metadata (SQLAlchemy reserved name)
-- [Phase 46]: Centered normalization for sector bias — subtract mean so poor sectors get preference_score < 0
-- [Phase 46]: Added get_habit_detections() read method to BehaviorService (plan referenced it but missing from 46-01)
-- [Phase 46]: daily_consecutive_loss_check chains from daily_pick_outcome_check (end of daily pipeline)
-- [Phase 46]: Sector bias as multiplicative factor (1 + preference_score * 0.1) bounded to +-10% impact
-- [Phase 46]: Used event_metadata (not metadata) in BehaviorEventCreate to match 46-01 deviation
-- [Phase 46]: Added onClick to PickCard for pick_click tracking (no prior click handler)
-- [Phase 47]: Gemini review uses WeeklyReviewOutput Pydantic model for structured output with 3-stage fallback
-- [Phase 47]: GoalService follows BehaviorService pattern: module-level pure functions + async class
-- [Phase 47]: Include sector preference data in weekly review prompts for richer coaching
-- [Phase 47]: GET goals endpoints return None (null JSON) not 404 for missing data
-- [Phase 47]: weekly_behavior_analysis chains to generate_weekly_review_triggered (separate ID from cron job)
-- [Phase 47]: Progress bar color computed client-side from progress_pct (3-tier: green>=100%, amber 50-99%, red<50%)
-- [Phase 47]: WeeklyReviewCard expanded by default for immediate value delivery
-- [Phase 47]: WeeklyPromptCard returns null (no DOM) when no pending prompt — matches Risk Banner pattern
+### Research Context (v9.0)
 
-### Research Context (v8.0)
-
-- Build VNMarketRules utility FIRST (P&L, picks validation, position sizing depend on it)
-- Daily picks = ranking layer on existing AI analysis, NOT re-analysis (~1 Gemini call/day)
-- Adaptive strategy needs ~20 trades before activation — build last
-- 6 new DB tables: daily_picks, trade_journal, user_risk_profile, behavior_events, goals, weekly_reviews
-- Zero new Python packages. 5 new frontend npm packages (react-hook-form, zod, react-day-picker, sonner, @hookform/resolvers)
+- Scheduler chain trigger fires from UPCOM crawl — MUST rewire to HOSE before removal (silent pipeline failure risk)
+- Watchlist localStorage→DB migration: deploy backend API first, then frontend bridge. Keep localStorage read-only for 1 cycle
+- AI batch size 25→15 when increasing prompt length to avoid truncation (~14% coverage drop otherwise)
+- Stale `holo-exchange-filter` localStorage key must be cleared on app mount before removing ExchangeFilter component
+- E2E tests reference current routes — add Next.js redirects for removed/renamed routes
 
 ### Pending Todos
 
@@ -112,6 +83,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T12:57:46.461Z
-Stopped at: Completed 47-03-PLAN.md
+Last session: 2026-04-24
+Stopped at: Roadmap created for v9.0 — ready to plan Phase 48
 Resume file: None

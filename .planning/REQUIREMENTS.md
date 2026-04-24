@@ -46,18 +46,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLN-01 | — | Pending |
-| CLN-02 | — | Pending |
-| CLN-03 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| FLOW-01 | — | Pending |
-| FLOW-02 | — | Pending |
-| FLOW-03 | — | Pending |
-| AI-01 | — | Pending |
-| AI-02 | — | Pending |
-| AI-03 | — | Pending |
+| CLN-01 | Phase 48 | Pending |
+| CLN-02 | Phase 48 | Pending |
+| CLN-03 | Phase 48 | Pending |
+| NAV-01 | Phase 49 | Pending |
+| NAV-02 | Phase 49 | Pending |
+| NAV-03 | Phase 49 | Pending |
+| FLOW-01 | Phase 50 | Pending |
+| FLOW-02 | Phase 50 | Pending |
+| FLOW-03 | Phase 50 | Pending |
+| AI-01 | Phase 51 | Pending |
+| AI-02 | Phase 51 | Pending |
+| AI-03 | Phase 51 | Pending |
 
 ---
 *Requirements defined: 2026-04-24*

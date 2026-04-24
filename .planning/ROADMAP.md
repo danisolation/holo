@@ -15,6 +15,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v6.0 AI Backtesting Engine** — Phases 32-34 (shipped 2026-04-22)
 - ✅ **v7.0 Consolidation & Quality Upgrade** — Phases 35-42 (shipped 2025-07-22)
 - ✅ **v8.0 AI Trading Coach** — Phases 43-47 (shipped 2026-04-23)
+- 🚧 **v9.0 UX Rework & Simplification** — Phases 48-51 (in progress)
 
 ## Phases
 
@@ -124,103 +125,83 @@ Full details: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md)
 
 </details>
 
-### ✅ v8.0 AI Trading Coach (Completed 2026-04-23)
+<details>
+<summary>✅ v8.0 AI Trading Coach (Phases 43-47) — SHIPPED 2026-04-23</summary>
 
-**Milestone Goal:** Biến Holo thành huấn luyện viên trading cá nhân — mỗi ngày gợi ý cụ thể mua mã nào, ghi nhận kết quả, học từ thói quen, và điều chỉnh chiến lược theo thời gian.
+- [x] Phase 43: Daily Picks Engine (3/3 plans) — AI selects 3-5 daily stock picks with entry/SL/TP, position sizing, safety scoring
+- [x] Phase 44: Trade Journal & P&L (3/3 plans) — User logs real trades with auto-calculated P&L including VN fees/tax
+- [x] Phase 45: Coach Dashboard & Pick Performance (2/2 plans) — Single-page coach view with picks, performance cards, outcome tracking
+- [x] Phase 46: Behavior Tracking & Adaptive Strategy (3/3 plans) — Viewing habits, trading patterns, risk adjustments, sector preferences
+- [x] Phase 47: Goals & Weekly Reviews (3/3 plans) — Monthly profit targets, weekly risk tolerance prompt, AI coaching reviews
 
-- [x] **Phase 43: Daily Picks Engine** - AI selects 3-5 daily stock picks with entry/SL/TP, position sizing, safety scoring, and Vietnamese explanations (completed 2026-04-23)
-- [x] **Phase 44: Trade Journal & P&L** - User logs real trades with auto-calculated P&L including VN fees/tax, optionally linked to AI picks (completed 2026-04-23)
-- [x] **Phase 45: Coach Dashboard & Pick Performance** - Single-page coach view with today's picks, open trades, performance cards, and full pick history with outcome tracking (completed 2026-04-23)
-- [x] **Phase 46: Behavior Tracking & Adaptive Strategy** - Track viewing habits and trading patterns, maintain risk level with suggest-then-confirm adjustments and sector preference learning (completed 2026-04-23)
-- [x] **Phase 47: Goals & Weekly Reviews** - Monthly profit targets with progress tracking, weekly risk tolerance prompt, and AI-generated coaching reviews (completed 2026-04-23)
+Full details: [milestones/v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md)
+
+</details>
+
+### 🚧 v9.0 UX Rework & Simplification (In Progress)
+
+**Milestone Goal:** Đơn giản hóa Holo — bỏ features không cần (corporate events, HNX/UPCOM), redesign luồng sử dụng cho rõ ràng, cải thiện AI output dài và hữu ích hơn.
+
+- [ ] **Phase 48: Backend Cleanup & Scheduler Simplification** - Remove corporate events, HNX/UPCOM, dead telegram dependency; simplify scheduler to HOSE-only pipeline
+- [ ] **Phase 49: Navigation & Watchlist Migration** - Reduce nav to 4-5 items, migrate watchlist from localStorage to PostgreSQL, show AI signals on watchlist
+- [ ] **Phase 50: Coach Page Restructure & Trade Flow** - Tab-based Coach layout, pick card trade recording, post-trade next steps
+- [ ] **Phase 51: AI Analysis Improvement** - Longer structured AI output, reduced batch sizes, frontend structured rendering
 
 ## Phase Details
 
-### Phase 43: Daily Picks Engine
-**Goal**: Each trading day, the app selects and displays 3-5 specific stock picks with entry/SL/TP, position sizing, and Vietnamese explanations — filtered for the user's capital and scored for safety
-**Depends on**: Phase 42 (v7.0 shipped)
-**Requirements**: PICK-01, PICK-02, PICK-03, PICK-04, PICK-05, PICK-06, PICK-07
+### Phase 48: Backend Cleanup & Scheduler Simplification
+**Goal**: All dead features are fully removed — corporate events, HNX/UPCOM support, and telegram dependency — and the scheduler pipeline is simplified to a reliable HOSE-only chain
+**Depends on**: Phase 47 (v8.0 shipped)
+**Requirements**: CLN-01, CLN-02, CLN-03
 **Success Criteria** (what must be TRUE):
-  1. User sees 3-5 daily stock picks on the /coach page, each with a Vietnamese explanation (200-300 words) combining technical, fundamental, and sentiment reasoning for why it was selected
-  2. Every pick displays a specific entry price, stop-loss, and take-profit level inherited from the existing trading signal pipeline
-  3. Every pick shows position sizing in absolute terms: "Mua X cổ × Y đồng = Z VND (N% vốn)" — based on the user's capital (<50M VND) and 100-share lot sizes
-  4. Picks are filtered by affordability (user can buy at least 1 lot of 100 shares) and scored with safety bias — high-ATR, low-ADX, and low-volume tickers are penalized in ranking
-  5. Below the main picks, 5-10 "almost selected" tickers are shown with a one-line explanation of why they weren't chosen
-**Plans**: 3 plans
-Plans:
-- [x] 43-01-PLAN.md — DB models, migration, schemas, test scaffold
-- [x] 43-02-PLAN.md — PickService, API endpoints, scheduler job chain
-- [x] 43-03-PLAN.md — Frontend /coach page, components, hooks, navbar
+  1. The daily scheduler pipeline (price crawl → indicators → AI analysis → picks) runs end-to-end on HOSE tickers only, with the chain trigger rewired from UPCOM to HOSE completion
+  2. Corporate events are fully removed: DB table dropped via Alembic migration, API endpoints return 404, scheduler jobs removed, frontend page and nav link gone
+  3. All HNX/UPCOM references removed: exchange filter component, exchange badge, exchange store, tickers deactivated in DB, no frontend traces remain
+  4. `python-telegram-bot` is removed from requirements.txt and the backend starts cleanly without it
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 44: Trade Journal & P&L
-**Goal**: User can log real buy/sell trades and see accurate profit/loss calculations with VN market fees and taxes, optionally linking trades to daily AI picks
-**Depends on**: Phase 43
-**Requirements**: JRNL-01, JRNL-02, JRNL-03
+### Phase 49: Navigation & Watchlist Migration
+**Goal**: User has a clean, simplified navigation and a server-backed watchlist that persists across devices and shows AI signal data alongside each ticker
+**Depends on**: Phase 48
+**Requirements**: NAV-01, NAV-02, NAV-03
 **Success Criteria** (what must be TRUE):
-  1. User can enter a buy or sell trade (ticker, price, quantity, date, fees) through a validated form on the journal page
-  2. The app automatically calculates realized P&L using FIFO matching, including broker fees (0.15% each side) and mandatory sell tax (0.1%) per VN regulations — showing both gross and net P&L
-  3. When logging a trade, user can optionally link it to a specific daily pick to track whether they followed the AI recommendation
-**Plans**: 3 plans
-Plans:
-- [x] 44-01-PLAN.md — Backend data layer: migration 020, ORM models, FIFO service, API endpoints, unit tests
-- [x] 44-02-PLAN.md — Frontend data layer + display components: API types, hooks, navbar, stats cards, filters, table, delete dialog
-- [x] 44-03-PLAN.md — Trade entry dialog + /journal page assembly + human verification
+  1. Navigation shows 4-5 items (reduced from 7), with overlapping pages merged or removed and redirects in place for old routes
+  2. User's watchlist is stored in PostgreSQL — adding/removing tickers persists across browsers and devices without data loss
+  3. Existing localStorage watchlist data is automatically migrated to the database on first visit, with localStorage cleared after successful migration
+  4. Each ticker in the watchlist displays the latest AI signal score and buy/sell/hold recommendation alongside the ticker name
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 45: Coach Dashboard & Pick Performance
-**Goal**: The /coach page becomes the daily landing page — displaying today's picks, open trades, performance metrics, and full pick history with actual outcome tracking for every pick
-**Depends on**: Phase 44
-**Requirements**: CDSH-01, CDSH-02, CDSH-03
+### Phase 50: Coach Page Restructure & Trade Flow
+**Goal**: The Coach page is interactive and action-oriented — user can record trades directly from AI picks with one click and sees clear next steps after every trade
+**Depends on**: Phase 49
+**Requirements**: FLOW-01, FLOW-02, FLOW-03
 **Success Criteria** (what must be TRUE):
-  1. The /coach page displays today's picks, currently open trades, and a performance summary all on a single page
-  2. Pick history shows actual outcomes for every pick — whether entry was hit, SL was hit, TP was hit, and return after N days — including picks the user didn't trade
-  3. Performance cards display win rate, total P&L, average risk-to-reward ratio, and current winning/losing streak
-**Plans**: 2 plans
-Plans:
-- [x] 45-01-PLAN.md — Backend: migration 021, outcome computation, API endpoints, scheduler job
-- [x] 45-02-PLAN.md — Frontend: performance cards, pick history table, coach page restructure
+  1. Each pick card displays a "Ghi nhận giao dịch" button that opens a trade entry dialog pre-filled with the pick's ticker, entry price, SL, and TP
+  2. The Coach page uses a tab-based layout (Picks / Nhật ký / Mục tiêu) instead of a single long scroll — each tab loads its own content
+  3. After recording a trade, the app immediately shows the open position with SL/TP monitoring status and clear guidance on what to do next
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 46: Behavior Tracking & Adaptive Strategy
-**Goal**: The app observes the user's trading habits and viewing patterns, then suggests personalized risk adjustments and sector preferences based on actual trade performance
-**Depends on**: Phase 45
-**Requirements**: BEHV-01, BEHV-02, ADPT-01, ADPT-02
+### Phase 51: AI Analysis Improvement
+**Goal**: AI analysis output is longer, structured into clear sections, and rendered on the frontend with visual hierarchy — not a plain text block
+**Depends on**: Phase 48
+**Requirements**: AI-01, AI-02, AI-03
 **Success Criteria** (what must be TRUE):
-  1. The app records which tickers the user views most frequently, when they view them, and how often — surfacing unconscious biases on the coach dashboard
-  2. The app detects trading habit patterns: selling too early when in profit, holding too long when in loss, and impulsive trading after news events
-  3. A risk level (1-5) is maintained — after 3 consecutive losses, the app suggests reducing risk level and requires explicit user confirmation before applying the change
-  4. The app learns sector preferences from trade results — biasing future picks toward sectors where the user typically profits and away from sectors with consistent losses
-**Plans**: 3 plans
-Plans:
-- [x] 46-01-PLAN.md — Backend data layer: migration 022, ORM models, schemas, BehaviorService + unit tests
-- [x] 46-02-PLAN.md — Backend API: 6 behavior endpoints, scheduler jobs, PickService sector bias
-- [x] 46-03-PLAN.md — Frontend: behavior tracking hook, 4 new components, coach page integration
-**UI hint**: yes
-
-### Phase 47: Goals & Weekly Reviews
-**Goal**: User sets monthly profit targets, tracks progress visually, and receives AI-generated weekly coaching reviews with risk tolerance adjustments
-**Depends on**: Phase 46
-**Requirements**: GOAL-01, GOAL-02, GOAL-03
-**Success Criteria** (what must be TRUE):
-  1. User can set a monthly profit target, and a progress bar on the coach dashboard shows real-time tracking of actual P&L toward that goal
-  2. Each week the app prompts: "Bạn muốn thận trọng hơn hay mạo hiểm hơn?" — the user's response adjusts the risk level for the following week
-  3. Every Sunday, an AI-generated weekly performance review summarizes the week in Vietnamese, highlights good and bad trading habits, and suggests specific improvements
-**Plans**: 3 plans
-Plans:
-- [x] 47-01-PLAN.md — Backend data layer: migration 023, ORM models, schemas, GoalService + tests
-- [x] 47-02-PLAN.md — Backend API: 7 endpoints, 2 scheduler jobs, Gemini review generation
-- [x] 47-03-PLAN.md — Frontend: 4 components, coach page integration, human verification
+  1. AI analysis output includes distinct sections (tóm tắt, mức giá quan trọng, rủi ro, hành động cụ thể) — each clearly labeled and separated
+  2. Batch sizes are reduced and token/thinking limits increased, producing multi-paragraph analysis for every ticker without output truncation
+  3. The frontend renders AI analysis as structured sections with headings and visual separation, replacing the previous plain text block display
+**Plans**: TBD
 **UI hint**: yes
 
 ## Progress
 
-**Execution Order:** 43 → 44 → 45 → 46 → 47
+**Execution Order:** 48 → 49 → 50 → 51
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 43. Daily Picks Engine | 3/3 | Complete    | 2026-04-23 |
-| 44. Trade Journal & P&L | 3/3 | Complete    | 2026-04-23 |
-| 45. Coach Dashboard & Pick Performance | 2/2 | Complete    | 2026-04-23 |
-| 46. Behavior Tracking & Adaptive Strategy | 3/3 | Complete   | 2026-04-23 |
-| 47. Goals & Weekly Reviews | 3/3 | Complete   | 2026-04-23 |
+| 48. Backend Cleanup & Scheduler Simplification | 0/0 | Not started | - |
+| 49. Navigation & Watchlist Migration | 0/0 | Not started | - |
+| 50. Coach Page Restructure & Trade Flow | 0/0 | Not started | - |
+| 51. AI Analysis Improvement | 0/0 | Not started | - |
