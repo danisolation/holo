@@ -106,6 +106,7 @@ None.
 | 260423-f6p | Tier 2 Batch A: staleTime tuning, GZip, N+1 fix, error states, pagination | 2026-04-23 | 16cd356 | [260423-f6p-tier-2-batch-a-staletime-tuning-gzip-ana](./quick/260423-f6p-tier-2-batch-a-staletime-tuning-gzip-ana/) |
 | 260423-feq | Tier 2 Batch B: market-overview sort/top, CafeF retry, realtime diff, home errors | 2026-04-23 | fee5e52 | [260423-feq-tier-2-batch-b-market-overview-optimizat](./quick/260423-feq-tier-2-batch-b-market-overview-optimizat/) |
 | 260423-fuy | Tier 2 Batch C: news skeleton, tickers pagination, crawler types, exchange-aware realtime | 2026-04-23 | 09c92a8 | [260423-fuy-tier-2-batch-c-news-skeleton-home-page-e](./quick/260423-fuy-tier-2-batch-c-news-skeleton-home-page-e/) |
+| 260424-ren | Add Render.com deployment config (render.yaml, CORS_ORIGINS, PORT binding) | 2026-04-24 | 7550c17 | — |
 
 ## Session Continuity
 
