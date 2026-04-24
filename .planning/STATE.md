@@ -4,13 +4,13 @@ milestone: v9.0
 milestone_name: UX Rework & Simplification
 status: executing
 stopped_at: Roadmap created for v9.0 — ready to plan Phase 48
-last_updated: "2026-04-24T07:32:33.927Z"
+last_updated: "2026-04-24T07:58:19.175Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** Phase 49 — navigation-watchlist-migration
+**Current focus:** Phase 50 — coach-page-restructure-trade-flow
 
 ## Current Position
 
-Phase: 50
+Phase: 51
 Plan: Not started
-Status: Executing Phase 49
+Status: Executing Phase 50
 Last activity: 2026-04-24
 
 Progress: [░░░░░░░░░░] 0%
