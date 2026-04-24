@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     # Gemini AI (Phase 2)
     gemini_api_key: str = ""  # Required — get from https://aistudio.google.com/apikey
     gemini_model: str = "gemini-2.5-flash-lite"
-    gemini_batch_size: int = 25  # 25/batch = 16 batches for 400 tickers
+    gemini_batch_size: int = 15  # Reduced from 25 — avoid truncation with longer prompts
     gemini_delay_seconds: float = 4.0  # Delay between batches for rate-limit safety
     gemini_max_retries: int = 3
 
@@ -86,6 +86,10 @@ class Settings(BaseSettings):
     trading_signal_batch_size: int = 15    # Reduced from 25 — larger output per ticker
     trading_signal_thinking_budget: int = 2048  # Doubled from 1024 — complex dual-direction reasoning
     trading_signal_max_tokens: int = 32768     # Doubled from 16384 — ~300 tokens/ticker × 15 tickers
+
+    # Combined Analysis (Phase 51 — structured sections need more tokens)
+    combined_thinking_budget: int = 2048   # Match trading_signal — complex multi-dimensional reasoning
+    combined_max_tokens: int = 32768       # Match trading_signal — 4 structured sections per ticker
 
     # Test Mode (Phase 27 — E2E testing)
     holo_test_mode: bool = False  # Set True to skip scheduler in tests

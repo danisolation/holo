@@ -98,7 +98,10 @@ class TickerCombinedAnalysis(BaseModel):
     ticker: str
     recommendation: Recommendation
     confidence: int = Field(ge=1, le=10, description="Confidence level 1-10")
-    explanation: str = Field(description="Vietnamese explanation, max ~200 words")
+    summary: str = Field(description="Tóm tắt: đánh giá tổng quan 3-5 câu tiếng Việt, tổng hợp cả 3 chiều phân tích")
+    key_levels: str = Field(description="Mức giá quan trọng: hỗ trợ, kháng cự, entry gợi ý, stop-loss, take-profit")
+    risks: str = Field(description="Rủi ro: 2-3 yếu tố rủi ro chính cần lưu ý (thị trường, ngành, nội tại)")
+    action: str = Field(description="Hành động cụ thể: mua/bán/giữ tại mức giá nào, khối lượng, thời điểm")
 
 
 class CombinedBatchResponse(BaseModel):
