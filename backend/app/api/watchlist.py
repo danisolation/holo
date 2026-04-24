@@ -1,0 +1,155 @@
+"""Watchlist API endpoints with AI signal enrichment.
+
+CRUD operations for the web watchlist (single-user, no auth).
+GET enriches each symbol with latest combined AI signal/score via JOIN.
+POST /migrate supports one-time localStorage→DB migration.
+"""
+from fastapi import APIRouter, HTTPException
+from sqlalchemy import select, delete, func as sa_func, and_
+
+from app.database import async_session
+from app.models.user_watchlist import UserWatchlist
+from app.models.ticker import Ticker
+from app.models.ai_analysis import AIAnalysis, AnalysisType
+from app.schemas.watchlist import (
+    WatchlistItemResponse,
+    WatchlistAddRequest,
+    WatchlistMigrateRequest,
+)
+
+router = APIRouter(prefix="/watchlist", tags=["watchlist"])
+
+
+async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
+    """Fetch all watchlist items enriched with latest combined AI signal.
+
+    JOIN path: UserWatchlist.symbol → Ticker.symbol → Ticker.id → AIAnalysis.ticker_id
+    Only the most recent 'combined' analysis per ticker is used.
+    """
+    # Subquery: latest combined analysis date per ticker
+    latest_analysis = (
+        select(
+            AIAnalysis.ticker_id,
+            sa_func.max(AIAnalysis.analysis_date).label("max_date"),
+        )
+        .where(AIAnalysis.analysis_type == AnalysisType.COMBINED)
+        .group_by(AIAnalysis.ticker_id)
+        .subquery()
+    )
+
+    # Main query: watchlist LEFT JOIN ticker LEFT JOIN latest combined analysis
+    stmt = (
+        select(
+            UserWatchlist.symbol,
+            UserWatchlist.created_at,
+            AIAnalysis.signal,
+            AIAnalysis.score,
+            AIAnalysis.analysis_date,
+        )
+        .outerjoin(Ticker, UserWatchlist.symbol == Ticker.symbol)
+        .outerjoin(
+            latest_analysis,
+            Ticker.id == latest_analysis.c.ticker_id,
+        )
+        .outerjoin(
+            AIAnalysis,
+            and_(
+                AIAnalysis.ticker_id == Ticker.id,
+                AIAnalysis.analysis_type == AnalysisType.COMBINED,
+                AIAnalysis.analysis_date == latest_analysis.c.max_date,
+            ),
+        )
+        .order_by(UserWatchlist.created_at.desc())
+    )
+
+    result = await session.execute(stmt)
+    rows = result.all()
+
+    return [
+        WatchlistItemResponse(
+            symbol=row.symbol,
+            created_at=row.created_at.isoformat(),
+            ai_signal=row.signal,
+            ai_score=row.score,
+            signal_date=row.analysis_date.isoformat() if row.analysis_date else None,
+        )
+        for row in rows
+    ]
+
+
+@router.get("/", response_model=list[WatchlistItemResponse])
+async def get_watchlist():
+    """Get all watchlist items with AI signal enrichment."""
+    async with async_session() as session:
+        return await _get_enriched_watchlist(session)
+
+
+@router.post("/", response_model=WatchlistItemResponse, status_code=201)
+async def add_to_watchlist(body: WatchlistAddRequest):
+    """Add a symbol to the watchlist. Idempotent — returns existing if already present."""
+    symbol = body.symbol.upper().strip()
+
+    async with async_session() as session:
+        # Check if already exists
+        stmt = select(UserWatchlist).where(UserWatchlist.symbol == symbol)
+        result = await session.execute(stmt)
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            return WatchlistItemResponse(
+                symbol=existing.symbol,
+                created_at=existing.created_at.isoformat(),
+            )
+
+        # Insert new entry
+        entry = UserWatchlist(symbol=symbol)
+        session.add(entry)
+        await session.commit()
+        await session.refresh(entry)
+
+        return WatchlistItemResponse(
+            symbol=entry.symbol,
+            created_at=entry.created_at.isoformat(),
+        )
+
+
+@router.delete("/{symbol}", status_code=204)
+async def remove_from_watchlist(symbol: str):
+    """Remove a symbol from the watchlist. Returns 404 if not found."""
+    symbol = symbol.upper().strip()
+
+    async with async_session() as session:
+        stmt = delete(UserWatchlist).where(UserWatchlist.symbol == symbol)
+        result = await session.execute(stmt)
+        await session.commit()
+
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not in watchlist")
+
+
+@router.post("/migrate", response_model=list[WatchlistItemResponse])
+async def migrate_watchlist(body: WatchlistMigrateRequest):
+    """Bulk add symbols from localStorage migration.
+
+    Skips symbols already in watchlist. Returns full enriched list.
+    One-time use for localStorage→DB migration on first web dashboard load.
+    """
+    async with async_session() as session:
+        # Get existing symbols
+        stmt = select(UserWatchlist.symbol)
+        result = await session.execute(stmt)
+        existing_symbols = {row[0] for row in result.all()}
+
+        # Insert new symbols
+        for raw_symbol in body.symbols:
+            symbol = raw_symbol.upper().strip()
+            if not symbol or symbol in existing_symbols:
+                continue
+            entry = UserWatchlist(symbol=symbol)
+            session.add(entry)
+            existing_symbols.add(symbol)
+
+        await session.commit()
+
+        # Return full enriched watchlist
+        return await _get_enriched_watchlist(session)

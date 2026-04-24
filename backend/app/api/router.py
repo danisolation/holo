@@ -9,6 +9,7 @@ from app.api.picks import router as picks_router
 from app.api.trades import router as trades_router
 from app.api.behavior import router as behavior_router
 from app.api.goals import router as goals_router
+from app.api.watchlist import router as watchlist_router
 
 api_router = APIRouter()
 api_router.include_router(system_router)
@@ -19,3 +20,4 @@ api_router.include_router(picks_router)
 api_router.include_router(trades_router)
 api_router.include_router(behavior_router)
 api_router.include_router(goals_router)
+api_router.include_router(watchlist_router)
