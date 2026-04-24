@@ -145,7 +145,7 @@ Full details: [milestones/v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md)
 - [x] **Phase 48: Backend Cleanup & Scheduler Simplification** - Remove corporate events, HNX/UPCOM, dead telegram dependency; simplify scheduler to HOSE-only pipeline (2 plans) (completed 2026-04-24)
 - [x] **Phase 49: Navigation & Watchlist Migration** - Reduce nav to 5 items, migrate watchlist from localStorage to PostgreSQL, show AI signals on watchlist (2 plans) (completed 2026-04-24)
 - [x] **Phase 50: Coach Page Restructure & Trade Flow** - Tab-based Coach layout, pick card trade recording, post-trade next steps (2 plans) (completed 2026-04-24)
-- [ ] **Phase 51: AI Analysis Improvement** - Longer structured AI output, reduced batch sizes, frontend structured rendering (2 plans)
+- [x] **Phase 51: AI Analysis Improvement** - Longer structured AI output, reduced batch sizes, frontend structured rendering (2 plans) (completed 2026-04-24)
 
 ## Phase Details
 
@@ -207,8 +207,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 51-01-PLAN.md — Backend: structured combined analysis schema + config tuning + API raw_response
-- [ ] 51-02-PLAN.md — Frontend: structured section rendering with visual hierarchy
+- [x] 51-01-PLAN.md — Backend: structured combined analysis schema + config tuning + API raw_response
+- [x] 51-02-PLAN.md — Frontend: structured section rendering with visual hierarchy
 **UI hint**: yes
 
 ## Progress
@@ -220,4 +220,4 @@ Plans:
 | 48. Backend Cleanup & Scheduler Simplification | 2/2 | Complete    | 2026-04-24 |
 | 49. Navigation & Watchlist Migration | 2/2 | Complete    | 2026-04-24 |
 | 50. Coach Page Restructure & Trade Flow | 2/2 | Complete    | 2026-04-24 |
-| 51. AI Analysis Improvement | 0/0 | Not started | - |
+| 51. AI Analysis Improvement | 2/2 | Complete    | 2026-04-24 |
