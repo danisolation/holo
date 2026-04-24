@@ -227,24 +227,30 @@ class ContextBuilder:
         if tech:
             context["tech_signal"] = tech.signal
             context["tech_score"] = tech.score
+            context["tech_reasoning"] = tech.reasoning or ""
         else:
             context["tech_signal"] = "N/A"
             context["tech_score"] = "N/A"
+            context["tech_reasoning"] = ""
 
         if fund:
             context["fund_signal"] = fund.signal
             context["fund_score"] = fund.score
+            context["fund_reasoning"] = fund.reasoning or ""
         else:
             context["fund_signal"] = "N/A"
             context["fund_score"] = "N/A"
+            context["fund_reasoning"] = ""
 
         if sent:
             context["sent_signal"] = sent.signal
             context["sent_score"] = sent.score
+            context["sent_reasoning"] = sent.reasoning or ""
         else:
             # Graceful degradation: sentiment defaults to neutral (per CONTEXT.md)
             context["sent_signal"] = "neutral"
             context["sent_score"] = 5
+            context["sent_reasoning"] = "Không có tin tức đặc biệt."
 
         return context
 

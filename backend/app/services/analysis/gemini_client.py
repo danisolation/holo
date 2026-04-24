@@ -357,8 +357,7 @@ class GeminiClient:
 
         Per CONTEXT.md: Single Gemini call combining tech + fund + sentiment.
         Per CONTEXT.md: Gemini reasons across all dimensions (NOT a weighted formula).
-        Per CONTEXT.md: Confidence based on signal alignment, data freshness, news volume.
-        Per CONTEXT.md: Vietnamese explanation, max ~200 words, natural language.
+        Includes per-type reasoning text for richer context.
         """
         lines = [
             COMBINED_FEW_SHOT,
@@ -368,8 +367,14 @@ class GeminiClient:
         for symbol, data in ticker_data.items():
             lines.append(f"\n--- {symbol} ---")
             lines.append(f"Kỹ thuật: signal={data.get('tech_signal', 'N/A')}, strength={data.get('tech_score', 'N/A')}")
+            if data.get('tech_reasoning'):
+                lines.append(f"  Chi tiết kỹ thuật: {data['tech_reasoning']}")
             lines.append(f"Cơ bản: health={data.get('fund_signal', 'N/A')}, score={data.get('fund_score', 'N/A')}")
+            if data.get('fund_reasoning'):
+                lines.append(f"  Chi tiết cơ bản: {data['fund_reasoning']}")
             lines.append(f"Tâm lý: sentiment={data.get('sent_signal', 'neutral')}, score={data.get('sent_score', 5)}")
+            if data.get('sent_reasoning'):
+                lines.append(f"  Chi tiết tâm lý: {data['sent_reasoning']}")
 
         return "\n".join(lines)
 
