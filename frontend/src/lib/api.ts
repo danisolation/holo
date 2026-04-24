@@ -63,6 +63,15 @@ export interface AnalysisResult {
   score: number;
   reasoning: string;
   model_version: string;
+  raw_response?: Record<string, unknown> | null;
+}
+
+/** Phase 51: Structured combined analysis sections from raw_response */
+export interface StructuredCombinedData {
+  summary: string;
+  key_levels: string;
+  risks: string;
+  action: string;
 }
 
 export interface AnalysisSummary {

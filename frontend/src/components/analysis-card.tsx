@@ -1,8 +1,10 @@
 "use client";
 
 import type { AnalysisResult } from "@/lib/api";
+import type { StructuredCombinedData } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   TrendingUp,
   TrendingDown,
@@ -12,6 +14,10 @@ import {
   MessageSquare,
   Brain,
   Target,
+  FileText,
+  DollarSign,
+  AlertTriangle,
+  Zap,
 } from "lucide-react";
 
 const TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -255,6 +261,93 @@ export function CombinedRecommendationCard({ analysis }: CombinedCardProps) {
               <span>{analysis.model_version}</span>
             </div>
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Extract structured sections from combined analysis raw_response */
+function getStructuredData(analysis: AnalysisResult): StructuredCombinedData | null {
+  const raw = analysis.raw_response;
+  if (
+    raw &&
+    typeof raw === "object" &&
+    typeof raw.summary === "string" &&
+    typeof raw.key_levels === "string" &&
+    typeof raw.risks === "string" &&
+    typeof raw.action === "string"
+  ) {
+    return {
+      summary: raw.summary as string,
+      key_levels: raw.key_levels as string,
+      risks: raw.risks as string,
+      action: raw.action as string,
+    };
+  }
+  return null;
+}
+
+const COMBINED_SECTIONS = [
+  { key: "summary" as const, label: "Tóm tắt", icon: <FileText className="size-4" /> },
+  { key: "key_levels" as const, label: "Mức giá quan trọng", icon: <DollarSign className="size-4" /> },
+  { key: "risks" as const, label: "Rủi ro", icon: <AlertTriangle className="size-4" /> },
+  { key: "action" as const, label: "Hành động cụ thể", icon: <Zap className="size-4" /> },
+] as const;
+
+/** Phase 51: Structured combined recommendation card with 4 sections */
+export function StructuredCombinedCard({ analysis }: CombinedCardProps) {
+  const signalCfg = getSignalConfig(analysis.signal);
+  const structured = getStructuredData(analysis);
+
+  return (
+    <Card className={`${signalCfg.bgColor} border-2`}>
+      <CardContent className="py-4 space-y-4">
+        {/* Header: Recommendation + Confidence */}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">
+              Khuyến nghị
+            </span>
+            <div className={`text-3xl font-bold ${signalCfg.color} flex items-center gap-2`}>
+              {signalCfg.icon}
+              {signalCfg.label}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs text-muted-foreground">Độ tin cậy:</span>
+              <span className="text-sm font-bold">{analysis.score}/10</span>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Structured sections or fallback */}
+        {structured ? (
+          <div className="space-y-4">
+            {COMBINED_SECTIONS.map(({ key, label, icon }) => (
+              <div key={key}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-muted-foreground">{icon}</span>
+                  <h4 className="text-sm font-semibold">{label}</h4>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed pl-6">
+                  {structured[key]}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Fallback for old data without raw_response */
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {analysis.reasoning}
+          </p>
+        )}
+
+        {/* Footer: date + model */}
+        <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60 pt-2">
+          <span>{analysis.analysis_date}</span>
+          <span>{analysis.model_version}</span>
         </div>
       </CardContent>
     </Card>
