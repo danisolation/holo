@@ -9,26 +9,6 @@ from app.services.ticker_service import TickerService
 class TestExchangeMaxTickers:
 
     @pytest.mark.asyncio
-    async def test_hnx_uses_200_max(self, mock_db_session):
-        """HNX exchange must limit to 200 tickers per CONTEXT.md decision."""
-        crawler = MagicMock()
-        listing_df = pd.DataFrame({
-            "symbol": [f"HNX{i:03d}" for i in range(300)],
-            "organ_name": [f"Company {i}" for i in range(300)],
-        })
-        crawler.fetch_listing = AsyncMock(return_value=listing_df)
-        crawler.fetch_industry_classification = AsyncMock(
-            side_effect=Exception("skip")
-        )
-        mock_db_session.execute = AsyncMock(return_value=MagicMock(rowcount=0))
-
-        service = TickerService(mock_db_session, crawler)
-        result = await service.fetch_and_sync_tickers(exchange="HNX")
-
-        assert result["synced"] == 200
-        crawler.fetch_listing.assert_called_once_with(exchange="HNX")
-
-    @pytest.mark.asyncio
     async def test_hose_uses_400_max(self, mock_db_session):
         """HOSE exchange must limit to 400 tickers."""
         crawler = MagicMock()
@@ -46,25 +26,6 @@ class TestExchangeMaxTickers:
         result = await service.fetch_and_sync_tickers(exchange="HOSE")
 
         assert result["synced"] == 400
-
-    @pytest.mark.asyncio
-    async def test_upcom_uses_200_max(self, mock_db_session):
-        """UPCOM exchange must limit to 200 tickers."""
-        crawler = MagicMock()
-        listing_df = pd.DataFrame({
-            "symbol": [f"UPC{i:03d}" for i in range(300)],
-            "organ_name": [f"Company {i}" for i in range(300)],
-        })
-        crawler.fetch_listing = AsyncMock(return_value=listing_df)
-        crawler.fetch_industry_classification = AsyncMock(
-            side_effect=Exception("skip")
-        )
-        mock_db_session.execute = AsyncMock(return_value=MagicMock(rowcount=0))
-
-        service = TickerService(mock_db_session, crawler)
-        result = await service.fetch_and_sync_tickers(exchange="UPCOM")
-
-        assert result["synced"] == 200
 
 
 class TestDeactivationScoping:

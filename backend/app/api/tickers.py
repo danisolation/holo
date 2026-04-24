@@ -46,7 +46,7 @@ class MarketTickerResponse(BaseModel):
 
 router = APIRouter(prefix="/tickers", tags=["tickers"])
 
-ALLOWED_EXCHANGES = {"HOSE", "HNX", "UPCOM"}
+ALLOWED_EXCHANGES = {"HOSE"}
 
 
 @router.get("/", response_model=list[TickerResponse])

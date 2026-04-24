@@ -117,7 +117,7 @@ async def daily_price_crawl():
 async def daily_price_crawl_for_exchange(exchange: str):
     """Exchange-parameterized daily OHLCV crawl.
 
-    Called by staggered cron triggers: HOSE at 15:30, HNX at 16:00, UPCOM at 16:30.
+    Called by cron trigger: HOSE at 15:30 Mon-Fri.
     Reuses the same resilience pattern as daily_price_crawl but scoped to one exchange.
     """
     if exchange not in VALID_EXCHANGES:

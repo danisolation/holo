@@ -22,7 +22,7 @@ class TestSchedulerManager:
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
     def test_configure_jobs_registers_six_jobs(self):
-        """configure_jobs must register all expected jobs including Phase 47 goal jobs."""
+        """configure_jobs must register all expected jobs (HOSE-only, Phase 47 goal jobs)."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         # Remove any existing jobs first
@@ -32,8 +32,6 @@ class TestSchedulerManager:
 
         job_ids = [job.id for job in scheduler.get_jobs()]
         assert "daily_price_crawl_hose" in job_ids
-        assert "daily_price_crawl_hnx" in job_ids
-        assert "daily_price_crawl_upcom" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
         assert "realtime_price_poll" in job_ids
@@ -41,32 +39,9 @@ class TestSchedulerManager:
         assert "weekly_behavior_analysis" in job_ids
         assert "create_weekly_risk_prompt" in job_ids
         assert "generate_weekly_review" in job_ids
-        assert len(job_ids) == 10
+        assert len(job_ids) == 8
 
         # Clean up
-        scheduler.remove_all_jobs()
-        scheduler._listeners = []
-
-    def test_exchange_crawl_stagger_timing(self):
-        """Exchange crawls must be staggered: HOSE 15:30, HNX 16:00, UPCOM 16:30."""
-        from app.scheduler.manager import scheduler, configure_jobs
-
-        scheduler.remove_all_jobs()
-        scheduler._listeners = []
-        configure_jobs()
-
-        hose_job = scheduler.get_job("daily_price_crawl_hose")
-        hnx_job = scheduler.get_job("daily_price_crawl_hnx")
-        upcom_job = scheduler.get_job("daily_price_crawl_upcom")
-
-        # Verify triggers have correct hour:minute
-        assert hose_job.trigger.fields[5].expressions[0].first == 15  # hour
-        assert hose_job.trigger.fields[6].expressions[0].first == 30  # minute
-        assert hnx_job.trigger.fields[5].expressions[0].first == 16
-        assert hnx_job.trigger.fields[6].expressions[0].first == 0
-        assert upcom_job.trigger.fields[5].expressions[0].first == 16
-        assert upcom_job.trigger.fields[6].expressions[0].first == 30
-
         scheduler.remove_all_jobs()
         scheduler._listeners = []
 
@@ -116,7 +91,7 @@ class TestJobFunctions:
 
     @pytest.mark.asyncio
     async def test_weekly_ticker_refresh_calls_service(self):
-        """weekly_ticker_refresh job must call TickerService.fetch_and_sync_tickers for all exchanges."""
+        """weekly_ticker_refresh job must call TickerService.fetch_and_sync_tickers for HOSE only."""
         with patch("app.scheduler.jobs.async_session") as mock_session_factory:
             mock_session = AsyncMock()
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
@@ -134,8 +109,8 @@ class TestJobFunctions:
                     await weekly_ticker_refresh()
 
                     MockTickerService.assert_called_once()
-                    # Now syncs all 3 exchanges
-                    assert mock_service.fetch_and_sync_tickers.call_count == 3
+                    # Now syncs HOSE only
+                    assert mock_service.fetch_and_sync_tickers.call_count == 1
 
     @pytest.mark.asyncio
     async def test_weekly_financial_crawl_calls_service(self):
@@ -164,19 +139,18 @@ class TestJobChaining:
     """Tests for EVENT_JOB_EXECUTED job chaining (Phase 2)."""
 
     def test_on_job_executed_chains_indicators_after_price_crawl(self):
-        """Successful daily_price_crawl_upcom must trigger daily_indicator_compute and daily_corporate_action_check."""
+        """Successful daily_price_crawl_hose must trigger daily_indicator_compute."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
-        mock_event.job_id = "daily_price_crawl_upcom"
+        mock_event.job_id = "daily_price_crawl_hose"
         mock_event.exception = None
 
         with patch.object(scheduler, "add_job") as mock_add:
             _on_job_executed(mock_event)
-            assert mock_add.call_count == 2
+            assert mock_add.call_count == 1
             call_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in mock_add.call_args_list]
             assert "daily_indicator_compute_triggered" in call_ids
-            assert "daily_corporate_action_check_triggered" in call_ids
 
     def test_on_job_executed_chains_ai_after_indicators(self):
         """Successful daily_indicator_compute must trigger daily_ai_analysis."""
@@ -198,7 +172,7 @@ class TestJobChaining:
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
-        mock_event.job_id = "daily_price_crawl_upcom"
+        mock_event.job_id = "daily_price_crawl_hose"
         mock_event.exception = Exception("crawl failed")
 
         with patch.object(scheduler, "add_job") as mock_add:
@@ -206,7 +180,7 @@ class TestJobChaining:
             mock_add.assert_not_called()
 
     def test_configure_jobs_still_registers_original_jobs(self):
-        """configure_jobs must register the staggered exchange crawls plus weekly jobs."""
+        """configure_jobs must register the HOSE crawl plus weekly jobs."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         scheduler.remove_all_jobs()
@@ -217,8 +191,6 @@ class TestJobChaining:
 
         job_ids = [job.id for job in scheduler.get_jobs()]
         assert "daily_price_crawl_hose" in job_ids
-        assert "daily_price_crawl_hnx" in job_ids
-        assert "daily_price_crawl_upcom" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
 
