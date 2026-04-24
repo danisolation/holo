@@ -43,8 +43,10 @@ import {
   useTradingSignal,
   useTickerNews,
   useTickers,
+  useWatchlist,
+  useAddToWatchlist,
+  useRemoveFromWatchlist,
 } from "@/lib/hooks";
-import { useWatchlistStore } from "@/lib/store";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { useBehaviorTracking } from "@/lib/use-behavior-tracking";
 import { PriceFlashCell } from "@/components/price-flash-cell";
@@ -127,9 +129,10 @@ export default function TickerDetailPage({
   }, [tradingSignal]);
 
   // Watchlist
-  const { addToWatchlist, removeFromWatchlist, isInWatchlist } =
-    useWatchlistStore();
-  const inWatchlist = isInWatchlist(upperSymbol);
+  const { data: watchlistData } = useWatchlist();
+  const addMutation = useAddToWatchlist();
+  const removeMutation = useRemoveFromWatchlist();
+  const inWatchlist = watchlistData?.some((w) => w.symbol === upperSymbol) ?? false;
 
   // Ticker metadata
   const ticker = tickers?.find((t) => t.symbol === upperSymbol);
@@ -186,8 +189,8 @@ export default function TickerDetailPage({
             size="sm"
             onClick={() =>
               inWatchlist
-                ? removeFromWatchlist(upperSymbol)
-                : addToWatchlist(upperSymbol)
+                ? removeMutation.mutate(upperSymbol)
+                : addMutation.mutate(upperSymbol)
             }
             className="gap-1.5"
           >

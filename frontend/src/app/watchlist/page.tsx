@@ -1,11 +1,18 @@
 "use client";
 
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { WatchlistTable } from "@/components/watchlist-table";
-import { useWatchlistStore } from "@/lib/store";
+import { useWatchlist } from "@/lib/hooks";
+import { migrateLocalWatchlist } from "@/lib/store";
 
 export default function WatchlistPage() {
-  const { watchlist } = useWatchlistStore();
+  const { data: watchlistItems } = useWatchlist();
+
+  // One-time migration from localStorage to server
+  useEffect(() => {
+    migrateLocalWatchlist();
+  }, []);
 
   return (
     <div data-testid="watchlist-page">
@@ -13,8 +20,8 @@ export default function WatchlistPage() {
         <h2 className="text-2xl font-bold tracking-tight">
           Danh mục theo dõi
         </h2>
-        {watchlist.length > 0 && (
-          <Badge variant="secondary">{watchlist.length} mã</Badge>
+        {(watchlistItems?.length ?? 0) > 0 && (
+          <Badge variant="secondary">{watchlistItems!.length} mã</Badge>
         )}
       </div>
 

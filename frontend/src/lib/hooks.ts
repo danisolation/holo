@@ -37,6 +37,9 @@ import {
   fetchWeeklyPrompt,
   respondWeeklyPrompt,
   fetchLatestReview,
+  fetchWatchlist,
+  addWatchlistItem,
+  removeWatchlistItem,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -419,5 +422,38 @@ export function useLatestReview() {
     queryKey: ["goals", "weekly-review"],
     queryFn: fetchLatestReview,
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+// --- Phase 49: Watchlist Hooks ---
+
+/** Fetch server-backed watchlist with AI signal data. staleTime: 2 min. */
+export function useWatchlist() {
+  return useQuery({
+    queryKey: ["watchlist"],
+    queryFn: fetchWatchlist,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+/** Add a symbol to watchlist, invalidates watchlist query on success. */
+export function useAddToWatchlist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (symbol: string) => addWatchlistItem(symbol),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    },
+  });
+}
+
+/** Remove a symbol from watchlist, invalidates watchlist query on success. */
+export function useRemoveFromWatchlist() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (symbol: string) => removeWatchlistItem(symbol),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    },
   });
 }

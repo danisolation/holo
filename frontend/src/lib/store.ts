@@ -1,44 +1,31 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { migrateWatchlist } from "@/lib/api";
 
 // Clean up stale localStorage from removed exchange filter feature
 if (typeof window !== "undefined") {
   localStorage.removeItem("holo-exchange-filter");
 }
 
-interface WatchlistState {
-  watchlist: string[];
-  addToWatchlist: (symbol: string) => void;
-  removeFromWatchlist: (symbol: string) => void;
-  isInWatchlist: (symbol: string) => boolean;
+/**
+ * One-time migration: move localStorage watchlist to server.
+ * Returns true if migration was performed, false if not needed.
+ */
+export async function migrateLocalWatchlist(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  const raw = localStorage.getItem("holo-watchlist");
+  if (!raw) return false;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const symbols: string[] = parsed?.state?.watchlist ?? [];
+    if (symbols.length === 0) {
+      localStorage.removeItem("holo-watchlist");
+      return false;
+    }
+    await migrateWatchlist(symbols);
+    localStorage.removeItem("holo-watchlist");
+    return true;
+  } catch (err) {
+    console.error("[watchlist-migration] Failed to migrate localStorage watchlist:", err);
+    return false;
+  }
 }
-
-export const useWatchlistStore = create<WatchlistState>()(
-  persist(
-    (set, get) => ({
-      watchlist: [],
-
-      addToWatchlist: (symbol: string) => {
-        const upper = symbol.toUpperCase();
-        set((state) => {
-          if (state.watchlist.includes(upper)) return state;
-          return { watchlist: [...state.watchlist, upper] };
-        });
-      },
-
-      removeFromWatchlist: (symbol: string) => {
-        const upper = symbol.toUpperCase();
-        set((state) => ({
-          watchlist: state.watchlist.filter((s) => s !== upper),
-        }));
-      },
-
-      isInWatchlist: (symbol: string) => {
-        return get().watchlist.includes(symbol.toUpperCase());
-      },
-    }),
-    {
-      name: "holo-watchlist",
-    },
-  ),
-);

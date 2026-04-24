@@ -80,6 +80,16 @@ export interface NewsArticleResponse {
   published_at: string;
 }
 
+// --- Phase 49: Watchlist Types ---
+
+export interface WatchlistItem {
+  symbol: string;
+  created_at: string;
+  ai_signal: string | null;
+  ai_score: number | null;
+  signal_date: string | null;
+}
+
 // --- Phase 20: Trading Plan Types ---
 
 export interface TradingPlanDetail {
@@ -757,4 +767,30 @@ export async function respondWeeklyPrompt(
 
 export async function fetchLatestReview(): Promise<WeeklyReviewResponse | null> {
   return apiFetch<WeeklyReviewResponse | null>("/goals/weekly-review");
+}
+
+// --- Phase 49: Watchlist API ---
+
+export async function fetchWatchlist(): Promise<WatchlistItem[]> {
+  return apiFetch<WatchlistItem[]>("/watchlist");
+}
+
+export async function addWatchlistItem(symbol: string): Promise<WatchlistItem> {
+  return apiFetch<WatchlistItem>("/watchlist", {
+    method: "POST",
+    body: JSON.stringify({ symbol }),
+  });
+}
+
+export async function removeWatchlistItem(symbol: string): Promise<void> {
+  await apiFetch<void>(`/watchlist/${encodeURIComponent(symbol)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function migrateWatchlist(symbols: string[]): Promise<WatchlistItem[]> {
+  return apiFetch<WatchlistItem[]>("/watchlist/migrate", {
+    method: "POST",
+    body: JSON.stringify({ symbols }),
+  });
 }

@@ -8,25 +8,9 @@ import { navigateAndWait, TEST_TICKER } from './fixtures/test-helpers';
  * → verify on /watchlist page → reload to verify persistence
  * → remove ticker → verify removal.
  *
- * Watchlist uses zustand persist with localStorage key "holo-watchlist".
+ * Watchlist is now server-backed via /api/watchlist endpoints.
  */
 test.describe('FLOW-03: Watchlist Add → Persist → Remove → Verify', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clean slate: remove the test ticker from watchlist via localStorage
-    // to ensure a predictable starting state.
-    await page.goto('/watchlist');
-    await page.evaluate((ticker) => {
-      const raw = localStorage.getItem('holo-watchlist');
-      if (raw) {
-        const store = JSON.parse(raw);
-        store.state.watchlist = store.state.watchlist.filter(
-          (s: string) => s !== ticker
-        );
-        localStorage.setItem('holo-watchlist', JSON.stringify(store));
-      }
-    }, TEST_TICKER);
-  });
-
   test('full flow: add → verify on watchlist → persist → remove → verify removal', async ({ page }) => {
     // ── Step 1: Navigate to ticker detail page ──────────────────────
     await navigateAndWait(page, `/ticker/${TEST_TICKER}`);
@@ -58,7 +42,7 @@ test.describe('FLOW-03: Watchlist Add → Persist → Remove → Verify', () => 
     await expect(watchlistTable).toBeVisible();
     await expect(watchlistTable.getByText(TEST_TICKER)).toBeVisible({ timeout: 10000 });
 
-    // ── Step 5: Reload page to verify persistence ───────────────────
+    // ── Step 5: Reload page to verify persistence (server-backed) ──
     await page.reload();
     await page.waitForLoadState('networkidle');
 
@@ -66,7 +50,6 @@ test.describe('FLOW-03: Watchlist Add → Persist → Remove → Verify', () => 
     await expect(watchlistTable.getByText(TEST_TICKER)).toBeVisible({ timeout: 10000 });
 
     // ── Step 6: Remove the ticker ───────────────────────────────────
-    // Navigate back to the ticker detail page to use the star button
     await navigateAndWait(page, `/ticker/${TEST_TICKER}`);
     await expect(page.locator('[data-testid="ticker-page"]')).toBeVisible({ timeout: 15000 });
 
@@ -95,23 +78,22 @@ test.describe('FLOW-03: Watchlist Add → Persist → Remove → Verify', () => 
   });
 
   test('watchlist add persists across full page navigation cycle', async ({ page }) => {
-    // Add via localStorage injection for deterministic setup
-    await page.goto('/watchlist');
-    await page.evaluate((ticker) => {
-      const existing = JSON.parse(
-        localStorage.getItem('holo-watchlist') ||
-        '{"state":{"watchlist":[]},"version":0}'
-      );
-      if (!existing.state.watchlist.includes(ticker)) {
-        existing.state.watchlist.push(ticker);
-        localStorage.setItem('holo-watchlist', JSON.stringify(existing));
-      }
-    }, TEST_TICKER);
+    // 1. Add via ticker detail page UI
+    await navigateAndWait(page, `/ticker/${TEST_TICKER}`);
+    await expect(page.locator('[data-testid="ticker-page"]')).toBeVisible({ timeout: 15000 });
 
-    // Navigate away to homepage
+    const watchButton = page.getByRole('button', { name: /Theo dõi|Đang theo dõi/ });
+    await expect(watchButton).toBeVisible();
+    const buttonText = await watchButton.textContent();
+    if (buttonText?.includes('Đang theo dõi') === false) {
+      await watchButton.click();
+      await expect(page.getByRole('button', { name: 'Đang theo dõi' })).toBeVisible();
+    }
+
+    // 2. Navigate away to homepage
     await navigateAndWait(page, '/');
 
-    // Navigate back to watchlist
+    // 3. Navigate back to watchlist
     await navigateAndWait(page, '/watchlist');
     await expect(page.locator('[data-testid="watchlist-page"]')).toBeVisible();
 

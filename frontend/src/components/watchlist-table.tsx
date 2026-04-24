@@ -29,63 +29,27 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PriceFlashCell } from "@/components/price-flash-cell";
-import { useMarketOverview, useAnalysisSummary } from "@/lib/hooks";
+import { useMarketOverview, useWatchlist, useRemoveFromWatchlist } from "@/lib/hooks";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
-import { useWatchlistStore } from "@/lib/store";
 import type { MarketTicker } from "@/lib/api";
-
-/** Signal badge cell — fetches analysis for individual ticker */
-function SignalCell({ symbol }: { symbol: string }) {
-  const { data, isLoading } = useAnalysisSummary(symbol);
-
-  if (isLoading) return <Skeleton className="h-5 w-16" />;
-
-  const signal = data?.combined?.signal;
-  if (!signal)
-    return <span className="text-xs text-muted-foreground">—</span>;
-
-  const key = signal.toLowerCase().replace(/\s+/g, "_");
-  const isBuy = ["buy", "strong_buy", "bullish", "mua", "strong", "good", "very_positive", "positive"].includes(key);
-  const isSell = ["sell", "strong_sell", "bearish", "ban", "weak", "critical", "very_negative", "negative"].includes(key);
-
-  return (
-    <Badge
-      variant="secondary"
-      className={
-        isBuy
-          ? "text-[#26a69a] bg-[#26a69a]/10 gap-1"
-          : isSell
-            ? "text-[#ef5350] bg-[#ef5350]/10 gap-1"
-            : "gap-1"
-      }
-    >
-      {isBuy ? (
-        <TrendingUp className="size-3" />
-      ) : isSell ? (
-        <TrendingDown className="size-3" />
-      ) : (
-        <Minus className="size-3" />
-      )}
-      {signal.toUpperCase().replace(/_/g, " ")}
-    </Badge>
-  );
-}
 
 export function WatchlistTable() {
   const router = useRouter();
-  const { watchlist, removeFromWatchlist } = useWatchlistStore();
-  const { data: marketData, isLoading } = useMarketOverview();
+  const { data: watchlistData, isLoading: watchlistLoading } = useWatchlist();
+  const removeMutation = useRemoveFromWatchlist();
+  const { data: marketData, isLoading: marketLoading } = useMarketOverview();
   const [sorting, setSorting] = useState<SortingState>([]);
-  const { prices: realtimePrices } = useRealtimePrices(watchlist);
+  const watchlistSymbols = useMemo(() => watchlistData?.map((w) => w.symbol) ?? [], [watchlistData]);
+  const { prices: realtimePrices } = useRealtimePrices(watchlistSymbols);
 
   // Filter market data to only watchlist symbols
   const rows = useMemo(() => {
-    if (!marketData) return [];
+    if (!marketData || !watchlistData) return [];
     const marketMap = new Map(marketData.map((t) => [t.symbol, t]));
-    return watchlist
-      .map((symbol) => marketMap.get(symbol))
+    return watchlistData
+      .map((w) => marketMap.get(w.symbol))
       .filter((t): t is MarketTicker => t != null);
-  }, [marketData, watchlist]);
+  }, [marketData, watchlistData]);
 
   const columns = useMemo<ColumnDef<MarketTicker>[]>(
     () => [
@@ -195,7 +159,45 @@ export function WatchlistTable() {
       {
         id: "signal",
         header: "Tín hiệu",
-        cell: ({ row }) => <SignalCell symbol={row.original.symbol} />,
+        cell: ({ row }) => {
+          const watchItem = watchlistData?.find((w) => w.symbol === row.original.symbol);
+          const signal = watchItem?.ai_signal;
+          const score = watchItem?.ai_score;
+
+          if (!signal)
+            return <span className="text-xs text-muted-foreground">—</span>;
+
+          const key = signal.toLowerCase().replace(/\s+/g, "_");
+          const isBuy = ["buy", "strong_buy", "bullish", "mua", "strong", "good", "very_positive", "positive"].includes(key);
+          const isSell = ["sell", "strong_sell", "bearish", "ban", "weak", "critical", "very_negative", "negative"].includes(key);
+
+          return (
+            <div className="flex items-center gap-1.5">
+              <Badge
+                variant="secondary"
+                className={
+                  isBuy
+                    ? "text-[#26a69a] bg-[#26a69a]/10 gap-1"
+                    : isSell
+                      ? "text-[#ef5350] bg-[#ef5350]/10 gap-1"
+                      : "gap-1"
+                }
+              >
+                {isBuy ? (
+                  <TrendingUp className="size-3" />
+                ) : isSell ? (
+                  <TrendingDown className="size-3" />
+                ) : (
+                  <Minus className="size-3" />
+                )}
+                {signal.toUpperCase().replace(/_/g, " ")}
+              </Badge>
+              {score != null && (
+                <span className="font-mono text-xs text-muted-foreground">{score}/10</span>
+              )}
+            </div>
+          );
+        },
         enableSorting: false,
       },
       {
@@ -207,7 +209,7 @@ export function WatchlistTable() {
             size="icon-xs"
             onClick={(e) => {
               e.stopPropagation();
-              removeFromWatchlist(row.original.symbol);
+              removeMutation.mutate(row.original.symbol);
             }}
             className="text-muted-foreground hover:text-destructive"
           >
@@ -217,7 +219,7 @@ export function WatchlistTable() {
         enableSorting: false,
       },
     ],
-    [removeFromWatchlist, realtimePrices],
+    [watchlistData, removeMutation, realtimePrices],
   );
 
   const table = useReactTable({
@@ -229,7 +231,17 @@ export function WatchlistTable() {
     state: { sorting },
   });
 
-  if (watchlist.length === 0) {
+  if (watchlistLoading || marketLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 rounded-md" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!watchlistData || watchlistData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <p className="text-muted-foreground">
@@ -238,16 +250,6 @@ export function WatchlistTable() {
         <p className="text-sm text-muted-foreground mt-1">
           Duyệt tổng quan thị trường để thêm.
         </p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: Math.min(watchlist.length, 5) }).map((_, i) => (
-          <Skeleton key={i} className="h-12 rounded-md" />
-        ))}
       </div>
     );
   }
