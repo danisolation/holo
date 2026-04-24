@@ -33,7 +33,7 @@ const IndicatorChart = dynamic(
 import { SupportResistanceCard } from "@/components/support-resistance-card";
 import {
   AnalysisCard,
-  CombinedRecommendationCard,
+  StructuredCombinedCard,
 } from "@/components/analysis-card";
 import { TradingPlanPanel } from "@/components/trading-plan-panel";
 import {
@@ -293,7 +293,7 @@ export default function TickerDetailPage({
         <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
       ) : analysisSummary?.combined ? (
         <section>
-          <CombinedRecommendationCard analysis={analysisSummary.combined} />
+          <StructuredCombinedCard analysis={analysisSummary.combined} />
         </section>
       ) : null}
 
