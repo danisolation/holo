@@ -27,7 +27,6 @@ export async function expectNavbarVisible(page: Page) {
 export const APP_ROUTES = [
   { path: '/', name: 'Home / Overview' },
   { path: '/watchlist', name: 'Watchlist' },
-  { path: '/dashboard', name: 'Dashboard' },
   { path: '/dashboard/health', name: 'System Health' },
 ] as const;
 

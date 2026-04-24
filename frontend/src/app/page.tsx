@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
+import Link from "next/link";
 import { TrendingUp, TrendingDown, BarChart3, RefreshCw } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heatmap } from "@/components/heatmap";
@@ -14,6 +16,19 @@ export default function Home() {
   const gainers = data?.filter((t) => t.change_pct != null && t.change_pct > 0).length ?? 0;
   const losers = data?.filter((t) => t.change_pct != null && t.change_pct < 0).length ?? 0;
   const unchanged = totalTickers - gainers - losers;
+
+  const topMovers = useMemo(() => {
+    if (!data) return null;
+    const gainersList = data.filter((t) => t.change_pct != null && t.change_pct > 0);
+    const losersList = data.filter((t) => t.change_pct != null && t.change_pct < 0);
+    const topGainers = [...gainersList]
+      .sort((a, b) => (b.change_pct ?? 0) - (a.change_pct ?? 0))
+      .slice(0, 5);
+    const topLosers = [...losersList]
+      .sort((a, b) => (a.change_pct ?? 0) - (b.change_pct ?? 0))
+      .slice(0, 5);
+    return { topGainers, topLosers };
+  }, [data]);
 
   const subtitle = "Bản đồ nhiệt toàn thị trường theo biến động giá trong ngày";
 
@@ -119,6 +134,88 @@ export default function Home() {
       ) : data ? (
         <Heatmap data={data} />
       ) : null}
+
+      {/* Top Movers — merged from /dashboard */}
+      {topMovers && (
+        <section className="mt-8">
+          <h3 className="text-lg font-semibold mb-3">Top biến động</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Top Gainers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[#26a69a]">
+                  <TrendingUp className="size-4" />
+                  Top tăng
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {topMovers.topGainers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Không có mã tăng
+                  </p>
+                ) : (
+                  topMovers.topGainers.map((t) => (
+                    <Link
+                      key={t.symbol}
+                      href={`/ticker/${t.symbol}`}
+                      className="flex items-center justify-between py-1.5 rounded-md px-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-sm">
+                          {t.symbol}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                          {t.name}
+                        </span>
+                      </div>
+                      <span className="font-mono text-sm text-[#26a69a]">
+                        +{(t.change_pct ?? 0).toFixed(2)}%
+                      </span>
+                    </Link>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Top Losers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[#ef5350]">
+                  <TrendingDown className="size-4" />
+                  Top giảm
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {topMovers.topLosers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Không có mã giảm
+                  </p>
+                ) : (
+                  topMovers.topLosers.map((t) => (
+                    <Link
+                      key={t.symbol}
+                      href={`/ticker/${t.symbol}`}
+                      className="flex items-center justify-between py-1.5 rounded-md px-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-sm">
+                          {t.symbol}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                          {t.name}
+                        </span>
+                      </div>
+                      <span className="font-mono text-sm text-[#ef5350]">
+                        {(t.change_pct ?? 0).toFixed(2)}%
+                      </span>
+                    </Link>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
     </>
   );
 }

@@ -10,9 +10,9 @@ test.describe('Navigation', () => {
     await page.locator('[data-testid="nav-desktop"]').getByText('Danh mục').click();
     await expect(page).toHaveURL(/\/watchlist/);
 
-    // Click "Bảng điều khiển" (Dashboard) nav link
-    await page.locator('[data-testid="nav-desktop"]').getByText('Bảng điều khiển').click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    // Click "Huấn luyện" (Coach) nav link
+    await page.locator('[data-testid="nav-desktop"]').getByText('Huấn luyện').click();
+    await expect(page).toHaveURL(/\/coach/);
 
     // Click back to home "Tổng quan"
     await page.locator('[data-testid="nav-desktop"]').getByText('Tổng quan').click();
@@ -20,7 +20,7 @@ test.describe('Navigation', () => {
   });
 
   test('Navbar is visible on all pages', async ({ page }) => {
-    const routes = ['/', '/watchlist', '/dashboard', '/dashboard/health'];
+    const routes = ['/', '/watchlist', '/dashboard/health'];
     for (const route of routes) {
       await page.goto(route);
       await expectNavbarVisible(page);
