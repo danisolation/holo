@@ -19,8 +19,6 @@ scheduler = AsyncIOScheduler(timezone=settings.timezone)
 _JOB_NAMES = {
     "daily_price_crawl": "Daily Price Crawl",
     "daily_price_crawl_hose": "Daily Price Crawl (HOSE)",
-    "daily_price_crawl_hnx": "Daily Price Crawl (HNX)",
-    "daily_price_crawl_upcom": "Daily Price Crawl (UPCOM)",
     "weekly_ticker_refresh": "Weekly Ticker Refresh",
     "weekly_financial_crawl": "Weekly Financial Crawl",
     "daily_indicator_compute_triggered": "Daily Indicator Compute",
@@ -35,9 +33,6 @@ _JOB_NAMES = {
     "daily_combined_manual": "Daily Combined Analysis",
     "daily_trading_signal_triggered": "Daily Trading Signal Analysis",
     "daily_trading_signal_manual": "Daily Trading Signal Analysis",
-    "daily_corporate_action_check_triggered": "Daily Corporate Action Check",
-    "daily_hnx_upcom_analysis": "Daily HNX/UPCOM Watchlist Analysis",
-    "daily_hnx_upcom_analysis_triggered": "Daily HNX/UPCOM Watchlist Analysis",
     "daily_pick_generation_triggered": "Daily Pick Generation",
     "daily_pick_generation_manual": "Daily Pick Generation",
     "daily_pick_outcome_check_triggered": "Daily Pick Outcome Check",
@@ -70,21 +65,12 @@ def _on_job_executed(event: events.JobExecutionEvent):
         logger.warning(f"Job {event.job_id} failed with exception, not chaining next job")
         return
 
-    if event.job_id == "daily_price_crawl_upcom":
+    if event.job_id == "daily_price_crawl_hose":
         from app.scheduler.jobs import daily_indicator_compute
-        logger.info("Chaining: daily_price_crawl_upcom → daily_indicator_compute")
+        logger.info("Chaining: daily_price_crawl_hose → daily_indicator_compute")
         scheduler.add_job(
             daily_indicator_compute,
             id="daily_indicator_compute_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-        # Also trigger corporate action check (parallel branch)
-        from app.scheduler.jobs import daily_corporate_action_check
-        logger.info("Chaining: daily_price_crawl_upcom → daily_corporate_action_check")
-        scheduler.add_job(
-            daily_corporate_action_check,
-            id="daily_corporate_action_check_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -135,19 +121,9 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_trading_signal_triggered",):
-        # Chain HNX/UPCOM watchlist analysis
-        from app.scheduler.jobs import daily_hnx_upcom_analysis
-        logger.info("Chaining: daily_trading_signal → daily_hnx_upcom_analysis")
-        scheduler.add_job(
-            daily_hnx_upcom_analysis,
-            id="daily_hnx_upcom_analysis_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-    elif event.job_id in ("daily_hnx_upcom_analysis_triggered",):
-        # Phase 43: Chain daily pick generation (last step in pipeline)
+        # Phase 48: Chain directly to pick generation (HNX/UPCOM analysis removed)
         from app.scheduler.jobs import daily_pick_generation
-        logger.info("Chaining: daily_hnx_upcom_analysis → daily_pick_generation")
+        logger.info("Chaining: daily_trading_signal → daily_pick_generation")
         scheduler.add_job(
             daily_pick_generation,
             id="daily_pick_generation_triggered",
@@ -195,12 +171,9 @@ def configure_jobs():
         weekly_financial_crawl,
     )
 
-    # Staggered exchange crawls: HOSE 15:30, HNX 16:00, UPCOM 16:30
-    # Chain only triggers from UPCOM (the last exchange crawl)
+    # HOSE-only price crawl at 15:30
     EXCHANGE_CRAWL_SCHEDULE = {
-        "HOSE":  {"hour": 15, "minute": 30},
-        "HNX":   {"hour": 16, "minute": 0},
-        "UPCOM": {"hour": 16, "minute": 30},
+        "HOSE": {"hour": 15, "minute": 30},
     }
 
     for exchange, schedule in EXCHANGE_CRAWL_SCHEDULE.items():
@@ -252,7 +225,6 @@ def configure_jobs():
 
     logger.info(
         f"Scheduled jobs: daily_price_crawl_hose (Mon-Fri 15:30 {settings.timezone}), "
-        f"daily_price_crawl_hnx (Mon-Fri 16:00), daily_price_crawl_upcom (Mon-Fri 16:30), "
         f"weekly_ticker_refresh (Sun 10:00), weekly_financial_crawl (Sat 08:00)"
     )
 
@@ -341,6 +313,6 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_upcom → [indicators → AI → news → sentiment → combined → trading_signal → hnx_upcom_analysis → pick_generation → pick_outcome_check → consecutive_loss_check] + [corporate_action_check]"
+        "daily_price_crawl_hose → [indicators → AI → news → sentiment → combined → trading_signal → pick_generation → pick_outcome_check → consecutive_loss_check]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")

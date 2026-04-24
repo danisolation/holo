@@ -25,7 +25,7 @@ from app.services.job_execution_service import JobExecutionService
 from app.services.dead_letter_service import DeadLetterService
 from app.resilience import CircuitOpenError
 
-VALID_EXCHANGES = ("HOSE", "HNX", "UPCOM")
+VALID_EXCHANGES = ("HOSE",)
 
 
 def _determine_status(result: dict) -> str:
@@ -167,9 +167,9 @@ async def daily_price_crawl_for_exchange(exchange: str):
 
 
 async def weekly_ticker_refresh():
-    """Weekly ticker list refresh — sync listing for all exchanges.
+    """Weekly ticker list refresh — sync HOSE listing.
 
-    Runs Sunday 10:00. Syncs HOSE, HNX, and UPCOM sequentially.
+    Runs Sunday 10:00. Syncs HOSE tickers only.
     """
     logger.info("=== WEEKLY TICKER REFRESH START ===")
     async with async_session() as session:
@@ -481,87 +481,12 @@ async def daily_trading_signal_analysis():
             raise
 
 
-async def daily_corporate_action_check():
-    """Crawl corporate events from VNDirect.
-
-    Triggered after daily_price_crawl via job chaining.
-    """
-    logger.info("=== DAILY CORPORATE ACTION CHECK START ===")
-    async with async_session() as session:
-        job_svc = JobExecutionService(session)
-        execution = await job_svc.start("daily_corporate_action_check")
-        try:
-            from app.crawlers.corporate_event_crawler import CorporateEventCrawler
-
-            crawler = CorporateEventCrawler(session)
-            crawl_result = await crawler.crawl_all_tickers()
-
-            # DLQ permanently failed tickers
-            crawl_failed = crawl_result.get("failed_symbols", [])
-            await _dlq_failures(session, "daily_corporate_action_check", crawl_failed)
-
-            new_events = crawl_result.get("new_events", 0)
-
-            status = "success"
-            total_failed = crawl_result.get("failed", 0)
-            if total_failed > 0 and crawl_result.get("success", 0) == 0:
-                status = "failed"
-            elif total_failed > 0:
-                status = "partial"
-
-            summary = {
-                "events_crawled": crawl_result.get("total_events", 0),
-                "new_events": new_events,
-                "tickers_failed": total_failed,
-                "failed_symbols": crawl_failed,
-            }
-            await job_svc.complete(execution, status=status, result_summary=summary)
-            await session.commit()
-            logger.info(f"=== DAILY CORPORATE ACTION CHECK COMPLETE: {summary} ===")
-
-            if status == "failed":
-                raise RuntimeError("Complete corporate action check failure")
-
-        except Exception as e:
-            if execution.status == "running":
-                await job_svc.fail(execution, error=str(e))
-                await session.commit()
-            logger.error(f"=== DAILY CORPORATE ACTION CHECK FAILED: {e} ===")
-            raise
-
-
-async def daily_hnx_upcom_analysis():
-    """Tiered AI analysis for watchlisted HNX/UPCOM tickers.
-
-    Chained after daily_combined completes. Analyzes only tickers
-    in the UserWatchlist for HNX/UPCOM, capped at 50 per CONTEXT.md.
-    """
-    logger.info("=== DAILY HNX/UPCOM ANALYSIS START ===")
-    async with async_session() as session:
-        job_svc = JobExecutionService(session)
-        execution = await job_svc.start("daily_hnx_upcom_analysis")
-        try:
-            from app.services.ai_analysis_service import AIAnalysisService
-            service = AIAnalysisService(session)
-            result = await service.analyze_watchlisted_tickers(
-                exchanges=["HNX", "UPCOM"], max_extra=50
-            )
-            summary = {"result": result}
-            await job_svc.complete(execution, status="success", result_summary=summary)
-            await session.commit()
-            logger.info(f"=== DAILY HNX/UPCOM ANALYSIS COMPLETE: {result} ===")
-        except Exception as e:
-            if execution.status == "running":
-                await job_svc.fail(execution, error=str(e))
-                await session.commit()
-            logger.error(f"=== DAILY HNX/UPCOM ANALYSIS FAILED: {e} ===")
-            raise
 
 
 async def daily_pick_generation():
     """Generate daily stock picks after all analysis completes.
 
-    Chains after daily_hnx_upcom_analysis. Scores existing trading signals,
+    Chains after daily_trading_signal. Scores existing trading signals,
     filters by capital/safety, generates Vietnamese explanations via Gemini.
     """
     logger.info("=== DAILY PICK GENERATION START ===")
