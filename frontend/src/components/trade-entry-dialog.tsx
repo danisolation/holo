@@ -36,8 +36,9 @@ import {
   useProfile,
 } from "@/lib/hooks";
 import { ApiError } from "@/lib/api";
-import type { TradeCreate, Ticker } from "@/lib/api";
+import type { TradeCreate, TradeResponse, Ticker } from "@/lib/api";
 import { formatVND } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
 
 const tradeSchema = z.object({
   ticker_symbol: z.string().min(1, "Chọn mã chứng khoán"),
@@ -64,14 +65,28 @@ const tradeSchema = z.object({
 
 type TradeForm = z.infer<typeof tradeSchema>;
 
+export interface TradePrefill {
+  ticker_symbol: string;
+  ticker_name: string;
+  price: number;
+  quantity: number;
+  daily_pick_id: number;
+  stop_loss: number | null;
+  take_profit_1: number | null;
+}
+
 interface TradeEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  prefill?: TradePrefill;
+  onTradeCreated?: (trade: TradeResponse) => void;
 }
 
 export function TradeEntryDialog({
   open,
   onOpenChange,
+  prefill,
+  onTradeCreated,
 }: TradeEntryDialogProps) {
   const [tickerOpen, setTickerOpen] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState<Ticker | null>(null);
@@ -140,7 +155,7 @@ export function TradeEntryDialog({
     }
   }, [matchingPick, setValue]);
 
-  // Reset form on dialog close
+  // Reset form on dialog close, or prefill on open
   useEffect(() => {
     if (!open) {
       reset({
@@ -152,8 +167,24 @@ export function TradeEntryDialog({
       setFeeOverrideEnabled(false);
       setPickLinkChecked(false);
       setApiError("");
+    } else if (prefill) {
+      // Pre-fill from AI pick data
+      reset({
+        side: "BUY",
+        ticker_symbol: prefill.ticker_symbol,
+        price: prefill.price,
+        quantity: prefill.quantity,
+        trade_date: new Date().toISOString().split("T")[0],
+        daily_pick_id: prefill.daily_pick_id,
+      });
+      setSelectedTicker({
+        symbol: prefill.ticker_symbol,
+        name: prefill.ticker_name,
+      } as Ticker);
+      setPickLinkChecked(true);
+      setApiError("");
     }
-  }, [open, reset]);
+  }, [open, prefill, reset]);
 
   async function onSubmit(data: TradeForm) {
     setApiError("");
@@ -171,10 +202,11 @@ export function TradeEntryDialog({
         payload.broker_fee_override = data.broker_fee_override;
         payload.sell_tax_override = data.sell_tax_override;
       }
-      await mutation.mutateAsync(payload);
+      const result = await mutation.mutateAsync(payload);
       reset();
       setSelectedTicker(null);
       onOpenChange(false);
+      onTradeCreated?.(result);
     } catch (err) {
       if (err instanceof ApiError) {
         setApiError(err.message);
@@ -188,7 +220,7 @@ export function TradeEntryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Ghi lệnh giao dịch</DialogTitle>
+          <DialogTitle>{prefill ? "Ghi nhận giao dịch từ gợi ý" : "Ghi lệnh giao dịch"}</DialogTitle>
           <DialogDescription>
             Nhập thông tin lệnh mua hoặc bán thực tế.
           </DialogDescription>
@@ -197,74 +229,87 @@ export function TradeEntryDialog({
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             {/* Ticker autocomplete */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                Mã chứng khoán <span className="text-destructive">*</span>
-              </label>
-              <Popover open={tickerOpen} onOpenChange={setTickerOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      type="button"
-                      className="w-full justify-between font-normal"
-                    />
-                  }
-                >
-                  {selectedTicker ? (
-                    <span>
-                      <span className="font-mono font-bold">
-                        {selectedTicker.symbol}
-                      </span>{" "}
-                      <span className="text-muted-foreground">
-                        {selectedTicker.name}
+            {prefill ? (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Mã chứng khoán
+                </label>
+                <div className="flex items-center gap-2 rounded-md border border-input bg-muted/50 px-3 py-2">
+                  <span className="font-mono font-bold text-sm">{prefill.ticker_symbol}</span>
+                  <span className="text-sm text-muted-foreground">{prefill.ticker_name}</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">Từ gợi ý AI</Badge>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Mã chứng khoán <span className="text-destructive">*</span>
+                </label>
+                <Popover open={tickerOpen} onOpenChange={setTickerOpen}>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        type="button"
+                        className="w-full justify-between font-normal"
+                      />
+                    }
+                  >
+                    {selectedTicker ? (
+                      <span>
+                        <span className="font-mono font-bold">
+                          {selectedTicker.symbol}
+                        </span>{" "}
+                        <span className="text-muted-foreground">
+                          {selectedTicker.name}
+                        </span>
                       </span>
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">
-                      Tìm mã CK...
-                    </span>
-                  )}
-                  <ChevronsUpDown className="size-4 text-muted-foreground" />
-                </PopoverTrigger>
-                <PopoverContent className="w-[--anchor-width] p-0">
-                  <Command shouldFilter={true}>
-                    <CommandInput placeholder="Tìm mã CK..." />
-                    <CommandList>
-                      <CommandEmpty>Không tìm thấy mã nào.</CommandEmpty>
-                      <CommandGroup>
-                        {tickers?.slice(0, 50).map((ticker) => (
-                          <CommandItem
-                            key={ticker.symbol}
-                            value={`${ticker.symbol} ${ticker.name}`}
-                            onSelect={() => {
-                              setValue("ticker_symbol", ticker.symbol, {
-                                shouldValidate: true,
-                              });
-                              setSelectedTicker(ticker);
-                              setTickerOpen(false);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <span className="font-mono font-bold text-sm w-16">
-                              {ticker.symbol}
-                            </span>
-                            <span className="text-muted-foreground text-sm truncate">
-                              {ticker.name}
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {errors.ticker_symbol && (
-                <p className="text-xs text-destructive mt-1">
-                  {errors.ticker_symbol.message}
-                </p>
-              )}
-            </div>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Tìm mã CK...
+                      </span>
+                    )}
+                    <ChevronsUpDown className="size-4 text-muted-foreground" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--anchor-width] p-0">
+                    <Command shouldFilter={true}>
+                      <CommandInput placeholder="Tìm mã CK..." />
+                      <CommandList>
+                        <CommandEmpty>Không tìm thấy mã nào.</CommandEmpty>
+                        <CommandGroup>
+                          {tickers?.slice(0, 50).map((ticker) => (
+                            <CommandItem
+                              key={ticker.symbol}
+                              value={`${ticker.symbol} ${ticker.name}`}
+                              onSelect={() => {
+                                setValue("ticker_symbol", ticker.symbol, {
+                                  shouldValidate: true,
+                                });
+                                setSelectedTicker(ticker);
+                                setTickerOpen(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <span className="font-mono font-bold text-sm w-16">
+                                {ticker.symbol}
+                              </span>
+                              <span className="text-muted-foreground text-sm truncate">
+                                {ticker.name}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {errors.ticker_symbol && (
+                  <p className="text-xs text-destructive mt-1">
+                    {errors.ticker_symbol.message}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Side + Date row */}
             <div className="grid grid-cols-2 gap-4">
