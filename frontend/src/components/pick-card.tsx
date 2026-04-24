@@ -2,6 +2,7 @@
 
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreBar } from "@/components/analysis-card";
 import { formatVND } from "@/lib/format";
@@ -11,9 +12,10 @@ import type { DailyPickResponse } from "@/lib/api";
 
 interface PickCardProps {
   pick: DailyPickResponse;
+  onRecordTrade?: (pick: DailyPickResponse) => void;
 }
 
-export function PickCard({ pick }: PickCardProps) {
+export function PickCard({ pick, onRecordTrade }: PickCardProps) {
   const { prices } = useRealtimePrices([pick.ticker_symbol]);
   const realtimeData = prices[pick.ticker_symbol.toUpperCase()];
   const currentPrice = realtimeData?.price ?? null;
@@ -159,6 +161,21 @@ export function PickCard({ pick }: PickCardProps) {
             </div>
           </div>
         </div>
+
+        {/* Section 5: Record trade button */}
+        {onRecordTrade && (
+          <div className="border-t border-border pt-4 mt-4">
+            <Button
+              className="w-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRecordTrade(pick);
+              }}
+            >
+              Ghi nhận giao dịch
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
