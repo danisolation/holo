@@ -45,10 +45,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow frontend dev server
+# CORS — allow frontend dev server + configured origins (Render, etc.)
+_default_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+_extra_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()] if settings.cors_origins else []
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_default_origins + _extra_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

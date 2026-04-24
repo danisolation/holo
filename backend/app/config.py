@@ -90,5 +90,8 @@ class Settings(BaseSettings):
     # Test Mode (Phase 27 — E2E testing)
     holo_test_mode: bool = False  # Set True to skip scheduler in tests
 
+    # CORS — additional allowed origins (comma-separated URLs)
+    cors_origins: str = ""
+
 
 settings = Settings()
