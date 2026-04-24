@@ -1,360 +1,321 @@
-# Feature Landscape — v8.0 AI Trading Coach
+# Feature Research: v9.0 UX Rework & Simplification
 
-**Domain:** Personal AI trading coach for Vietnamese stock market beginners (< 50M VND capital)
+**Domain:** Personal stock trading intelligence tool (single-user, Vietnam HOSE market)
 **Researched:** 2025-07-21
-**Overall confidence:** MEDIUM — based on domain knowledge of trading apps (Edgewonk, Tradervue, MarketSmith, Simplize, FireAnt, TCInvest) + existing Holo system analysis. No external search tools available; findings drawn from training data + codebase inspection.
+**Confidence:** HIGH — based on deep codebase analysis + established trading UX patterns
 
-## Context: What Exists vs What's New
+## Executive Assessment
 
-### Existing Foundation (already built — DO NOT rebuild)
+Holo's core capabilities are strong (AI analysis, daily picks, trade journal, behavior tracking, goals/reviews). The problem isn't missing features — it's **broken flow and scattered layout**. The app has 7 nav items, 3 overlapping market-overview pages, a Coach page that's a kitchen sink (picks + trades + history + goals + behavior all dumped together), and zero connection between recording a trade and what happens next.
 
-| Existing Feature | How v8.0 Builds On It |
-|------------------|----------------------|
-| AI analysis (tech + fundamental + sentiment + combined) across 800+ tickers | Daily Picks engine filters from these scores — picks are a curated subset, not new analysis |
-| Trading signals with entry/SL/TP/R:R/position sizing | Picks inherit signal structure — same `TradingPlanDetail` schema for concrete price targets |
-| 27 technical indicators (ATR, ADX, Stochastic, pivot, Fibonacci, etc.) | Safety scoring uses volatility (ATR) and trend strength (ADX) to filter risky tickers |
-| Real-time WebSocket price streaming (30s polling) | Pick performance tracking — show live P&L for active picks |
-| News integration (CafeF) | Educational explanations reference current news to explain "why this stock?" |
-| Market overview heatmap, ticker detail pages | Picks link to existing ticker detail — no need for duplicate analysis views |
-| Scheduled job pipeline (crawl → indicators → analysis → signals) | Daily Picks generation chains after existing signal pipeline |
-| `raw_response` JSONB on `ai_analyses` table | Proven pattern for storing structured AI output — reuse for picks |
-| Gemini structured output via Pydantic schemas | Pick generation uses same `google-genai` → Pydantic pattern |
-| Job execution tracking + dead letter queue | Pick generation job integrates into existing monitoring |
-
-### What Was Removed (v7.0) — Relevant Context
-
-Portfolio, paper trading, and backtest features were removed. Trade Journal in v8.0 is their **replacement** — simpler, focused on actual trades, not simulation. This is a fresh start, not a migration.
+The v9.0 UX rework should **not add new features**. It should reorganize existing features into a coherent daily workflow: **See recommendations → Take action → Monitor positions → Review results**. Every screen should answer "what do I do next?"
 
 ---
 
-## Table Stakes
+## Current UX Audit (Problems Found in Code)
 
-Features that a personal trading coach MUST have. Without these, the product is just another signal dashboard (which Holo already is).
-
-| Feature | Why Expected | Complexity | Depends On (Existing) | Notes |
-|---------|-------------|------------|----------------------|-------|
-| **Daily Picks (3-5 stocks/day)** | The core promise. User opens app → sees "buy these today." Without this, there's no "coach." | High | AI analysis scores, trading signals, ticker data, Gemini API | New Gemini prompt that selects top candidates from pre-analyzed pool. NOT re-analyzing 800 tickers — filter from existing scores. |
-| **Capital-aware filtering (< 50M VND)** | A beginner with 50M can't buy blue chips at 80K+/share in meaningful quantity. Picks must be buyable. | Medium | Ticker data (price), daily_prices | Filter by price × min lot (100 shares for HOSE). At 50M: max ~500K/share if buying 100 shares. Realistically 2-3 positions. |
-| **Safety-first pick scoring** | Beginners lose money from volatility. Coach must prioritize low-risk picks over high-return speculative ones. | Medium | ATR, ADX, volume, fundamental health score | Penalize high-ATR (volatile), low-ADX (no trend), low-volume (illiquid), weak fundamentals. Favor: stable trends, adequate liquidity, solid financials. |
-| **Educational explanation per pick** | "Buy VNM" is useless for a beginner. "Buy VNM because RSI bounced off oversold, strong Q4 earnings, sector rotation into consumer staples" teaches. | Medium | All analysis types (tech + fundamental + sentiment), news | Gemini generates Vietnamese explanation combining all dimensions. Max 200-300 words, conversational tone. |
-| **Entry/SL/TP per pick** | A coach tells you exactly when to get in, when to cut losses, and when to take profit. Vague "buy" signals are useless. | Low | Trading signal pipeline (already generates these) | Inherit from existing `TradingPlanDetail`. Possibly adjust position_size_pct for small capital. |
-| **Trade Journal — log actual trades** | The bridge between "what AI suggested" and "what I actually did." Without this, no learning happens. | Medium | New DB tables | Fields: ticker, direction (buy/sell), price, quantity, date, fees, linked_pick_id (nullable), notes. |
-| **Auto P&L calculation** | Manual P&L math is tedious and error-prone. Auto-calculate from buy/sell pairs. | Medium | Trade journal entries, daily_prices for unrealized P&L | Match buy→sell by FIFO. Realized P&L = (sell_price - buy_price) × quantity - fees. Unrealized = current_price vs avg_cost. |
-| **Pick history / track record** | "Did yesterday's picks work?" User needs to see historical pick performance to build trust in the AI. | Medium | Daily picks stored with outcomes, daily_prices | Track: pick date, entry hit?, SL hit?, TP hit?, actual return after N days. |
-| **Performance summary** | Win rate, total P&L, average R:R — the scoreboard. | Low | Trade journal data, pick outcomes | Aggregate stats from journal + pick tracking. Simple cards, no complex charts needed initially. |
-| **Coach dashboard page** | A single page where beginner opens the app and sees: today's picks, recent performance, active trades. | Medium | All above features | New route `/coach` — the primary landing page for v8.0. Replaces the need to navigate between multiple pages. |
+| Problem | Evidence in Code | Impact |
+|---------|-----------------|--------|
+| **Overlapping pages** | `/` (heatmap + stats), `/dashboard` (pie chart + top movers) show near-identical market data | User confusion — which one do I use? |
+| **Coach page = kitchen sink** | `coach/page.tsx` renders 12+ components: picks, trades, history, goals, weekly review, habits, viewing stats, sector prefs | Overwhelming, can't find what matters |
+| **Pick cards are display-only** | `PickCard` has no "Record trade" or "View analysis" buttons, only tracks clicks for behavior | User sees pick → dead end, must navigate elsewhere to act |
+| **Trade Journal is isolated** | After `TradeEntryDialog` closes on success, user returns to trade list | No "what to watch for" guidance, no link to AI analysis |
+| **Watchlist is localStorage** | `useWatchlistStore` uses zustand persist to `holo-watchlist` key | Loses data on browser clear, no server-side analysis connection |
+| **7 nav items** | `NAV_LINKS` in navbar.tsx has 7 entries including 2 to remove | Cognitive overload for single-user tool |
+| **No starting point** | Home page is a heatmap — useful for scanning but gives no direction | "I opened the app, now what?" |
+| **AI analysis is one paragraph** | `AnalysisCard` renders `analysis.reasoning` as single `<p>` element | User feedback: "too short/terse" |
 
 ---
 
-## Differentiators
+## Feature Landscape
 
-Features that transform this from "daily picks app" to "personal trading coach that learns." High value, some technically challenging.
+### Table Stakes (Must Fix for v9.0)
 
-| Feature | Value Proposition | Complexity | Depends On (Existing) | Notes |
-|---------|------------------|------------|----------------------|-------|
-| **Behavior tracking — viewing patterns** | Track which tickers user browses most, at what times, how long. Reveals unconscious biases (e.g., always looking at bank stocks). | Medium | Frontend event tracking → backend API | Log: ticker views, time-on-page, search queries. Store in new `user_behavior` table. Privacy non-issue (single user). |
-| **Behavior tracking — trading habits** | Detect patterns: "sells winners too early," "holds losers too long," "trades impulsively after news." | High | Trade journal with timestamps, pick data | Compare: actual sell time vs optimal exit (TP). Calculate: avg hold time for winners vs losers. Gemini can generate natural-language habit analysis. |
-| **Adaptive strategy — risk scaling** | After 3 consecutive losses, AI shifts to more conservative picks. After sustained wins, gradually allows slightly more aggressive picks. | High | Trade journal P&L history, pick generation | Maintain a "risk_level" state (1-5 scale). Recent P&L adjusts it. Risk level feeds into pick generation prompt as context. |
-| **Adaptive strategy — sector preference learning** | If user consistently profits from bank stocks and loses on real estate, bias picks toward banks. | Medium | Trade journal with sector data from ticker table | Compute per-sector win rate from journal. Feed top/bottom sectors into pick generation prompt. |
-| **Goal setting — monthly profit target** | User sets "I want to make 2M VND this month." App tracks progress. Creates accountability. | Low | Trade journal P&L, new `goals` table | Simple CRUD: target_amount, month, progress_amount (computed). Progress bar on coach dashboard. |
-| **Weekly risk tolerance review** | Every Sunday: "Last week you lost 500K. Do you want to: stay the course / reduce risk / take a break?" | Medium | Trade journal, scheduled job, user_settings | Popup/card on coach dashboard. User response adjusts risk_level for next week's picks. Can be a simple 3-option selector, not a chatbot. |
-| **Weekly performance review** | AI-generated summary: "This week: 3 trades, 2 wins, +800K. You held VNM 2 days longer than suggested. Consider tighter exits." | Medium | Trade journal, pick data, Gemini API | Gemini generates review from week's data. Store as a weekly report. Displayed on coach dashboard. |
-| **Pick-to-trade linkage** | When logging a trade, optionally link it to a daily pick. Enables: "did I follow the pick?" and "how do my deviations perform vs following exactly?" | Low | Trade journal + picks table foreign key | Optional `pick_id` on trade. Analytics: "Trades following picks: 65% win rate. Trades deviating: 40% win rate." |
-| **Position sizing for small capital** | Beginner doesn't know how much to buy. AI says "buy 200 shares of XYZ = 12M VND = 24% of your 50M." | Medium | Capital setting, trading signals | Adjust existing `position_size_pct` for absolute VND amounts. Show: "Mua 200 cổ XYZ × 60,000 = 12,000,000 VND (24% vốn)." |
-| **"Why not this stock?" explanations** | When a popular stock ISN'T picked, briefly explain why. Prevents FOMO. "HPG not picked today: RSI overbought at 78, wait for pullback." | Medium | AI analysis of non-picked tickers | For top 5-10 "near-miss" tickers, include a 1-sentence rejection reason. Helps beginner learn selection criteria. |
+These are broken UX patterns that make the app hard to use. Missing = product feels incomplete.
 
----
+| # | Feature | Why Expected | Complexity | Dependencies |
+|---|---------|--------------|------------|--------------|
+| T1 | **Action-first home page** | Open app → see what matters today (picks, open positions, market pulse). Not a heatmap. Every trading tool (TradingView, Robinhood, moomoo) leads with "today's relevance." | MEDIUM | Requires reorganizing existing components from coach page + market overview |
+| T2 | **"Record trade" button on pick cards** | See AI pick → immediately record trade from the card. Current flow: see pick → mentally note it → navigate to Journal → search ticker → fill form. 4 steps should be 1. | LOW | Reuses existing `TradeEntryDialog` with pre-filled data from pick |
+| T3 | **Post-trade next steps** | After recording BUY: show SL/TP levels to watch, link to AI analysis, add to monitoring. After recording SELL: prompt for reflection note. Tradervue, Edgewonk all do this. | MEDIUM | Requires trade creation response to include pick data + new "trade confirmation" UI |
+| T4 | **Structured AI analysis output** | AI reasoning should have sections: "Tình hình hiện tại", "Mức hỗ trợ/kháng cự", "Rủi ro", "Kế hoạch hành động". Not a single paragraph. | MEDIUM | Backend AI prompt changes + frontend rendering of structured sections |
+| T5 | **Simplified navigation (4 items max)** | Merge overlapping pages. Target: Trang chủ, Phân tích (ticker), Nhật ký, Hệ thống. Remove separate dashboard, watchlist-as-page, coach-as-page. | LOW | Page restructure + redirect handling |
+| T6 | **Watchlist to server-side DB** | Watchlist stored in PostgreSQL so it persists. Current localStorage approach is fragile and disconnected from AI pipeline. | LOW | New DB table + API endpoints + migrate zustand store |
+| T7 | **Open position monitoring on home** | Show active positions (BUY without matching SELL) with live P&L, proximity to SL/TP. Current coach page shows trades table but without P&L context. | MEDIUM | Combines existing trades data + realtime prices + pick SL/TP data |
+| T8 | **Remove corporate events** | Project scope — already decided. Remove backend + frontend + DB. | LOW | Pure deletion |
+| T9 | **Remove HNX/UPCOM support** | Project scope — already decided. Only HOSE remains. Remove exchange filter, multi-market code. | LOW-MEDIUM | Backend ticker filtering, frontend ExchangeFilter removal, DB cleanup |
 
-## Anti-Features
+### Differentiators (Set Holo Apart)
 
-Features to explicitly NOT build. Each sounds useful but is wrong for a solo beginner with < 50M VND.
+Features that aren't expected but make the single-user experience exceptional.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|-------------|-----------|-------------------|
-| **Auto-trading / order execution** | Legal risk (no broker API license), financial risk (bugs = real money lost), explicitly out of scope in PROJECT.md. VN brokers don't offer public trading APIs for retail. | Show picks with prices → user manually executes on their broker app (SSI, VnDirect, TCBS). |
-| **Complex portfolio analytics** | Removed in v7.0 for good reason. Beginners don't need Sharpe ratios, beta, correlation matrices. Overcomplicates the coaching experience. | Simple P&L, win rate, streak. That's enough for a beginner to learn. |
-| **Social features / community** | Single-user app. Social comparison creates FOMO and emotional trading — the exact thing the coach should prevent. | Personal journal with private reflection. |
-| **Gamification / badges / XP** | Creates wrong incentives. "Badge for 10 trades this week" encourages overtrading. Beginners should trade LESS, not more. | Celebrate restraint: "You skipped 2 impulsive trades this week — that's discipline." via weekly review. |
-| **AI chat / conversational interface** | Massive complexity (conversation state, NLU, context management) for minimal value. A personal coach app isn't a chatbot — it's a structured decision-support tool. | Pre-structured cards and panels. AI generates text content, but UX is widget-based, not conversational. |
-| **Intraday / scalping picks** | VN market has T+2.5 settlement. Intraday strategies are irrelevant for a beginner with small capital. Commission per trade (0.15-0.35%) makes frequent trading unprofitable. | Swing (3-15 days) and position (weeks+) timeframes only — already enforced in existing `Timeframe` enum. |
-| **Multi-account / family sharing** | Single user, single capital base. Multi-user adds auth, data isolation, RBAC — all explicitly out of scope. | Single user, localStorage + server state as-is. |
-| **Notification fatigue (real-time pick alerts)** | Telegram bot was already removed in v7.0. Push notifications for picks encourage impulsive action. Beginner should check picks once at market open, not react to alerts throughout the day. | Coach dashboard shows today's picks. User checks it during their morning routine. No push. |
-| **Options / derivatives** | VN retail market has extremely limited derivatives access (VN30F futures only, high margin requirements). Irrelevant for beginner with 50M VND. | Stocks only. |
-| **Technical indicator customization** | Beginners don't know what RSI period to use. Letting them customize creates analysis paralysis and false sophistication. | AI uses pre-tuned indicators (already 27 configured). User sees conclusions, not knobs. |
-| **Backtesting picks** | Removed in v7.0. Backtesting creates hindsight bias ("I would have bought that!"). Forward performance tracking is more honest and useful. | Track actual pick performance going forward. Show: "Last 30 days, picks had 62% hit rate." |
+| # | Feature | Value Proposition | Complexity | Dependencies |
+|---|---------|-------------------|------------|--------------|
+| D1 | **Daily briefing card** | AI-generated 3-5 sentence morning summary: market context, your positions status, today's picks highlight. Not just data — interpretation. Like having a personal analyst say "Here's what matters today." | MEDIUM | New AI prompt for daily summary + backend endpoint |
+| D2 | **Trade-to-review loop** | After SELL → prompt "Lý do bán? Bạn đã theo kế hoạch không?" → response feeds into weekly review quality. Closes the learning loop that makes Trade Journal + Weekly Review actually useful together. | MEDIUM | Extends trade creation flow + links to weekly review data |
+| D3 | **Contextual coaching on ticker page** | When viewing `/ticker/VNM`, show relevant coaching: "You own this (bought 2025-07-15 at 85,000)" or "AI picked this today" or "Your habit: you tend to sell VNM early." Coaching where you need it, not on a separate page. | MEDIUM | Ticker page enhancement — query trades + picks + habits for current ticker |
+| D4 | **Watchlist with AI signals** | Watchlist isn't just a list — each entry shows latest AI score, signal direction, and change since last view. "Your watchlist: VNM ↑ buy 8/10, HPG ↓ neutral 5/10." | LOW | Combines existing API data — watchlist tickers + analysis summary |
+| D5 | **Smart trade pre-fill from any context** | From ticker page, from pick card, from watchlist — "Record trade" always pre-fills known data (ticker, suggested price, link to pick). Reduces friction to 2 fields (quantity + date). | LOW | Extend TradeEntryDialog to accept initialData prop |
+
+### Anti-Features (What NOT to Build)
+
+| # | Feature | Why Tempting | Why Problematic | Do This Instead |
+|---|---------|-------------|-----------------|-----------------|
+| AF1 | **Separate Coach page** | "Coaching" feels like it deserves its own section | Current coach page is a dump of 12 components with no coherent flow. Single-user doesn't need a "coach tab" — coaching should be embedded in context (on home, on ticker page, after trades). | Distribute coach components: picks → home, behavior → settings, goals → home sidebar, weekly review → home |
+| AF2 | **Separate Dashboard page** | "Dashboard" sounds important | Current `/dashboard` duplicates `/` (both show market stats). Pie chart + top movers isn't useful daily — heatmap is better. Having two overlapping market views confuses navigation. | Merge into home page. Market pulse section with heatmap + top movers in one view. |
+| AF3 | **Heatmap as landing page** | Heatmap looks impressive, shows the whole market | For a personal tool, "what should I do today?" matters more than "what did 400 tickers do?" Heatmap is secondary/exploratory, not the daily starting point. | Heatmap becomes an expandable section on home, or accessed via market pulse area. Today's picks and positions are above the fold. |
+| AF4 | **Real-time notification system** | "Alert me when price hits X" | Already removed price alerts in v7. For single-user viewing a web dashboard, real-time price is shown via WebSocket — no need for separate notification layer. Browser tabs are sufficient. | Keep WebSocket price streaming as-is. It's good enough. |
+| AF5 | **Customizable dashboard widgets** | "Let user arrange cards" | Single user, single workflow. Customization adds complexity without value — just design the right default layout. | Fixed layout optimized for the daily routine. |
+| AF6 | **Gamification (streaks, badges, leaderboards)** | Engagement mechanics from consumer apps | Single user. No one to compete with. Streaks create guilt, not discipline. | Focus on the learning loop: trade → reflect → review → improve. Intrinsic motivation. |
+| AF7 | **Chat-with-AI interface** | "Ask the AI about a stock" | Gemini free tier = 15 RPM. Chat would burn through quota fast. Structured analysis is more reliable than free-form chat for trading decisions. | Keep structured AI analysis but make it longer/better. The prompts are the "conversation." |
 
 ---
 
 ## Feature Dependencies
 
 ```
-Existing Pipeline (crawl → indicators → analysis → signals)
-  │
-  ├─→ [NEW] Daily Picks Engine
-  │     ├─ Capital-aware filtering
-  │     ├─ Safety scoring
-  │     ├─ Educational explanation generation
-  │     ├─ Entry/SL/TP (inherited from signals)
-  │     └─ Pick storage (new table)
-  │
-  ├─→ [NEW] Trade Journal
-  │     ├─ Log trades (buy/sell)
-  │     ├─ Auto P&L calculation
-  │     ├─ Pick-to-trade linkage (optional FK)
-  │     └─ Trade history
-  │
-  ├─→ [NEW] Pick Performance Tracking
-  │     ├─ Monitor active picks vs market prices
-  │     ├─ Detect TP/SL hits
-  │     └─ Pick track record / history
-  │
-  ├─→ [NEW] Performance Summary
-  │     ├─ Aggregates from journal + picks
-  │     └─ Win rate, P&L, streaks
-  │
-  ├─→ [NEW] Behavior Tracking (depends on journal + frontend events)
-  │     ├─ Viewing patterns
-  │     └─ Trading habit analysis
-  │
-  ├─→ [NEW] Adaptive Strategy (depends on journal + behavior + picks)
-  │     ├─ Risk level state machine
-  │     ├─ Sector preference learning
-  │     └─ Feeds back into Pick generation prompt
-  │
-  ├─→ [NEW] Goal Setting & Review (depends on journal + picks)
-  │     ├─ Monthly profit target
-  │     ├─ Weekly risk review
-  │     └─ Weekly AI-generated performance review
-  │
-  └─→ [NEW] Coach Dashboard (depends on all above)
-        ├─ Today's picks card
-        ├─ Active trades card
-        ├─ Performance summary
-        ├─ Goal progress
-        └─ Weekly review card
+[T8: Remove corporate events]     (independent, do first for cleanup)
+[T9: Remove HNX/UPCOM]           (independent, do first for cleanup)
+     │
+     └─── enables cleaner ───> [T5: Simplified navigation]
+                                    │
+     ┌──────────────────────────────┘
+     │
+[T6: Watchlist to DB] ────────> [D4: Watchlist with AI signals]
+     │
+[T1: Action-first home page] ──requires──> [T5: Simplified navigation]
+     │                                          │
+     ├── incorporates ──> [T7: Open position monitoring]
+     │                          │
+     │                          └── enhances ──> [T3: Post-trade next steps]
+     │
+     └── incorporates ──> [D1: Daily briefing card]
+     
+[T2: Record trade on pick cards] ──> [T3: Post-trade next steps] ──> [D2: Trade-to-review loop]
+     │
+     └── enhanced by ──> [D5: Smart trade pre-fill]
+
+[T4: Structured AI analysis] ────────> [D3: Contextual coaching on ticker]
+                                              │
+                                              └── uses ──> [T6: Watchlist to DB]
 ```
 
-### Critical Path
+### Dependency Notes
 
+- **T8+T9 first:** Removing features before reorganizing avoids reworking code that gets deleted. Fewer components to arrange.
+- **T5 (navigation) gates T1 (home page):** Can't redesign the landing page without deciding what pages exist.
+- **T6 (watchlist DB) gates D4 (smart watchlist):** Can't show AI signals on watchlist without server-side storage to query against.
+- **T2 (record from pick) + T3 (post-trade flow) are sequential:** First make it easy to record, then make the post-recording experience useful.
+- **T4 (better AI output) gates D3 (contextual coaching):** Richer AI content makes contextual display more valuable.
+- **D1 (daily briefing) requires T1 (home page):** The briefing card needs a home to live on.
+- **D2 (trade-to-review loop) requires T3 (post-trade flow):** The reflection prompt appears after trade recording.
+
+---
+
+## Proposed User Flow (Daily Routine)
+
+### Morning (Market Open)
 ```
-1. Pick Storage Schema + Trade Journal Schema (DB foundation)
-   ↓
-2. Daily Picks Engine (core feature, generates data for everything else)
-   ↓
-3. Trade Journal (CRUD for actual trades)
-   ↓
-4. Pick Performance Tracking (monitors picks against market)
-   ↓
-5. Coach Dashboard (displays 2 + 3 + 4)
-   ↓
-6. Behavior Tracking + Adaptive Strategy (requires journal data to exist)
-   ↓
-7. Goal Setting & Weekly Review (polish layer)
+Open app → Home page
+  ├── Daily briefing card: "VN-Index +0.3%, HPG vượt kháng cự..."
+  ├── Today's AI picks (3-5 cards with [Ghi lệnh] button)
+  ├── Open positions: VNM +2.1% (approaching TP1), FPT -0.5%
+  └── Market pulse: heatmap (collapsed/expandable)
+```
+
+### During Session
+```
+Click pick card → [Ghi lệnh] → Pre-filled dialog
+  → Submit → "Đã ghi! SL: 82,000 | TP: 92,000 — theo dõi tại đây"
+  → Position appears in monitoring section
+
+Click ticker in heatmap → /ticker/VNM
+  ├── Chart + indicators (existing)
+  ├── Contextual: "Bạn đang giữ 500 cổ VNM (mua 85,000)"
+  ├── AI analysis (longer, structured sections)
+  └── [Ghi lệnh MUA] or [Ghi lệnh BÁN] button
+```
+
+### End of Day / Weekly
+```
+Record SELL → "Lý do bán? Bạn đã theo kế hoạch không?"
+  → Response saved → feeds weekly review
+
+Home page → Weekly review section (when available)
+  ├── AI summary of the week
+  ├── Good habits / bad habits
+  └── Goal progress
 ```
 
 ---
 
-## Detailed Feature Specifications
+## Navigation Redesign
 
-### 1. Daily Picks Engine
-
-**What:** Every trading day after the analysis pipeline runs, a new Gemini call selects 3-5 stocks optimized for a beginner with < 50M VND.
-
-**How it works:**
-1. Existing pipeline runs: crawl → indicators → analysis → signals (already happens)
-2. New job chains after signals: `generate_daily_picks`
-3. Job queries today's analysis results: combined score, trading signal confidence, ATR, volume, price
-4. Filters: price ≤ 500K (100 shares buyable with 50M budget), volume > 50K/day (liquid), ADX > 20 (has trend), fundamental health ≥ "neutral"
-5. Top ~20 candidates sent to Gemini with prompt: "From these pre-analyzed tickers, select 3-5 best for a beginner. Prioritize safety. Explain each pick in Vietnamese."
-6. Gemini returns structured response (Pydantic schema)
-7. Stored in new `daily_picks` table with JSONB `raw_response`
-
-**New Pydantic schema:**
-```python
-class DailyPick(BaseModel):
-    ticker: str
-    pick_reason: str  # Vietnamese, 100-200 words educational
-    risk_level: Literal["low", "medium"]  # No "high" for beginners
-    entry_price: float
-    stop_loss: float
-    take_profit: float
-    position_size_vnd: int  # Absolute VND, not percentage
-    confidence: int  # 1-10
-    
-class DailyPicksResponse(BaseModel):
-    picks: list[DailyPick]
-    market_context: str  # Overall market condition today
-    avoidance_notes: list[str]  # "Avoid real estate sector today because..."
+### Current (7 items, confusing)
+```
+Tổng quan | Danh mục | Bảng điều khiển | Huấn luyện | Nhật ký | Sự kiện | Hệ thống
 ```
 
-**Gemini API cost:** 1 extra call/day (within 15 RPM free tier — current pipeline uses ~12-13 RPM at peak).
-
-### 2. Trade Journal
-
-**What:** CRUD for logging actual trades the user executes on their broker.
-
-**DB schema (new table `trades`):**
+### Proposed (4 items, clear)
 ```
-id: BigInteger PK
-ticker_id: FK → tickers.id
-direction: Enum('buy', 'sell')
-price: Float
-quantity: Integer
-total_amount: Float (computed: price × quantity)
-fees: Float (default 0)
-executed_at: DateTime
-pick_id: FK → daily_picks.id (nullable — not all trades follow picks)
-notes: Text (nullable)
-created_at: Timestamp
+Trang chủ | Nhật ký | Thị trường | Hệ thống
 ```
 
-**P&L calculation:**
-- FIFO matching: first buy matched with first sell
-- Realized P&L: sell_total - buy_total - total_fees
-- Unrealized P&L: (current_price - avg_buy_price) × remaining_quantity
-- Uses existing `daily_prices` or real-time WebSocket price for current price
+| New | Content (merged from) | Rationale |
+|-----|----------------------|-----------|
+| **Trang chủ** | Daily briefing + Today's picks (from Coach) + Open positions (from Coach) + Goals progress (from Coach) + Weekly review (from Coach) + Watchlist quick-view | Everything "today" in one place. The daily starting point. |
+| **Nhật ký** | Trade journal (existing) + Trade stats + Behavior insights (from Coach) | "Your trading history and patterns." All backward-looking data. |
+| **Thị trường** | Heatmap (from /) + Top movers (from /dashboard) + Market stats | "Explore the market." Scanning tool, not daily landing. |
+| **Hệ thống** | Health dashboard (existing, kept for ops) | Admin-only, tucked away. |
 
-**API endpoints:**
-- `POST /api/trades` — log new trade
-- `GET /api/trades` — list trades (with filters: date range, ticker, direction)
-- `GET /api/trades/summary` — P&L summary (realized, unrealized, win rate)
-- `PUT /api/trades/{id}` — edit trade
-- `DELETE /api/trades/{id}` — delete trade
-
-### 3. Pick Performance Tracking
-
-**What:** Scheduled job monitors active picks against real market prices.
-
-**Logic:**
-- After market close each day, check all active picks (issued within their timeframe window)
-- Compare day's high/low against pick's TP and SL
-- If high ≥ TP → mark pick as "hit_tp" (success)
-- If low ≤ SL → mark pick as "hit_sl" (stopped out)
-- If timeframe expired → mark as "expired" with final P&L
-- Store outcome on `daily_picks` table: `status` enum (active/hit_tp/hit_sl/expired), `outcome_pct`, `resolved_at`
-
-### 4. Behavior Tracking
-
-**What:** Frontend sends lightweight events; backend aggregates patterns.
-
-**Events tracked:**
-- `ticker_view`: user visits `/ticker/[symbol]` — log symbol + timestamp
-- `pick_viewed`: user expands a daily pick for details
-- `trade_logged`: user logs a trade (already captured via journal)
-- `time_on_coach`: how long user spends on `/coach` page
-
-**Storage:** New `user_events` table (event_type, payload JSONB, created_at). Lightweight — no heavy analytics infra.
-
-**Habit analysis (Gemini):** Weekly job queries events + journal, sends to Gemini with prompt: "Analyze this trader's behavior patterns. Identify: impulsive trading, loss aversion, confirmation bias, FOMO. Provide 2-3 specific observations in Vietnamese."
-
-### 5. Adaptive Strategy
-
-**What:** Risk level state machine that adjusts pick aggressiveness.
-
-**State: `risk_level` (1-5 scale)**
-- 1 = Ultra-conservative (only "low" risk picks)
-- 3 = Balanced (default for new user)
-- 5 = Moderate growth (still no "high" risk — beginner constraint)
-
-**Transitions:**
-- 3 consecutive losing trades → risk_level decreases by 1
-- Week with > 3% portfolio loss → risk_level decreases by 1
-- 2 consecutive winning weeks → risk_level increases by 1
-- User manually overrides via weekly review → set directly
-- Never exceeds 5 (no aggressive mode for beginners)
-
-**How it feeds picks:** Risk level is injected into the daily picks Gemini prompt as context:
-- Level 1-2: "Select ONLY stocks with ATR < 2%, strong fundamentals, high liquidity"
-- Level 3: "Balance safety and opportunity"
-- Level 4-5: "Can include moderately volatile stocks with strong technical setups"
-
-**Storage:** `user_settings` table or simple key-value config. Single value, updated by automated rules + user override.
-
-### 6. Goal Setting & Weekly Review
-
-**What:** User sets monthly profit target; weekly AI-generated review.
-
-**Goal:**
-- `goals` table: `id`, `month` (YYYY-MM), `target_amount` (VND), `created_at`
-- Progress computed from trade journal P&L for that month
-- Displayed as progress bar on coach dashboard
-
-**Weekly Review:**
-- Scheduled job runs every Sunday
-- Collects: week's trades, pick outcomes, behavior events
-- Sends to Gemini: "Generate a weekly trading review for this beginner trader. Be encouraging but honest. In Vietnamese."
-- Stored in `weekly_reviews` table (week_start, review_text, stats_json)
-- Includes risk tolerance question: "Tuần tới bạn muốn: (1) Giảm rủi ro (2) Giữ nguyên (3) Tăng nhẹ"
-- User's answer updates risk_level for adaptive strategy
+**Note:** `/ticker/[symbol]` remains as-is (not a nav item, accessed via search/click). `/watchlist` becomes a section on home page, not a separate page.
 
 ---
 
-## MVP Recommendation
+## MVP Definition (v9.0 Scope)
 
-**Prioritize (Phase 1-3):**
-1. **Daily Picks Engine** — this IS the core feature; everything else is secondary
-2. **Trade Journal with P&L** — connects picks to reality; minimal but complete CRUD
-3. **Pick Performance Tracking** — builds trust in AI; answers "does this actually work?"
-4. **Coach Dashboard** — single page that ties 1+2+3 together
+### Must Have (Launch Blockers)
 
-**Defer to later phases:**
-- **Behavior Tracking:** Needs journal data to exist first. At least 2 weeks of trade data before patterns are detectable. Build after core loop is working.
-- **Adaptive Strategy:** Needs pick + journal history. Meaningful after ~1 month of data. Can start with a simple manual risk toggle before implementing the full state machine.
-- **Goal Setting & Weekly Review:** Polish feature. The system works without goals. Add after the core coaching loop proves itself.
-- **"Why not this stock?" explanations:** Nice-to-have differentiator. Requires additional Gemini calls. Defer unless Gemini rate limit budget allows.
+- [x] **T8: Remove corporate events** — Cleanup before rework
+- [x] **T9: Remove HNX/UPCOM** — Cleanup before rework
+- [x] **T5: Simplified navigation** — 4 items, merge overlapping pages
+- [x] **T1: Action-first home page** — Reorganize existing components into daily routine layout
+- [x] **T2: Record trade from pick cards** — Button + pre-filled dialog
+- [x] **T6: Watchlist to server-side DB** — Migrate from localStorage
+- [x] **T4: Structured AI analysis** — Longer output with sections (prompt engineering + frontend)
 
-**Build order rationale:** The core coaching loop is: AI picks → user trades → results tracked → AI adapts. Each phase should complete one link in this chain. Don't build adaptive strategy before there's data to adapt on.
+### Should Have (High Value, Add Immediately After)
 
----
+- [ ] **T3: Post-trade next steps** — Confirmation screen with SL/TP + monitoring link
+- [ ] **T7: Open position monitoring** — Live P&L on home page
+- [ ] **D4: Watchlist with AI signals** — Show score/signal on watchlist entries
+- [ ] **D5: Smart trade pre-fill** — Pre-fill from any context (ticker page, watchlist)
 
-## Vietnamese Stock Market Constraints (Inform All Features)
+### Nice to Have (Future)
 
-| Constraint | Impact on Feature Design |
-|-----------|------------------------|
-| T+2.5 settlement | No day-trading picks. Minimum hold period is effectively 3 days. Timeframe enum already enforces swing/position only. |
-| No short selling (retail) | All picks are BUY only. BEARISH direction in existing signals becomes "avoid" guidance, not actionable picks. |
-| Floor/ceiling limits (±7% HOSE, ±10% HNX, ±15% UPCOM) | SL/TP must respect daily price limits. Can't hit 8% SL intraday on HOSE. |
-| Lot size: 100 shares (HOSE), 100 shares (HNX), 1 share (UPCOM) | Capital-aware filtering must account for lot sizes. 50M / price / 100 = max lots buyable. |
-| Commission: 0.15-0.35% per trade (broker-dependent) | P&L calculation should include configurable fee rate. Default to 0.25%. |
-| Market hours: 9:00-15:00 (VN time, UTC+7) | Picks should be ready before 9:00 AM. Generate during post-close pipeline (after 15:00), displayed next morning. |
-| Tax: 0.1% on sell transactions | Include in P&L calculations. Sell tax = 0.1% × sell_amount. |
+- [ ] **D1: Daily briefing card** — AI-generated morning summary (uses Gemini quota)
+- [ ] **D2: Trade-to-review loop** — Post-SELL reflection prompt
+- [ ] **D3: Contextual coaching on ticker page** — Show position/habit info in context
 
 ---
 
-## Gemini API Budget Analysis
+## Feature Prioritization Matrix
 
-**Current usage (existing pipeline):**
-- Crawl: 0 Gemini calls
-- Indicators: 0 Gemini calls
-- Technical analysis: ~54 calls (800 tickers / 15 per batch)
-- Fundamental analysis: ~54 calls
-- Sentiment analysis: ~54 calls
-- Combined analysis: ~54 calls
-- Trading signals: ~54 calls (batch size 15)
-- **Total: ~270 calls/day** (spread across scheduled batches with 4s delays)
+| Feature | User Value | Implementation Cost | Risk | Priority |
+|---------|-----------|--------------------|----- |----------|
+| T8: Remove corporate events | MEDIUM (cleanup) | LOW | LOW | P0 |
+| T9: Remove HNX/UPCOM | MEDIUM (cleanup) | LOW-MEDIUM | LOW | P0 |
+| T5: Simplified navigation | HIGH | LOW | LOW | P1 |
+| T1: Action-first home page | HIGH | MEDIUM | MEDIUM — layout rework | P1 |
+| T4: Structured AI analysis | HIGH | MEDIUM | LOW — prompt engineering | P1 |
+| T2: Record trade from pick cards | HIGH | LOW | LOW | P1 |
+| T6: Watchlist to DB | MEDIUM | LOW | LOW | P1 |
+| T7: Open position monitoring | HIGH | MEDIUM | LOW | P2 |
+| T3: Post-trade next steps | MEDIUM | MEDIUM | LOW | P2 |
+| D4: Watchlist with AI signals | MEDIUM | LOW | LOW | P2 |
+| D5: Smart trade pre-fill | MEDIUM | LOW | LOW | P2 |
+| D1: Daily briefing card | MEDIUM | MEDIUM | MEDIUM — Gemini quota | P3 |
+| D2: Trade-to-review loop | MEDIUM | MEDIUM | LOW | P3 |
+| D3: Contextual coaching | MEDIUM | MEDIUM | LOW | P3 |
 
-**New v8.0 calls:**
-- Daily picks generation: **1 call/day** (small — top 20 candidates in one prompt)
-- Weekly behavior analysis: **1 call/week**
-- Weekly review generation: **1 call/week**
-- "Why not" explanations: **1 call/day** (if implemented)
-- **Total new: ~2 calls/day + 2/week = negligible**
+**Priority key:**
+- **P0:** Cleanup — do first to reduce surface area before rework
+- **P1:** Core rework — the actual UX transformation
+- **P2:** Enhancement — makes the rework shine
+- **P3:** Polish — future improvement
 
-**Verdict:** v8.0 features add < 1% to Gemini usage. Well within free tier limits. No rate limiting concerns.
+---
+
+## Competitor/Pattern Analysis
+
+| UX Pattern | TradingView | Robinhood/moomoo | Tradervue/Edgewonk | Our Approach |
+|-----------|-------------|------------------|--------------------|----|
+| **Landing page** | Customizable chart workspace | "Today" feed: positions + movers + news | Trade log with stats | **"Today" page:** picks + positions + market pulse |
+| **Trade recording** | External (connects to broker) | Automatic from broker | Manual entry with rich tagging | **One-click from pick card**, manual entry in journal |
+| **Post-trade flow** | N/A | Shows position in portfolio | Tags, notes, screenshots prompt | **Confirmation with SL/TP reminder**, monitoring link |
+| **Watchlist** | Always-visible sidebar panel | Favorites list with live prices | N/A | **Home page section** with AI scores, not separate page |
+| **AI/Analysis** | Community scripts + built-in indicators | Simple "analyst ratings" | AI trade grading | **Structured multi-section AI analysis** with clear action guidance |
+| **Navigation** | Workspace tabs (flexible) | 5 bottom tabs (Home, Search, Invest, Crypto, Profile) | Simple sidebar (Dashboard, Trades, Reports) | **4 top nav items:** Trang chủ, Nhật ký, Thị trường, Hệ thống |
+| **Coaching** | N/A | N/A | Performance reports with habit tracking | **Embedded in context** — on home, ticker page, journal. Not separate page. |
+
+---
+
+## Specific Component Decisions
+
+### Pick Card Redesign
+**Current:** Display-only card with price levels. `onClick` only tracks behavior event.
+**Proposed:** Add footer with two action buttons:
+- `[Ghi lệnh MUA]` — Opens TradeEntryDialog pre-filled with pick data
+- `[Xem phân tích →]` — Links to `/ticker/{symbol}`
+
+### Coach Page Decomposition
+**Current coach page sections → New locations:**
+
+| Current Section | New Location | Rationale |
+|----------------|--------------|-----------|
+| Daily Picks (Section 2) | **Home page** — primary content | This IS the daily starting point |
+| Performance Cards (Section 1) | **Home page** — above picks | Context for today's picks |
+| Open Trades (Section 3) | **Home page** — position monitor | Active monitoring belongs on daily view |
+| Pick History (Section 4) | **Nhật ký page** — tab or section | Historical data belongs with journal |
+| Goals & Weekly Reviews (Section 5) | **Home page** — sidebar/bottom | Weekly cadence content on the daily view |
+| Behavior Insights (Section 6) | **Nhật ký page** — insights tab | Patterns are backward-looking, belong with history |
+| Risk Suggestion Banner | **Home page** — top banner | Urgent advisory belongs on the main view |
+| Profile Settings | **Home page** — header area or settings | Keep accessible but not prominent |
+
+### AI Analysis Output Structure
+**Current:** Single `reasoning` string, typically 2-3 sentences.
+**Proposed:** Structured output with sections:
+
+```typescript
+interface StructuredAnalysis {
+  summary: string;           // 1-2 sentence headline
+  market_context: string;    // Overall market + sector context  
+  key_levels: string;        // Support/resistance interpretation
+  catalysts: string;         // What could move the price
+  risks: string;             // What to watch out for
+  action_plan: string;       // Concrete "if X then Y" guidance
+}
+```
+
+**Implementation:** Change Gemini prompt to request structured sections + Pydantic schema for structured output (already using `google-genai` structured output for trading signals). Frontend renders each section with headers and expandable detail.
+
+### Watchlist DB Migration
+**Current:** `zustand/persist` → `localStorage('holo-watchlist')` → array of symbol strings.
+**Proposed:**
+- New `watchlist` table: `id, ticker_symbol, added_at, notes`
+- API endpoints: `GET/POST/DELETE /api/watchlist`
+- Frontend: Replace `useWatchlistStore` with react-query hooks
+- Migration: On first load, check localStorage, POST to API if exists, clear localStorage
+
+---
+
+## UX Principles for v9.0
+
+1. **Every screen answers "what next?"** — No display-only dead ends. Every card has an action button or a link to relevant context.
+
+2. **Morning routine fit** — Home page is designed to be scanned in 2 minutes: picks → positions → market pulse. Everything above the fold.
+
+3. **Record friction < 10 seconds** — From seeing a pick to recording a trade should be: click button → confirm quantity → done. Pre-fill everything possible.
+
+4. **Coach is embedded, not separate** — Coaching advice appears where relevant (ticker page shows your position, home shows your habits), not on a dedicated "coaching" page you have to visit.
+
+5. **Progressive disclosure** — Summary first, detail on demand. AI analysis shows headline + expandable sections. Position shows P&L + expandable SL/TP levels.
 
 ---
 
 ## Sources & Confidence
 
-| Claim | Source | Confidence |
-|-------|--------|------------|
-| VN market T+2.5 settlement, no retail short selling | Training data (well-established VN market rules) | HIGH |
-| HOSE lot size 100, floor/ceiling ±7% | Training data (standard VN exchange rules) | HIGH |
-| Commission range 0.15-0.35% | Training data (typical VN broker fees) | MEDIUM |
-| Sell tax 0.1% | Training data (VN stock transaction tax) | HIGH |
-| Trade journal feature patterns (Edgewonk, Tradervue) | Training data (domain knowledge of trading journal apps) | MEDIUM |
-| Behavior tracking patterns | Training data (general app analytics patterns) | MEDIUM |
-| Adaptive strategy concept | Training data (risk management best practices) | MEDIUM |
-| Existing Holo codebase analysis | Direct code inspection — schemas, models, APIs | HIGH |
-| Gemini API budget analysis | Calculated from existing batch sizes in codebase | HIGH |
-| Daily picks as filtered subset (not re-analysis) | Architecture decision based on existing pipeline efficiency | HIGH |
+| Finding | Basis | Confidence |
+|---------|-------|------------|
+| Navigation should be ≤5 items | Established UX research (Miller's law, mobile nav patterns). TradingView uses tabs, Robinhood uses 5 bottom nav. | HIGH |
+| Action-first home beats heatmap landing | Consumer fintech pattern (Robinhood, Wealthfront all lead with "your stuff" not "the market"). For single user, personal relevance > market overview. | HIGH |
+| Pick card needs action buttons | Direct observation: current code has no CTA on pick cards. Every comparable tool (stock screener, signal service) has "trade" or "add to watchlist" buttons. | HIGH |
+| Post-trade flow improves journaling | Tradervue and Edgewonk both prompt for notes/tags after trade entry. Research on trading psychology emphasizes the "plan → execute → review" loop. | MEDIUM — based on training data about trading journal apps |
+| Structured AI output improves comprehension | Direct user feedback ("AI analysis is too short/terse") + general UX principle that structured content is easier to scan than prose. | HIGH |
+| Watchlist should be server-side | Already flagged as "⚠️ Revisit" in PROJECT.md key decisions. localStorage is unreliable for important data. | HIGH |
+| Coach page decomposition pattern | UX principle: related actions should be near their context. "Coaching" scattered across home + ticker + journal is more useful than coaching on a separate page. | MEDIUM — opinionated design decision |
+| Overlapping page problem | Direct code inspection: `/` page.tsx and `/dashboard` page.tsx both call `useMarketOverview()` and display nearly identical data | HIGH |
+
+---
+*Feature research for: Holo v9.0 UX Rework & Simplification*
+*Researched: 2025-07-21*

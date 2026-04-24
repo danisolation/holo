@@ -1,145 +1,124 @@
-# Domain Pitfalls — v8.0 AI Trading Coach
+# Domain Pitfalls — v9.0 UX Rework & Simplification
 
-**Domain:** Adding AI-powered daily picks, trade journal, behavior tracking, and adaptive strategy to existing VN stock intelligence platform
-**Researched:** 2025-07-24
-**Platform context:** Holo — 800+ tickers, Gemini structured output, PostgreSQL/Aiven, FastAPI + Next.js, single-user personal use
-**Market:** Vietnam HOSE/HNX/UPCOM — T+2 settlement, no short selling, lot sizes, price steps, ±7% daily limits
+**Domain:** Feature removal + UX rework on existing production stock intelligence platform
+**Project:** Holo v9.0 — UX Rework & Simplification
+**Researched:** 2025-07-21
+**Platform context:** Holo — 800+ tickers (HOSE/HNX/UPCOM), Gemini structured output, PostgreSQL/Aiven, FastAPI + Next.js, single-user personal use
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause dangerous financial decisions, data corruption, or major rewrites.
+Mistakes that cause data loss, broken pipelines, or require emergency rollbacks.
 
 ---
 
-### Pitfall 1: AI Hallucinated Stock Picks — Phantom Tickers, Impossible Prices
+### Pitfall 1: Broken Job Chain When Removing HNX/UPCOM Crawls
 
-**What goes wrong:** Gemini generates daily picks containing ticker symbols that don't exist on HOSE/HNX/UPCOM (e.g., inventing "VNX" or confusing with NYSE tickers), entry prices outside the ±7% daily limit band, or stop-loss levels that are physically impossible given the exchange's price step rules (e.g., 82,030 VND on HOSE where the step is 10 VND below 10K, 50 VND for 10K-50K, 100 VND for ≥50K).
+**What goes wrong:** The scheduler's job chain is deeply coupled to HNX/UPCOM. The chain trigger fires from `daily_price_crawl_upcom` → `daily_indicator_compute` → `daily_ai_analysis` → ... → `daily_hnx_upcom_analysis` → `daily_pick_generation`. If you remove the UPCOM crawl job without rewiring the chain trigger, the entire downstream pipeline (indicators, AI analysis, news, sentiment, combined, trading signals, picks) **never fires**.
 
-**Why it happens:** Gemini's training data includes global stock tickers. When asked for "top picks," it may hallucinate tickers from other markets or generate plausible-sounding Vietnamese ticker codes that don't exist. The existing `_validate_trading_signal()` validates entry ±5% and SL within 3×ATR — but daily picks have a different risk profile: they're **actionable recommendations** a beginner will directly trade, not exploratory analysis across 800 tickers.
+**Why it happens:** The chain listener in `scheduler/manager.py:73` specifically checks `event.job_id == "daily_price_crawl_upcom"` as the trigger for indicator compute. It's the *last* exchange crawl (HOSE 15:30 → HNX 16:00 → UPCOM 16:30), so it was chosen as the chain initiator. Removing it without moving the chain trigger to `daily_price_crawl_hose` silently breaks the entire daily pipeline.
 
-**Consequences:** Beginner user places orders on tickers that don't exist (wasted effort), or enters at prices that are outside today's tradeable range and the order sits unfilled. Worse: user trusts a hallucinated "safe pick" with a stop-loss the exchange will never match due to price step rounding.
+**Consequences:**
+- No daily indicators computed
+- No AI analysis generated
+- No trading signals, picks, or sentiment analysis
+- The app appears functional but shows stale data — worst kind of bug (silent failure)
 
 **Prevention:**
-- **Hard validation layer:** Every pick ticker MUST exist in the `tickers` table. Reject any ticker not in DB.
-- **Price feasibility check:** Entry must be within today's price limit band (previous close ±7% for HOSE, ±10% HNX, ±15% UPCOM). Don't rely on Gemini knowing the limits.
-- **Price step normalization:** Round all price targets to valid price steps: 10 VND (< 10,000), 50 VND (10,000–49,950), 100 VND (≥ 50,000 on HOSE). Invalid prices → auto-round, don't reject.
-- **Liquidity gate:** Reject picks with average daily volume < 10,000 shares (illiquid stocks trap beginners).
-- **Re-use existing validation pattern:** Extend `_validate_trading_signal()` with daily-pick-specific rules. The existing post-validation architecture (entry ±5%, SL ≤3×ATR) is the right pattern — just add VN-market-specific checks.
-- **Structured output schema:** Define a Pydantic model for daily picks that constrains Gemini output. The project already uses `response_schema` in `GeminiClient` — apply the same pattern.
+1. In the SAME migration/code change that removes HNX/UPCOM crawl jobs, rewire `_on_job_executed` to trigger from `daily_price_crawl_hose` (or whatever the new last/only exchange crawl is)
+2. Also remove the `daily_hnx_upcom_analysis` job and its chain step — it chains from `daily_trading_signal_triggered` to `daily_hnx_upcom_analysis_triggered` to `daily_pick_generation_triggered`
+3. Write a verification test: trigger HOSE crawl → assert indicator compute fires → assert AI analysis fires → assert pick generation completes
+4. Remove all three cron entries (HOSE/HNX/UPCOM staggered) and replace with single HOSE cron
 
-**Detection:** Log every validation failure with reason. If >30% of picks fail validation in a week, the prompt needs rewriting.
+**Detection:** Daily picks stop generating. Health dashboard shows `daily_indicator_compute` hasn't run. Job execution table shows no new entries after the day of deployment.
 
-**Existing code to leverage:** `app/services/analysis/prompts.py::_validate_trading_signal()`, `app/schemas/analysis.py::TickerTradingSignal`, `app/services/analysis/gemini_client.py` structured output pattern.
+**Phase:** Must be addressed in the FIRST phase that touches HNX/UPCOM removal. Backend changes only — no frontend dependency.
 
 ---
 
-### Pitfall 2: Survivorship Bias When Evaluating Pick Quality
+### Pitfall 2: Orphaned Foreign Key Data After Corporate Events Table Drop
 
-**What goes wrong:** The system tracks daily picks and later shows "65% win rate!" — but this only counts picks the user actually traded. Picks the user skipped (often the losers, because they "felt wrong") aren't in the journal. The AI adapts based on journal results, learning from a biased sample where bad picks are systematically excluded.
+**What goes wrong:** Dropping the `corporate_events` table via Alembic migration while the `ticker_id` foreign key still references `tickers.id`. If done in wrong order, or if other tables were added that reference `corporate_events`, the migration fails. Worse: if you just remove the model without a migration, SQLAlchemy's metadata diverges from the actual DB schema.
 
-**Why it happens:** Natural human behavior — user sees 5 picks, trades the 2 that look safest, skips the 3 that feel risky. Journal records 2 wins. System concludes "100% accuracy" when reality was 2/5 = 40%.
+**Why it happens:** The `corporate_events` table has `ForeignKey("tickers.id")` on `ticker_id`. The table *itself* doesn't have anything referencing it (no other table has FK → corporate_events), so DROP is safe. But developers often forget to:
+- Remove the model from `models/__init__.py` `__all__` list and imports
+- Remove the CorporateEvent import from Alembic's `env.py` target metadata
+- Actually create and run the Alembic migration (not just delete the .py model file)
 
-**Consequences:** False confidence in AI quality. Adaptive strategy overfits to the surviving picks, recommending similar patterns. User increases position sizes based on inflated win rate. Eventually, a correlated loss wipes out gains.
+**Consequences:**
+- If model removed without migration: `alembic upgrade head` still sees the old table, autogenerate creates confusing diff
+- If migration drops table before removing code references: imports break at startup → 500 on all requests
+- If only code removed (no migration): dead table sitting in production DB consuming space, confusing future developers
 
 **Prevention:**
-- **Track ALL picks, not just traded ones.** Every daily pick gets a row in the database regardless of whether the user trades it. Fields: `pick_date`, `ticker`, `entry_suggested`, `outcome` (tracked automatically via price data).
-- **Two win rates:** Display "Traded win rate" AND "All picks win rate" side by side. Make the user see the gap.
-- **Auto-evaluate untraded picks:** Use closing prices on the pick's target date to simulate what would have happened. This is straightforward since the system already crawls daily OHLCV for 800+ tickers.
-- **Survivorship flag in adaptive strategy:** When the adaptive engine learns from results, weight ALL picks equally, not just traded ones.
+1. Order of operations: Create Alembic migration FIRST → `DROP TABLE corporate_events` (the table has no inbound FKs, so this is clean)
+2. In the SAME commit: remove `models/corporate_event.py`, remove import from `models/__init__.py`, remove from `__all__`
+3. Remove `api/corporate_events.py` and its router registration in `api/router.py`
+4. Remove `crawlers/corporate_event_crawler.py`
+5. Remove `daily_corporate_action_check` job from `scheduler/jobs.py` AND its chain entry in `scheduler/manager.py` (line 83-90, triggered from `daily_price_crawl_upcom`)
+6. Remove the `_JOB_NAMES` entries for corporate action check in `scheduler/manager.py`
+7. Run `alembic check` to verify no drift
 
-**Detection:** If "Traded win rate" exceeds "All picks win rate" by >15 percentage points for >2 weeks, show a warning: "Bạn đang chọn lọc kết quả — xem lại tất cả gợi ý."
+**Detection:** `alembic check` shows pending operations. Backend fails to start with ImportError. Tests referencing corporate events fail.
+
+**Phase:** Backend feature removal phase. Do corporate events and HNX/UPCOM in the same phase since the chain trigger from UPCOM also triggers corporate action check.
 
 ---
 
-### Pitfall 3: P&L Calculation Errors with VN Market Rules
+### Pitfall 3: Watchlist Migration Data Loss — localStorage to DB
 
-**What goes wrong:** P&L calculations show incorrect profit/loss because they ignore VN-specific rules: T+2 settlement, lot sizes of 100, price steps, trading fees, and the mandatory 0.1% personal income tax on sells.
+**What goes wrong:** User has a curated watchlist in `localStorage` (key: `holo-watchlist`). During migration to DB-backed watchlist, the localStorage data is lost because:
+- The migration code runs before the user visits the page
+- The user clears browser data between versions
+- The new frontend code removes the zustand persist middleware before reading the old data
+- The DB migration creates a new empty `watchlist` table, and old localStorage data is never transferred
 
-**Why it happens:** Developer uses simple (sell - buy) × quantity formula from textbooks or US market tutorials. VN market has unique mechanics that silently corrupt P&L.
+**Why it happens:** localStorage → DB migration is fundamentally a client-to-server data migration. There's no server-side way to read `localStorage`. The migration MUST happen in the browser on first visit after deployment. Most developers write the new DB-backed code and forget the one-time migration bridge.
 
-**Consequences:** User thinks they made 500K VND profit, but after fees/tax the real profit is 350K. Or worse: user tries to sell shares they bought yesterday (T+0) and can't, but the journal doesn't reflect that the position is locked until T+2.
-
-**Specific VN market rules that MUST be implemented:**
-
-| Rule | Detail | P&L Impact |
-|------|--------|------------|
-| **Lot size = 100 shares** | HOSE requires orders in multiples of 100. HNX allows odd lots in some sessions. | Position size must be rounded to 100-share lots. Suggested capital / entry price → round DOWN to nearest 100 shares. |
-| **Price steps** | HOSE: 10₫ (<10K), 50₫ (10K-49.95K), 100₫ (≥50K). HNX: 100₫ all prices. | Entry/SL/TP must be valid price steps. Invalid prices → order rejected by exchange. |
-| **T+2 settlement** | Shares bought on Monday available to sell on Wednesday (T+2 = 2 business days). HOSE has T+2, technically T+2.5 historically but now aligned to T+2. | Journal must track `buy_date` and `sellable_date = buy_date + 2 business days`. Show "locked" status before sellable date. |
-| **Trading fees** | Broker fee: 0.15-0.25% per side (varies by broker, typical ~0.15% for online). | P&L = (sell × qty) - (buy × qty) - buy_fee - sell_fee - sell_tax. User should configure their broker fee rate. |
-| **Sell tax** | 0.1% of gross sell value (personal income tax, mandatory). | Applied on every sell transaction. Must be subtracted from P&L. |
-| **Daily price limits** | HOSE: ±7%, HNX: ±10%, UPCOM: ±15% from reference price. | Stop-loss or take-profit outside limit → won't execute in one day. SL beyond -7% may take 2+ days to trigger (gap down risk). |
-| **No fractional shares** | Unlike US markets, no partial share trading. | Position sizing must produce whole multiples of 100 shares. Small capital (<50M VND) severely limits diversification. |
+**Consequences:**
+- User loses their carefully curated watchlist (the whole point of the feature)
+- Since this is a single-user personal app, there's exactly ONE user to anger — the developer/user themselves
+- If localStorage is cleared before first visit with new code, data is permanently gone
 
 **Prevention:**
-- **Create a `VNMarketRules` utility class** with methods: `round_to_lot_size(qty)`, `round_to_price_step(price, exchange)`, `calculate_fees(value, side, fee_rate)`, `calculate_tax(sell_value)`, `get_sellable_date(buy_date)`, `get_limit_prices(ref_price, exchange)`.
-- **Store fee rate in user settings** (default 0.15%, configurable). This already has precedent — v4.0 paper trading had settings (now removed but the pattern existed).
-- **Always show gross P&L and net P&L** separately. Beginners need to understand the fee drag.
-- **Business day calendar:** VN market holidays affect T+2 calculation. Either maintain a holiday list or use a simple "weekday-only" approximation with a note that holidays may shift dates.
+1. **Phase 1 — Add DB watchlist API** (backend): Create `POST/GET/DELETE /api/watchlist` endpoints. Use existing `user_watchlist` table (already exists! — it was for Telegram bot but has `chat_id` + `ticker_id`). Repurpose or create new table.
+2. **Phase 2 — Frontend migration bridge**: On app mount, check if `localStorage` has `holo-watchlist` data AND DB watchlist is empty → bulk POST to DB → clear localStorage flag (but keep data as backup for 30 days)
+3. **Never** remove `zustand/persist` middleware UNTIL after the migration bridge has been deployed and confirmed working
+4. Add a `migrated_from_local` flag in DB or localStorage to prevent double-migration
+5. Keep localStorage as read-only fallback for 1 release cycle
 
-**Detection:** Automated test: create a journal entry for buying 100 shares of VNM at 82,000 and selling at 83,000. Expected net P&L should be: (83,000 - 82,000) × 100 - (82,000 × 100 × 0.0015) - (83,000 × 100 × 0.0015) - (83,000 × 100 × 0.001) = 100,000 - 12,300 - 12,450 - 8,300 = **66,950 VND** (not 100,000). If the test shows 100,000, fees are missing.
+**Detection:** Watchlist page shows empty after deployment. User notices missing symbols.
+
+**Phase:** Watchlist rework phase. Must be a two-step deployment: backend API first, then frontend migration bridge.
 
 ---
 
-### Pitfall 4: Over-Trading Recommendations Burning Small Capital
+### Pitfall 4: HNX/UPCOM Ticker Data Orphaning — 400+ Tickers Left in DB
 
-**What goes wrong:** AI generates 3-5 picks daily. Beginner user tries to trade all of them. With <50M VND capital and lot size of 100 shares, buying 5 stocks means ~10M per position → 100-share lots of mid-cap stocks. Trading fees eat into profits at this scale. Frequent trading creates a psychological cycle: loss → revenge trade → bigger loss.
+**What goes wrong:** Removing HNX/UPCOM support from the code but leaving ~400 HNX/UPCOM tickers in the `tickers` table (200 HNX + 200 UPCOM, currently active). These tickers have associated rows in `daily_prices`, `technical_indicators`, `ai_analysis`, `news_articles`, and `financials`. The data becomes stale and pollutes queries.
 
-**Why it happens:** The feature spec says "3-5 picks daily." A beginner interprets this as "trade all 5 every day." AI doesn't understand the user's capital constraints or emotional state.
+**Why it happens:** Developers remove the crawl jobs and exchange filter UI but forget that existing data in 6+ tables still references these tickers. Simply marking tickers as `is_active=false` stops new data from being generated but doesn't clean up the presence of these tickers in API responses, search results, and market overview.
 
-**Consequences:** User over-trades, fees compound, small losses accumulate, capital depletes faster than expected. The system designed to help becomes the cause of losses.
-
-**Prevention:**
-- **Capital-aware pick count:** With <50M VND, recommend MAX 1-2 positions at a time (not 5). Calculate: `capital / avg_pick_entry_price / 100 × 100` = max concurrent positions at minimum lot size. Show this on the picks page.
-- **"Pick of the Day" primary mode:** Show 1 highest-conviction pick prominently. Show 2-4 additional picks as "also watching" with explicit "chỉ xem, không nhất thiết phải giao dịch" (watch only, don't necessarily trade).
-- **Position limit enforcement:** If user has 3 open journal trades, show a warning before allowing a 4th. "Bạn đang giữ 3 vị thế — mở thêm tăng rủi ro."
-- **Cooldown after losses:** If the journal shows 2 consecutive losing trades, the daily pick section should show a "pause and review" message instead of new picks. This is the adaptive strategy's most important safety feature.
-- **Fee impact preview:** Before each pick, show: "Phí giao dịch ước tính: 24,750 VND (nếu mua 100 cổ @ 82,000)" so the user sees the cost of trading.
-
-**Detection:** Track `trades_per_week` metric. If >5 trades/week for capital <50M, surface a behavioral warning.
-
----
-
-### Pitfall 5: Gemini Rate Limit Exhaustion — Daily Picks Pipeline Competing with Existing Pipelines
-
-**What goes wrong:** The existing daily pipeline already consumes most of the 15 RPM Gemini quota: technical analysis (800 tickers / 25 per batch = 32 calls), fundamental (32), sentiment (32), combined (32), trading signals (800/15 = 54 calls). That's ~182 Gemini calls with 4s delays = ~12 minutes. Adding daily picks (even just scanning 50 candidates to select 5) adds more calls that push the pipeline past rate limits, causing failures and partial results.
-
-**Why it happens:** Developer adds the daily picks generation as another scheduled job without accounting for the total Gemini budget across all pipelines.
-
-**Consequences:** Either daily picks fail silently (no picks generated), or existing analysis pipelines get disrupted (partial analysis for 800 tickers). The `_gemini_lock` (module-level asyncio.Lock in `ai_analysis_service.py`) serializes access, but doesn't prevent quota exhaustion.
+**Consequences:**
+- `GET /api/tickers` returns HNX/UPCOM tickers unless filtered — confusing
+- Heatmap shows stale HNX/UPCOM data from the last crawl day (prices frozen in time)
+- Ticker search autocomplete returns HNX/UPCOM symbols that lead to pages with no current data
+- `daily_prices` table retains millions of rows for 400 dead tickers (storage waste on Aiven free tier)
+- AI analysis summaries for HNX/UPCOM tickers show outdated scores
 
 **Prevention:**
-- **Don't make daily picks a separate Gemini call for 50+ tickers.** Instead, **derive daily picks from existing analysis data:** filter today's combined recommendations where signal=mua, confidence≥8, and trading_signal has long_confidence≥7. This requires ZERO additional Gemini calls.
-- **If AI must generate picks:** Use a single Gemini call with the top 10-15 pre-filtered candidates (not 50+). The pre-filter uses existing technical + fundamental + sentiment scores already in the DB.
-- **Budget accounting:** Add a `daily_gemini_budget` config (e.g., max 5 calls for daily picks). The picks pipeline checks remaining budget before calling.
-- **Schedule after existing pipeline completes:** Use job chaining (EVENT_JOB_EXECUTED pattern already in `scheduler/jobs.py`) to ensure daily picks run AFTER all 5 analysis types complete. Don't run in parallel.
-- **Cache picks for the day:** Generate once in the morning (after ~15:30 when data is fresh). If user views picks page later, serve from DB, don't regenerate.
+1. Alembic migration: `UPDATE tickers SET is_active = false WHERE exchange IN ('HNX', 'UPCOM')`
+2. Ensure ALL API endpoints that list tickers filter by `is_active=true` (verify `tickers.py` does this)
+3. Optionally: `DELETE FROM daily_prices WHERE ticker_id IN (SELECT id FROM tickers WHERE exchange IN ('HNX', 'UPCOM'))` — but be careful with partition table if yearly partitioning is used
+4. Remove the `exchange` filter UI (`ExchangeFilter` component, `ExchangeBadge`, `useExchangeStore`) — or simplify to show "HOSE" only / remove entirely
+5. Clean up the `EXCHANGE_MAX_TICKERS` dict in `ticker_service.py` to only have HOSE
+6. Remove `VALID_EXCHANGES` tuple in `jobs.py`
+7. Update `realtime_priority_exchanges` in config to only `["HOSE"]`
 
-**Existing infrastructure to leverage:** The job chaining pattern via `EVENT_JOB_EXECUTED` in `scheduler/manager.py`, the `_gemini_lock` serialization, the `GeminiUsage` tracking table for monitoring.
+**Detection:** Search for a known HNX ticker (e.g., "SHB") — if it appears in results, cleanup is incomplete.
 
-**Detection:** Monitor `gemini_usage` table. If daily total exceeds 200 calls or error rate spikes above 10%, the pipeline is overloaded.
-
----
-
-### Pitfall 6: Adaptive Strategy Creating a Dangerous Feedback Loop
-
-**What goes wrong:** The adaptive strategy learns from user's journal results and adjusts future picks. If the user had 3 winning trades in banking stocks, the AI starts recommending more banking stocks. Banking sector has a correction → all concentrated positions lose simultaneously. The AI learned a pattern that was actually market-wide momentum, not stock-specific alpha.
-
-**Why it happens:** Small sample sizes. With 1-2 trades per week, after a month you have ~8 data points. Any "pattern" in 8 trades is noise, not signal. The AI doesn't know the difference.
-
-**Consequences:** Sector concentration risk. False sense of "the AI is learning me" when it's actually overfitting to recent market conditions. User loses more than they would with random diversified picks.
-
-**Prevention:**
-- **Minimum sample size gate:** Don't activate adaptive strategy until at least 20 completed trades. Before that, use default safety-first parameters.
-- **Sector diversification constraint:** Never recommend >2 picks from the same industry sector in a single week, regardless of what the adaptive model suggests. The existing trading signals already have sector data.
-- **Adaptation speed limit:** Don't change strategy parameters more than once per week (weekly review, not per-trade adjustment). Prevents whipsawing.
-- **Recency decay, not recency obsession:** Weight last 20 trades equally. Don't over-weight the last 3 trades. A simple moving average of results is better than exponential weighting for small samples.
-- **Hard safety rails that adaptation can NEVER override:** Max position size ≤20% of capital, max concurrent positions ≤3, only stocks with average volume >50,000/day. These constraints persist regardless of how "confident" the adaptive model becomes.
-- **Transparency:** Show the user what the adaptive strategy changed and why: "Giảm mức rủi ro từ 3% → 2% vì 2 lệnh gần nhất lỗ." Don't silently adjust.
-
-**Detection:** If the adaptive model recommends >50% of capital in a single sector for >2 consecutive weeks, something is wrong.
+**Phase:** Same phase as HNX/UPCOM job removal. Data cleanup migration should be the LAST step after code changes.
 
 ---
 
@@ -147,95 +126,167 @@ Mistakes that cause dangerous financial decisions, data corruption, or major rew
 
 ---
 
-### Pitfall 7: Trade Journal Entry Timing vs Actual Execution Mismatch
+### Pitfall 5: AI Prompt Length Change Breaks Structured Output Parsing
 
-**What goes wrong:** User enters a journal trade as "bought VNM at 82,000 on Monday." But the actual execution might have been at 82,100 (partial fill, price moved) or the order was placed Monday but filled Tuesday. The journal records the intended price, not the actual execution price. Over time, this creates phantom P&L that doesn't match the user's real brokerage account.
+**What goes wrong:** Making AI analysis "longer and more detailed" by increasing reasoning token limits or changing prompt instructions (e.g., from "2-3 câu" to "5-7 câu") causes Gemini to exceed the response schema's expected structure, return partial JSON, or hit token limits. The `google-genai` structured output (Pydantic schema) may truncate or fail validation.
 
-**Why it happens:** The system is a manual journal, not connected to a brokerage API. Users round prices, forget exact fill times, enter trades retroactively. Vietnam has no public retail brokerage API for automated import.
+**Why it happens:** The current prompts are tightly calibrated:
+- `TECHNICAL_SYSTEM_INSTRUCTION`: "reasoning (2-3 câu tiếng Việt)"
+- `COMBINED_SYSTEM_INSTRUCTION`: "explanation (tiếng Việt, tối đa 200 từ)"
+- `TRADING_SIGNAL_SYSTEM_INSTRUCTION`: "reasoning: tối đa 300 ký tự"
+- `gemini_batch_size: 25` — 25 tickers per prompt
+- `trading_signal_batch_size: 15` — already reduced for larger output
+
+Doubling the reasoning length means each ticker's response is ~2x larger. With batch size 25, the total response can hit Gemini's output token limit. The model silently truncates, producing invalid JSON for the last few tickers in the batch.
+
+**Consequences:**
+- Last 3-5 tickers in each batch get no analysis (truncated response)
+- Pydantic validation rejects malformed JSON → those tickers recorded as "failed"
+- Overall analysis coverage drops from ~400 tickers to ~350 (14% loss)
+- Cost increases proportionally (more output tokens billed)
+- Response time per batch increases from ~4s to ~6-8s, extending the full pipeline from ~45min to ~75min
 
 **Prevention:**
-- **Make entry price a required field with reasonable validation** — must be within the trading day's OHLCV range. If user says "bought at 82,000" but the day's low was 82,500, flag it.
-- **Suggest the day's close price as default** — reduces friction and is usually close to actual fill.
-- **Allow price range tolerance** — validate entry_price is within [day_low, day_high] from `daily_prices` table. Reject obviously wrong prices (typos like 8,200 instead of 82,000).
-- **"Approximate" flag:** Let user mark entries as approximate. Don't include approximate entries in precision P&L stats, but include in directional analysis (win/loss).
-- **Date validation:** `buy_date` must be a trading day (not weekend/holiday). Check against existing `daily_prices` data — if no price data exists for that date, it wasn't a trading day.
+1. When increasing reasoning length, SIMULTANEOUSLY reduce `gemini_batch_size` (e.g., 25→15 for regular analysis, 15→10 for trading signals)
+2. Increase `gemini_max_tokens` in config proportionally
+3. Test with ONE batch first — verify full JSON response before running full pipeline
+4. Add a token usage check: if response `usage_metadata.candidates_token_count` is within 90% of max, log a warning
+5. Consider increasing `gemini_delay_seconds` from 4.0→5.0 to stay within rate limits with larger responses
+6. Update the reasoning field's `max_length` in Pydantic schemas if they have one
 
-**Detection:** Compare journal entries against daily_prices OHLCV. If >20% of entries have prices outside the day's range, user is entering inaccurate data.
+**Detection:** Spike in "failed_symbols" in daily AI analysis job execution records. `gemini_usage` table shows increased token counts per call.
+
+**Phase:** AI improvement phase. Must be tested in isolation before deploying to production pipeline.
 
 ---
 
-### Pitfall 8: Behavior Tracking Data Explosion and Storage Bloat
+### Pitfall 6: Navigation Restructure Breaks E2E Tests and Bookmarks
 
-**What goes wrong:** Behavior tracking records every ticker the user views, every time they visit the picks page, every filter change. With 800+ tickers and multiple daily visits, this generates hundreds of rows per day. On Aiven PostgreSQL with pool_size=5, the behavior_tracking table grows to millions of rows within months, slowing down queries that power the adaptive strategy.
+**What goes wrong:** Changing the navbar links (currently 7 items: Tổng quan, Danh mục, Bảng điều khiển, Huấn luyện, Nhật ký, Sự kiện, Hệ thống) breaks:
+- 119 Playwright E2E tests that navigate by URL or click nav links
+- Any bookmarked URLs the user has
+- The `data-testid="navbar"` and `data-testid="nav-desktop"` selectors used in tests
+- Mobile sheet navigation (duplicated link list)
 
-**Why it happens:** "Track everything, analyze later" mentality. Developer logs raw events without considering aggregation strategy or retention policy.
+**Why it happens:** The `NAV_LINKS` array in `navbar.tsx` is the single source of truth for navigation. But E2E tests reference specific routes (`/dashboard`, `/watchlist`, `/coach`, `/journal`, `/dashboard/corporate-events`, `/dashboard/health`). Removing "Sự kiện" (corporate events) link without adding a redirect means tests AND bookmarks hit a 404 or empty page.
 
-**Consequences:** Database bloat on Aiven (free/small tier has storage limits). Slow behavior analysis queries. Pool exhaustion during bulk inserts. The `pool_size=5, max_overflow=3` constraint in `database.py` means only 8 concurrent DB connections — behavior tracking inserts compete with price crawling and analysis storage.
+**Consequences:**
+- E2E test suite fails (was passing 119/119 → now unknown failures)
+- User's browser history links break
+- If routes are renamed (e.g., `/dashboard` → something else), deep links from any saved notes break
 
 **Prevention:**
-- **Aggregate, don't log raw events.** Instead of logging "user viewed VNM at 14:32:05, 14:32:18, 14:33:01," store a daily summary: `{"date": "2025-07-24", "ticker": "VNM", "view_count": 3, "total_seconds": 45}`.
-- **Frontend aggregation:** Batch behavior events in the browser (localStorage or in-memory), send a single summary API call per session close or every 5 minutes. Don't fire an API call per click.
-- **Retention policy:** Keep daily aggregates for 90 days, weekly aggregates beyond that. Auto-purge raw data older than 7 days (if stored at all).
-- **Separate table with partition:** `behavior_daily` table partitioned by month. Easy to drop old partitions (the project already uses yearly partitioning for `daily_prices`).
-- **Connection-conscious writes:** Use a dedicated low-priority write path for behavior data. Don't block price crawling connections.
+1. When removing `/dashboard/corporate-events` route, delete the page directory AND remove from `NAV_LINKS`
+2. Add a Next.js redirect in `next.config.ts` for removed routes → home page (graceful degradation)
+3. Update ALL E2E tests that reference removed routes BEFORE merging the change
+4. Keep route structure stable where possible — rename only when necessary
+5. For navigation restructure: update `NAV_LINKS` as a single atomic change, then update tests
 
-**Detection:** Monitor table size weekly. If `behavior_daily` exceeds 100K rows, check retention policy.
+**Detection:** E2E test run fails immediately. Manual: visit `/dashboard/corporate-events` → should redirect, not 404.
+
+**Phase:** Navigation/onboarding phase. Run E2E suite as validation gate after changes.
 
 ---
 
-### Pitfall 9: False Confidence from AI's Fluent Reasoning
+### Pitfall 7: Removing Exchange Filter Breaks Market Overview Page Logic
 
-**What goes wrong:** Gemini provides a beautifully written Vietnamese explanation for why VNM is a great buy: "RSI đang hồi phục từ vùng quá bán, kết hợp với MACD cắt lên..." The reasoning sounds professional and authoritative. Beginner user trusts it completely because they can't evaluate the technical claims. But the reasoning may be generic template text that Gemini applies to any stock with RSI > 30.
+**What goes wrong:** The market overview page (`/dashboard/page.tsx`) and heatmap heavily depend on `useExchangeStore` to filter which tickers to display. The `ExchangeFilter` component controls a zustand store that persists to localStorage. If you remove the filter component but the store still has `exchange: "HNX"` persisted from a previous session, the heatmap renders an empty view (no HNX tickers after cleanup).
 
-**Why it happens:** LLMs are trained to produce fluent, confident text. Gemini doesn't flag uncertainty the way a human analyst would ("I'm not sure about this one"). The existing analysis pipeline already has this risk for the 800-ticker analysis, but daily picks amplify it because they're **prescriptive** ("buy this") rather than **descriptive** ("here's the analysis").
+**Why it happens:** `zustand/persist` stores the selected exchange in `localStorage` under key `holo-exchange-filter`. Even after removing the `ExchangeFilter` UI component, the persisted value remains. If the API endpoint still accepts `exchange` parameter, it'll filter to an exchange that no longer has active tickers.
 
-**Consequences:** User develops blind trust in AI recommendations. Doesn't develop their own analytical skills. When the AI is wrong (which will happen regularly), user has no framework to recognize it.
+**Consequences:**
+- User sees empty heatmap on first visit after update (had "HNX" selected)
+- Watchlist table shows zero rows (was filtered to HNX/UPCOM)
+- No obvious way to "fix" it from the UI since the filter toggle is gone
 
 **Prevention:**
-- **Confidence score gates with visible thresholds:** Only show picks with combined confidence ≥7. Show the raw confidence score prominently, not just the reasoning text.
-- **Counter-argument mandatory:** For every pick, require Gemini to also state the bear case: "Rủi ro: Volume giao dịch thấp, hỗ trợ yếu tại 80,000." The existing dual-direction (long + bearish) pattern from trading signals is perfect for this.
-- **Historical accuracy display:** Show "AI picks accuracy last 30 days: 55%." Seeing the actual hit rate prevents blind trust.
-- **Educational framing:** Prefix every pick with: "Đây là gợi ý phân tích, không phải lời khuyên đầu tư. Hãy tự nghiên cứu trước khi quyết định." This isn't just legal CYA — it psychologically frames the AI as a tool, not an oracle.
-- **Link to raw data:** Each pick should link to the ticker detail page where the user can see the actual chart, indicators, and analysis cards. Encourage verification, not blind follow.
+1. When removing `ExchangeFilter`, also clear the persisted store. Add a one-time migration in the app root: `localStorage.removeItem("holo-exchange-filter")`
+2. OR: Set default exchange to `"HOSE"` (not `"all"`) and remove the ability to change it
+3. Remove the `exchange` parameter from API calls in the frontend OR hardcode to "HOSE"
+4. Remove `useExchangeStore` entirely from `store.ts` after migration
+5. Remove `ExchangeBadge` component (no longer needed with single exchange)
 
-**Detection:** If user trades every pick without visiting the ticker detail page first, the behavior tracker should flag this pattern.
+**Detection:** Heatmap is empty on first load after deployment. Console shows API returning empty array for `exchange=HNX`.
+
+**Phase:** Same phase as HNX/UPCOM frontend cleanup. Must handle localStorage stale state.
 
 ---
 
-### Pitfall 10: Goal Setting That Creates Pressure for Unsafe Behavior
+### Pitfall 8: Onboarding Flow Blocks Experienced User
 
-**What goes wrong:** User sets a monthly profit goal of 5M VND. After 3 weeks, they're at 1M. The system shows "Progress: 20% — 1 tuần còn lại." This creates pressure to take larger positions and riskier trades to "catch up," exactly the opposite of safety-first approach.
+**What goes wrong:** Adding a "where to start" onboarding experience (one of v9.0 goals) that shows on every visit, uses a modal/overlay pattern, or requires clicking through steps before accessing the dashboard. The single user is already experienced with the app and will be annoyed by onboarding they can't dismiss permanently.
 
-**Why it happens:** Goal tracking is borrowed from productivity/fitness apps where falling behind schedule means "work harder." In trading, falling behind schedule means "take more risk" — which is destructive.
+**Why it happens:** Developer thinks "new users need guidance" but forgets this is a single-user app where the user already knows the workflow. Common anti-pattern: using a framework's onboarding library (like react-joyride or shepherd.js) that defaults to showing on every new session.
 
-**Consequences:** User increases position sizes late in the month, takes on trades they wouldn't normally take, compounds losses trying to recover.
+**Consequences:**
+- Daily friction for the one user who matters
+- User starts ignoring/resenting the onboarding, defeating its purpose
+- Time wasted implementing something that gets disabled immediately
 
 **Prevention:**
-- **Goals should be process-based, not outcome-based.** Good goals: "Follow my SL rules 100% of the time," "Review every pick before trading," "Max 2 trades per week." Bad goals: "Make 5M VND this month."
-- **If P&L goals exist, make them annual, not monthly.** Monthly goals create monthly pressure cycles. Annual goals allow for bad months.
-- **No "catch up" framing.** Never show "bạn cần kiếm 4M trong 7 ngày." Instead show: "Tháng này: +1M VND. Trung bình tháng: +1.5M VND." Neutral reporting, not deficit highlighting.
-- **Risk review should DECREASE risk after losses, not increase it.** Weekly review that detects losses should suggest: "Giảm size vị thế tuần tới" not "Tăng số lệnh để bù lỗ."
-- **Circuit breaker for capital drawdown:** If total capital drops >10% from peak, auto-pause daily picks for 1 week with message: "Tạm nghỉ để đánh giá lại chiến lược."
+1. Onboarding should be a one-time experience stored in localStorage (`holo-onboarding-completed: true`)
+2. Better approach for single-user app: improve the DEFAULT layout so it's self-explanatory, not a tutorial overlay
+3. Add a "What's New" section on the home page after v9.0 ships — one dismissible card, not a modal flow
+4. Focus on making navigation labels clear (Vietnamese, action-oriented) rather than adding tooltip tours
+5. If implementing guided flow, add a "Bỏ qua" (Skip) button that permanently dismisses
 
-**Detection:** Track if position sizes increase after losing periods. This is a behavioral red flag.
+**Detection:** User complains about onboarding appearing repeatedly. Onboarding state not persisting across browser restarts.
+
+**Phase:** Navigation/onboarding phase. Design decision should favor layout clarity over tutorial overlays.
 
 ---
 
-### Pitfall 11: Small Capital Position Sizing Producing Unviable Trades
+### Pitfall 9: Coach Page Rework Loses Existing Data Relationships
 
-**What goes wrong:** AI recommends "position_size_pct: 8%" for a pick with entry at 120,000 VND. With 50M VND capital, 8% = 4M VND. 4,000,000 / 120,000 = 33.3 shares. Rounded to lot size of 100 → 0 shares (can't buy less than 100). The pick is unviable but the system doesn't tell the user.
+**What goes wrong:** The Coach page currently shows read-only data (behavior tracking, habit detection, risk suggestions, sector preferences, weekly reviews). Making it "actionable" (allowing user actions) requires new API endpoints, potentially new DB tables, and careful handling of existing data flows. If the rework replaces components rather than extending them, the existing data visualizations break.
 
-**Why it happens:** Position sizing formulas assume infinite divisibility. VN lot sizes make many small-capital recommendations impossible.
+**Why it happens:** "Making the coach page actionable" is vague. The backend already has:
+- `behavior_service.py` — behavior event tracking
+- `habit_detection.py` model — detected habits
+- `risk_suggestion.py` model — risk suggestions with response capability
+- `weekly_review.py` model — AI-generated reviews
+- `weekly_prompt.py` model — weekly prompts with response capability
 
-**Consequences:** User either can't trade the pick (frustrating) or buys the minimum 100 shares which is 12M VND = 24% of capital (too concentrated for a "safe" pick).
+Some of these already support user responses (`respondRiskSuggestion`, `respondWeeklyPrompt`). The rework might duplicate this by adding new action endpoints without realizing the backend capability already exists.
+
+**Consequences:**
+- Duplicate endpoints for the same functionality
+- Existing response data (weekly prompt answers, risk suggestion responses) orphaned if tables are restructured
+- Frontend components rebuilt from scratch when they only needed UI polish
 
 **Prevention:**
-- **Pre-calculate viability for each pick:** `min_investment = entry_price × 100 × (1 + fee_rate)`. If `min_investment > capital × max_position_pct`, mark pick as "Vốn chưa đủ cho mã này."
-- **Show actual share count and actual % of capital:** "100 cổ × 120,000₫ = 12,000,000₫ (24% vốn)." Let the user see the real concentration.
-- **Prefer lower-priced stocks for small capital:** When generating picks, filter out stocks where 100 shares > 20% of user's capital. With 50M VND, this means stocks under 100,000 VND (100 shares = 10M = 20%).
-- **Suggest fractional strategy:** "Với vốn 50M, nên chia 2-3 mã giá dưới 50,000₫ để đa dạng hóa."
+1. Audit existing Coach page functionality BEFORE redesigning: list every component, what data it shows, what actions are already supported
+2. The backend already supports `POST /api/behavior/risk-suggestions/{id}/respond` and `POST /api/goals/weekly-prompts/{id}/respond` — the frontend just needs to expose these better
+3. Start by adding action buttons to EXISTING components, not rebuilding
+4. If restructuring: keep the same API contracts, just change how data is displayed/interacted with
 
-**Detection:** If >50% of daily picks fail the viability check for the user's capital, the filtering isn't capital-aware enough.
+**Detection:** Previously working coach features (habit detection cards, risk suggestion banners) stop rendering after rework.
+
+**Phase:** Coach page rework phase. Start with UI-only changes before adding new backend capabilities.
+
+---
+
+### Pitfall 10: Trade Journal "Next Step" Redesign Disrupts Existing Trade Data
+
+**What goes wrong:** Redesigning the Trade Journal flow to add "clear next steps after recording a trade" may change the `Trade` model or `Lot`/`LotMatch` structure. If new fields are added (e.g., `next_action`, `follow_up_date`) without Alembic migration, or if existing trades are assumed to have these fields, the journal page crashes for historical data.
+
+**Why it happens:** Desire to show "what to do after recording a trade" (e.g., set alerts, review in 3 days, check stop-loss levels). Developers add non-nullable fields to the Trade model without defaults, breaking existing records.
+
+**Consequences:**
+- Existing trade history renders as errors (null values where not expected)
+- Alembic migration fails if adding NOT NULL columns without defaults
+- Historical P&L calculations break if trade structure changes
+
+**Prevention:**
+1. New fields MUST be nullable or have defaults — existing trades don't have this data
+2. "Next step" guidance should be a UI-ONLY feature (show suggested actions based on trade type/status) rather than new DB columns
+3. If new columns are needed, use `server_default` in Alembic migration
+4. Test with existing trade data BEFORE deploying — query `SELECT count(*) FROM trades` to know the scale
+5. Prefer adding a new related table (e.g., `trade_actions`) over modifying the existing `Trade` model
+
+**Detection:** Trade journal page crashes after migration. Alembic migration fails with "column cannot be null" error.
+
+**Phase:** Trade Journal rework phase. Favor UI-only changes; DB changes only if strictly necessary.
 
 ---
 
@@ -243,102 +294,120 @@ Mistakes that cause dangerous financial decisions, data corruption, or major rew
 
 ---
 
-### Pitfall 12: Database Schema Sprawl from New Feature Tables
+### Pitfall 11: Gemini API Cost Increase from Longer Analysis
 
-**What goes wrong:** v8.0 adds 5+ new tables (daily_picks, trade_journal, behavior_events, strategy_params, goals) to a database that already has tickers, daily_prices (partitioned), technical_indicators, ai_analyses, corporate_events, news_articles, financials, gemini_usage, job_executions, failed_jobs. Alembic migrations become complex. Foreign key relationships between new and existing tables create migration ordering issues.
+**What goes wrong:** Switching from "2-3 câu" to "5-7 câu" reasoning doubles output tokens. With 400 tickers × 5 analysis types × 2x tokens, the daily Gemini API cost roughly doubles. On free tier (gemini-2.5-flash-lite), this might not cost money but WILL hit rate limits more aggressively.
 
 **Prevention:**
-- **Plan all new tables in one migration batch.** Don't add tables one-by-one across phases — migration ordering becomes fragile.
-- **New tables should reference `tickers.id`, not `ticker_symbol`.** Follow existing pattern (all existing tables use `ticker_id` FK).
-- **JSONB for flexible data:** Store behavior aggregates and strategy parameters as JSONB columns. Avoids schema changes when adding new tracking dimensions.
-- **Index strategy upfront:** Journal queries will filter by date range + ticker. Add composite indexes at table creation, not retroactively.
+1. Calculate expected token increase BEFORE changing prompts: `current_daily_tokens × 2 = new_daily_tokens`
+2. Check Gemini free tier limits: 15 RPM is the bottleneck, not token count — but longer responses = longer per-request time = fewer effective RPM
+3. Consider increasing `gemini_delay_seconds` from 4.0→5.0 to compensate for longer processing
+4. Monitor `gemini_usage` table daily for a week after changes
+
+**Phase:** AI improvement phase.
 
 ---
 
-### Pitfall 13: Frontend State Complexity from Multiple New Views
+### Pitfall 12: Frontend Components Reference Removed Backend Endpoints
 
-**What goes wrong:** Adding 5 new feature areas (picks, journal, behavior, strategy, goals) to the existing Next.js app creates route proliferation and shared state challenges. The journal needs to know about picks (to link trades to picks). Behavior tracking needs to know about journal (to correlate viewing patterns with trading outcomes). Goals need to know about journal P&L.
+**What goes wrong:** Frontend still imports `fetchCorporateEvents` from `lib/api.ts` and uses `useCorporateEvents` from `lib/hooks.ts` after backend endpoint is removed. The corporate events calendar component throws uncaught fetch errors.
 
 **Prevention:**
-- **Single new route group:** `/dashboard/coach/` with sub-routes: `/picks`, `/journal`, `/review`, `/goals`. Don't scatter across existing routes.
-- **Server-side data joining:** Let the API return pre-joined data (pick + journal entry + outcome) rather than making the frontend orchestrate 3 API calls.
-- **URL state for filters:** Use URL search params for date ranges, status filters — enables sharing/bookmarking of specific views and avoids hidden state bugs.
-- **Avoid global state for coach features.** Each page fetches its own data via React Query. Don't add Zustand stores for coach-specific state.
+1. Full-text search for `corporate` in ALL frontend files before marking backend removal as complete
+2. Remove: `corporate-events-calendar.tsx`, `/dashboard/corporate-events/page.tsx`, `fetchCorporateEvents` in `api.ts`, `useCorporateEvents` in `hooks.ts`
+3. Remove the `{ href: "/dashboard/corporate-events", label: "Sự kiện" }` from `NAV_LINKS` in `navbar.tsx`
+4. Run `npx tsc --noEmit` after removal to catch any remaining type references
+
+**Phase:** Frontend cleanup phase, immediately after or alongside backend corporate events removal.
 
 ---
 
-### Pitfall 14: Ignoring VN Market Calendar Edge Cases
+### Pitfall 13: Alembic Migration Ordering for Multiple Table Drops
 
-**What goes wrong:** T+2 settlement calculation breaks on Lunar New Year (Tết, 5-7 business days off), September 2 National Day, April 30 Reunification Day. Shares bought on the Friday before Tết aren't sellable until the following Tuesday (not Monday, because Monday is still Tết). P&L date ranges and weekly reviews cross holidays incorrectly.
+**What goes wrong:** Creating separate Alembic migrations for "drop corporate_events" and "deactivate HNX/UPCOM tickers" in the wrong dependency order. If the ticker deactivation migration runs first and assumes corporate events are already gone (or vice versa), the migrations become order-dependent.
 
 **Prevention:**
-- **Start with weekday-only T+2** (skip Saturday/Sunday). Good enough for 95% of cases.
-- **Add a `market_holidays` config** — a simple list of dates updated annually. VN market publishes the holiday calendar each December for the following year.
-- **Test T+2 calculation explicitly** around known multi-day holidays.
+1. Create ONE migration for all v9.0 cleanup: drop `corporate_events` table, deactivate HNX/UPCOM tickers, clean up any orphaned data
+2. Name it clearly: `024_v9_remove_corporate_events_and_hnx_upcom.py`
+3. Test both `upgrade` and `downgrade` paths — downgrade should recreate the table and reactivate tickers
+4. Run on a test database BEFORE production
+
+**Phase:** First backend phase. Migration should be the very first deliverable.
 
 ---
 
-### Pitfall 15: Prompt Injection via Journal Notes
+### Pitfall 14: WebSocket Real-Time Polling Still Includes HNX/UPCOM Symbols
 
-**What goes wrong:** The trade journal has a free-text "notes" field. If this text is later included in a Gemini prompt (e.g., "analyze my recent trades and their notes"), a malicious or accidental prompt injection could alter the AI's behavior. Even for single-user, a habit of including special characters or Vietnamese text with certain patterns could confuse the prompt.
+**What goes wrong:** `realtime_priority_exchanges` in `config.py` is set to `["HOSE", "HNX", "UPCOM"]`. The `realtime_price_poll` job uses this to determine which symbols to poll from VCI. After removing HNX/UPCOM support, this config still tries to poll prices for exchanges with no active tickers, wasting API calls.
 
 **Prevention:**
-- **Never include raw user text in Gemini prompts** without sanitization. The existing pattern in `AIQ-03` (sanitize news titles before Gemini) applies here too.
-- **Separate user notes from AI context:** When the adaptive strategy analyzes journal data, pass structured fields (ticker, entry, exit, P&L, date) to Gemini, not free-text notes.
-- **Max length on notes:** 500 characters. Prevents massive text injection.
+1. Update `realtime_priority_exchanges` default to `["HOSE"]` in `config.py`
+2. Check `realtime_price_service.py` for any hardcoded exchange references
+3. The service should already filter by `is_active=true` tickers, but verify this
+
+**Phase:** Backend cleanup phase, same as HNX/UPCOM removal.
+
+---
+
+### Pitfall 15: Test Coverage Gap After Feature Removal
+
+**What goes wrong:** Removing 560+ lines of corporate events code and HNX/UPCOM logic also removes their associated tests. The overall test count drops significantly, but more importantly, tests that INCIDENTALLY covered shared code paths (like job chaining, ticker service, price service) are gone — reducing coverage of the remaining code.
+
+**Prevention:**
+1. Before removing: check which tests cover shared utilities (e.g., `_determine_status`, `_build_summary`, `_dlq_failures` in `jobs.py`)
+2. After removing: run full test suite AND check coverage report for regressions
+3. Add new tests for the modified job chain (HOSE-only pipeline)
+4. Ensure E2E tests cover the modified navigation (one less nav item, no exchange filter)
+
+**Phase:** Every phase should include test updates as a checklist item.
 
 ---
 
 ## Phase-Specific Warnings
 
 | Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| **Daily Picks Generation** | Rate limit exhaustion (Pitfall 5), hallucinated tickers (Pitfall 1) | Derive picks from existing analysis data first. If Gemini call needed, pre-filter to 10-15 candidates MAX. Validate every ticker against DB. |
-| **Trade Journal** | P&L calculation errors (Pitfall 3), entry timing mismatch (Pitfall 7) | Build `VNMarketRules` utility FIRST, write comprehensive unit tests for fee/tax/lot calculations BEFORE building the journal UI. |
-| **Behavior Tracking** | Storage bloat (Pitfall 8), connection pool competition | Frontend aggregation + daily summary tables. Never raw event logging. Batch API calls. |
-| **Adaptive Strategy** | Feedback loop (Pitfall 6), survivorship bias (Pitfall 2), small sample overfitting | 20-trade minimum before activation. Track ALL picks (traded and untraded). Hard safety rails that can't be overridden. |
-| **Goal Setting & Review** | Unsafe pressure creation (Pitfall 10), position sizing issues (Pitfall 11) | Process goals over outcome goals. No "catch up" framing. Capital drawdown circuit breaker. |
-| **AI Pick Display** | False confidence (Pitfall 9), over-trading (Pitfall 4) | Show bear case alongside bull case. Display accuracy metrics. Capital-aware pick count. |
-| **Schema Design** | Migration complexity (Pitfall 12), FK ordering | Design all tables together in phase 1. Use JSONB for flexible fields. Follow existing ticker_id FK pattern. |
-| **Frontend Integration** | Route/state sprawl (Pitfall 13) | Single `/dashboard/coach/` route group. Server-side data joining. React Query per-page, no new global stores. |
+|---|---|---|
+| **Remove corporate events (backend)** | Chain trigger breakage (#1), orphan imports (#2), frontend still referencing endpoint (#12) | Do backend + frontend removal atomically; rewire chain trigger; run `tsc --noEmit` |
+| **Remove HNX/UPCOM (backend)** | Chain trigger breakage (#1), stale ticker data (#4), WebSocket config (#14) | Rewire chain to HOSE-only; deactivate tickers in migration; update config defaults |
+| **Remove HNX/UPCOM (frontend)** | Persisted exchange filter (#7), exchange badge dead references | Clear localStorage stale state; remove all exchange-related components |
+| **Watchlist migration** | Data loss from localStorage (#3) | Two-step deploy: backend API first, then frontend migration bridge with fallback |
+| **AI prompt improvement** | Structured output truncation (#5), cost/rate increase (#11) | Reduce batch size proportionally; test single batch first; monitor token usage |
+| **Trade Journal rework** | Existing trade data breakage (#10) | UI-only changes preferred; nullable new fields with defaults if DB changes needed |
+| **Coach page rework** | Losing existing functionality (#9) | Audit existing backend capabilities first; extend, don't replace |
+| **Navigation & onboarding** | E2E test breakage (#6), annoying onboarding (#8) | Add redirects for removed routes; one-time dismissible onboarding only |
+| **Combined: corporate + HNX/UPCOM** | Migration ordering (#13) | Single Alembic migration for all DB schema changes |
 
 ---
 
-## Integration Pitfalls with Existing System
+## Recommended Removal Order (Dependency-Safe)
 
-These are specific to ADDING coach features to the existing Holo codebase.
+Based on the pitfall analysis, the safest order for feature removal is:
 
-### Integration 1: Scheduler Job Ordering
+```
+1. Alembic migration (deactivate HNX/UPCOM tickers, drop corporate_events table)
+2. Backend code removal (models, crawlers, API endpoints, scheduler jobs)
+3. Scheduler chain rewiring (UPCOM trigger → HOSE trigger, remove corporate action chain)
+4. Frontend code removal (components, routes, store cleanup, localStorage migration)
+5. Test updates (remove dead tests, add new chain verification tests)
+6. Config cleanup (exchange lists, batch sizes, timeouts)
+```
 
-**Risk:** Daily picks job must run AFTER all 5 analysis types complete (technical, fundamental, sentiment, combined, trading_signal). The existing scheduler uses `EVENT_JOB_EXECUTED` chaining. Adding a 6th job in the chain requires careful wiring.
-
-**Prevention:** Add daily picks as the final job in the existing chain: `crawl_prices → compute_indicators → analyze_technical → ... → analyze_trading_signal → generate_daily_picks`. Don't create a separate schedule — chain it.
-
-### Integration 2: Gemini Model Context Window
-
-**Risk:** If daily picks prompt includes the user's full trade history (20+ trades with notes), the context window fills up. `gemini-2.5-flash-lite` has a large context but token costs scale with input size on free tier.
-
-**Prevention:** Summarize trade history into structured stats (win rate, avg P&L, preferred sectors, avg holding period) and pass the summary to Gemini, not raw trade data. Keep pick generation prompts under 2,000 tokens input.
-
-### Integration 3: Existing Post-Validation Pattern
-
-**Risk:** Daily picks need validation (Pitfall 1), but the existing `_validate_trading_signal()` in `prompts.py` is specific to trading signals (checks long + bearish analysis structure). Copy-pasting and modifying it creates divergent validation logic.
-
-**Prevention:** Extract shared validation functions: `validate_price_bounds(price, current, pct)`, `validate_atr_distance(price, ref, atr, multiplier)`. Both trading signal validation and daily pick validation compose from these primitives.
-
-### Integration 4: Frontend Route Structure
-
-**Risk:** Existing routes are `/`, `/watchlist`, `/dashboard/*`, `/ticker/[symbol]`. Coach features need multiple sub-pages. Adding them at top level (`/picks`, `/journal`, `/goals`) pollutes the navbar.
-
-**Prevention:** Nest under `/dashboard/coach/*` matching the existing `/dashboard/*` pattern. Add a single "Coach" nav item that expands to sub-navigation.
+Doing it in any other order risks the silent pipeline failure described in Pitfall #1 — the most critical and hardest-to-detect failure mode in this codebase.
 
 ---
 
 ## Sources
 
-- **HIGH confidence:** Direct codebase analysis — `app/services/analysis/prompts.py`, `app/schemas/analysis.py`, `app/config.py`, `app/database.py`, `app/scheduler/jobs.py`
-- **HIGH confidence:** VN market rules — HOSE trading regulations (lot sizes, price steps, T+2, daily limits, fee structure)
-- **HIGH confidence:** Existing Gemini integration patterns — structured output, post-validation, rate limiting, batch processing
-- **MEDIUM confidence:** Behavioral finance pitfalls (over-trading, loss aversion, goal pressure) — well-established in trading psychology literature
-- **MEDIUM confidence:** LLM hallucination patterns in financial contexts — observed in Gemini and other LLMs when generating specific financial recommendations
-- **LOW confidence:** Exact Aiven storage limits for free/small tier — varies by plan, verify actual limits
+- Direct codebase analysis:
+  - `backend/app/scheduler/manager.py` — job chain listener with UPCOM-specific trigger (line 73)
+  - `backend/app/scheduler/jobs.py` — HNX/UPCOM job functions, VALID_EXCHANGES constant
+  - `backend/app/models/corporate_event.py` — FK to tickers, unique constraints
+  - `backend/app/api/corporate_events.py` — API endpoint to remove
+  - `backend/app/crawlers/corporate_event_crawler.py` — crawler to remove
+  - `frontend/src/lib/store.ts` — zustand persist for watchlist (localStorage) and exchange filter
+  - `frontend/src/components/navbar.tsx` — NAV_LINKS array with corporate events route
+  - `frontend/src/components/exchange-filter.tsx` — HNX/UPCOM filter component
+  - `backend/app/config.py` — realtime_priority_exchanges, batch sizes, token limits
+  - `backend/app/services/analysis/prompts.py` — current prompt reasoning length constraints
+  - `backend/app/models/__init__.py` — model registry with CorporateEvent
+- Confidence: **HIGH** — all findings derived from direct code inspection, not inference

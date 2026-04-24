@@ -1,420 +1,352 @@
-# Technology Stack — AI Trading Coach
+# Technology Stack — v9.0 UX Rework & Simplification
 
-**Project:** Holo v8.0 — AI Trading Coach
-**Researched:** 2025-07-23
-**Confidence:** HIGH (versions verified via npm/pip registries, existing codebase audited)
-
-## Executive Principle
-
-**The existing stack covers 90% of what v8.0 needs.** The only new dependencies are 5 frontend libraries for form handling, date picking, and toast notifications — all from the shadcn/ui ecosystem. Zero new Python packages needed.
+**Project:** Holo Stock Intelligence Platform
+**Researched:** 2026-04-23
+**Scope:** Stack additions, removals, and changes for UX rework milestone
 
 ---
 
-## Stack Additions (NEW for v8.0)
+## Existing Stack (Validated — No Changes Needed)
 
-### Frontend — New Dependencies
+These are confirmed working and do NOT need replacement or upgrade:
 
-| Technology | Version | Purpose | Why | Confidence |
-|------------|---------|---------|-----|------------|
-| `react-hook-form` | ^7.73.1 | Form state management for trade journal + goal setting | Trade journal requires multi-field forms (ticker, price, qty, date, direction, notes). Controlled components alone get messy with 8+ fields + validation. react-hook-form is the shadcn/ui standard — all shadcn `<Form>` examples use it. Supports React 19 (peerDep: `^16.8 \|\| ^17 \|\| ^18 \|\| ^19`). | HIGH |
-| `@hookform/resolvers` | ^5.2.2 | Connects react-hook-form with zod validation | Bridge library. v5.x uses `@standard-schema/utils` internally — works with both zod 3.x and zod 4.x via Standard Schema protocol. | HIGH |
-| `zod` | ^3.25.76 | Schema validation for trade forms + API request bodies | Type-safe validation. Generates TypeScript types from schemas (`z.infer<typeof schema>`). **Use zod 3.x, not 4.x** — zod 4 is brand new (June 2025), shadcn/ui docs + community examples all target zod 3. @hookform/resolvers 5.x supports both via Standard Schema but zod 3 is battle-tested. | HIGH |
-| `react-day-picker` | ^9.14.0 | Calendar date picker for trade entry dates | Required by shadcn/ui `<Calendar>` and `<DatePicker>` components. v9 depends on `date-fns ^4.1.0` which the project already has — zero extra transitive deps for date logic. Supports React ≥16.8. | HIGH |
-| `sonner` | ^2.0.7 | Toast notifications for trade actions + form feedback | shadcn/ui's recommended toast library (replaced radix-ui/toast). Shows success/error feedback: "Trade saved", "Goal updated", "Pick generated". Supports React 18+19. Lightweight (~3KB). | HIGH |
-
-### Frontend — shadcn/ui Components to Add
-
-These are copy-paste components (not npm dependencies), installed via `npx shadcn add`:
-
-| Component | Purpose | Depends On |
-|-----------|---------|------------|
-| `form` | Wraps react-hook-form + zod for trade journal / goal forms | react-hook-form, zod, @hookform/resolvers |
-| `calendar` | Date picker for trade entry dates | react-day-picker |
-| `select` | Dropdown: direction (buy/sell), timeframe, ticker selection | @radix-ui/react-select (auto-installed) |
-| `switch` | Toggle: active/closed trades, goal tracking on/off | @radix-ui/react-switch (auto-installed) |
-| `sonner` | Toast notifications provider | sonner |
-| `progress` | Goal progress bars (profit target %, weekly progress) | (none — pure CSS/Tailwind) |
-| `slider` | Risk tolerance adjustment (1-10 scale) | @radix-ui/react-slider (auto-installed) |
-| `label` | Form field labels (dependency of `form` component) | @radix-ui/react-label (auto-installed) |
-
-### Backend — No New Packages
-
-**Zero new Python dependencies.** The existing stack handles everything:
-
-| Existing Technology | How It Serves v8.0 |
-|--------------------|--------------------|
-| SQLAlchemy 2.0 + asyncpg | New models: `daily_picks`, `trades`, `trading_goals`, `weekly_reviews`, `user_profile` |
-| Alembic | Migrations for all new tables |
-| APScheduler 3.11 | New jobs: `daily_pick_generation` (chain after pipeline), `weekly_review_generation` (Sunday cron) |
-| google-genai (Gemini) | New prompts: pick selection, weekly coaching review, adaptive strategy context |
-| Pydantic 2.x | New structured output schemas for daily picks + weekly reviews |
-| FastAPI | New API routers: `/api/coach/picks`, `/api/coach/trades`, `/api/coach/goals`, `/api/coach/reviews` |
-| loguru | Logging for new services |
-| tenacity | Retry on Gemini calls for pick generation |
+| Layer | Technology | Version | Status |
+|-------|-----------|---------|--------|
+| Backend | Python 3.12, FastAPI | 0.135.x | ✓ Keep |
+| ORM | SQLAlchemy 2.0 + asyncpg | 2.0.49 / 0.31 | ✓ Keep |
+| Migrations | Alembic | 1.18 | ✓ Keep |
+| Scheduler | APScheduler | 3.11 | ✓ Keep |
+| AI | google-genai | 1.73 | ✓ Keep |
+| Indicators | ta | 0.11.0 | ✓ Keep |
+| Market Data | vnstock | 3.5.1 | ✓ Keep |
+| HTTP | httpx | 0.28 | ✓ Keep |
+| Scraping | beautifulsoup4 | 4.12 | ✓ Keep |
+| Logging | loguru | 0.7 | ✓ Keep |
+| Retry | tenacity | 9.1 | ✓ Keep |
+| Frontend | Next.js | 16.2.3 | ✓ Keep |
+| UI Kit | shadcn/ui (base-ui) | 4.2.0 | ✓ Keep |
+| State | zustand | 5.0.12 | ✓ Keep |
+| Data Fetching | @tanstack/react-query | 5.99.0 | ✓ Keep |
+| Tables | @tanstack/react-table | 8.21.3 | ✓ Keep |
+| Charts | lightweight-charts + recharts | 5.1.0 / 3.8.1 | ✓ Keep |
+| Icons | lucide-react | 1.8.0 | ✓ Keep |
+| Forms | react-hook-form + zod | 7.73.1 / 4.3.6 | ✓ Keep |
+| Styling | Tailwind CSS 4 | 4.x | ✓ Keep |
+| Database | PostgreSQL (Aiven) | — | ✓ Keep |
+| Deploy | Render (backend), Vercel (frontend) | — | ✓ Keep |
 
 ---
 
-## Existing Stack (Validated — DO NOT change)
+## 1. Dependencies to REMOVE After Feature Removal
 
-### Backend (Python 3.12)
+### Backend Removals
 
-| Technology | Version | v8.0 Role |
-|------------|---------|-----------|
-| FastAPI | ~0.135 | New `/api/coach/*` router group |
-| SQLAlchemy | ~2.0 | 5 new models with JSONB columns for flexible AI output storage |
-| asyncpg | ~0.31 | Same connection pool (5+3 is sufficient for single-user) |
-| Alembic | ~1.18 | ~3 migration files for new tables |
-| APScheduler | 3.11 | 2 new jobs chained into existing pipeline |
-| google-genai | ≥1.73 | 3 new Gemini prompt types (picks, review, adaptive) |
-| Pydantic | ~2.13 | New schemas: DailyPickResponse, TradeSchema, GoalSchema, WeeklyReviewResponse |
-| httpx | ~0.28 | No change |
-| ta | 0.11.0 | No change — indicators feed into pick selection |
+**Confidence: HIGH** — Direct code audit of the codebase confirms these.
 
-### Frontend (Next.js 16 + React 19)
+| What to Remove | Files | Rationale |
+|---------------|-------|-----------|
+| Corporate events model | `app/models/corporate_event.py` | Feature being removed entirely |
+| Corporate events crawler | `app/crawlers/corporate_event_crawler.py` | No longer needed — was VNDirect API crawler |
+| Corporate events API | `app/api/corporate_events.py` | API endpoint `/api/corporate-events` no longer served |
+| Corporate events router import | `app/api/router.py` line 8, 19 | Remove from API router |
+| VNDirect config settings | `app/config.py` lines 77-79 | `vndirect_delay_seconds`, `vndirect_timeout` — no longer needed |
+| VNDirect circuit breaker | `app/resilience.py` | `vndirect_breaker` — remove if only used by corporate events |
+| Corporate events scheduler job | `app/scheduler/jobs.py` | Remove crawl_corporate_events job and chain references |
+| HNX/UPCOM exchange constants | `app/scheduler/jobs.py` line 28 | `VALID_EXCHANGES` → change to `("HOSE",)` only |
+| HNX/UPCOM priority config | `app/config.py` line 83 | `realtime_priority_exchanges` list → simplify to HOSE only |
 
-| Technology | Version | v8.0 Role |
-|------------|---------|-----------|
-| Next.js | 16.2.3 | New routes: `/coach`, `/coach/journal`, `/coach/goals`, `/coach/reviews` |
-| React | 19.2.4 | Standard component development |
-| TypeScript | ~5.x | Type definitions for new API types |
-| Tailwind CSS | ~4.x | Styling new coaching pages |
-| @tanstack/react-query | ~5.99 | New query hooks: `useDailyPicks`, `useTrades`, `useGoals`, `useWeeklyReviews` |
-| @tanstack/react-table | ~8.21 | Trade journal table with sorting/filtering |
-| Recharts | ~3.8 | P&L charts, goal progress, behavior pattern visualization |
-| zustand | ~5.0 | Coach page state: active tab, filter preferences, form drafts |
-| lightweight-charts | ~5.1 | Display pick entry/SL levels on ticker charts (reuse existing pattern) |
-| react-activity-calendar | ~3.2 | **Already installed** — reuse for trading activity heatmap |
-| date-fns | ~4.1 | Date formatting, week boundaries for reviews |
-| lucide-react | ~1.x | Icons for coaching UI |
+**DB migration required:** Drop `corporate_events` table. Mark HNX/UPCOM tickers as `is_active=false` (don't delete — historical data preserved).
+
+**No pip packages to remove for corporate events:** The crawler uses `httpx` (shared) and SQLAlchemy (core ORM). No unique Python packages were added solely for corporate events.
+
+**However — `python-telegram-bot` can be removed:** Still listed in `requirements.txt` line 16 (`python-telegram-bot==22.7`) but Telegram bot was removed in v7.0 post-milestone. This is dead weight.
+
+### Frontend Removals
+
+**Confidence: HIGH** — Direct component audit.
+
+| What to Remove | File(s) | Rationale |
+|---------------|---------|-----------|
+| Corporate events calendar component | `components/corporate-events-calendar.tsx` | Feature removed |
+| Corporate events page | `app/dashboard/corporate-events/page.tsx` | Route removed |
+| Corporate events nav link | `components/navbar.tsx` line 29 | Remove `{ href: "/dashboard/corporate-events", label: "Sự kiện" }` |
+| Corporate events hooks | `lib/hooks.ts` lines 196-202 | `useCorporateEvents` hook |
+| Corporate events API function | `lib/api.ts` | `fetchCorporateEvents` function + `CorporateEventResponse` type |
+| Exchange filter component | `components/exchange-filter.tsx` | No longer needed — HOSE only |
+| Exchange badge component | `components/exchange-badge.tsx` | No longer needed — all tickers are HOSE |
+| Exchange store | `lib/store.ts` lines 41-58 | `useExchangeStore` — no exchange switching needed |
+| Exchange column in watchlist | `components/watchlist-table.tsx` lines 119-137 | "Sàn" column unnecessary |
+| Exchange filter in home page | `app/page.tsx` line 38 | Remove `<ExchangeFilter />` and exchange-based subtitle logic |
+
+**No npm packages to remove:** All corporate event / exchange components use shared dependencies (shadcn/ui primitives, Tabs, Badge, etc.).
+
+### Summary of Removable Dead Weight
+
+| Category | Items Removed | Impact |
+|----------|--------------|--------|
+| Backend files | 3 files deleted, 3+ files edited | ~400 LOC removed |
+| Frontend files | 3 files deleted, 5+ files edited | ~500 LOC removed |
+| DB tables | 1 table dropped | Simpler schema |
+| Scheduler jobs | 1 job removed from chain | Faster daily pipeline |
+| Config settings | 3+ settings removed | Cleaner config |
+| Dead pip package | `python-telegram-bot` | 1 fewer dependency |
 
 ---
 
-## Database Schema Strategy
+## 2. Stack Additions for Watchlist DB Migration
 
-### New Tables (5 tables, all via Alembic)
+### Backend: New Watchlist API Endpoints
 
-```
-daily_picks           — AI-generated daily stock picks (3-5 per day)
-trades                — User's actual trade journal entries
-trading_goals         — Profit targets, risk tolerance settings
-weekly_reviews        — AI-generated weekly coaching summaries
-user_profile          — Trading behavior profile (updated by system)
-```
+**No new packages needed.** The existing stack (FastAPI + SQLAlchemy + asyncpg + Alembic) handles this natively.
 
-### Schema Patterns
+| What's Needed | Approach | Existing Tech |
+|--------------|----------|---------------|
+| New watchlist model | Repurpose/replace existing `user_watchlist` table (currently Telegram-only, has `chat_id` column) | SQLAlchemy model |
+| CRUD API endpoints | `GET/POST/DELETE /api/watchlist` | FastAPI router |
+| Migration | Alembic migration to create new `watchlist` table | Alembic |
 
-**Use JSONB for flexible AI output** — same pattern as existing `ai_analyses.raw_response`:
+**Watchlist model redesign (recommended):**
+
+The existing `UserWatchlist` model has a `chat_id` column designed for Telegram bot (removed in v7.0). For the frontend watchlist migration, create a new simpler table:
 
 ```python
-# daily_picks: Store full pick detail in JSONB (entry, SL, reasoning can evolve)
-class DailyPick(Base):
-    __tablename__ = "daily_picks"
+class Watchlist(Base):
+    __tablename__ = "watchlist"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    pick_date: Mapped[date] = mapped_column(Date, nullable=False)
-    ticker_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickers.id"))
-    rank: Mapped[int] = mapped_column(Integer)  # 1-5 ranking
-    entry_price: Mapped[float] = mapped_column(Float)
-    stop_loss: Mapped[float] = mapped_column(Float)
-    reasoning: Mapped[str] = mapped_column(Text)  # Vietnamese
-    pick_detail: Mapped[dict | None] = mapped_column(JSONB)  # Full Gemini output
-    outcome: Mapped[str | None] = mapped_column(String(20))  # win/loss/pending
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+    ticker_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickers.id"), unique=True)
+    added_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now())
 ```
 
-**Trade journal — denormalized for query simplicity** (single-user, no multi-table joins needed):
+**Rationale:** Single-user app (per PROJECT.md constraints), no need for `chat_id` or user column. `ticker_id` has UNIQUE constraint since one user = one watchlist. Simpler than repurposing the old Telegram table. Drop old `user_watchlist` table in same migration.
 
-```python
-class Trade(Base):
-    __tablename__ = "trades"
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    ticker_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickers.id"))
-    direction: Mapped[str] = mapped_column(String(10))  # buy/sell
-    entry_price: Mapped[float] = mapped_column(Float)
-    entry_date: Mapped[date] = mapped_column(Date)
-    exit_price: Mapped[float | None] = mapped_column(Float, nullable=True)
-    exit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    quantity: Mapped[int] = mapped_column(Integer)
-    fees: Mapped[float] = mapped_column(Float, default=0)
-    pnl: Mapped[float | None] = mapped_column(Float, nullable=True)  # Computed on exit
-    pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
-    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(20), default="open")  # open/closed
-    from_daily_pick_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)  # FK if from pick
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+### Frontend: Zustand → React Query Migration for Watchlist
+
+**No new packages needed.** Replace `zustand/persist` localStorage watchlist with `@tanstack/react-query` mutations backed by the new API.
+
+Current flow:
+```
+User clicks star → zustand.addToWatchlist() → localStorage
 ```
 
-**Goals — simple key-value style with period tracking:**
-
-```python
-class TradingGoal(Base):
-    __tablename__ = "trading_goals"
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    period_type: Mapped[str] = mapped_column(String(20))  # weekly/monthly
-    period_start: Mapped[date] = mapped_column(Date)
-    period_end: Mapped[date] = mapped_column(Date)
-    profit_target_pct: Mapped[float] = mapped_column(Float)
-    max_loss_pct: Mapped[float] = mapped_column(Float)
-    risk_tolerance: Mapped[int] = mapped_column(Integer)  # 1-10
-    status: Mapped[str] = mapped_column(String(20), default="active")
-    actual_pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
+New flow:
+```
+User clicks star → useMutation(POST /api/watchlist/{symbol}) → invalidateQueries(["watchlist"])
+Watchlist page → useQuery(GET /api/watchlist) → server-synced data
 ```
 
-### Index Strategy
+**Migration strategy for existing localStorage data:**
+1. On first load, check `localStorage["holo-watchlist"]`
+2. If exists and API watchlist is empty, POST each symbol to migrate
+3. Delete localStorage key after successful migration
+4. This is a one-time client-side migration — no new packages needed
 
-```sql
--- Daily picks: fast lookup by date
-CREATE INDEX ix_daily_picks_date ON daily_picks(pick_date DESC);
-
--- Trades: filter by status, date range
-CREATE INDEX ix_trades_status_date ON trades(status, entry_date DESC);
-CREATE INDEX ix_trades_ticker ON trades(ticker_id, entry_date DESC);
-
--- Goals: active period lookup
-CREATE INDEX ix_goals_period ON trading_goals(period_type, period_start DESC);
-```
+**Impact on `lib/store.ts`:**
+- Remove `useWatchlistStore` entirely (lines 1-39)
+- Remove `useExchangeStore` (lines 41-58) — no longer needed (HOSE only)
+- If both stores removed, evaluate if `zustand` dependency is still needed elsewhere
+- **Keep zustand** — it may be useful for other local UI state in future, and it's only ~1KB
 
 ---
 
-## Scheduling Integration
+## 3. Stack Additions for UX Improvements (Navigation, Onboarding)
 
-### Daily Pick Generation — Chain Into Existing Pipeline
+### No New Animation/Transition Libraries Needed
 
-Current chain ends at: `daily_trading_signal → daily_hnx_upcom_analysis`
+**Confidence: HIGH** — The existing stack already has what's needed.
 
-**Extend to:** `daily_hnx_upcom_analysis → daily_pick_generation`
+| UX Need | Existing Solution | Why Not Add More |
+|---------|------------------|-----------------|
+| Page transitions | CSS transitions + Tailwind `transition-*` classes | Already in use; Next.js App Router handles route transitions |
+| Component animations | `tw-animate-css` (already installed v1.4.0) | Already provides enter/exit animations for shadcn/ui |
+| Micro-interactions | Tailwind `transition-colors`, `transition-transform` | Already used in navbar, cards, buttons |
+| Loading states | shadcn `Skeleton` component | Already used extensively |
 
-```python
-# In scheduler/manager.py — add to _on_job_executed
-elif event.job_id in ("daily_hnx_upcom_analysis_triggered",):
-    from app.scheduler.jobs import daily_pick_generation
-    logger.info("Chaining: daily_hnx_upcom_analysis → daily_pick_generation")
-    scheduler.add_job(
-        daily_pick_generation,
-        id="daily_pick_generation_triggered",
-        replace_existing=True,
-        misfire_grace_time=3600,
-    )
-```
+### One Potential Addition — Toast Notifications
 
-### Weekly Review — New Cron Job
+| Library | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `sonner` | ^2.x | Toast notifications | Lightweight (~3KB), shadcn/ui recommended toast solution. Useful for "Đã thêm vào danh mục" / "Đã ghi lệnh" feedback during user flows. |
 
-```python
-# In scheduler/manager.py — add to configure_jobs()
-from app.scheduler.jobs import weekly_coaching_review
+**Confidence: MEDIUM** — `sonner` is optional. The existing `Dialog` and inline status patterns may suffice. Add only if UX design requires toast-style feedback. This is a "nice to have" not a blocker.
 
-scheduler.add_job(
-    weekly_coaching_review,
-    trigger=CronTrigger(
-        day_of_week="sun",
-        hour=20,
-        minute=0,
-        timezone=settings.timezone,
-    ),
-    id="weekly_coaching_review",
-    name="Weekly AI Coaching Review",
-    replace_existing=True,
-    misfire_grace_time=7200,
-)
-```
+### Navigation Simplification — No Stack Changes
 
----
+Current navbar has 7 links. After v9.0 removals:
 
-## Gemini Prompt Patterns for Coaching
+| Current Nav | v9.0 Nav | Change |
+|------------|----------|--------|
+| Tổng quan | ✓ Keep | — |
+| Danh mục | ✓ Keep | — |
+| Bảng điều khiển | ⚠️ Evaluate | Merge into Tổng quan or remove |
+| Huấn luyện | ✓ Keep | Redesigned content |
+| Nhật ký | ✓ Keep | Redesigned flow |
+| Sự kiện | ❌ Remove | Corporate events gone |
+| Hệ thống | ✓ Keep | Maybe icon-only |
 
-### Pattern 1: Daily Pick Selection
+Pure template/routing work — zero new packages.
 
-**Input:** Top candidates (combined score ≥ 7) with their full analysis data + user profile (risk tolerance, recent performance).
+### Onboarding Flow — No New Libraries
 
-**Key design:** This is a RANKING + SELECTION prompt, not an analysis prompt. Gemini receives pre-analyzed data and selects the best 3-5.
+For a single-user personal tool, onboarding should be:
+- A first-visit welcome card on the home page (conditional render based on empty watchlist + no trades)
+- Empty states with clear CTAs (partially done — see watchlist-table.tsx empty state)
+- Progressive disclosure via existing Card/Badge components
 
-```python
-DAILY_PICK_SYSTEM_INSTRUCTION = (
-    "Bạn là huấn luyện viên trading cá nhân cho thị trường chứng khoán Việt Nam. "
-    "Từ danh sách các mã đã phân tích, chọn 3-5 mã TỐT NHẤT cho hôm nay.\n\n"
-    "Tiêu chí chọn:\n"
-    "- Ưu tiên mã có signal đồng thuận (tech + fundamental + sentiment)\n"
-    "- Risk/Reward ratio ≥ 1.5\n"
-    "- Tránh mã có SL quá rộng (>3% entry)\n"
-    "- Đa dạng ngành — không chọn 3 mã cùng ngành\n"
-    "- Xem xét profile rủi ro của trader\n\n"
-    "Output: danh sách 3-5 mã với giá vào, SL, lý do ngắn gọn."
-)
-
-class DailyPickItem(BaseModel):
-    ticker: str
-    entry_price: float
-    stop_loss: float
-    expected_gain_pct: float = Field(ge=0)
-    risk_reward_ratio: float = Field(ge=0.5)
-    reasoning: str = Field(description="Vietnamese, max 200 chars")
-    confidence: int = Field(ge=1, le=10)
-
-class DailyPicksResponse(BaseModel):
-    picks: list[DailyPickItem] = Field(min_length=3, max_length=5)
-    market_context: str = Field(description="Brief market overview, Vietnamese")
-```
-
-### Pattern 2: Weekly Coaching Review
-
-**Input:** Week's trades (P&L, patterns), goals progress, behavior data.
-
-**Key design:** Gemini as personal coach — encouraging but honest. Adjusts tone based on performance.
-
-```python
-WEEKLY_REVIEW_SYSTEM_INSTRUCTION = (
-    "Bạn là huấn luyện viên trading cá nhân. Đánh giá tuần giao dịch vừa qua.\n"
-    "Phong cách: thẳng thắn nhưng khích lệ, như một mentor đáng tin.\n\n"
-    "Nội dung review:\n"
-    "1. Tóm tắt hiệu suất (P&L, win rate, trades thực hiện)\n"
-    "2. Điểm mạnh tuần này (giao dịch tốt nhất, kỷ luật)\n"
-    "3. Điểm cần cải thiện (sai lầm, cảm xúc giao dịch)\n"
-    "4. Gợi ý tuần tới (điều chỉnh chiến lược cụ thể)\n"
-    "5. Đánh giá mức rủi ro: nên giữ/tăng/giảm?\n"
-)
-```
-
-### Pattern 3: Adaptive Strategy Context
-
-**NOT a new prompt** — inject user performance into existing trading signal prompt:
-
-```python
-# Add to trading signal context builder
-def _build_user_context(user_profile: dict) -> str:
-    """Build user performance context for adaptive recommendations."""
-    return (
-        f"\n--- TRADER PROFILE ---\n"
-        f"Win rate 30 ngày: {user_profile['win_rate_30d']}%\n"
-        f"Avg P&L per trade: {user_profile['avg_pnl_pct']}%\n"
-        f"Risk tolerance: {user_profile['risk_tolerance']}/10\n"
-        f"Losing streak hiện tại: {user_profile['current_losing_streak']}\n"
-        f"Ngành hay giao dịch: {', '.join(user_profile['preferred_sectors'])}\n"
-        f"Quy tắc: "
-        + ("Gợi ý AN TOÀN HƠN — trader đang thua nhiều." if user_profile['current_losing_streak'] >= 3
-           else "Gợi ý bình thường theo phân tích.")
-    )
-```
-
-### Gemini Token Budget for v8.0
-
-| Prompt Type | Est. Input Tokens | Est. Output Tokens | Calls/Day | Daily Total |
-|------------|-------------------|-------------------|-----------|-------------|
-| Daily Picks (1 call) | ~3,000 | ~1,500 | 1 | ~4,500 |
-| Weekly Review (1/week) | ~2,000 | ~2,000 | 0.14 | ~600 |
-| Existing pipeline | — | — | — | ~50,000 |
-| **v8.0 addition** | — | — | — | **~5,100** |
-
-**Impact: ~10% increase in daily Gemini usage.** Well within free tier limits.
+**Anti-recommendation:** Do NOT add `react-joyride`, `intro.js`, or any tour library. Single-user personal tool — the user IS the developer. Simple conditional cards are sufficient.
 
 ---
 
-## What NOT to Add
+## 4. Stack Changes for AI Analysis Improvement
 
-| Technology | Why NOT |
-|-----------|---------|
-| Redis / Celery | Behavior tracking can be done with simple DB inserts. No pub/sub or background queues needed for single-user. APScheduler handles all scheduling. |
-| Pandas for P&L calculation | P&L is simple arithmetic: `(exit - entry) × qty - fees`. Python built-in math suffices. Don't import pandas for 4 lines of math. |
-| chart.js / victory / nivo | Recharts already handles all non-financial charts. Don't add a second charting library. |
-| D3.js | Overkill. Recharts is built on D3 and provides high-level API. |
-| framer-motion | Animations are nice-to-have, not needed. Tailwind CSS 4 `tw-animate-css` (already installed) covers basic transitions. |
-| Redux Toolkit / MobX | zustand already handles client state. Trade journal form state is managed by react-hook-form, not global state. |
-| Prisma / Drizzle | SQLAlchemy 2.0 is the established ORM. Adding a second ORM for new tables would be insane. |
-| tRPC | Already have a REST API pattern with FastAPI + React Query. tRPC solves a problem Holo doesn't have (type-safe API layer — Holo manually types API responses). |
-| NextAuth / Auth.js | Single-user app. No auth needed per PROJECT.md constraints. |
-| Supabase / Firebase | Already have PostgreSQL + FastAPI. These are full platforms, not libraries. |
-| scikit-learn / ML libraries | Behavior analysis is pattern recognition via Gemini, not ML training. Per PROJECT.md: "ML price prediction — tạo false confidence." |
-| LangChain / LlamaIndex | Single model (Gemini), direct SDK calls. LangChain adds abstraction with zero benefit. Already rejected in v1.0 research. |
-| zod 4.x | Too new (June 2025). shadcn/ui docs, community examples, and @hookform/resolvers all target zod 3.x. Stick with 3.25.x. |
+### Gemini Prompt Engineering — No New Packages
+
+**Confidence: HIGH** — Entirely prompt/config changes within existing `google-genai` SDK.
+
+Current system constraints (from `prompts.py` audit):
+- Model: `gemini-2.5-flash-lite`
+- Default `max_output_tokens`: 16384
+- Default `thinking_budget`: 1024 (2048 for trading signals)
+- Reasoning caps: "2-3 câu" / "tối đa 200 từ" / "tối đa 300 ký tự"
+
+### Changes to Make AI Output Longer and More Useful
+
+| Change | Current Value | New Value | File |
+|--------|-------------|-----------|------|
+| Technical reasoning length | "2-3 câu tiếng Việt" | "5-8 câu tiếng Việt, phân tích chi tiết" | `prompts.py` |
+| Fundamental reasoning length | "2-3 câu tiếng Việt" | "5-8 câu tiếng Việt, phân tích chi tiết" | `prompts.py` |
+| Sentiment reasoning length | "2-3 câu tiếng Việt" | "3-5 câu tiếng Việt" | `prompts.py` |
+| Combined explanation cap | "tối đa 200 từ" | "tối đa 500 từ" | `prompts.py` |
+| Trading signal reasoning cap | "tối đa 300 ký tự" | "tối đa 800 ký tự" | `prompts.py` |
+| Default `max_output_tokens` | 16384 | 32768 | `gemini_client.py` |
+| Default `thinking_budget` | 1024 | 2048 | `gemini_client.py` |
+
+### Approach: Keep Single `reasoning` Field, Increase Length via Prompt
+
+**Recommended over schema changes because:**
+- No DB migration needed — `reasoning` column is `Text` (unlimited length)
+- `raw_response` JSONB already stores the full Gemini response
+- Frontend just needs to render longer text (potentially with expand/collapse)
+- Lower risk, faster to ship
+
+### Model Consideration
+
+| Model | RPM (Free) | Quality | Recommendation |
+|-------|-----------|---------|---------------|
+| `gemini-2.5-flash-lite` (current) | 15 RPM | Good for batch | Keep as default for technical/fundamental/sentiment |
+| `gemini-2.5-flash` | 15 RPM | Better reasoning | Use for combined + trading_signal for richer output |
+
+**Confidence: MEDIUM** — `gemini-2.5-flash` (non-lite) may produce significantly better long-form analysis. This is a config change (`GEMINI_MODEL` env var or per-analysis-type model selection in code), not a dependency change. Worth A/B testing.
+
+### Frontend Display for Longer AI Output
+
+| Component | Current | Change Needed |
+|-----------|---------|--------------|
+| `analysis-card.tsx` reasoning | `<p className="text-xs">` | `text-sm`, add expand/collapse for long text |
+| `CombinedRecommendationCard` | Single paragraph, inline | Section with line breaks, expandable |
+| `trading-plan-panel.tsx` | Compact reasoning | Expandable detail section |
+
+**Potential addition for formatted AI output:**
+
+| Library | Version | Purpose | Add When |
+|---------|---------|---------|----------|
+| `react-markdown` | ^10.x | Render markdown in AI output | Only if prompts instruct Gemini to use bullet points/headers |
+| `remark-gfm` | ^4.x | GFM markdown (tables, lists) | Companion to react-markdown |
+
+**Confidence: MEDIUM** — Only needed if AI prompts produce markdown-formatted text. If plain text with longer content suffices (likely for v9.0), skip these. Evaluate after prompt changes are tested.
 
 ---
 
-## Alternatives Considered
+## 5. No-Stack-Change Work Items
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Form Library | react-hook-form 7.73 | Formik 2.x | Formik: larger bundle, less performant (re-renders entire form on change), fewer updates. RHF is the shadcn/ui standard. |
-| Form Library | react-hook-form 7.73 | Controlled components (no lib) | Works for 2-3 fields. Trade journal has 8+ fields with validation, date pickers, conditional logic. RHF saves significant boilerplate. |
-| Validation | zod 3.25 | yup | zod has better TypeScript inference, better error messages, and is the shadcn/ui default. |
-| Validation | zod 3.25 | valibot | Smaller bundle but much smaller ecosystem. zod has 100x more examples/docs. |
-| Toast | sonner 2.0 | react-hot-toast | sonner is shadcn/ui's official recommendation. Better styling, stacking, promise support. |
-| Toast | sonner 2.0 | @radix-ui/react-toast | Lower-level — requires manual styling. sonner is built on Radix but provides styled defaults. |
-| Calendar | react-day-picker 9.14 | @internationalized/date | Adobe library, used by react-aria. Overkill — rdp is shadcn/ui standard, already depends on date-fns (which project has). |
-| Calendar | react-day-picker 9.14 | date-fns-picker (doesn't exist) | No standalone date picker from date-fns. rdp + date-fns is the canonical combo. |
-| P&L Tracking | Python arithmetic | pandas P&L calculation | Trade P&L is `(exit - entry) * qty - fees`. This isn't a DataFrame operation. |
-| Behavior Store | PostgreSQL table | localStorage + zustand | Behavior data must persist across browser sessions and feed into Gemini prompts (server-side). DB is the right place. |
-| Behavior Store | PostgreSQL table | ClickHouse / TimescaleDB | Single-user. Behavioral events are ~10-50/day. PostgreSQL handles this without breaking a sweat. |
+These v9.0 tasks require ZERO new packages — pure application code:
+
+| Task | Approach |
+|------|----------|
+| Trade Journal flow redesign | Rearrange components, add CTA buttons, improve empty states |
+| Coach page rework | Reorder sections, add action buttons, improve layout |
+| Navigation simplification | Edit `navbar.tsx` NAV_LINKS array, remove dead routes |
+| HNX/UPCOM data cleanup | Alembic migration: `UPDATE tickers SET is_active=false WHERE exchange != 'HOSE'` |
+| Remove exchange filter from all pages | Delete components, simplify store |
+| Improve error/empty states | Enhance existing error Card patterns with clearer CTAs |
 
 ---
 
-## Installation
+## 6. Migration & Database Schema Changes
 
-### Frontend (from `frontend/` directory)
+**All handled by existing Alembic + SQLAlchemy. No new tools.**
+
+| Migration | Type | Detail |
+|-----------|------|--------|
+| Drop `corporate_events` table | Destructive | `DROP TABLE corporate_events` |
+| Create `watchlist` table | Additive | New table with `ticker_id` FK + `added_at` |
+| Deactivate HNX/UPCOM tickers | Data migration | `UPDATE tickers SET is_active=false WHERE exchange IN ('HNX', 'UPCOM')` |
+| Drop `user_watchlist` table | Destructive | Old Telegram-era table, no longer used |
+
+**Ordering:** Create new `watchlist` table BEFORE deploying frontend that expects it. Deactivating HNX/UPCOM tickers should happen BEFORE removing exchange filter UI (graceful transition).
+
+---
+
+## Recommended Stack Summary
+
+### Additions (Minimal — 0 Required, 3 Optional)
+
+| Library | Version | Required? | Purpose | Confidence |
+|---------|---------|-----------|---------|------------|
+| `sonner` | ^2.x | Optional | Toast notifications for UX feedback | MEDIUM |
+| `react-markdown` | ^10.x | Optional | Render formatted AI text | MEDIUM |
+| `remark-gfm` | ^4.x | Optional | GFM support for react-markdown | MEDIUM |
+
+### Removals (5 Items)
+
+| What | Type | Saves |
+|------|------|-------|
+| `python-telegram-bot` from `requirements.txt` | Dead dependency | ~15MB installed |
+| Corporate events (full stack) | Feature removal | ~900 LOC, 1 DB table, 1 scheduler job |
+| Exchange filter/badge/store | Feature simplification | ~150 LOC, simpler UI |
+| Old `user_watchlist` table | DB cleanup | Simpler schema |
+| VNDirect config + circuit breaker | Config cleanup | 3 settings |
+
+### Config-Only Changes (No Packages)
+
+| Change | Impact |
+|--------|--------|
+| Prompt length caps increased (prompts.py) | Longer AI analysis output |
+| Default max_output_tokens: 16384→32768 | More room for AI response |
+| Default thinking_budget: 1024→2048 | Better AI reasoning quality |
+| Consider `gemini-2.5-flash` for combined/trading_signal | Better output quality at same cost |
+| Remove HNX/UPCOM from exchange config | Simpler data pipeline |
+
+---
+
+## Installation Summary
+
+### Backend
 
 ```bash
-# Form handling (trade journal, goal setting)
-npm install react-hook-form @hookform/resolvers zod
+# Remove dead dependency
+# Delete from requirements.txt: python-telegram-bot==22.7
 
-# Date picker (trade entry dates)
-npm install react-day-picker
-
-# Toast notifications (trade actions feedback)
-npm install sonner
-
-# shadcn/ui components (copy-paste, not npm deps)
-npx shadcn add form calendar select switch sonner progress slider label
+# No new packages to install
 ```
 
-### Backend (from `backend/` directory)
+### Frontend
 
 ```bash
-# No new packages needed!
-# Existing requirements.txt covers all v8.0 needs.
+# Optional additions (add only if UX design requires them)
+npm install sonner              # Toast notifications
+npm install react-markdown remark-gfm  # AI markdown rendering
 ```
-
-### Settings Additions (`backend/app/config.py`)
-
-```python
-# AI Trading Coach (v8.0)
-daily_pick_count: int = 5                    # Max picks per day
-daily_pick_min_combined_score: int = 7       # Minimum combined score to be candidate
-daily_pick_thinking_budget: int = 2048       # Gemini thinking budget for pick selection
-weekly_review_thinking_budget: int = 4096    # Larger budget for coaching review
-coach_risk_tolerance_default: int = 5        # Default risk tolerance 1-10
-```
-
----
-
-## Integration Points Summary
-
-| Feature | Backend Integration | Frontend Integration |
-|---------|-------------------|---------------------|
-| Daily Picks | New `DailyPickService` + chain into scheduler after HNX/UPCOM analysis | New `/coach` page, reuse `<TradingPlanPanel>` pattern for pick cards |
-| Trade Journal | New `TradeService` + CRUD endpoints + P&L auto-calc on trade close | `react-hook-form` + `zod` forms, `@tanstack/react-table` for trade list, `Recharts` for P&L chart |
-| Behavior Tracking | API middleware logs ticker views → `user_profile` table updated | Existing `useAnalysisSummary` / `useTradingSignal` hooks log pageviews server-side |
-| Adaptive Strategy | Inject `user_profile` context into existing Gemini prompts | No frontend change — recommendations automatically adapt |
-| Goal & Review | New `GoalService` + `WeeklyReviewService` + Sunday cron job | `react-hook-form` for goal form, `<Progress>` for tracking, review display card |
-
----
-
-## Version Compatibility Matrix
-
-| Package | Version | React 19 | Node 22 | Notes |
-|---------|---------|----------|---------|-------|
-| react-hook-form | 7.73.1 | ✅ peer: ^19 | ✅ | Current stable |
-| @hookform/resolvers | 5.2.2 | ✅ (via RHF) | ✅ | Uses Standard Schema |
-| zod | 3.25.76 | N/A (runtime) | ✅ | Latest 3.x stable |
-| react-day-picker | 9.14.0 | ✅ peer: ≥16.8 | ✅ | Depends on date-fns ^4.1 (already installed) |
-| sonner | 2.0.7 | ✅ peer: ^19 | ✅ | Lightweight toast |
 
 ---
 
 ## Sources
 
-- npm registry: `npm view react-hook-form version` → 7.73.1, peerDeps: react ^19 (verified 2025-07-23)
-- npm registry: `npm view @hookform/resolvers version` → 5.2.2, peerDeps: react-hook-form ^7.55 (verified 2025-07-23)
-- npm registry: `npm view zod@3 version` → 3.25.76 (verified 2025-07-23)
-- npm registry: `npm view react-day-picker version` → 9.14.0, deps: date-fns ^4.1.0 (verified 2025-07-23)
-- npm registry: `npm view sonner version` → 2.0.7, peerDeps: react ^19 (verified 2025-07-23)
-- pip registry: `pip index versions google-genai` → 1.73.1 (verified 2025-07-23)
-- Existing codebase: `frontend/package.json`, `backend/requirements.txt`, `backend/app/` models/services/scheduler
-- shadcn/ui docs: form, calendar, sonner component patterns (shadcn v4)
+| Source | Confidence | What It Confirmed |
+|--------|------------|------------------|
+| Direct codebase audit (all files above) | HIGH | All removal targets, existing dependencies, current patterns |
+| `PROJECT.md` v9.0 goals | HIGH | Feature removal scope, constraints |
+| `requirements.txt` | HIGH | `python-telegram-bot` still listed as dead dependency |
+| `package.json` | HIGH | Current frontend dependency versions |
+| `prompts.py` + `gemini_client.py` | HIGH | Current AI prompt constraints and token limits |
+| `store.ts` | HIGH | Current localStorage watchlist implementation |
+| `user_watchlist.py` model | HIGH | Old Telegram-era table structure |
