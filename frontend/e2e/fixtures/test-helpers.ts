@@ -29,7 +29,6 @@ export const APP_ROUTES = [
   { path: '/watchlist', name: 'Watchlist' },
   { path: '/dashboard', name: 'Dashboard' },
   { path: '/dashboard/health', name: 'System Health' },
-  { path: '/dashboard/corporate-events', name: 'Corporate Events' },
 ] as const;
 
 /** A known ticker symbol that should have data (use for ticker detail tests) */

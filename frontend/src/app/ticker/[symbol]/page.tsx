@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useMemo } from "react";
+import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -8,15 +8,11 @@ import {
   StarOff,
   BarChart3,
   RefreshCw,
-  Sparkles,
-  Check,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ExchangeBadge } from "@/components/exchange-badge";
 import dynamic from "next/dynamic";
 
 const CandlestickChart = dynamic(
@@ -47,7 +43,6 @@ import {
   useTradingSignal,
   useTickerNews,
   useTickers,
-  useTriggerAnalysis,
 } from "@/lib/hooks";
 import { useWatchlistStore } from "@/lib/store";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
@@ -55,75 +50,6 @@ import { useBehaviorTracking } from "@/lib/use-behavior-tracking";
 import { PriceFlashCell } from "@/components/price-flash-cell";
 import { NewsList } from "@/components/news-list";
 import { NewsListSkeleton } from "@/components/news-list-skeleton";
-
-/** AnalyzeNow button — shows for non-watchlisted HNX/UPCOM tickers without recent analysis */
-function AnalyzeNowButton({ symbol, exchange, isWatchlisted, hasRecentAnalysis }: {
-  symbol: string;
-  exchange: string;
-  isWatchlisted: boolean;
-  hasRecentAnalysis: boolean;
-}) {
-  const { mutate, isPending, isSuccess, isError } = useTriggerAnalysis();
-  const [cooldown, setCooldown] = useState(0);
-
-  // Cooldown timer
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [cooldown]);
-
-  // Start cooldown after trigger (success or error)
-  useEffect(() => {
-    if (isSuccess || isError) {
-      setCooldown(60);
-    }
-  }, [isSuccess, isError]);
-
-  // Only show for HNX/UPCOM, non-watchlisted, no recent analysis
-  if (exchange === "HOSE") return null;
-  if (isWatchlisted) return null;
-  if (hasRecentAnalysis) return null;
-
-  const isDisabled = isPending || cooldown > 0;
-
-  return (
-    <div className="flex items-center gap-3">
-      <Button
-        variant={isSuccess ? "outline" : "default"}
-        size="sm"
-        disabled={isDisabled}
-        onClick={() => mutate(symbol)}
-        aria-busy={isPending}
-        className="gap-1.5"
-      >
-        {isPending ? (
-          <>
-            <Loader2 className="size-3.5 animate-spin" />
-            Đang phân tích...
-          </>
-        ) : isSuccess ? (
-          <>
-            <Check className="size-3.5" />
-            Đã phân tích
-          </>
-        ) : cooldown > 0 ? (
-          `Thử lại sau ${cooldown}s`
-        ) : (
-          <>
-            <Sparkles className="size-3.5" />
-            Phân tích ngay
-          </>
-        )}
-      </Button>
-      {isError && (
-        <p className="text-sm text-destructive">
-          Không thể phân tích. Thử lại sau.
-        </p>
-      )}
-    </div>
-  );
-}
 
 /** Inline error card for individual sections */
 function SectionError({ error, onRetry }: { error: Error; onRetry: () => void }) {
@@ -208,9 +134,6 @@ export default function TickerDetailPage({
   // Ticker metadata
   const ticker = tickers?.find((t) => t.symbol === upperSymbol);
 
-  // Check if recent analysis exists
-  const hasRecentAnalysis = !!analysisSummary?.combined;
-
   // Real-time price
   const { prices: realtimePrices } = useRealtimePrices([upperSymbol]);
   const rtPrice = realtimePrices[upperSymbol];
@@ -231,9 +154,6 @@ export default function TickerDetailPage({
           <h1 className="text-lg font-semibold tracking-tight font-mono">
             {upperSymbol}
           </h1>
-          {ticker?.exchange && (
-            <ExchangeBadge exchange={ticker.exchange} />
-          )}
           {ticker && (
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {ticker.name}
@@ -387,17 +307,9 @@ export default function TickerDetailPage({
 
       {/* Analysis Cards Grid */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">
-            Phân tích AI đa chiều
-          </h2>
-          <AnalyzeNowButton
-            symbol={upperSymbol}
-            exchange={ticker?.exchange ?? "HOSE"}
-            isWatchlisted={inWatchlist}
-            hasRecentAnalysis={hasRecentAnalysis}
-          />
-        </div>
+        <h2 className="text-lg font-semibold mb-3">
+          Phân tích AI đa chiều
+        </h2>
         {analysisLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (

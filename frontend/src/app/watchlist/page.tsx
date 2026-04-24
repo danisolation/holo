@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/badge";
 import { WatchlistTable } from "@/components/watchlist-table";
-import { ExchangeFilter } from "@/components/exchange-filter";
 import { useWatchlistStore } from "@/lib/store";
 
 export default function WatchlistPage() {
@@ -17,11 +16,6 @@ export default function WatchlistPage() {
         {watchlist.length > 0 && (
           <Badge variant="secondary">{watchlist.length} mã</Badge>
         )}
-      </div>
-
-      {/* Exchange filter */}
-      <div className="mb-6">
-        <ExchangeFilter />
       </div>
 
       <div data-testid="watchlist-table">

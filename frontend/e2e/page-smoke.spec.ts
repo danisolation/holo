@@ -40,10 +40,4 @@ test.describe('Key Components Render', () => {
     await expectNavbarVisible(page);
     await expect(page.locator('main, [role="main"], .container').first()).toBeVisible();
   });
-
-  test('Corporate Events page renders content', async ({ page }) => {
-    await page.goto('/dashboard/corporate-events');
-    await expectNavbarVisible(page);
-    await expect(page.locator('main, [role="main"], .container').first()).toBeVisible();
-  });
 });

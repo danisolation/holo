@@ -12,9 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ExchangeFilter } from "@/components/exchange-filter";
 import { useMarketOverview } from "@/lib/hooks";
-import { useExchangeStore } from "@/lib/store";
 import {
   PieChart,
   Pie,
@@ -31,8 +29,7 @@ const PIE_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { exchange } = useExchangeStore();
-  const { data: marketData } = useMarketOverview(exchange);
+  const { data: marketData } = useMarketOverview();
 
   const stats = useMemo(() => {
     if (!marketData) return null;
@@ -73,11 +70,6 @@ export default function DashboardPage() {
         <p className="text-sm text-muted-foreground mt-1">
           Phân tích nhanh và top biến động
         </p>
-      </div>
-
-      {/* Exchange filter */}
-      <div>
-        <ExchangeFilter />
       </div>
 
       {/* Signal Distribution Pie Chart */}

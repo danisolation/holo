@@ -51,11 +51,4 @@ test.describe('API Error Handling — 400 Bad Request', () => {
     const body = await response.json();
     expect(body).toHaveProperty('detail');
   });
-
-  test('Invalid corporate events month format returns 400', async ({ request }) => {
-    const response = await request.get(`${API}/corporate-events?month=invalid`);
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body).toHaveProperty('detail');
-  });
 });

@@ -5,22 +5,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heatmap } from "@/components/heatmap";
-import { ExchangeFilter } from "@/components/exchange-filter";
-import { useExchangeStore } from "@/lib/store";
 import { useMarketOverview } from "@/lib/hooks";
 
 export default function Home() {
-  const { exchange } = useExchangeStore();
-  const { data, isLoading, error, refetch } = useMarketOverview(exchange);
+  const { data, isLoading, error, refetch } = useMarketOverview();
 
   const totalTickers = data?.length ?? 0;
   const gainers = data?.filter((t) => t.change_pct != null && t.change_pct > 0).length ?? 0;
   const losers = data?.filter((t) => t.change_pct != null && t.change_pct < 0).length ?? 0;
   const unchanged = totalTickers - gainers - losers;
 
-  const subtitle = exchange === "all" || !exchange
-    ? "Bản đồ nhiệt toàn thị trường theo biến động giá trong ngày"
-    : `Bản đồ nhiệt sàn ${exchange} theo biến động giá trong ngày`;
+  const subtitle = "Bản đồ nhiệt toàn thị trường theo biến động giá trong ngày";
 
   return (
     <>
@@ -32,11 +27,6 @@ export default function Home() {
         <p className="text-sm text-muted-foreground mt-1">
           {subtitle}
         </p>
-      </div>
-
-      {/* Exchange filter */}
-      <div className="mb-6">
-        <ExchangeFilter />
       </div>
 
       {/* Market Stats */}
@@ -127,7 +117,7 @@ export default function Home() {
           </CardContent>
         </Card>
       ) : data ? (
-        <Heatmap data={data} exchange={exchange} />
+        <Heatmap data={data} />
       ) : null}
     </>
   );

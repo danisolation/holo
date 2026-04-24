@@ -145,17 +145,3 @@ test.describe('API Smoke Tests — Analysis', () => {
     expect([200, 404]).toContain(response.status());
   });
 });
-
-test.describe('API Smoke Tests — Corporate Events', () => {
-  test('GET /api/corporate-events returns 200 with array', async ({ request }) => {
-    const response = await request.get(`${API}/corporate-events`);
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(Array.isArray(body)).toBe(true);
-    if (body.length > 0) {
-      expect(body[0]).toHaveProperty('symbol');
-      expect(body[0]).toHaveProperty('event_type');
-      expect(body[0]).toHaveProperty('ex_date');
-    }
-  });
-});
