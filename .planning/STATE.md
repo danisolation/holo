@@ -107,6 +107,7 @@ None.
 | 260423-feq | Tier 2 Batch B: market-overview sort/top, CafeF retry, realtime diff, home errors | 2026-04-23 | fee5e52 | [260423-feq-tier-2-batch-b-market-overview-optimizat](./quick/260423-feq-tier-2-batch-b-market-overview-optimizat/) |
 | 260423-fuy | Tier 2 Batch C: news skeleton, tickers pagination, crawler types, exchange-aware realtime | 2026-04-23 | 09c92a8 | [260423-fuy-tier-2-batch-c-news-skeleton-home-page-e](./quick/260423-fuy-tier-2-batch-c-news-skeleton-home-page-e/) |
 | 260424-ren | Add Render.com deployment config (render.yaml, CORS_ORIGINS, PORT binding) | 2026-04-24 | 7550c17 | — |
+| 260424-vcl | Add Vercel deployment config for frontend (vercel.json) | 2026-04-24 | 398ed0c | — |
 
 ## Session Continuity
 
