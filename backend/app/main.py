@@ -46,7 +46,7 @@ app = FastAPI(
 )
 
 # CORS — allow frontend dev server + configured origins (Render, etc.)
-_default_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+_default_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "https://holo-jade-six.vercel.app"]
 _extra_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()] if settings.cors_origins else []
 app.add_middleware(
     CORSMiddleware,
