@@ -392,34 +392,6 @@ export async function triggerJob(jobName: string): Promise<TriggerResponse> {
   );
 }
 
-// --- Corporate Events Types (Phase 14) ---
-
-export interface CorporateEventResponse {
-  id: number;
-  symbol: string;
-  name: string;
-  event_type: string;
-  ex_date: string;
-  record_date: string | null;
-  announcement_date: string | null;
-  dividend_amount: number | null;
-  ratio: number | null;
-  note: string | null;
-}
-
-export async function fetchCorporateEvents(params?: {
-  month?: string;
-  type?: string;
-  symbol?: string;
-}): Promise<CorporateEventResponse[]> {
-  const searchParams = new URLSearchParams();
-  if (params?.month) searchParams.set("month", params.month);
-  if (params?.type) searchParams.set("type", params.type);
-  if (params?.symbol) searchParams.set("symbol", params.symbol);
-  const qs = searchParams.toString();
-  return apiFetch<CorporateEventResponse[]>(`/corporate-events/${qs ? `?${qs}` : ""}`);
-}
-
 // --- Gemini Usage Types (Phase 15) ---
 
 export interface GeminiUsageTodayBreakdown {

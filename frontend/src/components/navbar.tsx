@@ -25,7 +25,6 @@ const NAV_LINKS = [
   { href: "/dashboard", label: "Bảng điều khiển" },
   { href: "/coach", label: "Huấn luyện" },
   { href: "/journal", label: "Nhật ký" },
-  { href: "/dashboard/corporate-events", label: "Sự kiện" },
   { href: "/dashboard/health", label: "Hệ thống" },
 ];
 

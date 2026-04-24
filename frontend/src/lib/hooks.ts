@@ -16,7 +16,6 @@ import {
   fetchDbPool,
   fetchHealthSummary,
   triggerJob,
-  fetchCorporateEvents,
   fetchGeminiUsage,
   fetchPipelineTimeline,
   fetchDailyPicks,
@@ -188,16 +187,6 @@ export function useTriggerJob() {
       queryClient.invalidateQueries({ queryKey: ["health-jobs"] });
       queryClient.invalidateQueries({ queryKey: ["health-summary"] });
     },
-  });
-}
-
-// --- Corporate Events Hooks (Phase 14) ---
-
-export function useCorporateEvents(params?: { month?: string; type?: string; symbol?: string }) {
-  return useQuery({
-    queryKey: ["corporate-events", params?.month ?? "default", params?.type ?? "all", params?.symbol ?? "all"],
-    queryFn: () => fetchCorporateEvents(params),
-    staleTime: 10 * 60 * 1000, // 10 min — events change rarely
   });
 }
 
