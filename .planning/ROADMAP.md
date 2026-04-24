@@ -143,7 +143,7 @@ Full details: [milestones/v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md)
 **Milestone Goal:** Đơn giản hóa Holo — bỏ features không cần (corporate events, HNX/UPCOM), redesign luồng sử dụng cho rõ ràng, cải thiện AI output dài và hữu ích hơn.
 
 - [x] **Phase 48: Backend Cleanup & Scheduler Simplification** - Remove corporate events, HNX/UPCOM, dead telegram dependency; simplify scheduler to HOSE-only pipeline (2 plans) (completed 2026-04-24)
-- [ ] **Phase 49: Navigation & Watchlist Migration** - Reduce nav to 4-5 items, migrate watchlist from localStorage to PostgreSQL, show AI signals on watchlist
+- [ ] **Phase 49: Navigation & Watchlist Migration** - Reduce nav to 5 items, migrate watchlist from localStorage to PostgreSQL, show AI signals on watchlist (2 plans)
 - [ ] **Phase 50: Coach Page Restructure & Trade Flow** - Tab-based Coach layout, pick card trade recording, post-trade next steps
 - [ ] **Phase 51: AI Analysis Improvement** - Longer structured AI output, reduced batch sizes, frontend structured rendering
 
@@ -174,7 +174,11 @@ Plans:
   2. User's watchlist is stored in PostgreSQL — adding/removing tickers persists across browsers and devices without data loss
   3. Existing localStorage watchlist data is automatically migrated to the database on first visit, with localStorage cleared after successful migration
   4. Each ticker in the watchlist displays the latest AI signal score and buy/sell/hold recommendation alongside the ticker name
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 49-01-PLAN.md — Backend watchlist DB migration + REST API with AI signal enrichment
+- [ ] 49-02-PLAN.md — Frontend navigation simplification + watchlist server migration
 **UI hint**: yes
 
 ### Phase 50: Coach Page Restructure & Trade Flow
