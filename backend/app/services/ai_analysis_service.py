@@ -323,62 +323,6 @@ class AIAnalysisService:
             batch_size_override=settings.trading_signal_batch_size,
         )
 
-    async def analyze_watchlisted_tickers(
-        self, exchanges: list[str], max_extra: int = 50
-    ) -> dict:
-        """Analyze only watchlisted tickers from given exchanges.
-
-        Per CONTEXT.md: HNX/UPCOM tickers get AI analysis only if in
-        the UserWatchlist (Telegram /watch). Capped at max_extra per day
-        to stay within Gemini 1500 RPD budget.
-
-        Args:
-            exchanges: List of exchanges to query (e.g., ["HNX", "UPCOM"])
-            max_extra: Maximum tickers to analyze (default 50)
-
-        Returns: {analyzed: int, skipped: int, exchanges: list[str]}
-        """
-        from app.models.user_watchlist import UserWatchlist
-
-        # Query active tickers in target exchanges that are in watchlist
-        stmt = (
-            select(Ticker.symbol, Ticker.id)
-            .join(UserWatchlist, UserWatchlist.ticker_id == Ticker.id)
-            .where(Ticker.exchange.in_(exchanges), Ticker.is_active == True)
-        )
-        result = await self.session.execute(stmt)
-        watchlisted = {row[0]: row[1] for row in result.fetchall()}
-
-        # Cap at max_extra
-        symbols_to_analyze = list(watchlisted.keys())[:max_extra]
-        skipped = len(watchlisted) - len(symbols_to_analyze)
-
-        if not symbols_to_analyze:
-            logger.info(f"No watchlisted tickers in {exchanges} — skipping analysis")
-            return {"analyzed": 0, "skipped": 0, "exchanges": exchanges}
-
-        logger.info(
-            f"Analyzing {len(symbols_to_analyze)} watchlisted tickers "
-            f"from {exchanges} (capped at {max_extra}, skipped {skipped})"
-        )
-
-        # Run analysis for selected tickers using existing batch method
-        ticker_id_map = {s: watchlisted[s] for s in symbols_to_analyze}
-        for analysis_type in ["technical", "fundamental"]:
-            try:
-                await self.analyze_all_tickers(
-                    analysis_type=analysis_type,
-                    ticker_filter=ticker_id_map,
-                )
-            except Exception as e:
-                logger.error(f"Failed {analysis_type} analysis for watchlisted: {e}")
-
-        return {
-            "analyzed": len(symbols_to_analyze),
-            "skipped": skipped,
-            "exchanges": exchanges,
-        }
-
     async def analyze_single_ticker(self, ticker_id: int, symbol: str) -> dict:
         """Run all analysis types for a single ticker (on-demand).
 

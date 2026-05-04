@@ -15,6 +15,7 @@ Resilience pattern per CONTEXT.md decisions:
 from datetime import date
 
 from loguru import logger
+from sqlalchemy import select
 
 from app.database import async_session
 from app.crawlers.vnstock_crawler import VnstockCrawler
@@ -58,6 +59,24 @@ async def _dlq_failures(session, job_type: str, failed_symbols: list[str], retry
     dlq_svc = DeadLetterService(session)
     for symbol in failed_symbols:
         await dlq_svc.add(job_type, symbol, "Persistent failure after retry", retry_count)
+
+
+async def _get_watchlist_ticker_map(session) -> dict[str, int]:
+    """Resolve watchlist symbols to {symbol: ticker_id} for ticker_filter.
+
+    JOINs UserWatchlist.symbol → Ticker.symbol → returns {symbol: Ticker.id}.
+    Returns empty dict if watchlist is empty or no symbols match active tickers.
+    """
+    from app.models.user_watchlist import UserWatchlist
+    from app.models.ticker import Ticker
+
+    stmt = (
+        select(Ticker.symbol, Ticker.id)
+        .join(UserWatchlist, UserWatchlist.symbol == Ticker.symbol)
+        .where(Ticker.is_active == True)
+    )
+    result = await session.execute(stmt)
+    return {row[0]: row[1] for row in result.fetchall()}
 
 
 async def daily_price_crawl():
@@ -297,9 +316,23 @@ async def daily_ai_analysis():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_ai_analysis")
         try:
+            # Phase 53: Watchlist gating (WL-01)
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping daily AI analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Watchlist gating: analyzing {len(ticker_filter)} tickers")
+
             from app.services.ai_analysis_service import AIAnalysisService
             service = AIAnalysisService(session)
-            results = await service.analyze_all_tickers(analysis_type="both")
+            results = await service.analyze_all_tickers(
+                analysis_type="both", ticker_filter=ticker_filter
+            )
 
             result = _sum_ai_results(results)
             final_failed = result.get("failed_symbols", [])
@@ -371,9 +404,23 @@ async def daily_sentiment_analysis():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_sentiment_analysis")
         try:
+            # Phase 53: Watchlist gating (WL-01)
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping daily sentiment analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Watchlist gating: sentiment for {len(ticker_filter)} tickers")
+
             from app.services.ai_analysis_service import AIAnalysisService
             service = AIAnalysisService(session)
-            results = await service.analyze_all_tickers(analysis_type="sentiment")
+            results = await service.analyze_all_tickers(
+                analysis_type="sentiment", ticker_filter=ticker_filter
+            )
 
             result = _sum_ai_results(results)
             final_failed = result.get("failed_symbols", [])
@@ -411,9 +458,23 @@ async def daily_combined_analysis():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_combined_analysis")
         try:
+            # Phase 53: Watchlist gating (WL-01)
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping daily combined analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Watchlist gating: combined for {len(ticker_filter)} tickers")
+
             from app.services.ai_analysis_service import AIAnalysisService
             service = AIAnalysisService(session)
-            results = await service.analyze_all_tickers(analysis_type="combined")
+            results = await service.analyze_all_tickers(
+                analysis_type="combined", ticker_filter=ticker_filter
+            )
 
             result = _sum_ai_results(results)
             final_failed = result.get("failed_symbols", [])
@@ -452,9 +513,23 @@ async def daily_trading_signal_analysis():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_trading_signal_analysis")
         try:
+            # Phase 53: Watchlist gating (WL-01)
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping daily trading signal analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Watchlist gating: trading signals for {len(ticker_filter)} tickers")
+
             from app.services.ai_analysis_service import AIAnalysisService
             service = AIAnalysisService(session)
-            results = await service.analyze_all_tickers(analysis_type="trading_signal")
+            results = await service.analyze_all_tickers(
+                analysis_type="trading_signal", ticker_filter=ticker_filter
+            )
 
             result = _sum_ai_results(results)
             final_failed = result.get("failed_symbols", [])
@@ -494,10 +569,23 @@ async def daily_pick_generation():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_pick_generation")
         try:
+            # Phase 53: Watchlist gating (WL-02)
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping daily pick generation")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "picked": 0, "almost": 0},
+                )
+                await session.commit()
+                return
+            watchlist_symbols = set(ticker_filter.keys())
+            logger.info(f"Watchlist gating: picking from {len(watchlist_symbols)} tickers")
+
             from app.services.pick_service import PickService
 
             service = PickService(session)
-            result = await service.generate_daily_picks()
+            result = await service.generate_daily_picks(watchlist_symbols=watchlist_symbols)
             status = "success" if result.get("picked", 0) > 0 else "partial"
             await job_svc.complete(
                 execution,

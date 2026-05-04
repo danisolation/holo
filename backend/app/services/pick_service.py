@@ -282,7 +282,7 @@ class PickService:
         logger.info(f"Updated profile: capital={capital:,}, risk_level={risk_level}")
         return profile
 
-    async def generate_daily_picks(self) -> dict:
+    async def generate_daily_picks(self, watchlist_symbols: set[str] | None = None) -> dict:
         """Generate daily stock picks from today's trading signals.
 
         Steps:
@@ -318,6 +318,9 @@ class PickService:
                 AIAnalysis.score > 0,
             )
         )
+        # Phase 53: Restrict picks to watchlist tickers (WL-02)
+        if watchlist_symbols is not None:
+            signal_query = signal_query.where(Ticker.symbol.in_(watchlist_symbols))
         signal_rows = (await self.session.execute(signal_query)).all()
         logger.info(f"Found {len(signal_rows)} LONG trading signals for {today}")
 
