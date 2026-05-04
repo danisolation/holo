@@ -48,9 +48,11 @@ Exceptions: Score bar track height is 6px (`h-1.5`) — established pattern from
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (text-sm) | 400 (normal) | 1.5 |
-| Label | 12px (text-xs) | 500 (medium) | 1.5 |
+| Label | 12px (text-xs) | 400 (normal) | 1.5 |
 | Heading | 24px (text-2xl) | 700 (bold) | 1.2 |
 | Mono values | 12px (text-xs) | 400 (normal) | 1.5 |
+
+**Weights:** 2 only — **400** (normal) for body, labels, mono values and **700** (bold) for headings, ticker symbols, composite scores. No intermediate weights.
 
 Source: Matches existing watchlist page pattern — `text-2xl font-bold` heading, `text-sm` table body, `text-xs font-mono` for numeric scores.
 
@@ -74,6 +76,12 @@ Source: Matches existing watchlist page pattern — `text-2xl font-bold` heading
 | Score < 4 (weak) | `#ef5350` (red) | Score bar fill |
 
 Accent reserved for: "Thêm" (add to watchlist) button only. "Đã thêm" (already added) uses `variant="secondary"`.
+
+---
+
+## Focal Point
+
+**Focal point:** Điểm (composite score) column with color-coded score bars — primary visual anchor that draws the eye to signal strength. The `font-mono font-bold` weight + score color (green/amber/red) makes this the dominant element per row.
 
 ---
 
@@ -135,10 +143,10 @@ Accent reserved for: "Thêm" (add to watchlist) button only. "Đã thêm" (alrea
 
 | Column | Width | Content | Sortable | Mobile |
 |--------|-------|---------|----------|--------|
-| Mã | 80px | Symbol text (font-mono font-semibold) | Yes | Show |
+| Mã | 80px | Symbol text (font-mono font-bold) | Yes | Show |
 | Tên | flex | Company name (truncate) | No | Hide (md:table-cell) |
 | Ngành | 120px | Sector badge (text-xs) | No | Hide (lg:table-cell) |
-| Điểm | 60px | Composite total_score (font-mono font-semibold) | Yes (default desc) | Show |
+| Điểm | 60px | Composite total_score (font-mono font-bold) | Yes (default desc) | Show |
 | RSI | 100px | ScoreCell bar + value | No | Hide (lg:table-cell) |
 | MACD | 100px | ScoreCell bar + value | No | Hide (lg:table-cell) |
 | ADX | 100px | ScoreCell bar + value | No | Hide (xl:table-cell) |
@@ -211,7 +219,7 @@ When `score_date` is older than 1 business day, show an inline warning badge:
 | Page title | "Khám phá cổ phiếu" |
 | Page subtitle | "Dữ liệu ngày {DD/MM/YYYY}" |
 | Nav link | "Khám phá" |
-| Primary CTA | "Thêm" (add to watchlist) |
+| Primary CTA | "Thêm" (add to watchlist — abbreviated from "Thêm mã" for 80px column width constraint) |
 | CTA completed state | "Đã thêm" |
 | Ticker count badge | "{N} mã" |
 | Sector filter placeholder | "Tất cả ngành" |
