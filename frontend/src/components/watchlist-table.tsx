@@ -29,7 +29,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PriceFlashCell } from "@/components/price-flash-cell";
-import { useMarketOverview, useWatchlist, useRemoveFromWatchlist } from "@/lib/hooks";
+import { SectorCombobox } from "@/components/sector-combobox";
+import { useMarketOverview, useWatchlist, useRemoveFromWatchlist, useSectors, useUpdateSectorGroup } from "@/lib/hooks";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import type { MarketTicker } from "@/lib/api";
 
@@ -41,6 +42,8 @@ export function WatchlistTable() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const watchlistSymbols = useMemo(() => watchlistData?.map((w) => w.symbol) ?? [], [watchlistData]);
   const { prices: realtimePrices } = useRealtimePrices(watchlistSymbols);
+  const { data: sectorsData } = useSectors();
+  const updateSectorMutation = useUpdateSectorGroup();
 
   // Filter market data to only watchlist symbols
   const rows = useMemo(() => {
@@ -90,6 +93,26 @@ export function WatchlistTable() {
             {row.getValue("name")}
           </span>
         ),
+      },
+      {
+        id: "sector_group",
+        header: "Ngành",
+        cell: ({ row }) => {
+          const watchItem = watchlistData?.find((w) => w.symbol === row.original.symbol);
+          return (
+            <SectorCombobox
+              value={watchItem?.sector_group ?? null}
+              onChange={(sector) =>
+                updateSectorMutation.mutate({
+                  symbol: row.original.symbol,
+                  sectorGroup: sector,
+                })
+              }
+              sectors={sectorsData ?? []}
+            />
+          );
+        },
+        enableSorting: false,
       },
       {
         accessorKey: "last_price",
@@ -219,7 +242,7 @@ export function WatchlistTable() {
         enableSorting: false,
       },
     ],
-    [watchlistData, removeMutation, realtimePrices],
+    [watchlistData, removeMutation, realtimePrices, sectorsData, updateSectorMutation],
   );
 
   const table = useReactTable({

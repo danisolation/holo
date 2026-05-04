@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heatmap } from "@/components/heatmap";
-import { useMarketOverview } from "@/lib/hooks";
+import { useMarketOverview, useWatchlist } from "@/lib/hooks";
 
 export default function Home() {
   const { data, isLoading, error, refetch } = useMarketOverview();
+  const { data: watchlistData } = useWatchlist();
 
   const totalTickers = data?.length ?? 0;
   const gainers = data?.filter((t) => t.change_pct != null && t.change_pct > 0).length ?? 0;
@@ -30,7 +31,22 @@ export default function Home() {
     return { topGainers, topLosers };
   }, [data]);
 
-  const subtitle = "Bản đồ nhiệt toàn thị trường theo biến động giá trong ngày";
+  const watchlistHeatmapData = useMemo(() => {
+    if (!data || !watchlistData) return [];
+    const marketMap = new Map(data.map((t) => [t.symbol, t]));
+    return watchlistData
+      .map((w) => {
+        const market = marketMap.get(w.symbol);
+        if (!market) return null;
+        // Override sector with user's sector_group, fallback to ICB sector from market data
+        return { ...market, sector: w.sector_group ?? market.sector ?? "Khác" };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+  }, [data, watchlistData]);
+
+  const subtitle = watchlistData && watchlistData.length > 0
+    ? `Bản đồ nhiệt ${watchlistData.length} mã trong danh mục, phân nhóm theo ngành`
+    : "Thêm mã vào danh mục để xem bản đồ nhiệt theo ngành";
 
   return (
     <>
@@ -131,9 +147,20 @@ export default function Home() {
             </Button>
           </CardContent>
         </Card>
-      ) : data ? (
-        <Heatmap data={data} />
-      ) : null}
+      ) : watchlistHeatmapData.length > 0 ? (
+        <Heatmap data={watchlistHeatmapData} />
+      ) : (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground font-medium mb-2">
+              Chưa có mã trong danh mục
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Thêm mã vào danh mục theo dõi để xem bản đồ nhiệt theo nhóm ngành.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Top Movers — merged from /dashboard */}
       {topMovers && (
