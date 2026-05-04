@@ -26,6 +26,7 @@ export async function expectNavbarVisible(page: Page) {
 /** Known application routes for smoke tests */
 export const APP_ROUTES = [
   { path: '/', name: 'Home / Overview' },
+  { path: '/discovery', name: 'Discovery' },
   { path: '/watchlist', name: 'Watchlist' },
   { path: '/dashboard/health', name: 'System Health' },
 ] as const;
