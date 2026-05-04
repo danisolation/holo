@@ -15,8 +15,9 @@ test.describe('Discovery Page Interactions', () => {
     const table = page.locator('[data-testid="discovery-table"]');
     await expect(table).toBeVisible();
 
-    // Wait for loading to finish (skeleton disappears)
-    await page.waitForTimeout(3000);
+    // Wait for loading to finish — skeleton disappears once data or empty state renders
+    await expect(page.locator('.space-y-2 .animate-pulse').first())
+      .toBeHidden({ timeout: 10000 });
 
     // Should show either table rows or empty state message
     const hasRows = await page.locator('[data-testid="discovery-table"] table tbody tr').count() > 0;
