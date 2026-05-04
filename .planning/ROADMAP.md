@@ -171,7 +171,10 @@ Full details: [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md)
   2. Discovery job executes sequentially after indicators complete in the scheduler chain, without breaking any existing downstream jobs (AI analysis, picks, etc.)
   3. Results older than 14 days are automatically cleaned up during each run, keeping the table bounded
   4. `sector_group` column exists on `user_watchlist` table (Alembic migration), ready for Phase 54
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 52-01-PLAN.md — Schema, model & DiscoveryService implementation
+- [ ] 52-02-PLAN.md — Scheduler integration & unit tests
 
 ### Phase 53: Watchlist-Gated AI Pipeline
 **Goal**: AI analysis and daily picks run exclusively on watchlist tickers, reducing Gemini API usage by ~70% and pipeline time by ~3x
@@ -214,7 +217,7 @@ Full details: [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Discovery Engine & Schema | 0/0 | Not started | - |
+| 52. Discovery Engine & Schema | 0/2 | Not started | - |
 | 53. Watchlist-Gated AI Pipeline | 0/0 | Not started | - |
 | 54. Sector Grouping & Heatmap Rework | 0/0 | Not started | - |
 | 55. Discovery Frontend | 0/0 | Not started | - |
