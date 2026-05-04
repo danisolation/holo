@@ -233,15 +233,16 @@ class TestNewJobFunctions:
             with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
                 MockJobSvc.return_value = _mock_job_svc()
 
-                with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
-                    mock_svc = AsyncMock()
-                    mock_svc.analyze_all_tickers = AsyncMock(return_value={"technical": {"success": 400, "failed": 0, "failed_symbols": []}})
-                    MockService.return_value = mock_svc
+                with patch("app.scheduler.jobs._get_watchlist_ticker_map", new_callable=AsyncMock, return_value={"VNM": 1, "FPT": 2}):
+                    with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                        mock_svc = AsyncMock()
+                        mock_svc.analyze_all_tickers = AsyncMock(return_value={"technical": {"success": 400, "failed": 0, "failed_symbols": []}})
+                        MockService.return_value = mock_svc
 
-                    from app.scheduler.jobs import daily_ai_analysis
-                    await daily_ai_analysis()
+                        from app.scheduler.jobs import daily_ai_analysis
+                        await daily_ai_analysis()
 
-                    mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="both")
+                        mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="both", ticker_filter={"VNM": 1, "FPT": 2})
 
 
 class TestPhase3Chaining:
@@ -353,15 +354,16 @@ class TestPhase3JobFunctions:
             with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
                 MockJobSvc.return_value = _mock_job_svc()
 
-                with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
-                    mock_svc = AsyncMock()
-                    mock_svc.analyze_all_tickers = AsyncMock(return_value={"sentiment": {"success": 400, "failed": 0, "failed_symbols": []}})
-                    MockService.return_value = mock_svc
+                with patch("app.scheduler.jobs._get_watchlist_ticker_map", new_callable=AsyncMock, return_value={"VNM": 1, "FPT": 2}):
+                    with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                        mock_svc = AsyncMock()
+                        mock_svc.analyze_all_tickers = AsyncMock(return_value={"sentiment": {"success": 400, "failed": 0, "failed_symbols": []}})
+                        MockService.return_value = mock_svc
 
-                    from app.scheduler.jobs import daily_sentiment_analysis
-                    await daily_sentiment_analysis()
+                        from app.scheduler.jobs import daily_sentiment_analysis
+                        await daily_sentiment_analysis()
 
-                    mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="sentiment")
+                        mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="sentiment", ticker_filter={"VNM": 1, "FPT": 2})
 
     @pytest.mark.asyncio
     async def test_daily_combined_calls_service(self):
@@ -374,12 +376,13 @@ class TestPhase3JobFunctions:
             with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
                 MockJobSvc.return_value = _mock_job_svc()
 
-                with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
-                    mock_svc = AsyncMock()
-                    mock_svc.analyze_all_tickers = AsyncMock(return_value={"combined": {"success": 400, "failed": 0, "failed_symbols": []}})
-                    MockService.return_value = mock_svc
+                with patch("app.scheduler.jobs._get_watchlist_ticker_map", new_callable=AsyncMock, return_value={"VNM": 1, "FPT": 2}):
+                    with patch("app.services.ai_analysis_service.AIAnalysisService") as MockService:
+                        mock_svc = AsyncMock()
+                        mock_svc.analyze_all_tickers = AsyncMock(return_value={"combined": {"success": 400, "failed": 0, "failed_symbols": []}})
+                        MockService.return_value = mock_svc
 
-                    from app.scheduler.jobs import daily_combined_analysis
-                    await daily_combined_analysis()
+                        from app.scheduler.jobs import daily_combined_analysis
+                        await daily_combined_analysis()
 
-                    mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="combined")
+                        mock_svc.analyze_all_tickers.assert_called_once_with(analysis_type="combined", ticker_filter={"VNM": 1, "FPT": 2})
