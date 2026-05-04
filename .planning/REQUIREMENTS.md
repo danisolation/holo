@@ -47,21 +47,21 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISC-01 | TBD | Pending |
-| DISC-02 | TBD | Pending |
-| WL-01 | TBD | Pending |
-| WL-02 | TBD | Pending |
-| DPAGE-01 | TBD | Pending |
-| DPAGE-02 | TBD | Pending |
-| DPAGE-03 | TBD | Pending |
-| TAG-01 | TBD | Pending |
-| TAG-02 | TBD | Pending |
-| TAG-03 | TBD | Pending |
+| DISC-01 | Phase 52 | Pending |
+| DISC-02 | Phase 52 | Pending |
+| WL-01 | Phase 53 | Pending |
+| WL-02 | Phase 53 | Pending |
+| DPAGE-01 | Phase 55 | Pending |
+| DPAGE-02 | Phase 55 | Pending |
+| DPAGE-03 | Phase 55 | Pending |
+| TAG-01 | Phase 54 | Pending |
+| TAG-02 | Phase 54 | Pending |
+| TAG-03 | Phase 54 | Pending |
 
 **Coverage:**
 - v10.0 requirements: 10 total
-- Mapped to phases: 0 (awaiting roadmap)
-- Unmapped: 10 ⚠️
+- Mapped to phases: 10 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-04*

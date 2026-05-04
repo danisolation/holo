@@ -15,7 +15,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v6.0 AI Backtesting Engine** — Phases 32-34 (shipped 2026-04-22)
 - ✅ **v7.0 Consolidation & Quality Upgrade** — Phases 35-42 (shipped 2025-07-22)
 - ✅ **v8.0 AI Trading Coach** — Phases 43-47 (shipped 2026-04-23)
-- 🚧 **v9.0 UX Rework & Simplification** — Phases 48-51 (in progress)
+- ✅ **v9.0 UX Rework & Simplification** — Phases 48-51 (shipped 2026-05-04)
+- 🚧 **v10.0 Watchlist-Centric & Stock Discovery** — Phases 52-55 (in progress)
 
 ## Phases
 
@@ -138,86 +139,82 @@ Full details: [milestones/v8.0-ROADMAP.md](milestones/v8.0-ROADMAP.md)
 
 </details>
 
-### 🚧 v9.0 UX Rework & Simplification (In Progress)
+<details>
+<summary>✅ v9.0 UX Rework & Simplification (Phases 48-51) — SHIPPED 2026-05-04</summary>
 
-**Milestone Goal:** Đơn giản hóa Holo — bỏ features không cần (corporate events, HNX/UPCOM), redesign luồng sử dụng cho rõ ràng, cải thiện AI output dài và hữu ích hơn.
+- [x] Phase 48: Backend Cleanup & Scheduler Simplification (2/2 plans) — Remove corporate events, HNX/UPCOM, telegram; HOSE-only pipeline
+- [x] Phase 49: Navigation & Watchlist Migration (2/2 plans) — 5-item nav, watchlist localStorage→PostgreSQL, AI signal enrichment
+- [x] Phase 50: Coach Page Restructure & Trade Flow (2/2 plans) — Tab layout, one-click trade recording, post-trade guidance
+- [x] Phase 51: AI Analysis Improvement (2/2 plans) — Structured AI output sections, visual hierarchy rendering
 
-- [x] **Phase 48: Backend Cleanup & Scheduler Simplification** - Remove corporate events, HNX/UPCOM, dead telegram dependency; simplify scheduler to HOSE-only pipeline (2 plans) (completed 2026-04-24)
-- [x] **Phase 49: Navigation & Watchlist Migration** - Reduce nav to 5 items, migrate watchlist from localStorage to PostgreSQL, show AI signals on watchlist (2 plans) (completed 2026-04-24)
-- [x] **Phase 50: Coach Page Restructure & Trade Flow** - Tab-based Coach layout, pick card trade recording, post-trade next steps (2 plans) (completed 2026-04-24)
-- [x] **Phase 51: AI Analysis Improvement** - Longer structured AI output, reduced batch sizes, frontend structured rendering (2 plans) (completed 2026-04-24)
+Full details: [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md)
+
+</details>
+
+### 🚧 v10.0 Watchlist-Centric & Stock Discovery (In Progress)
+
+**Milestone Goal:** Chuyển Holo từ "hiển thị 400 mã cố định" sang "watchlist là trung tâm" — AI scan toàn sàn gợi ý mã tiềm năng hàng ngày, user tự chọn thêm vào watchlist, mọi thứ (AI analysis, daily picks, heatmap) chỉ chạy trên watchlist.
+
+- [ ] **Phase 52: Discovery Engine & Schema** - Alembic migration + pure-indicator scoring engine scanning ~400 HOSE tickers daily
+- [ ] **Phase 53: Watchlist-Gated AI Pipeline** - Gate AI analysis and daily picks to run exclusively on watchlist tickers
+- [ ] **Phase 54: Sector Grouping & Heatmap Rework** - User-assigned sector tags on watchlist, heatmap filtered and grouped by sector
+- [ ] **Phase 55: Discovery Frontend** - Discovery page with scored recommendations, add-to-watchlist flow, signal/sector filters
 
 ## Phase Details
 
-### Phase 48: Backend Cleanup & Scheduler Simplification
-**Goal**: All dead features are fully removed — corporate events, HNX/UPCOM support, and telegram dependency — and the scheduler pipeline is simplified to a reliable HOSE-only chain
-**Depends on**: Phase 47 (v8.0 shipped)
-**Requirements**: CLN-01, CLN-02, CLN-03
+### Phase 52: Discovery Engine & Schema
+**Goal**: A pure-computation discovery engine scores all ~400 HOSE tickers daily on technical and fundamental indicators, persisting results with 14-day retention
+**Depends on**: Phase 51 (v9.0 shipped)
+**Requirements**: DISC-01, DISC-02
 **Success Criteria** (what must be TRUE):
-  1. The daily scheduler pipeline (price crawl → indicators → AI analysis → picks) runs end-to-end on HOSE tickers only, with the chain trigger rewired from UPCOM to HOSE completion
-  2. Corporate events are fully removed: DB table dropped via Alembic migration, API endpoints return 404, scheduler jobs removed, frontend page and nav link gone
-  3. All HNX/UPCOM references removed: exchange filter component, exchange badge, exchange store, tickers deactivated in DB, no frontend traces remain
-  4. `python-telegram-bot` is removed from requirements.txt and the backend starts cleanly without it
-**Plans**: 2 plans
+  1. After the daily pipeline runs, `discovery_results` table contains scored entries for all active HOSE tickers with breakdown by indicator dimension (RSI, MACD, ADX, volume, P/E, ROE)
+  2. Discovery job executes sequentially after indicators complete in the scheduler chain, without breaking any existing downstream jobs (AI analysis, picks, etc.)
+  3. Results older than 14 days are automatically cleaned up during each run, keeping the table bounded
+  4. `sector_group` column exists on `user_watchlist` table (Alembic migration), ready for Phase 54
+**Plans**: TBD
 
-Plans:
-- [x] 48-01-PLAN.md — Scheduler rewire (HOSE-only chain) + backend dead code removal (corporate events, deps, tests)
-- [x] 48-02-PLAN.md — Frontend dead feature removal (corporate events page, exchange components, HNX/UPCOM references)
+### Phase 53: Watchlist-Gated AI Pipeline
+**Goal**: AI analysis and daily picks run exclusively on watchlist tickers, reducing Gemini API usage by ~70% and pipeline time by ~3x
+**Depends on**: Phase 52
+**Requirements**: WL-01, WL-02
+**Success Criteria** (what must be TRUE):
+  1. AI analysis (Gemini calls) runs only on tickers present in the user's watchlist — non-watchlist tickers receive no AI analysis
+  2. Daily picks are selected exclusively from watchlist tickers — no picks appear for tickers outside the watchlist
+  3. An empty watchlist causes the AI pipeline to skip gracefully with a logged warning and the scheduler chain continues — no crashes or stuck jobs
+  4. Full pipeline completes noticeably faster, proportional to watchlist size (~15-30 tickers) versus the previous ~400-ticker run
+**Plans**: TBD
+
+### Phase 54: Sector Grouping & Heatmap Rework
+**Goal**: User can organize watchlist tickers by sector and the home page heatmap reflects only their curated, sector-grouped watchlist
+**Depends on**: Phase 52
+**Requirements**: TAG-01, TAG-02, TAG-03
+**Success Criteria** (what must be TRUE):
+  1. User can assign a sector/industry group to each ticker in their watchlist via inline editing on the watchlist table
+  2. When adding a new ticker, the sector field auto-suggests a value based on vnstock ICB classification data
+  3. Home page heatmap displays only tickers from the user's watchlist, grouped visually by their assigned sector
+  4. Changing watchlist membership or sector assignment immediately reflects in the heatmap without full page refresh
+**Plans**: TBD
 **UI hint**: yes
 
-### Phase 49: Navigation & Watchlist Migration
-**Goal**: User has a clean, simplified navigation and a server-backed watchlist that persists across devices and shows AI signal data alongside each ticker
-**Depends on**: Phase 48
-**Requirements**: NAV-01, NAV-02, NAV-03
+### Phase 55: Discovery Frontend
+**Goal**: User can browse daily AI-scored stock recommendations on a dedicated Discovery page and add promising tickers to their watchlist with one click
+**Depends on**: Phase 53, Phase 54
+**Requirements**: DPAGE-01, DPAGE-02, DPAGE-03
 **Success Criteria** (what must be TRUE):
-  1. Navigation shows 4-5 items (reduced from 7), with overlapping pages merged or removed and redirects in place for old routes
-  2. User's watchlist is stored in PostgreSQL — adding/removing tickers persists across browsers and devices without data loss
-  3. Existing localStorage watchlist data is automatically migrated to the database on first visit, with localStorage cleared after successful migration
-  4. Each ticker in the watchlist displays the latest AI signal score and buy/sell/hold recommendation alongside the ticker name
-**Plans**: 2 plans
-
-Plans:
-- [x] 49-01-PLAN.md — Backend watchlist DB migration + REST API with AI signal enrichment
-- [x] 49-02-PLAN.md — Frontend navigation simplification + watchlist server migration
-**UI hint**: yes
-
-### Phase 50: Coach Page Restructure & Trade Flow
-**Goal**: The Coach page is interactive and action-oriented — user can record trades directly from AI picks with one click and sees clear next steps after every trade
-**Depends on**: Phase 49
-**Requirements**: FLOW-01, FLOW-02, FLOW-03
-**Success Criteria** (what must be TRUE):
-  1. Each pick card displays a "Ghi nhận giao dịch" button that opens a trade entry dialog pre-filled with the pick's ticker, entry price, SL, and TP
-  2. The Coach page uses a tab-based layout (Picks / Nhật ký / Mục tiêu) instead of a single long scroll — each tab loads its own content
-  3. After recording a trade, the app immediately shows the open position with SL/TP monitoring status and clear guidance on what to do next
-**Plans**: 2 plans
-
-Plans:
-- [x] 50-01-PLAN.md — Trade flow components: dialog prefill, pick card button, post-trade guidance
-- [x] 50-02-PLAN.md — Coach page tab restructure (Picks / Nhật ký / Mục tiêu) + trade flow wiring
-**UI hint**: yes
-
-### Phase 51: AI Analysis Improvement
-**Goal**: AI analysis output is longer, structured into clear sections, and rendered on the frontend with visual hierarchy — not a plain text block
-**Depends on**: Phase 48
-**Requirements**: AI-01, AI-02, AI-03
-**Success Criteria** (what must be TRUE):
-  1. AI analysis output includes distinct sections (tóm tắt, mức giá quan trọng, rủi ro, hành động cụ thể) — each clearly labeled and separated
-  2. Batch sizes are reduced and token/thinking limits increased, producing multi-paragraph analysis for every ticker without output truncation
-  3. The frontend renders AI analysis as structured sections with headings and visual separation, replacing the previous plain text block display
-**Plans**: 2 plans
-
-Plans:
-- [x] 51-01-PLAN.md — Backend: structured combined analysis schema + config tuning + API raw_response
-- [x] 51-02-PLAN.md — Frontend: structured section rendering with visual hierarchy
+  1. Discovery page shows top-scored tickers with their composite score and signal breakdown (e.g., RSI oversold, MACD cross, volume spike, strong ADX trend)
+  2. User can add any discovery ticker to their watchlist with a single button click, with sector auto-suggested from ICB data
+  3. User can filter discovery results by sector and by signal type (e.g., show only MACD crossover signals, or only Banking sector)
+  4. Discovery page updates daily after the pipeline runs, showing fresh scores each trading day
+**Plans**: TBD
 **UI hint**: yes
 
 ## Progress
 
-**Execution Order:** 48 → 49 → 50 → 51
+**Execution Order:** 52 → 53 → 54 → 55
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 48. Backend Cleanup & Scheduler Simplification | 2/2 | Complete    | 2026-04-24 |
-| 49. Navigation & Watchlist Migration | 2/2 | Complete    | 2026-04-24 |
-| 50. Coach Page Restructure & Trade Flow | 2/2 | Complete    | 2026-04-24 |
-| 51. AI Analysis Improvement | 2/2 | Complete    | 2026-04-24 |
+| 52. Discovery Engine & Schema | 0/0 | Not started | - |
+| 53. Watchlist-Gated AI Pipeline | 0/0 | Not started | - |
+| 54. Sector Grouping & Heatmap Rework | 0/0 | Not started | - |
+| 55. Discovery Frontend | 0/0 | Not started | - |

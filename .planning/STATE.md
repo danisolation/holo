@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Watchlist-Centric & Stock Discovery
-status: defining_requirements
-stopped_at: Milestone v10.0 started — defining requirements
-last_updated: "2026-05-04T10:27:00.000Z"
-last_activity: 2026-05-04
+status: ready_to_plan
+stopped_at: Roadmap created — 4 phases (52-55), ready to plan Phase 52
+last_updated: "2025-07-23T00:00:00.000Z"
+last_activity: 2025-07-23
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-04)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** Defining requirements for v10.0
+**Current focus:** v10.0 Phase 52 — Discovery Engine & Schema
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 52 of 55 (Discovery Engine & Schema)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-04 — Milestone v10.0 started
+Status: Ready to plan
+Last activity: 2025-07-23 — Roadmap created for v10.0
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -51,15 +51,18 @@ Progress: [░░░░░░░░░░] 0%
 
 ### Decisions
 
-All v1.0–v8.0 decisions archived in PROJECT.md Key Decisions table.
+All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 
-### Research Context (v9.0)
+### Research Context (v10.0)
 
-- Scheduler chain trigger fires from UPCOM crawl — MUST rewire to HOSE before removal (silent pipeline failure risk)
-- Watchlist localStorage→DB migration: deploy backend API first, then frontend bridge. Keep localStorage read-only for 1 cycle
-- AI batch size 25→15 when increasing prompt length to avoid truncation (~14% coverage drop otherwise)
-- Stale `holo-exchange-filter` localStorage key must be cleared on app mount before removing ExchangeFilter component
-- E2E tests reference current routes — add Next.js redirects for removed/renamed routes
+- Discovery engine uses PURE indicator scoring (no Gemini) — RSI, MACD, ADX, volume, P/E, ROE
+- Existing `ticker_filter` param in AIAnalysisService enables watchlist gating — no new API needed
+- Schema changes needed first: `discovery_results` table + `sector_group` column on UserWatchlist
+- Scheduler chain modification is highest risk — job ID string matching means typo kills pipeline silently
+- DB pool (5+3) can't handle parallel heavy jobs — discovery MUST run sequentially after indicators
+- Empty watchlist must skip gracefully (log + return normally) — not crash the chain
+- Heatmap rework is frontend composition (existing APIs) — no new backend endpoint needed
+- Discovery retention: 14 days (5,600 rows max)
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-04
-Stopped at: Milestone v10.0 started — defining requirements
+Last session: 2025-07-23
+Stopped at: Roadmap created for v10.0 — 4 phases (52-55), ready to plan Phase 52
 Resume file: None
