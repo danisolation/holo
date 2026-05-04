@@ -23,6 +23,8 @@ _JOB_NAMES = {
     "weekly_financial_crawl": "Weekly Financial Crawl",
     "daily_indicator_compute_triggered": "Daily Indicator Compute",
     "daily_indicator_compute_manual": "Daily Indicator Compute",
+    "daily_discovery_scoring_triggered": "Daily Discovery Scoring",
+    "daily_discovery_scoring_manual": "Daily Discovery Scoring",
     "daily_ai_analysis_triggered": "Daily AI Analysis",
     "daily_ai_analysis_manual": "Daily AI Analysis",
     "daily_news_crawl_triggered": "Daily News Crawl",
@@ -75,8 +77,17 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_indicator_compute_triggered", "daily_indicator_compute_manual"):
+        from app.scheduler.jobs import daily_discovery_scoring
+        logger.info("Chaining: daily_indicator_compute → daily_discovery_scoring")
+        scheduler.add_job(
+            daily_discovery_scoring,
+            id="daily_discovery_scoring_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_discovery_scoring_triggered", "daily_discovery_scoring_manual"):
         from app.scheduler.jobs import daily_ai_analysis
-        logger.info("Chaining: daily_indicator_compute → daily_ai_analysis")
+        logger.info("Chaining: daily_discovery_scoring → daily_ai_analysis")
         scheduler.add_job(
             daily_ai_analysis,
             id="daily_ai_analysis_triggered",
@@ -313,6 +324,6 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_hose → [indicators → AI → news → sentiment → combined → trading_signal → pick_generation → pick_outcome_check → consecutive_loss_check]"
+        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → pick_generation → pick_outcome_check → consecutive_loss_check]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")

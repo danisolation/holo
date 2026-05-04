@@ -708,3 +708,38 @@ async def generate_weekly_review():
             logger.error(f"Generate weekly review failed: {e}")
             raise
 
+
+# ── Phase 52: Discovery scoring engine ──────────────────────────────────────
+
+
+async def daily_discovery_scoring():
+    """Score all HOSE tickers for discovery.
+
+    Triggered after daily_indicator_compute via job chaining.
+    Pure computation — no external API calls. Reads from DB, scores, writes to DB.
+    """
+    logger.info("=== DAILY DISCOVERY SCORING START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_discovery_scoring")
+        try:
+            from app.services.discovery_service import DiscoveryService
+            service = DiscoveryService(session)
+            result = await service.score_all_tickers()
+
+            status = _determine_status(result)
+            summary = _build_summary(result)
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY DISCOVERY SCORING COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete discovery scoring failure: all tickers failed")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY DISCOVERY SCORING FAILED: {e} ===")
+            raise
+
