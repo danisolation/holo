@@ -86,6 +86,20 @@ async def list_tickers(
     ]
 
 
+@router.get("/sectors", response_model=list[str])
+async def list_sectors():
+    """Return distinct ICB sector names from active tickers for auto-suggest."""
+    async with async_session() as session:
+        stmt = (
+            select(Ticker.sector)
+            .where(Ticker.is_active.is_(True), Ticker.sector.isnot(None))
+            .distinct()
+            .order_by(Ticker.sector)
+        )
+        result = await session.execute(stmt)
+        return [row[0] for row in result.all()]
+
+
 @router.get("/{symbol}/prices", response_model=list[PriceResponse])
 async def get_ticker_prices(
     symbol: str,

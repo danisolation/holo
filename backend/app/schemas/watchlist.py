@@ -6,14 +6,21 @@ class WatchlistItemResponse(BaseModel):
     """Single watchlist item with optional AI signal enrichment."""
     symbol: str
     created_at: str
+    sector_group: str | None = None
     ai_signal: str | None = None      # e.g. "buy", "sell", "hold"
     ai_score: int | None = None        # 1-10
     signal_date: str | None = None     # ISO date of the signal
 
 
+class WatchlistUpdateRequest(BaseModel):
+    """PATCH /api/watchlist/{symbol} request body."""
+    sector_group: str | None = Field(None, max_length=100)
+
+
 class WatchlistAddRequest(BaseModel):
     """POST /api/watchlist request body."""
     symbol: str = Field(min_length=1, max_length=10, description="Ticker symbol to add")
+    sector_group: str | None = Field(None, max_length=100)
 
 
 class WatchlistMigrateRequest(BaseModel):

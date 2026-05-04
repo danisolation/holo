@@ -14,6 +14,7 @@ from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.schemas.watchlist import (
     WatchlistItemResponse,
     WatchlistAddRequest,
+    WatchlistUpdateRequest,
     WatchlistMigrateRequest,
 )
 
@@ -42,6 +43,7 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
         select(
             UserWatchlist.symbol,
             UserWatchlist.created_at,
+            UserWatchlist.sector_group,
             AIAnalysis.signal,
             AIAnalysis.score,
             AIAnalysis.analysis_date,
@@ -69,6 +71,7 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
         WatchlistItemResponse(
             symbol=row.symbol,
             created_at=row.created_at.isoformat(),
+            sector_group=row.sector_group,
             ai_signal=row.signal,
             ai_score=row.score,
             signal_date=row.analysis_date.isoformat() if row.analysis_date else None,
@@ -99,10 +102,20 @@ async def add_to_watchlist(body: WatchlistAddRequest):
             return WatchlistItemResponse(
                 symbol=existing.symbol,
                 created_at=existing.created_at.isoformat(),
+                sector_group=existing.sector_group,
             )
 
+        # Determine sector_group: user-provided > ICB auto-populate > None
+        sector = body.sector_group
+        if sector is None:
+            ticker_stmt = select(Ticker.sector).where(Ticker.symbol == symbol)
+            ticker_result = await session.execute(ticker_stmt)
+            ticker_row = ticker_result.scalar_one_or_none()
+            if ticker_row:
+                sector = ticker_row
+
         # Insert new entry
-        entry = UserWatchlist(symbol=symbol)
+        entry = UserWatchlist(symbol=symbol, sector_group=sector)
         session.add(entry)
         await session.commit()
         await session.refresh(entry)
@@ -110,6 +123,27 @@ async def add_to_watchlist(body: WatchlistAddRequest):
         return WatchlistItemResponse(
             symbol=entry.symbol,
             created_at=entry.created_at.isoformat(),
+            sector_group=entry.sector_group,
+        )
+
+
+@router.patch("/{symbol}", response_model=WatchlistItemResponse)
+async def update_watchlist_item(symbol: str, body: WatchlistUpdateRequest):
+    """Update sector_group for a watchlist item."""
+    symbol = symbol.upper().strip()
+    async with async_session() as session:
+        stmt = select(UserWatchlist).where(UserWatchlist.symbol == symbol)
+        result = await session.execute(stmt)
+        item = result.scalar_one_or_none()
+        if not item:
+            raise HTTPException(status_code=404, detail=f"'{symbol}' not in watchlist")
+        item.sector_group = body.sector_group
+        await session.commit()
+        await session.refresh(item)
+        return WatchlistItemResponse(
+            symbol=item.symbol,
+            created_at=item.created_at.isoformat(),
+            sector_group=item.sector_group,
         )
 
 
