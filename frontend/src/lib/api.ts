@@ -94,6 +94,7 @@ export interface NewsArticleResponse {
 export interface WatchlistItem {
   symbol: string;
   created_at: string;
+  sector_group: string | null;  // Phase 54 — user-assigned or ICB auto-populated
   ai_signal: string | null;
   ai_score: number | null;
   signal_date: string | null;
@@ -802,4 +803,20 @@ export async function migrateWatchlist(symbols: string[]): Promise<WatchlistItem
     method: "POST",
     body: JSON.stringify({ symbols }),
   });
+}
+
+// --- Phase 54: Sector Group API ---
+
+export async function updateWatchlistSector(
+  symbol: string,
+  sectorGroup: string | null
+): Promise<WatchlistItem> {
+  return apiFetch<WatchlistItem>(`/watchlist/${encodeURIComponent(symbol)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ sector_group: sectorGroup }),
+  });
+}
+
+export async function fetchSectors(): Promise<string[]> {
+  return apiFetch<string[]>("/tickers/sectors");
 }

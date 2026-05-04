@@ -40,6 +40,8 @@ import {
   fetchWatchlist,
   addWatchlistItem,
   removeWatchlistItem,
+  updateWatchlistSector,
+  fetchSectors,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -452,6 +454,29 @@ export function useRemoveFromWatchlist() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (symbol: string) => removeWatchlistItem(symbol),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+    },
+  });
+}
+
+// --- Phase 54: Sector Group Hooks ---
+
+/** Fetch distinct ICB sector names for auto-suggest. staleTime: 10 min (rarely changes). */
+export function useSectors() {
+  return useQuery({
+    queryKey: ["sectors"],
+    queryFn: fetchSectors,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+/** Update sector_group for a watchlist item, invalidates watchlist query on success. */
+export function useUpdateSectorGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ symbol, sectorGroup }: { symbol: string; sectorGroup: string | null }) =>
+      updateWatchlistSector(symbol, sectorGroup),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["watchlist"] });
     },
