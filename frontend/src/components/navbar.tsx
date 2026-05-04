@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
   { href: "/", label: "Tổng quan" },
+  { href: "/discovery", label: "Khám phá" },
   { href: "/watchlist", label: "Danh mục" },
   { href: "/coach", label: "Huấn luyện" },
   { href: "/journal", label: "Nhật ký" },
