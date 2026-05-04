@@ -50,7 +50,7 @@ def score_adx(adx_14: float | None, plus_di: float | None, minus_di: float | Non
     if adx_14 is None:
         return None
     trend_strength = min(10, adx_14 / 5)  # ADX 50 → 10
-    if plus_di and minus_di:
+    if plus_di is not None and minus_di is not None:
         direction_bias = 1.0 if plus_di > minus_di else 0.3
     else:
         direction_bias = 0.5
