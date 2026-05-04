@@ -157,7 +157,7 @@ Full details: [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md)
 
 - [x] **Phase 52: Discovery Engine & Schema** - Alembic migration + pure-indicator scoring engine scanning ~400 HOSE tickers daily (completed 2026-05-04)
 - [x] **Phase 53: Watchlist-Gated AI Pipeline** - Gate AI analysis and daily picks to run exclusively on watchlist tickers (completed 2026-05-04)
-- [ ] **Phase 54: Sector Grouping & Heatmap Rework** - User-assigned sector tags on watchlist, heatmap filtered and grouped by sector
+- [x] **Phase 54: Sector Grouping & Heatmap Rework** - User-assigned sector tags on watchlist, heatmap filtered and grouped by sector (completed 2026-05-04)
 - [ ] **Phase 55: Discovery Frontend** - Discovery page with scored recommendations, add-to-watchlist flow, signal/sector filters
 
 ## Phase Details
@@ -198,10 +198,10 @@ Plans:
   2. When adding a new ticker, the sector field auto-suggests a value based on vnstock ICB classification data
   3. Home page heatmap displays only tickers from the user's watchlist, grouped visually by their assigned sector
   4. Changing watchlist membership or sector assignment immediately reflects in the heatmap without full page refresh
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 54-01-PLAN.md — Backend: sector_group model fix, PATCH endpoint, auto-populate on add, sectors list endpoint, unit tests
-- [ ] 54-02-PLAN.md — Frontend: sector combobox, inline editing in watchlist table, heatmap rework to watchlist-only with sector grouping
+- [x] 54-01-PLAN.md — Backend: sector_group model fix, PATCH endpoint, auto-populate on add, sectors list endpoint, unit tests
+- [x] 54-02-PLAN.md — Frontend: sector combobox, inline editing in watchlist table, heatmap rework to watchlist-only with sector grouping
 **UI hint**: yes
 
 ### Phase 55: Discovery Frontend
@@ -213,7 +213,10 @@ Plans:
   2. User can add any discovery ticker to their watchlist with a single button click, with sector auto-suggested from ICB data
   3. User can filter discovery results by sector and by signal type (e.g., show only MACD crossover signals, or only Banking sector)
   4. Discovery page updates daily after the pipeline runs, showing fresh scores each trading day
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 55-01-PLAN.md — Backend discovery API endpoint + frontend data layer (types, fetch, hook)
+- [ ] 55-02-PLAN.md — Discovery page UI (table, score bars, filters, add-to-watchlist) + E2E tests
 **UI hint**: yes
 
 ## Progress
@@ -224,5 +227,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 52. Discovery Engine & Schema | 2/2 | Complete    | 2026-05-04 |
 | 53. Watchlist-Gated AI Pipeline | 1/1 | Complete    | 2026-05-04 |
-| 54. Sector Grouping & Heatmap Rework | 0/0 | Not started | - |
+| 54. Sector Grouping & Heatmap Rework | 2/2 | Complete    | 2026-05-04 |
 | 55. Discovery Frontend | 0/0 | Not started | - |
