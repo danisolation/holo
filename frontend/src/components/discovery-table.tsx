@@ -342,8 +342,29 @@ export function DiscoveryTable() {
     discoveryData[0]?.score_date &&
     isStaleData(discoveryData[0].score_date);
 
+  const scoreDate = discoveryData?.[0]?.score_date;
+  const formattedDate = scoreDate
+    ? new Date(scoreDate).toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : null;
+
   return (
     <div data-testid="discovery-table">
+      {/* Result count badge + score date — uses filtered data */}
+      {!isLoading && !isError && discoveryData && discoveryData.length > 0 && (
+        <div className="flex items-center gap-3 mb-2">
+          <Badge variant="secondary">{discoveryData.length} mã</Badge>
+          {formattedDate && (
+            <span className="text-sm text-muted-foreground">
+              Dữ liệu ngày {formattedDate}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Stale data warning */}
       {showStaleWarning && (
         <Badge variant="outline" className="text-amber-600 mb-4">
