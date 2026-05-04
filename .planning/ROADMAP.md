@@ -156,7 +156,7 @@ Full details: [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md)
 **Milestone Goal:** Chuyển Holo từ "hiển thị 400 mã cố định" sang "watchlist là trung tâm" — AI scan toàn sàn gợi ý mã tiềm năng hàng ngày, user tự chọn thêm vào watchlist, mọi thứ (AI analysis, daily picks, heatmap) chỉ chạy trên watchlist.
 
 - [x] **Phase 52: Discovery Engine & Schema** - Alembic migration + pure-indicator scoring engine scanning ~400 HOSE tickers daily (completed 2026-05-04)
-- [ ] **Phase 53: Watchlist-Gated AI Pipeline** - Gate AI analysis and daily picks to run exclusively on watchlist tickers
+- [x] **Phase 53: Watchlist-Gated AI Pipeline** - Gate AI analysis and daily picks to run exclusively on watchlist tickers (completed 2026-05-04)
 - [ ] **Phase 54: Sector Grouping & Heatmap Rework** - User-assigned sector tags on watchlist, heatmap filtered and grouped by sector
 - [ ] **Phase 55: Discovery Frontend** - Discovery page with scored recommendations, add-to-watchlist flow, signal/sector filters
 
@@ -185,9 +185,9 @@ Plans:
   2. Daily picks are selected exclusively from watchlist tickers — no picks appear for tickers outside the watchlist
   3. An empty watchlist causes the AI pipeline to skip gracefully with a logged warning and the scheduler chain continues — no crashes or stuck jobs
   4. Full pipeline completes noticeably faster, proportional to watchlist size (~15-30 tickers) versus the previous ~400-ticker run
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 53-01-PLAN.md — Watchlist gating for AI analysis jobs, pick service, and tests
+- [x] 53-01-PLAN.md — Watchlist gating for AI analysis jobs, pick service, and tests
 
 ### Phase 54: Sector Grouping & Heatmap Rework
 **Goal**: User can organize watchlist tickers by sector and the home page heatmap reflects only their curated, sector-grouped watchlist
@@ -198,7 +198,10 @@ Plans:
   2. When adding a new ticker, the sector field auto-suggests a value based on vnstock ICB classification data
   3. Home page heatmap displays only tickers from the user's watchlist, grouped visually by their assigned sector
   4. Changing watchlist membership or sector assignment immediately reflects in the heatmap without full page refresh
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 54-01-PLAN.md — Backend: sector_group model fix, PATCH endpoint, auto-populate on add, sectors list endpoint, unit tests
+- [ ] 54-02-PLAN.md — Frontend: sector combobox, inline editing in watchlist table, heatmap rework to watchlist-only with sector grouping
 **UI hint**: yes
 
 ### Phase 55: Discovery Frontend
@@ -220,6 +223,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 52. Discovery Engine & Schema | 2/2 | Complete    | 2026-05-04 |
-| 53. Watchlist-Gated AI Pipeline | 0/1 | Planning    | - |
+| 53. Watchlist-Gated AI Pipeline | 1/1 | Complete    | 2026-05-04 |
 | 54. Sector Grouping & Heatmap Rework | 0/0 | Not started | - |
 | 55. Discovery Frontend | 0/0 | Not started | - |
