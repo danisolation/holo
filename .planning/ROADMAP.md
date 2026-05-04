@@ -155,7 +155,7 @@ Full details: [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md)
 
 **Milestone Goal:** Chuyển Holo từ "hiển thị 400 mã cố định" sang "watchlist là trung tâm" — AI scan toàn sàn gợi ý mã tiềm năng hàng ngày, user tự chọn thêm vào watchlist, mọi thứ (AI analysis, daily picks, heatmap) chỉ chạy trên watchlist.
 
-- [ ] **Phase 52: Discovery Engine & Schema** - Alembic migration + pure-indicator scoring engine scanning ~400 HOSE tickers daily
+- [x] **Phase 52: Discovery Engine & Schema** - Alembic migration + pure-indicator scoring engine scanning ~400 HOSE tickers daily (completed 2026-05-04)
 - [ ] **Phase 53: Watchlist-Gated AI Pipeline** - Gate AI analysis and daily picks to run exclusively on watchlist tickers
 - [ ] **Phase 54: Sector Grouping & Heatmap Rework** - User-assigned sector tags on watchlist, heatmap filtered and grouped by sector
 - [ ] **Phase 55: Discovery Frontend** - Discovery page with scored recommendations, add-to-watchlist flow, signal/sector filters
@@ -171,10 +171,10 @@ Full details: [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md)
   2. Discovery job executes sequentially after indicators complete in the scheduler chain, without breaking any existing downstream jobs (AI analysis, picks, etc.)
   3. Results older than 14 days are automatically cleaned up during each run, keeping the table bounded
   4. `sector_group` column exists on `user_watchlist` table (Alembic migration), ready for Phase 54
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 52-01-PLAN.md — Schema, model & DiscoveryService implementation
-- [ ] 52-02-PLAN.md — Scheduler integration & unit tests
+- [x] 52-02-PLAN.md — Scheduler integration & unit tests
 
 ### Phase 53: Watchlist-Gated AI Pipeline
 **Goal**: AI analysis and daily picks run exclusively on watchlist tickers, reducing Gemini API usage by ~70% and pipeline time by ~3x
@@ -217,7 +217,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Discovery Engine & Schema | 1/2 | In Progress|  |
+| 52. Discovery Engine & Schema | 2/2 | Complete   | 2026-05-04 |
 | 53. Watchlist-Gated AI Pipeline | 0/0 | Not started | - |
 | 54. Sector Grouping & Heatmap Rework | 0/0 | Not started | - |
 | 55. Discovery Frontend | 0/0 | Not started | - |
