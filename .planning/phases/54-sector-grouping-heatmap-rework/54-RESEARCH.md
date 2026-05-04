@@ -377,17 +377,13 @@ const watchlistHeatmapData = useMemo(() => {
 | A2 | cmdk Command component supports being rendered inside a Popover (not just Dialog) | Architecture Patterns / Pattern 3 | Would need to find alternative combobox approach — but this is standard cmdk usage [LOW RISK] |
 | A3 | @base-ui/react Popover supports being triggered from within a table cell without z-index or portal issues | Common Pitfalls / Pitfall 2 | May need z-index adjustments; existing PopoverContent uses Portal so should be fine |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the home page show a "full market" heatmap toggle when watchlist is empty?**
-   - What we know: Current heatmap shows all ~400 tickers. Rework filters to watchlist only.
-   - What's unclear: UX for users with empty watchlist — empty page vs. fallback to full market.
-   - Recommendation: Show empty state with CTA. The "full market" view is still accessible via the market overview section (stats cards remain visible). If user has 0 watchlist items, show invitation to add tickers.
+   - RESOLVED: Show empty state with CTA. The "full market" view is still accessible via the market overview section (stats cards remain visible). If user has 0 watchlist items, show invitation to add tickers.
 
 2. **Should the add-to-watchlist POST auto-populate sector_group from ICB data?**
-   - What we know: Tickers table has sector from ICB. WatchlistAddRequest can accept optional sector_group.
-   - What's unclear: Whether to auto-populate server-side or let frontend handle it.
-   - Recommendation: Auto-populate server-side in the POST handler by looking up `tickers.sector` for the symbol. This ensures sector_group is always populated without extra frontend work. User can override via inline editing.
+   - RESOLVED: Auto-populate server-side in the POST handler by looking up `tickers.sector` for the symbol. This ensures sector_group is always populated without extra frontend work. User can override via inline editing.
 
 ## Validation Architecture
 
