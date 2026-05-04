@@ -185,7 +185,9 @@ Plans:
   2. Daily picks are selected exclusively from watchlist tickers — no picks appear for tickers outside the watchlist
   3. An empty watchlist causes the AI pipeline to skip gracefully with a logged warning and the scheduler chain continues — no crashes or stuck jobs
   4. Full pipeline completes noticeably faster, proportional to watchlist size (~15-30 tickers) versus the previous ~400-ticker run
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 53-01-PLAN.md — Watchlist gating for AI analysis jobs, pick service, and tests
 
 ### Phase 54: Sector Grouping & Heatmap Rework
 **Goal**: User can organize watchlist tickers by sector and the home page heatmap reflects only their curated, sector-grouped watchlist
@@ -217,7 +219,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 52. Discovery Engine & Schema | 2/2 | Complete   | 2026-05-04 |
-| 53. Watchlist-Gated AI Pipeline | 0/0 | Not started | - |
+| 52. Discovery Engine & Schema | 2/2 | Complete    | 2026-05-04 |
+| 53. Watchlist-Gated AI Pipeline | 0/1 | Planning    | - |
 | 54. Sector Grouping & Heatmap Rework | 0/0 | Not started | - |
 | 55. Discovery Frontend | 0/0 | Not started | - |
