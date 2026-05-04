@@ -7,8 +7,8 @@
 
 ### Discovery Engine (DISC)
 
-- [ ] **DISC-01**: Hệ thống scan ~400 mã HOSE hàng ngày, tính điểm tiềm năng dựa trên kỹ thuật (RSI, MACD, ADX, volume) + cơ bản (P/E, ROE, tăng trưởng)
-- [ ] **DISC-02**: Kết quả discovery lưu vào DB, giữ lịch sử 14 ngày
+- [x] **DISC-01**: Hệ thống scan ~400 mã HOSE hàng ngày, tính điểm tiềm năng dựa trên kỹ thuật (RSI, MACD, ADX, volume) + cơ bản (P/E, ROE, tăng trưởng)
+- [x] **DISC-02**: Kết quả discovery lưu vào DB, giữ lịch sử 14 ngày
 
 ### Watchlist Pipeline (WL)
 
@@ -47,8 +47,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISC-01 | Phase 52 | Pending |
-| DISC-02 | Phase 52 | Pending |
+| DISC-01 | Phase 52 | Complete |
+| DISC-02 | Phase 52 | Complete |
 | WL-01 | Phase 53 | Pending |
 | WL-02 | Phase 53 | Pending |
 | DPAGE-01 | Phase 55 | Pending |
