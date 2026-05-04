@@ -820,3 +820,35 @@ export async function updateWatchlistSector(
 export async function fetchSectors(): Promise<string[]> {
   return apiFetch<string[]>("/tickers/sectors");
 }
+
+// --- Phase 55: Discovery Types & API ---
+
+export interface DiscoveryItem {
+  symbol: string;
+  name: string;
+  sector: string | null;
+  score_date: string;
+  rsi_score: number | null;
+  macd_score: number | null;
+  adx_score: number | null;
+  volume_score: number | null;
+  pe_score: number | null;
+  roe_score: number | null;
+  total_score: number;
+  dimensions_scored: number;
+}
+
+export async function fetchDiscovery(params?: {
+  sector?: string;
+  signal_type?: string;
+  min_score?: number;
+  limit?: number;
+}): Promise<DiscoveryItem[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.sector) searchParams.set("sector", params.sector);
+  if (params?.signal_type) searchParams.set("signal_type", params.signal_type);
+  if (params?.min_score !== undefined) searchParams.set("min_score", String(params.min_score));
+  if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+  const qs = searchParams.toString();
+  return apiFetch<DiscoveryItem[]>(`/discovery${qs ? `?${qs}` : ""}`);
+}

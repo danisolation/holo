@@ -42,6 +42,7 @@ import {
   removeWatchlistItem,
   updateWatchlistSector,
   fetchSectors,
+  fetchDiscovery,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -480,5 +481,16 @@ export function useUpdateSectorGroup() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["watchlist"] });
     },
+  });
+}
+
+// --- Phase 55: Discovery Hooks ---
+
+/** Fetch discovery results with optional sector/signal filters. staleTime: 5 min. */
+export function useDiscovery(params?: { sector?: string; signal_type?: string }) {
+  return useQuery({
+    queryKey: ["discovery", params?.sector ?? "all", params?.signal_type ?? "all"],
+    queryFn: () => fetchDiscovery(params),
+    staleTime: 5 * 60 * 1000,
   });
 }
