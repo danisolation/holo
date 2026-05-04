@@ -1,63 +1,68 @@
-# Requirements: Holo — v9.0 UX Rework & Simplification
+# Requirements: Holo — v10.0 Watchlist-Centric & Stock Discovery
 
-**Defined:** 2026-04-24
+**Defined:** 2026-05-04
 **Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
 
-## v9.0 Requirements
+## v10.0 Requirements
 
-### Cleanup — Feature Removal (CLN)
+### Discovery Engine (DISC)
 
-- [ ] **CLN-01**: Xóa toàn bộ tính năng corporate events (DB tables, API endpoints, scheduler jobs, frontend pages)
-- [ ] **CLN-02**: Xóa hỗ trợ sàn HNX & UPCOM (chỉ giữ HOSE), rewire scheduler chain an toàn từ UPCOM→HOSE trigger
-- [ ] **CLN-03**: Xóa python-telegram-bot khỏi requirements.txt (dead dependency từ v7.0)
+- [ ] **DISC-01**: Hệ thống scan ~400 mã HOSE hàng ngày, tính điểm tiềm năng dựa trên kỹ thuật (RSI, MACD, ADX, volume) + cơ bản (P/E, ROE, tăng trưởng)
+- [ ] **DISC-02**: Kết quả discovery lưu vào DB, giữ lịch sử 14 ngày
 
-### Navigation & Watchlist (NAV)
+### Watchlist Pipeline (WL)
 
-- [ ] **NAV-01**: Giảm navigation từ 7 items xuống 4-5 items, gộp các trang có nội dung trùng lặp
-- [ ] **NAV-02**: Migrate watchlist từ localStorage sang PostgreSQL (Alembic migration + REST API + React Query hooks)
-- [ ] **NAV-03**: Watchlist hiển thị AI signal score/recommendation bên cạnh mỗi mã trong danh sách
+- [ ] **WL-01**: AI analysis (Gemini) chỉ chạy trên các mã trong watchlist của user, không phân tích toàn sàn
+- [ ] **WL-02**: Daily picks chỉ chọn từ các mã trong watchlist
 
-### Coach & Trade Flow (FLOW)
+### Discovery Frontend (DPAGE)
 
-- [ ] **FLOW-01**: Pick cards có nút "Ghi nhận giao dịch" — 1 click mở trade entry dialog với data pre-filled từ pick
-- [ ] **FLOW-02**: Coach page dùng tab-based layout (Picks / Nhật ký / Mục tiêu) thay vì single long scroll
-- [ ] **FLOW-03**: Sau khi ghi nhận trade → hiển thị next step rõ ràng (vị thế đang mở, theo dõi SL/TP)
+- [ ] **DPAGE-01**: Trang Discovery hiển thị top mã tiềm năng với điểm số và lý do gợi ý (RSI oversold, MACD cross, volume spike...)
+- [ ] **DPAGE-02**: User bấm một nút để thêm mã từ Discovery vào watchlist
+- [ ] **DPAGE-03**: User có thể filter gợi ý theo ngành hoặc loại tín hiệu
 
-### AI Analysis Improvement (AI)
+### Sector & Heatmap (TAG)
 
-- [ ] **AI-01**: AI analysis output dài hơn với sections rõ ràng (tóm tắt, mức giá quan trọng, rủi ro, hành động cụ thể)
-- [ ] **AI-02**: Giảm batch size + tăng token/thinking limits cho output chất lượng hơn (prompt engineering)
-- [ ] **AI-03**: Frontend render AI output dạng structured sections với headings thay vì plain text block
+- [ ] **TAG-01**: User gán sector/nhóm ngành cho mỗi mã trong watchlist
+- [ ] **TAG-02**: Khi thêm mã mới, sector tự động gợi ý từ data vnstock (ICB classification)
+- [ ] **TAG-03**: Heatmap trên trang chủ chỉ hiện các mã trong watchlist, phân nhóm theo sector user đã gán
 
 ## Future Requirements
 
+- Discovery score trend (so sánh điểm hôm nay vs hôm qua)
+- "New since last check" badge trên Discovery page
 - Watchlist-based alerts (notify khi mã trong watchlist có signal mới)
-- Open position monitoring dashboard (realtime SL/TP tracking)
-- Post-trade AI guidance (gợi ý hành động tiếp theo cho vị thế đang mở)
 
 ## Out of Scope
 
-- Multi-user / authentication — vẫn single-user
-- Mobile native app — web responsive đủ
-- Re-add Telegram bot — web dashboard là kênh chính
-- Re-add HNX/UPCOM — giữ focus HOSE cho đơn giản
+| Feature | Reason |
+|---------|--------|
+| AI-powered discovery (Gemini scan toàn sàn) | 15 RPM rate limit, tốn 200s+ pipeline time — dùng indicator scoring thuần |
+| Auto add/remove watchlist | User phải tự quyết định — auto-changes phá trust |
+| Custom scoring weights UI | Single user — tune weights trong code nếu cần |
+| Multi-user watchlists | Single-user app — không cần auth |
+| Watchlist notifications | Telegram bot đã bị xóa v7.0 — check trên web |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLN-01 | Phase 48 | Pending |
-| CLN-02 | Phase 48 | Pending |
-| CLN-03 | Phase 48 | Pending |
-| NAV-01 | Phase 49 | Pending |
-| NAV-02 | Phase 49 | Pending |
-| NAV-03 | Phase 49 | Pending |
-| FLOW-01 | Phase 50 | Pending |
-| FLOW-02 | Phase 50 | Pending |
-| FLOW-03 | Phase 50 | Pending |
-| AI-01 | Phase 51 | Pending |
-| AI-02 | Phase 51 | Pending |
-| AI-03 | Phase 51 | Pending |
+| DISC-01 | TBD | Pending |
+| DISC-02 | TBD | Pending |
+| WL-01 | TBD | Pending |
+| WL-02 | TBD | Pending |
+| DPAGE-01 | TBD | Pending |
+| DPAGE-02 | TBD | Pending |
+| DPAGE-03 | TBD | Pending |
+| TAG-01 | TBD | Pending |
+| TAG-02 | TBD | Pending |
+| TAG-03 | TBD | Pending |
+
+**Coverage:**
+- v10.0 requirements: 10 total
+- Mapped to phases: 0 (awaiting roadmap)
+- Unmapped: 10 ⚠️
 
 ---
-*Requirements defined: 2026-04-24*
+*Requirements defined: 2026-05-04*
+*Last updated: 2026-05-04 after initial definition*
