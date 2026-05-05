@@ -311,6 +311,17 @@ class GeminiClient:
                     f"Giá vs SMA(50): {data.get('price_vs_sma_50_pct', 'N/A')}%, "
                     f"Giá vs SMA(200): {data.get('price_vs_sma_200_pct', 'N/A')}%"
                 )
+            # Phase 67: Volume profile (CTX-01)
+            if "avg_volume_20d" in data:
+                lines.append(
+                    f"KL trung bình 20 phiên: {data['avg_volume_20d']:,}, "
+                    f"KL mới nhất: {data.get('latest_volume', 'N/A'):,}, "
+                    f"Tỷ lệ KL: {data.get('relative_volume', 'N/A')}x"
+                )
+            if "volume_trend" in data:
+                lines.append(
+                    f"Xu hướng KL: {data['volume_trend']} ({data.get('volume_change_pct', 0):+.1f}%)"
+                )
 
         return "\n".join(lines)
 
@@ -387,6 +398,12 @@ class GeminiClient:
                     lines.append(f"  Thông tin chính: {'; '.join(claims)}")
                 if data.get('rumor_reasoning'):
                     lines.append(f"  Phân tích tin đồn: {data['rumor_reasoning'][:200]}")
+            # Phase 67: Sector peer comparison (CTX-02)
+            if data.get('sector_avg_score') is not None:
+                lines.append(
+                    f"So sánh ngành ({data.get('sector', '')}): "
+                    f"điểm trung bình ngành={data['sector_avg_score']}/10"
+                )
 
         return "\n".join(lines)
 
@@ -435,6 +452,12 @@ class GeminiClient:
                     f"52-week High: {data['week_52_high']:,.0f} | "
                     f"52-week Low: {data['week_52_low']:,.0f}"
                 )
+                # Phase 67: Price percentile (CTX-03)
+                if "price_percentile_52w" in data:
+                    lines.append(f"Vị trí giá 52 tuần: {data['price_percentile_52w']:.0f}%")
+            # Phase 67: Volume-price alignment (CTX-03)
+            if "volume_price_alignment" in data:
+                lines.append(f"KL-Giá tương quan: {data['volume_price_alignment']}")
             # Phase 64: Rumor context for trading signals (AIUP-02)
             if data.get("rumor_direction"):
                 claims = data.get("rumor_key_claims", [])[:2]

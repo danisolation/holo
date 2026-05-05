@@ -120,6 +120,32 @@ class ContextBuilder:
                     pct = (close_val - sma_val) / sma_val * 100
                     context[f"price_vs_{sma_key}_pct"] = round(pct, 2)
 
+        # Phase 67: Volume profile (CTX-01)
+        vol_result = await self.session.execute(
+            select(DailyPrice.volume)
+            .where(DailyPrice.ticker_id == ticker_id)
+            .order_by(DailyPrice.date.desc())
+            .limit(20)
+        )
+        volumes = [int(r[0]) for r in vol_result.all()]
+        if volumes:
+            avg_vol_20 = sum(volumes) / len(volumes)
+            context["avg_volume_20d"] = round(avg_vol_20)
+            latest_vol = volumes[0]
+            context["latest_volume"] = latest_vol
+            if avg_vol_20 > 0:
+                context["relative_volume"] = round(latest_vol / avg_vol_20, 2)
+            # Volume trend: compare first half vs second half avg
+            if len(volumes) >= 10:
+                recent_avg = sum(volumes[:10]) / 10
+                older_avg = sum(volumes[10:]) / len(volumes[10:])
+                if older_avg > 0:
+                    vol_change = (recent_avg - older_avg) / older_avg * 100
+                    context["volume_trend"] = "increasing" if vol_change > 10 else (
+                        "decreasing" if vol_change < -10 else "stable"
+                    )
+                    context["volume_change_pct"] = round(vol_change, 1)
+
         return context
 
     async def get_fundamental_context(
@@ -262,6 +288,28 @@ class ContextBuilder:
             context["rumor_reasoning"] = rumor["reasoning"]
             context["rumor_key_claims"] = rumor["key_claims"]
 
+        # Phase 67: Sector peer comparison (CTX-02)
+        from app.models.ticker import Ticker
+        ticker_row = await self.session.execute(
+            select(Ticker.sector).where(Ticker.id == ticker_id)
+        )
+        sector = ticker_row.scalar_one_or_none()
+        if sector:
+            # Get avg combined scores for tickers in the same sector
+            sector_avg_result = await self.session.execute(
+                select(sa_func.avg(AIAnalysis.score))
+                .join(Ticker, Ticker.id == AIAnalysis.ticker_id)
+                .where(
+                    AIAnalysis.analysis_type == AnalysisType.COMBINED,
+                    Ticker.sector == sector,
+                    AIAnalysis.analysis_date >= date.today() - timedelta(days=7),
+                )
+            )
+            sector_avg = sector_avg_result.scalar_one_or_none()
+            if sector_avg is not None:
+                context["sector"] = sector
+                context["sector_avg_score"] = round(float(sector_avg), 1)
+
         return context
 
     async def get_rumor_context(
@@ -367,6 +415,37 @@ class ContextBuilder:
         if row and row[0] is not None:
             context["week_52_high"] = float(row[0])
             context["week_52_low"] = float(row[1])
+            # Phase 67: 52-week price percentile (CTX-03)
+            high_52 = float(row[0])
+            low_52 = float(row[1])
+            if high_52 > low_52:
+                percentile = (context["current_price"] - low_52) / (high_52 - low_52) * 100
+                context["price_percentile_52w"] = round(percentile, 1)
+
+        # Phase 67: Volume-price correlation (CTX-03)
+        vp_result = await self.session.execute(
+            select(DailyPrice.close, DailyPrice.volume)
+            .where(
+                DailyPrice.ticker_id == ticker_id,
+                DailyPrice.date >= date.today() - timedelta(days=20),
+            )
+            .order_by(DailyPrice.date.asc())
+        )
+        vp_rows = vp_result.all()
+        if len(vp_rows) >= 5:
+            prices_list = [float(r[0]) for r in vp_rows]
+            vols_list = [int(r[1]) for r in vp_rows]
+            # Simple correlation: are prices and volumes moving together?
+            price_up_days = sum(1 for i in range(1, len(prices_list)) if prices_list[i] > prices_list[i-1])
+            vol_up_on_price_up = sum(
+                1 for i in range(1, len(prices_list))
+                if prices_list[i] > prices_list[i-1] and vols_list[i] > vols_list[i-1]
+            )
+            if price_up_days > 0:
+                vp_corr = vol_up_on_price_up / price_up_days
+                context["volume_price_alignment"] = (
+                    "strong" if vp_corr >= 0.7 else "moderate" if vp_corr >= 0.4 else "weak"
+                )
 
         # Phase 64: Include rumor context for trading signals (AIUP-02)
         rumor = await self.get_rumor_context(ticker_id, symbol)

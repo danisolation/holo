@@ -193,8 +193,8 @@ Full details: [milestones/v12.0-ROADMAP.md](milestones/v12.0-ROADMAP.md)
 ### v13.0 AI Context & Accuracy (Phases 64-67)
 
 - [x] **Phase 64: Rumor-to-Signal Integration** — Feed rumor scores into combined analysis + trading signals + daily picks
-- [ ] **Phase 65: AI Accuracy Tracking Backend** — Track actual price changes post-signal, compute accuracy verdicts
-- [ ] **Phase 66: Accuracy Dashboard & Feedback Loop** — Frontend accuracy stats, historical accuracy boost for picks
+- [x] **Phase 65: AI Accuracy Tracking Backend** — Track actual price changes post-signal, compute accuracy verdicts
+- [x] **Phase 66: Accuracy Dashboard & Feedback Loop** — Frontend accuracy stats, historical accuracy boost for picks
 - [ ] **Phase 67: Enhanced Gemini Context** — Volume profile, sector peer comparison, price percentile in prompts
 
 ## Phase Details
