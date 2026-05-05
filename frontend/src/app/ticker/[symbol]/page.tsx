@@ -36,12 +36,15 @@ import {
   StructuredCombinedCard,
 } from "@/components/analysis-card";
 import { TradingPlanPanel } from "@/components/trading-plan-panel";
+import { RumorScorePanel } from "@/components/rumor-score-panel";
+import { RumorFeed } from "@/components/rumor-feed";
 import {
   usePrices,
   useIndicators,
   useAnalysisSummary,
   useTradingSignal,
   useTickerNews,
+  useRumorScores,
   useTickers,
   useWatchlist,
   useAddToWatchlist,
@@ -112,6 +115,12 @@ export default function TickerDetailPage({
     error: newsError,
     refetch: refetchNews,
   } = useTickerNews(upperSymbol);
+  const {
+    data: rumorData,
+    isLoading: rumorsLoading,
+    error: rumorsError,
+    refetch: refetchRumors,
+  } = useRumorScores(upperSymbol);
 
   // Derive recommended direction's trading plan for chart overlay
   const tradingPlanForChart = useMemo(() => {
@@ -360,6 +369,21 @@ export default function TickerDetailPage({
           <SectionError error={newsError} onRetry={() => refetchNews()} />
         ) : newsArticles && newsArticles.length > 0 ? (
           <NewsList articles={newsArticles} />
+        ) : null}
+      </section>
+
+      {/* Rumor Intelligence — Phase 62 */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Tin đồn cộng đồng</h2>
+        {rumorsLoading ? (
+          <Skeleton className="h-32 rounded-xl" />
+        ) : rumorsError ? (
+          <SectionError error={rumorsError} onRetry={() => refetchRumors()} />
+        ) : rumorData ? (
+          <div className="space-y-4">
+            <RumorScorePanel data={rumorData} />
+            <RumorFeed posts={rumorData.posts} />
+          </div>
         ) : null}
       </section>
     </div>

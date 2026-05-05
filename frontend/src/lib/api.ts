@@ -89,6 +89,36 @@ export interface NewsArticleResponse {
   published_at: string;
 }
 
+// --- Phase 62: Rumor Types ---
+
+export interface RumorPost {
+  content: string;
+  author_name: string;
+  is_authentic: boolean;
+  total_likes: number;
+  total_replies: number;
+  posted_at: string;
+}
+
+export interface RumorScoreData {
+  symbol: string;
+  scored_date: string | null;
+  credibility_score: number | null;
+  impact_score: number | null;
+  direction: string | null;
+  key_claims: string[];
+  reasoning: string | null;
+  posts: RumorPost[];
+}
+
+export interface WatchlistRumorSummary {
+  symbol: string;
+  rumor_count: number;
+  avg_credibility: number | null;
+  avg_impact: number | null;
+  dominant_direction: string | null;
+}
+
 // --- Phase 49: Watchlist Types ---
 
 export interface WatchlistItem {
@@ -852,4 +882,14 @@ export async function fetchDiscovery(params?: {
   if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
   const qs = searchParams.toString();
   return apiFetch<DiscoveryItem[]>(`/discovery${qs ? `?${qs}` : ""}`);
+}
+
+// --- Phase 62: Rumor API ---
+
+export async function fetchRumorScores(symbol: string): Promise<RumorScoreData> {
+  return apiFetch<RumorScoreData>(`/rumors/${encodeURIComponent(symbol)}`);
+}
+
+export async function fetchWatchlistRumors(): Promise<WatchlistRumorSummary[]> {
+  return apiFetch<WatchlistRumorSummary[]>("/rumors/watchlist/summary");
 }

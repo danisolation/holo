@@ -43,6 +43,8 @@ import {
   updateWatchlistSector,
   fetchSectors,
   fetchDiscovery,
+  fetchRumorScores,
+  fetchWatchlistRumors,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -491,6 +493,33 @@ export function useDiscovery(params?: { sector?: string; signal_type?: string })
   return useQuery({
     queryKey: ["discovery", params?.sector ?? "all", params?.signal_type ?? "all"],
     queryFn: () => fetchDiscovery(params),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// --- Phase 62: Rumor Hooks ---
+
+/**
+ * Fetch rumor scores + posts for a single ticker.
+ * staleTime: 5 minutes — rumor data refreshes daily (per D-13).
+ */
+export function useRumorScores(symbol: string | undefined) {
+  return useQuery({
+    queryKey: ["rumor-scores", symbol],
+    queryFn: () => fetchRumorScores(symbol!),
+    enabled: !!symbol,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch rumor summary for all watchlist tickers (badge data).
+ * staleTime: 5 minutes (per D-13).
+ */
+export function useWatchlistRumors() {
+  return useQuery({
+    queryKey: ["watchlist-rumors"],
+    queryFn: fetchWatchlistRumors,
     staleTime: 5 * 60 * 1000,
   });
 }
