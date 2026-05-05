@@ -113,6 +113,65 @@ class TestParsePostsExtraction:
         crawler = _make_crawler()
         assert crawler._parse_posts([]) == []
 
+    def test_parse_posts_missing_post_id_skips(self):
+        """Post missing postID should be skipped, not crash the batch."""
+        crawler = _make_crawler()
+        posts = [
+            {
+                "content": "x" * 25,
+                "date": "2025-07-21T10:00:00+07:00",
+                "sentiment": 0,
+                "totalLikes": 0,
+                "totalReplies": 0,
+                "user": {"name": "user1", "isAuthentic": False},
+                # No "postID" field
+            },
+        ]
+        result = crawler._parse_posts(posts)
+        assert len(result) == 0
+
+    def test_parse_posts_missing_date_skips(self):
+        """Post missing date should be skipped, not crash the batch."""
+        crawler = _make_crawler()
+        posts = [
+            {
+                "postID": 999,
+                "content": "x" * 25,
+                "sentiment": 0,
+                "totalLikes": 0,
+                "totalReplies": 0,
+                "user": {"name": "user1", "isAuthentic": False},
+                # No "date" field
+            },
+        ]
+        result = crawler._parse_posts(posts)
+        assert len(result) == 0
+
+    def test_parse_posts_malformed_skips_but_keeps_good(self):
+        """One malformed post should not prevent other valid posts from being parsed."""
+        crawler = _make_crawler()
+        posts = [
+            {  # Bad: no postID
+                "content": "x" * 25,
+                "date": "2025-07-21T10:00:00+07:00",
+            },
+            {  # Good
+                "postID": 123,
+                "content": "y" * 25,
+                "date": "2025-07-21T11:00:00+07:00",
+                "user": {"name": "trader", "isAuthentic": True},
+            },
+        ]
+        result = crawler._parse_posts(posts)
+        assert len(result) == 1
+        assert result[0]["post_id"] == 123
+
+    def test_parse_posts_non_list_returns_empty(self):
+        """Non-list API response (e.g. error object) should return empty list."""
+        crawler = _make_crawler()
+        assert crawler._parse_posts({"error": "rate limited"}) == []
+        assert crawler._parse_posts("unexpected string") == []
+
 
 class TestStorePosts:
     """Test _store_posts DB insertion logic."""
