@@ -981,7 +981,7 @@ async def daily_discovery_scoring():
 
 
 async def daily_rumor_crawl():
-    """Crawl Fireant community posts for watchlist tickers.
+    """Crawl Fireant community posts + F319 RSS for watchlist tickers.
 
     Triggered after daily_trading_signal via job chaining.
     Phase 63: Part of rumor intelligence pipeline.
@@ -991,9 +991,21 @@ async def daily_rumor_crawl():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_rumor_crawl")
         try:
+            # 1. Fireant community posts
             from app.crawlers.fireant_crawler import FireantCrawler
             crawler = FireantCrawler(session)
             result = await crawler.crawl_watchlist_tickers()
+
+            # 2. F319 forum RSS feed
+            from app.crawlers.f319_crawler import F319Crawler
+            f319 = F319Crawler(session)
+            f319_result = await f319.crawl_rss()
+
+            # Merge results
+            result["total_posts"] = (
+                result.get("total_posts", 0) + f319_result.get("total_posts", 0)
+            )
+            result["success"] = result.get("success", 0) + f319_result.get("success", 0)
 
             # result shape: {success, failed, total_posts, failed_symbols}
             final_failed = result.get("failed_symbols", [])
@@ -1002,6 +1014,7 @@ async def daily_rumor_crawl():
             status = _determine_status(result)
             summary = _build_summary(result, dlq_count=len(final_failed))
             summary["total_posts"] = result.get("total_posts", 0)
+            summary["f319_posts"] = f319_result.get("total_posts", 0)
             await job_svc.complete(execution, status=status, result_summary=summary)
             await session.commit()
             logger.info(f"=== DAILY RUMOR CRAWL COMPLETE: {summary} ===")
