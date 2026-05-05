@@ -98,6 +98,7 @@ export interface WatchlistItem {
   ai_signal: string | null;
   ai_score: number | null;
   signal_date: string | null;
+  last_analysis_at: string | null;  // Phase 58: ISO timestamp of latest AI analysis
 }
 
 // --- Phase 20: Trading Plan Types ---

@@ -16,6 +16,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,28 @@ import { SectorCombobox } from "@/components/sector-combobox";
 import { useMarketOverview, useWatchlist, useRemoveFromWatchlist, useSectors, useUpdateSectorGroup } from "@/lib/hooks";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import type { MarketTicker } from "@/lib/api";
+
+/** Phase 58: Compute freshness label and status from ISO timestamp */
+function getAnalysisFreshness(isoTimestamp: string | null | undefined): {
+  label: string;
+  isStale: boolean;
+} {
+  if (!isoTimestamp) return { label: "Chưa có", isStale: true };
+  const now = Date.now();
+  const then = new Date(isoTimestamp).getTime();
+  const diffMs = now - then;
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  if (diffHours < 1) {
+    const mins = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+    return { label: `${mins}m ago`, isStale: false };
+  }
+  if (diffHours < 24) {
+    return { label: `${Math.floor(diffHours)}h ago`, isStale: diffHours >= 12 };
+  }
+  const days = Math.floor(diffHours / 24);
+  return { label: `${days}d ago`, isStale: true };
+}
 
 export function WatchlistTable() {
   const router = useRouter();
@@ -218,6 +241,29 @@ export function WatchlistTable() {
               {score != null && (
                 <span className="font-mono text-xs text-muted-foreground">{score}/10</span>
               )}
+            </div>
+          );
+        },
+        enableSorting: false,
+      },
+      {
+        id: "freshness",
+        header: "AI",
+        cell: ({ row }) => {
+          const watchItem = watchlistData?.find((w) => w.symbol === row.original.symbol);
+          const { label, isStale } = getAnalysisFreshness(watchItem?.last_analysis_at);
+          return (
+            <div className="flex items-center gap-1">
+              <Clock className={`size-3 ${isStale ? "text-amber-500" : "text-muted-foreground"}`} />
+              <span
+                className={`text-xs ${
+                  isStale
+                    ? "text-amber-500 font-medium"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {label}
+              </span>
             </div>
           );
         },
