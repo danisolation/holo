@@ -1,410 +1,438 @@
 # Architecture Patterns
 
-**Domain:** Watchlist-centric stock discovery integration into existing Holo platform
-**Researched:** 2025-07-23
-**Confidence:** HIGH — based on direct codebase analysis of all integration points
-
-## Executive Summary
-
-The v10.0 architecture challenge is **narrowing a 400-ticker firehose to a watchlist-gated pipeline** while adding a new Discovery engine that scans the full market to suggest additions. This requires surgical modifications to the existing scheduler chain, two new database entities (sector grouping + discovery results), a new API router, and a new frontend route — all without breaking the existing daily pipeline.
-
-The key architectural insight: the current system runs ALL analysis on ALL ~400 active tickers. v10.0 splits this into two distinct pipelines: (1) a **lightweight discovery scan** across all tickers (cheap, technical-only), and (2) the **deep analysis pipeline** (AI-heavy, multi-dimensional) gated to only watchlist tickers. This dramatically reduces Gemini API usage from ~400 tickers x 5 analysis types to ~15-30 watchlist tickers x 5 types + ~400 tickers x 1 lightweight scan.
+**Domain:** Stock Intelligence Platform — v11.0 UX & Reliability Overhaul
+**Researched:** 2026-05-06
+**Overall confidence:** HIGH (based on direct codebase analysis)
 
 ## Current Architecture (As-Is)
 
-### Scheduler Chain (daily, Mon-Fri)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Vercel (Frontend)                                              │
+│  Next.js 16 + React + TanStack Query                           │
+│  ┌───────────┐  ┌──────────────┐  ┌────────────────────────┐   │
+│  │ Navbar    │  │ TickerSearch │  │ Pages: /, /ticker/X,   │   │
+│  │ + Search  │  │ (CommandDialog│  │ /discovery, /watchlist,│   │
+│  │           │  │  shouldFilter)│  │ /coach, /journal       │   │
+│  └───────────┘  └──────────────┘  └────────────────────────┘   │
+│         │              │                      │                  │
+│         └──────────────┴──────────────────────┘                  │
+│                        │ HTTP + WebSocket                        │
+└────────────────────────┼────────────────────────────────────────┘
+                         │
+┌────────────────────────┼────────────────────────────────────────┐
+│  Render.com Free Tier (Backend)                                 │
+│  FastAPI + APScheduler (in-process)                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
+│  │ API Routes   │  │ Scheduler    │  │ WebSocket /ws/prices  │  │
+│  │ /api/*       │  │ (AsyncIO)    │  │ (30s VCI polling)     │  │
+│  │ 10 routers   │  │ Cron+Chain   │  │                       │  │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────────────┘  │
+│         │                 │                                      │
+│  ┌──────┴─────────────────┴──────────────────────────────────┐  │
+│  │ Services Layer                                             │  │
+│  │ AIAnalysisService, PriceService, DiscoveryService,        │  │
+│  │ TickerService, etc. (12 services)                          │  │
+│  └──────────────────────────┬────────────────────────────────┘  │
+│                              │                                   │
+│  ┌──────────────────────────┴────────────────────────────────┐  │
+│  │ SQLAlchemy Async + asyncpg                                 │  │
+│  │ pool_size=5, max_overflow=3 (8 max connections)            │  │
+│  └──────────────────────────┬────────────────────────────────┘  │
+└─────────────────────────────┼───────────────────────────────────┘
+                              │ SSL
+┌─────────────────────────────┼───────────────────────────────────┐
+│  Aiven PostgreSQL                                               │
+│  ~20-25 max connections, yearly partitioned daily_prices        │
+│  20+ tables: tickers, daily_prices, technical_indicators,       │
+│  ai_analyses, discovery_results, news_articles, etc.            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Job Chain (Current — 1x daily at 15:30)
 
 ```
-15:30 CRON: daily_price_crawl_hose (ALL ~400 HOSE tickers)
-  | EVENT_JOB_EXECUTED chain
-daily_indicator_compute (ALL tickers)
-  |
-daily_ai_analysis (ALL tickers -- technical + fundamental)
-  |
-daily_news_crawl (ALL tickers -- CafeF)
-  |
-daily_sentiment_analysis (ALL tickers)
-  |
-daily_combined_analysis (ALL tickers)
-  |
-daily_trading_signal_analysis (ALL tickers)
-  |
-daily_pick_generation (top 3-5 from ALL)
-  |
+15:30 Mon-Fri (cron)
+    │
+    ▼
+daily_price_crawl_hose
+    │ (EVENT_JOB_EXECUTED chain)
+    ▼
+daily_indicator_compute
+    │
+    ▼
+daily_discovery_scoring
+    │
+    ▼
+daily_ai_analysis  ← WATCHLIST ONLY (~15-20 tickers)
+    │
+    ▼
+daily_news_crawl
+    │
+    ▼
+daily_sentiment_analysis
+    │
+    ▼
+daily_combined_analysis
+    │
+    ▼
+daily_trading_signal_analysis
+    │
+    ▼
+daily_pick_generation
+    │
+    ▼
 daily_pick_outcome_check
-  |
+    │
+    ▼
 daily_consecutive_loss_check
 ```
 
-### Key Integration Points Identified
+## Problems & Root Causes
 
-| Component | File | Current Scope | v10.0 Impact |
-|-----------|------|---------------|-------------|
-| `TickerService.get_ticker_id_map()` | `ticker_service.py` | Returns ALL active tickers | Discovery uses this; AI pipeline needs watchlist-filtered version |
-| `AIAnalysisService.analyze_all_tickers()` | `ai_analysis_service.py` | Accepts optional `ticker_filter` dict | Already supports filtering! Key enabler for watchlist gating |
-| `_on_job_executed()` | `scheduler/manager.py` | Linear chain, no branching | Needs fork point for discovery vs deep analysis |
-| `UserWatchlist` model | `models/user_watchlist.py` | Simple `(id, symbol, created_at)` | Needs `sector_group` column |
-| `Ticker` model | `models/ticker.py` | Has `sector`, `industry` from vnstock | Source for default sector suggestions |
-| Heatmap component | `components/heatmap.tsx` | Groups by `ticker.sector` from market-overview API | Needs to group by user-assigned sector from watchlist |
-| Market overview API | `api/tickers.py` `/market-overview` | Returns ALL active tickers with price/change | Heatmap needs watchlist-only variant |
+### Problem 1: Cold Start (~3 min API response on production)
 
-## Recommended Architecture (To-Be)
+**Root cause:** Render.com free tier spins down after 15 minutes of inactivity. Cold start = Python process restart + uvicorn init + SQLAlchemy engine creation + APScheduler startup + first DB connection through Aiven SSL.
 
-### Revised Scheduler Chain
+**Why ~3 minutes:** Cold boot (~30-60s) + first query establishing asyncpg connection pool through Aiven SSL (~5-10s) + potentially heavy market-overview query (ROW_NUMBER over entire daily_prices table, no date filtering).
 
+**Architectural impact:** The `market-overview` endpoint (line 147 of `tickers.py`) runs `ROW_NUMBER()` over the ENTIRE `daily_prices` table to find the latest 2 prices per ticker. With 400 tickers × 2+ years of data = 200K+ rows being ranked. This is the likely cause of sustained slowness beyond cold start.
+
+### Problem 2: Search Misses Tickers
+
+**Root cause identified in code:** `ticker-search.tsx` line 54 — `tickers?.slice(0, 50)` hard-caps rendered CommandItems to 50. The `useTickers()` hook calls `fetchTickers()` with default `limit=100` (backend default). So:
+1. API returns max 100 tickers (backend default limit parameter)
+2. Frontend renders only the first 50 in the Command list
+3. `shouldFilter={true}` on `<Command>` only filters within the 50 rendered items
+4. Any ticker beyond the first 50 alphabetically is invisible to search
+
+**This is purely a frontend issue** — the API supports `limit=500` and the Command component can filter client-side over a larger set.
+
+### Problem 3: AI Analysis Staleness
+
+**Root cause:** The entire 11-step job chain runs once daily at 15:30. AI analysis runs mid-chain after price crawl + indicators + discovery scoring. By next morning, analysis is ~18 hours old. No mechanism for intraday refresh.
+
+**Constraint:** Gemini free tier = 15 RPM, 4s delay between batches. With ~15-20 watchlist tickers at batch_size=8, a full AI cycle (technical + fundamental + sentiment + combined + trading_signal) takes ~15-20 minutes.
+
+### Problem 4: UX Confusion for New Users
+
+**Root cause:** Landing page shows a heatmap that's empty until user adds watchlist items. No onboarding flow. Navigation labels are abbreviated Vietnamese. No "what does this do?" context for features.
+
+## Recommended Architecture Changes (To-Be)
+
+### Component Map: New vs Modified
+
+| Component | Status | What Changes |
+|-----------|--------|--------------|
+| **External keep-alive pinger** | 🆕 NEW | cron-job.org or UptimeRobot (zero code) |
+| **TickerSearch component** | 🔧 MODIFY | Remove `.slice(0, 50)`, fetch all 400 |
+| **`GET /api/tickers/market-overview`** | 🔧 MODIFY | Add date filter to ROW_NUMBER query |
+| **Database indexes** | 🆕 NEW | Alembic migration for composite index |
+| **In-memory response cache** | 🆕 NEW | Simple TTL cache utility |
+| **Scheduler manager** | 🔧 MODIFY | Add morning AI refresh cron trigger |
+| **`_on_job_executed` chain handler** | 🔧 MODIFY | Add morning chain path |
+| **Home page (`page.tsx`)** | 🔧 MODIFY | Onboarding state when watchlist empty |
+| **Navbar component** | 🔧 MODIFY | Feature descriptions/tooltips |
+
+---
+
+### Change 1: Keep-Alive Service (External Pinger)
+
+**Architecture decision:** Use an external free cron service, NOT an in-process keep-alive.
+
+**Why external:** The backend IS the thing that sleeps. An in-process timer dies when Render spins down the process. You need something outside Render to keep hitting it.
+
+**Recommended approach: UptimeRobot or cron-job.org**
+- Configure to ping `https://holo-api.onrender.com/` every 5 minutes
+- Both are free, no code changes needed
+- The existing `GET /` endpoint returns `{"status": "ok"}` — perfect health target
+
+**Why NOT Vercel Cron:** Vercel Hobby plan only supports daily cron frequency. Not sufficient for keep-alive.
+
+**Integration impact:** Zero backend/frontend code changes. Purely external configuration.
+
+---
+
+### Change 2: Search Fix
+
+**Files modified:**
 ```
-15:30 CRON: daily_price_crawl_hose (ALL ~400 tickers -- unchanged)
-  |
-daily_indicator_compute (ALL tickers -- unchanged, needed for discovery)
-  |
-daily_discovery_scan (NEW -- lightweight scoring of ALL tickers)
-  |   Runs AFTER indicators. Pure computation, no Gemini calls.
-  |   Scores tickers on technical signals only (RSI, MACD, volume spike, etc.)
-  |   Stores results in discovery_results table.
-  |
-daily_ai_analysis (MODIFIED -- watchlist tickers ONLY)
-  |
-daily_news_crawl (watchlist tickers ONLY)
-  |
-daily_sentiment_analysis (watchlist tickers ONLY)
-  |
-daily_combined_analysis (watchlist tickers ONLY)
-  |
-daily_trading_signal_analysis (watchlist tickers ONLY)
-  |
-daily_pick_generation (from watchlist tickers ONLY)
-  |
-daily_pick_outcome_check (unchanged)
-  |
-daily_consecutive_loss_check (unchanged)
+frontend/src/components/ticker-search.tsx  ← MODIFY (2 lines)
 ```
 
-### Chain Fork Strategy
+**What to change:**
+1. Remove `.slice(0, 50)` from line 54
+2. Change `useTickers()` to `useTickers(undefined, undefined, 500)` to fetch all 400 HOSE tickers
+3. cmdk's `shouldFilter={true}` handles client-side fuzzy matching over the full set
 
-The insertion after `daily_indicator_compute` is the critical design decision. Two approaches:
+**Why NOT a backend search endpoint:** 400 tickers × ~50 bytes = ~20KB. Already fetched and cached by TanStack Query (5-min staleTime). Client-side filtering over 400 items is instant. A backend endpoint adds network latency + cold start risk for zero benefit.
 
-**Option A: Sequential (recommended)** — Discovery runs first, then AI pipeline. Simple, no concurrency issues with DB pool or Gemini rate limits.
+**Architecture impact:** None. Pure presentation fix.
+
+---
+
+### Change 3: API Performance Optimization
+
+**Files modified:**
+```
+backend/app/api/tickers.py                ← MODIFY market-overview query
+backend/alembic/versions/xxx_indexes.py   ← NEW migration
+backend/app/cache.py                      ← NEW utility (optional)
+```
+
+#### 3a. Market-Overview Query Fix (Critical)
+
+The current query runs `ROW_NUMBER()` over the ENTIRE `daily_prices` table. Fix by adding a date filter:
 
 ```python
-# In manager.py _on_job_executed:
-elif event.job_id in ("daily_indicator_compute_triggered", "daily_indicator_compute_manual"):
-    # Discovery first (no Gemini, fast), then AI pipeline
-    scheduler.add_job(daily_discovery_scan, id="daily_discovery_scan_triggered", ...)
+# BEFORE (scans entire daily_prices — 200K+ rows):
+ranked = select(
+    DailyPrice.ticker_id, DailyPrice.close,
+    func.row_number().over(
+        partition_by=DailyPrice.ticker_id,
+        order_by=DailyPrice.date.desc(),
+    ).label("rn"),
+).subquery("ranked")
 
-elif event.job_id in ("daily_discovery_scan_triggered",):
-    # After discovery completes, start AI pipeline (watchlist-only)
-    scheduler.add_job(daily_ai_analysis, id="daily_ai_analysis_triggered", ...)
+# AFTER (scans last 7 days only — ~2,800 rows):
+since = date.today() - timedelta(days=7)
+ranked = select(
+    DailyPrice.ticker_id, DailyPrice.close,
+    func.row_number().over(
+        partition_by=DailyPrice.ticker_id,
+        order_by=DailyPrice.date.desc(),
+    ).label("rn"),
+).where(DailyPrice.date >= since).subquery("ranked")
 ```
 
-**Option B: Parallel** — Both run concurrently. Faster but risks DB pool exhaustion (pool_size=5, max_overflow=3) and adds complexity. **Not recommended** given the tight DB pool.
+**Expected improvement:** ~100x reduction in rows processed.
 
-### Component Boundaries
-
-| Component | Responsibility | New/Modified | Communicates With |
-|-----------|---------------|-------------|-------------------|
-| `DiscoveryService` | Score all tickers on technical signals, rank, persist | **NEW** | IndicatorService (reads), DB (writes discovery_results) |
-| `DiscoveryScoringEngine` | Pure computation: RSI zones, MACD crossovers, volume spikes, breakout detection | **NEW** | None (pure functions, no I/O) |
-| `AIAnalysisService` | Gemini multi-dimensional analysis | **MODIFIED** — add watchlist-filter helper | TickerService, WatchlistService |
-| `WatchlistService` | Extract watchlist logic from API into service layer | **NEW** | DB (user_watchlist), TickerService |
-| Scheduler jobs | Chain orchestration | **MODIFIED** — add discovery job, gate AI jobs | All services |
-| Discovery API | `/api/discovery` endpoints | **NEW** | DiscoveryService |
-| Watchlist API | `/api/watchlist` | **MODIFIED** — add sector_group CRUD | WatchlistService |
-
-### New Database Entities
-
-#### 1. `discovery_results` table
+#### 3b. Composite Database Index
 
 ```sql
-CREATE TABLE discovery_results (
-    id BIGSERIAL PRIMARY KEY,
-    ticker_id INTEGER NOT NULL REFERENCES tickers(id),
-    scan_date DATE NOT NULL,
-    discovery_score NUMERIC(5,2) NOT NULL,  -- 0-100
-    score_breakdown JSONB NOT NULL,          -- {rsi: 8, macd: 7, volume: 9, breakout: 6}
-    signal_summary VARCHAR(50) NOT NULL,     -- 'strong_buy', 'buy', 'neutral', 'avoid'
-    highlights TEXT,                          -- Vietnamese 1-line reason
-    is_in_watchlist BOOLEAN DEFAULT FALSE,   -- Denormalized for fast filtering
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(ticker_id, scan_date)
-);
-CREATE INDEX idx_discovery_date_score ON discovery_results(scan_date, discovery_score DESC);
+-- Alembic migration
+CREATE INDEX ix_daily_prices_ticker_date_close
+ON daily_prices (ticker_id, date DESC, close);
 ```
 
-**Why a dedicated table instead of reusing `ai_analyses`:**
-- Discovery scoring is pure computation (no Gemini), different from AI analysis
-- Different schema: composite score + breakdown, not signal/reasoning
-- Allows independent retention policy (keep 7 days of discovery vs years of AI analysis)
-- Avoids bloating `ai_analyses` with ~400 rows/day of non-AI data
+This covers the market-overview query's access pattern (ticker_id partition, date ordering, close column) without touching the heap.
 
-#### 2. `user_watchlist.sector_group` column
+#### 3c. In-Memory Response Cache (Optional)
 
-```sql
-ALTER TABLE user_watchlist ADD COLUMN sector_group VARCHAR(50);
+Simple TTL cache for the market-overview response. Single user = no stale data concerns.
+
+```python
+import time
+from typing import Any
+
+_cache: dict[str, tuple[float, Any]] = {}
+
+def get_cached(key: str, ttl: float = 60.0):
+    if key in _cache:
+        ts, data = _cache[key]
+        if time.time() - ts < ttl:
+            return data
+    return None
+
+def set_cached(key: str, data: Any):
+    _cache[key] = (time.time(), data)
 ```
 
-**Why a column on `user_watchlist` instead of a separate table:**
-- Single-user system — no complex group management needed
-- One ticker belongs to one user-assigned group
-- Simple `GROUP BY sector_group` for heatmap
-- `Ticker.sector` from vnstock provides a sensible default suggestion
-- No need for a full `watchlist_groups` table with ordering, colors, etc.
+**Architecture decision: NOT adding Redis.** Single-user app. Python `dict` with TTL is equivalent. Redis adds infrastructure complexity for zero benefit.
 
-### Data Flow
+---
 
-#### Discovery Flow (daily, automatic)
+### Change 4: More Frequent AI Analysis
 
+**Files modified:**
 ```
-1. Indicators computed for ALL tickers (existing)
-2. DiscoveryService reads latest indicators + prices for ALL tickers
-3. DiscoveryScoringEngine scores each ticker:
-   - RSI zone score (oversold=high, overbought=low)
-   - MACD momentum score (bullish crossover=high)
-   - Volume spike detection (unusual volume=high)
-   - Breakout score (price vs S/R levels)
-   - ADX trend strength
-4. Results stored in discovery_results (UPSERT on ticker_id+scan_date)
-5. Discovery page reads top N results, filtered by NOT in watchlist
+backend/app/scheduler/manager.py  ← MODIFY: add morning cron + chain
 ```
 
-#### Watchlist-Gated AI Flow (daily, automatic)
+**Strategy: Add a morning AI refresh at 8:30 AM for watchlist tickers.**
+
+The morning chain is a subset of the daily chain — only the steps needed for fresh AI signals:
 
 ```
-1. Jobs.py queries user_watchlist to get symbols list
-2. TickerService.get_ticker_id_map() filtered to only those symbols
-3. Passes ticker_filter dict to AIAnalysisService.analyze_all_tickers()
-4. analyze_all_tickers() already supports ticker_filter parameter!
-   (See ai_analysis_service.py line 87-98)
-5. Downstream chain (news, sentiment, combined, signals) all receive
-   same watchlist-gated ticker set
+08:30 Mon-Fri (NEW cron trigger)
+    │
+    ▼
+morning_price_crawl_hose  ← Crawl pre-market/opening prices
+    │ (chain via _on_job_executed)
+    ▼
+morning_indicator_compute  ← Recompute with fresh data
+    │
+    ▼
+morning_ai_analysis  ← Technical + combined only (watchlist)
+    │
+    ▼
+morning_trading_signal  ← Fresh trading plans for the day
 ```
 
-#### Heatmap Rework Flow
+**Why 8:30:** HOSE opens at 9:00. VCI provides pre-market data by ~8:15. Running at 8:30 gives fresh signals before market open.
 
+**Why skip discovery/news/sentiment in morning:** Discovery scores all 400 tickers (slow). News/sentiment are supplementary and don't change dramatically intraday. The afternoon run covers these.
+
+**Implementation approach:** Add a new cron trigger and chain path in `manager.py`. Reuse the same job functions (`daily_price_crawl_for_exchange`, `daily_indicator_compute`, `daily_ai_analysis`, `daily_trading_signal_analysis`) but with different job IDs for the morning chain (e.g., `morning_price_crawl_hose`, `morning_indicator_compute`, etc.).
+
+**Gemini budget check:** ~15-20 watchlist tickers × 5 analysis types × 2 runs/day ≈ ~150-200 API calls/day. At 15 RPM with 4s delay, each run takes ~15 min. Well under Gemini free tier (1,500 RPD).
+
+**Idempotency:** AI analysis uses `INSERT ... ON CONFLICT (ticker_id, analysis_type, analysis_date) DO UPDATE` — already idempotent. Running twice per day safely overwrites the earlier result.
+
+**Critical dependency on Phase 1:** The keep-alive pinger MUST be active before this works. Otherwise the 8:30 AM cron fires on a sleeping Render process. While `misfire_grace_time=3600` provides a 1-hour recovery window, the pinger ensures reliable scheduling.
+
+---
+
+### Change 5: UX/Onboarding Improvements
+
+**Files modified:**
 ```
-1. Frontend calls GET /api/watchlist (already returns all watchlist items)
-2. Response enriched with sector_group field
-3. Frontend calls GET /api/tickers/market-overview (existing)
-4. Frontend filters market-overview to only watchlist symbols
-5. Groups by sector_group instead of ticker.sector
-6. Heatmap renders watchlist-only, user-grouped data
+frontend/src/app/page.tsx           ← MODIFY: onboarding state
+frontend/src/components/navbar.tsx  ← MODIFY: descriptions
+```
+
+**Onboarding strategy for empty-watchlist users:**
+
+Current: empty heatmap + "Chưa có mã trong danh mục" message.
+
+Proposed:
+1. **Hero card:** "Holo — AI phân tích chứng khoán HOSE" with brief feature summary
+2. **Quick-start:** Show top 5 tickers from discovery (by total_score) with one-click add buttons
+3. **Feature cards:** 4 cards explaining Discovery → Watchlist → Coach → Journal workflow
+4. **Nav descriptions:** Brief subtitle text under navigation labels
+
+**Architecture impact:** Frontend-only. Uses existing `/api/discovery` endpoint for the quick-start tickers — no new backend code.
+
+---
+
+## Data Flow Changes Summary
+
+### Current (1x daily)
+```
+15:30 → price → indicators → discovery → AI(all) → news → sentiment → combined → signal → picks
+```
+
+### Proposed (2x daily)
+```
+08:30 → price → indicators → AI(tech+combined) → signal  [MORNING — fast, watchlist]
+15:30 → price → indicators → discovery → AI(all) → news → sentiment → combined → signal → picks  [AFTERNOON — full]
+```
+
+### API Response Flow (Optimized)
+```
+Request → In-memory cache check (60s TTL)
+  ├── HIT  → Return cached (< 1ms)
+  └── MISS → Date-filtered query (7 days, ~2800 rows)
+             → Cache result → Return (~50-100ms)
 ```
 
 ## Patterns to Follow
 
-### Pattern 1: Watchlist-Filter Helper
+### Pattern 1: Date-Bounded Window Queries
+**What:** Always add a date filter BEFORE window functions on time-series tables
+**When:** Any query using ROW_NUMBER/RANK over daily_prices or similar
+**Why:** Prevents full table scans as historical data accumulates
 
-The `AIAnalysisService.analyze_all_tickers()` already accepts `ticker_filter: dict[str, int] | None`. Create a reusable helper to build this from watchlist.
+### Pattern 2: External Health Pinging
+**What:** Use external free services for keep-alive instead of in-process timers
+**When:** Render.com free tier or any sleeping infrastructure
+**Why:** In-process solutions die with the sleeping process
 
-```python
-# services/watchlist_service.py (NEW)
-class WatchlistService:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+### Pattern 3: Client-Side Filtering for Small Datasets
+**What:** Fetch complete dataset, cache in TanStack Query, filter in browser
+**When:** Dataset < 1000 items and < 100KB
+**Why:** Eliminates network round-trips, works offline, instant UX
 
-    async def get_watchlist_ticker_map(self) -> dict[str, int]:
-        """Return {symbol: ticker_id} for all watchlist tickers.
-        Used to gate AI analysis pipeline to watchlist-only.
-        """
-        stmt = (
-            select(UserWatchlist.symbol, Ticker.id)
-            .join(Ticker, UserWatchlist.symbol == Ticker.symbol)
-            .where(Ticker.is_active == True)
-        )
-        result = await self.session.execute(stmt)
-        return {row[0]: row[1] for row in result.all()}
-```
-
-**Why this pattern:** Single source of truth for "which tickers to analyze." Used by all chained jobs. Avoids N+1 queries across the chain.
-
-### Pattern 2: Discovery Score as Pure Functions
-
-Keep discovery scoring as stateless pure functions (like `pick_service.py` already does with `compute_composite_score`, `compute_safety_score`).
-
-```python
-# services/discovery/scoring.py (NEW)
-def compute_rsi_score(rsi_14: float | None) -> float:
-    """Score RSI for discovery. Oversold (< 30) = high score."""
-    if rsi_14 is None:
-        return 5.0
-    if rsi_14 < 30:
-        return 10.0 - (rsi_14 / 30) * 2  # 8-10 range
-    if rsi_14 > 70:
-        return max(0, 3.0 - (rsi_14 - 70) / 10)
-    return 5.0 + (50 - abs(rsi_14 - 50)) / 10
-
-def compute_discovery_score(indicators: dict) -> tuple[float, dict]:
-    """Returns (total_score, breakdown_dict)."""
-    rsi = compute_rsi_score(indicators.get("rsi_14"))
-    macd = compute_macd_score(indicators.get("macd_histogram"))
-    volume = compute_volume_score(indicators.get("volume"), indicators.get("avg_volume"))
-    breakout = compute_breakout_score(indicators.get("close"), indicators.get("resistance_1"))
-    trend = compute_trend_score(indicators.get("adx_14"))
-
-    breakdown = {"rsi": rsi, "macd": macd, "volume": volume, "breakout": breakout, "trend": trend}
-    total = sum(breakdown.values()) / len(breakdown) * 10  # Normalize to 0-100
-    return total, breakdown
-```
-
-**Why pure functions:** Testable without DB, composable, mirrors existing `pick_service.py` pattern.
-
-### Pattern 3: Chain Gate with Fallback
-
-If watchlist is empty, the AI pipeline should gracefully skip rather than crash.
-
-```python
-async def daily_ai_analysis():
-    async with async_session() as session:
-        # Gate: only analyze watchlist tickers
-        watchlist_svc = WatchlistService(session)
-        ticker_filter = await watchlist_svc.get_watchlist_ticker_map()
-
-        if not ticker_filter:
-            logger.warning("Watchlist is empty -- skipping AI analysis")
-            # Still return normally so chain continues
-            return
-
-        service = AIAnalysisService(session)
-        results = await service.analyze_all_tickers(
-            analysis_type="both",
-            ticker_filter=ticker_filter,  # Already supported!
-        )
-```
-
-### Pattern 4: Frontend Data Composition (No New API for Heatmap)
-
-For the heatmap rework, avoid creating a new dedicated API endpoint. Compose existing data on the frontend:
-
-```typescript
-// Compose watchlist + market data on frontend
-const watchlistSymbols = new Set(watchlistData.map(w => w.symbol));
-const watchlistMarketData = marketData.filter(t => watchlistSymbols.has(t.symbol));
-
-// Group by user sector instead of ticker sector
-const sectorMap = new Map(watchlistData.map(w => [w.symbol, w.sector_group]));
-const grouped = watchlistMarketData.reduce((acc, ticker) => {
-  const group = sectorMap.get(ticker.symbol) ?? ticker.sector ?? "Khac";
-  if (!acc[group]) acc[group] = [];
-  acc[group].push(ticker);
-  return acc;
-}, {});
-```
-
-**Why frontend composition:** Both APIs already exist. Adding a third "watchlist-market-overview" API duplicates logic. React Query caches both responses, so composition is fast.
+### Pattern 4: Subset Job Chains for Freshness
+**What:** Run a shorter version of the full pipeline at additional times
+**When:** Full pipeline too slow/expensive to run multiple times daily
+**Why:** Gets 80% of freshness benefit at 30% of the computational cost
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Gemini for Discovery Scoring
-**What:** Using Gemini API to score all 400 tickers for discovery
-**Why bad:** 15 RPM rate limit x batch 8 = ~50 batches x 4s delay = 200s minimum. Plus unnecessary API cost for scores that pure computation handles better.
-**Instead:** Use indicator-based scoring (RSI zones, MACD crossovers, volume spikes, S/R breakouts). All data already exists in `technical_indicators` table.
+### Anti-Pattern 1: Backend Search for 400 Items
+**What:** Creating `/api/search?q=X` for the ticker list
+**Why bad:** Adds network latency + cold start risk for zero benefit
+**Instead:** Fetch all tickers, cache with TanStack Query, filter with cmdk
 
-### Anti-Pattern 2: Separate Watchlist Scheduler
-**What:** Creating a separate cron-triggered scheduler for watchlist analysis
-**Why bad:** Two competing scheduler chains create race conditions, duplicate DB sessions, and make the pipeline order unpredictable.
-**Instead:** Single chain with a fork point after indicators. Sequential, deterministic.
+### Anti-Pattern 2: Redis for Single-User Caching
+**What:** Adding Redis infrastructure for response caching
+**Why bad:** Adds cost, connection management, failure points. Python `dict` with TTL is equivalent.
+**Instead:** In-memory dict cache with timestamp-based TTL
 
-### Anti-Pattern 3: Denormalizing Sector Group on Ticker Table
-**What:** Adding `user_sector_group` column to `tickers` table
-**Why bad:** Mixes system data (ticker metadata from vnstock) with user preferences. Confuses `weekly_ticker_refresh` which upserts ticker data. Gets overwritten on sync.
-**Instead:** Store on `user_watchlist` table — user data stays on user table.
+### Anti-Pattern 3: Premature Render Paid Tier
+**What:** Upgrading to $7/month Render to avoid cold starts
+**Why bad:** External pinger + query optimization solves 95% for free
+**Instead:** External pinger first. Evaluate paid tier only if still insufficient.
 
-### Anti-Pattern 4: Over-Engineering Discovery with ML
-**What:** Building a recommendation engine with collaborative filtering or ML scoring
-**Why bad:** Single-user system. No collaborative data. ML adds complexity, training pipeline, and false precision.
-**Instead:** Weighted composite score from 5 indicator dimensions. User can understand why a ticker was recommended.
+### Anti-Pattern 4: Celery/Worker for Morning AI
+**What:** Adding Celery + Redis broker for a second daily AI run
+**Why bad:** APScheduler already handles multiple cron triggers and chaining in-process
+**Instead:** Add another cron trigger + chain path in existing scheduler manager
 
-### Anti-Pattern 5: Creating a New Market Overview API for Heatmap
-**What:** Adding `GET /api/tickers/watchlist-overview` endpoint
-**Why bad:** Duplicates 90% of `/api/tickers/market-overview` logic. Two endpoints to maintain. Frontend already has both watchlist and market data via React Query.
-**Instead:** Frontend composes the intersection.
+## Suggested Build Order (Dependency-Aware)
 
-## New Components Inventory
+### Phase 1: Keep-Alive + API Performance
+**Rationale:** Eliminates the most visible user pain (~3 min load). All other improvements are useless if the app doesn't respond.
 
-### Backend — New Files
+| Step | Component | Type | Risk |
+|------|-----------|------|------|
+| 1a | External pinger setup (UptimeRobot/cron-job.org) | Config only | None |
+| 1b | Market-overview date filter | Modify `tickers.py` | LOW |
+| 1c | Composite index migration | New Alembic migration | LOW |
+| 1d | In-memory response cache | New `cache.py` utility | LOW |
 
-| File | Type | Purpose |
-|------|------|---------|
-| `services/watchlist_service.py` | Service | Watchlist query helpers (ticker_map, sector groups) |
-| `services/discovery/scoring.py` | Module | Pure discovery scoring functions |
-| `services/discovery/discovery_service.py` | Service | Orchestrate scoring for all tickers, persist results |
-| `models/discovery_result.py` | Model | SQLAlchemy model for discovery_results table |
-| `schemas/discovery.py` | Schema | Pydantic schemas for discovery API |
-| `api/discovery.py` | Router | Discovery API endpoints |
-| `alembic/versions/xxx_add_discovery.py` | Migration | discovery_results table + sector_group column |
+**Dependencies:** None. Start immediately.
 
-### Backend — Modified Files
+### Phase 2: Search Fix
+**Rationale:** Smallest change, highest UX impact. 2-line fix.
 
-| File | Change |
-|------|--------|
-| `scheduler/manager.py` | Add discovery chain link after indicators |
-| `scheduler/jobs.py` | Add `daily_discovery_scan()` job, modify AI jobs to use watchlist filter |
-| `api/router.py` | Register discovery router |
-| `models/user_watchlist.py` | Add `sector_group` column |
-| `schemas/watchlist.py` | Add `sector_group` to response/request schemas |
-| `api/watchlist.py` | Add sector_group CRUD, update enrichment query |
+| Step | Component | Type | Risk |
+|------|-----------|------|------|
+| 2a | Remove `.slice(0, 50)` | Modify `ticker-search.tsx` | None |
+| 2b | Fetch all tickers (limit=500) | Modify `useTickers()` call | None |
 
-### Frontend — New Files
+**Dependencies:** Independent of Phase 1. Can run in parallel.
 
-| File | Type | Purpose |
-|------|------|---------|
-| `src/app/discovery/page.tsx` | Page | Discovery page showing recommended tickers |
-| `src/components/discovery-card.tsx` | Component | Individual discovery result card |
+### Phase 3: AI Analysis Refresh
+**Rationale:** Requires keep-alive (Phase 1) for reliable 8:30 AM scheduling.
 
-### Frontend — Modified Files
+| Step | Component | Type | Risk |
+|------|-----------|------|------|
+| 3a | Morning cron trigger | Modify `manager.py` | LOW |
+| 3b | Morning chain in `_on_job_executed` | Modify `manager.py` | MEDIUM |
+| 3c | Verify idempotency in production | Testing | LOW |
 
-| File | Change |
-|------|--------|
-| `src/components/navbar.tsx` | Add "Kham pha" nav link |
-| `src/components/heatmap.tsx` | Support watchlist-only mode with user sector groups |
-| `src/app/page.tsx` | Switch from all-market to watchlist-only heatmap |
-| `src/lib/api.ts` | Add discovery API types and fetch functions |
-| `src/lib/hooks.ts` | Add `useDiscoveryResults()` hook |
-| `src/components/watchlist-table.tsx` | Add sector_group column with inline edit |
+**Dependencies:** Phase 1 (keep-alive must be active).
+
+### Phase 4: UX/Onboarding
+**Rationale:** Polish layer. Best done after functional fixes.
+
+| Step | Component | Type | Risk |
+|------|-----------|------|------|
+| 4a | Home page onboarding redesign | Modify `page.tsx` | LOW |
+| 4b | Quick-add popular tickers | Modify `page.tsx` | LOW |
+| 4c | Navigation descriptions | Modify `navbar.tsx` | None |
+
+**Dependencies:** Phase 2 (search must work for onboarding).
 
 ## Scalability Considerations
 
-| Concern | Current (400 tickers) | With Watchlist (15-30 tickers) | Impact |
-|---------|----------------------|-------------------------------|--------|
-| Daily Gemini API calls | ~400 x 5 types = ~250 API calls | ~25 x 5 = ~80 calls | **70% reduction** in API usage |
-| Pipeline duration | ~25-30 min (250 calls x 4s delay) | ~8-10 min | **3x faster** pipeline |
-| DB writes (ai_analyses) | ~2,000 rows/day | ~125 rows/day | **16x less** DB load |
-| Discovery scan | N/A | ~400 tickers, pure computation | <5 seconds, no API calls |
-| Discovery storage | N/A | 400 rows/day, 7-day retention | 2,800 rows max |
+| Concern | Now (1 user) | At 10 users | At 100 users |
+|---------|-------------|-------------|--------------|
+| DB connections | pool_size=5 sufficient | pool_size=10 | PgBouncer needed |
+| Gemini rate limit | 15 RPM covers 2x/day | Paid tier required | Queue + paid tier |
+| Cold start | External pinger | Paid Render ($7/mo) | Paid + autoscaling |
+| Market-overview | Date filter + cache | Same approach | Materialized view |
+| Search | Client-side (400 items) | Same approach | Server-side ILIKE |
 
-## Suggested Build Order
-
-### Phase A: Database & Discovery Foundation
-1. Alembic migration -- `discovery_results` table + `sector_group` column on `user_watchlist`
-2. Discovery models -- SQLAlchemy model for `discovery_results`
-3. Discovery scoring engine -- Pure functions for technical scoring
-4. Discovery service -- Orchestration: read indicators, score, persist
-5. Discovery scheduler job -- `daily_discovery_scan()` + chain link
-
-### Phase B: Watchlist-Gated AI Pipeline
-1. WatchlistService -- `get_watchlist_ticker_map()` helper
-2. Modify AI jobs -- Gate all 5 AI scheduler jobs to use watchlist filter
-3. Scheduler chain rewire -- Insert discovery between indicators and AI analysis
-4. Verify pick generation only processes watchlist tickers
-
-### Phase C: Sector Grouping & Heatmap Rework
-1. Watchlist API -- Add `sector_group` to schemas, CRUD, auto-suggest from `Ticker.sector`
-2. Watchlist table -- Add inline sector_group editing
-3. Heatmap rework -- Filter to watchlist-only, group by `sector_group`
-4. Home page -- Switch from all-market to watchlist heatmap
-
-### Phase D: Discovery Frontend
-1. Discovery API -- Endpoints for discovery results (today's scan, filters)
-2. Discovery page -- New `/discovery` route with result cards
-3. Add-to-watchlist flow -- One-click from discovery card to watchlist
-4. Navigation -- Add nav link
+**For v11.0:** No scaling changes needed. Architecture is fully adequate for single-user.
 
 ## Sources
 
-- Direct codebase analysis of `scheduler/manager.py` (chain logic, lines 58-162)
-- Direct codebase analysis of `ai_analysis_service.py` (ticker_filter support, line 87)
-- Direct codebase analysis of `models/user_watchlist.py` (current schema)
-- Direct codebase analysis of `models/ticker.py` (sector/industry fields)
-- Direct codebase analysis of `components/heatmap.tsx` (grouping logic)
-- Direct codebase analysis of `api/watchlist.py` (enrichment query pattern)
-- Direct codebase analysis of `services/pick_service.py` (pure function pattern)
-- Direct codebase analysis of `config.py` (Gemini settings: batch_size=8, delay=4s)
+- Direct codebase analysis: `backend/app/scheduler/manager.py`, `backend/app/api/tickers.py`, `frontend/src/components/ticker-search.tsx` — **HIGH confidence**
+- Render.com free tier sleep behavior: well-documented, 15-min inactivity timeout — **HIGH confidence**
+- Vercel Hobby cron limitations (daily only): **MEDIUM confidence** (verify current docs)
+- PostgreSQL window function performance characteristics: standard DB knowledge — **HIGH confidence**
+- UptimeRobot/cron-job.org free tier availability: established services — **HIGH confidence**
+- Gemini free tier limits (15 RPM, 1500 RPD): per project constraints doc — **HIGH confidence**

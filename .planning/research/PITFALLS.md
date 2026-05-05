@@ -1,142 +1,255 @@
-# Domain Pitfalls
+# Domain Pitfalls — v11.0 UX & Reliability Overhaul
 
-**Domain:** Watchlist-centric stock discovery integration
-**Researched:** 2025-07-23
+**Domain:** UX & Reliability improvements on free-tier FastAPI + PostgreSQL + Gemini stock platform
+**Researched:** 2025-07-27
+**Overall confidence:** HIGH (pitfalls derived from direct codebase analysis + known platform constraints)
+
+---
 
 ## Critical Pitfalls
 
-Mistakes that cause pipeline failures, data loss, or broken daily workflows.
+Mistakes that cause outages, data loss, or require rework.
 
-### Pitfall 1: Empty Watchlist Crashes the AI Pipeline
+### Pitfall 1: Keep-Alive Ping Consuming the App's Own Connection Pool
 
-**What goes wrong:** User hasn't added any tickers to watchlist yet (or removes all). The AI pipeline receives an empty `ticker_filter`, and depending on implementation, either: (a) crashes with an empty-query error, (b) falls back to analyzing ALL 400 tickers (defeating the purpose), or (c) silently skips and breaks the chain so downstream jobs never run.
+**What goes wrong:** A naive keep-alive (e.g., APScheduler job hitting `/` every 10 min) uses the same in-process event loop AND database pool. If the keep-alive endpoint touches the DB (health check, not just `{"status": "ok"}`), it competes for the pool_size=5 connections alongside scheduled jobs, API requests, and WebSocket polling. During the daily pipeline chain (price crawl → indicators → discovery → AI → news → sentiment → combined → trading signals → picks → outcome check — **10 chained jobs**), every connection matters.
 
-**Why it happens:** The watchlist-gating logic is new; existing code assumes there are always tickers to process. `analyze_all_tickers()` with an empty dict behaves differently than with `None` (which means "all tickers").
+**Why it happens:** Developers think "just add a ping" without considering that in-process APScheduler means ping jobs share resources with everything else. Render free tier also has 750 hours/month — a ping every 5 min keeps the service running 24/7 = 720 hours, leaving only 30 hours of headroom.
 
-**Consequences:** Daily pipeline fails silently. No picks generated. User doesn't realize until they check the Coach page and see stale data.
-
-**Prevention:**
-1. `WatchlistService.get_watchlist_ticker_map()` returns empty dict when watchlist is empty
-2. Each gated job checks `if not ticker_filter: log warning + return normally` (NOT raise)
-3. Return normally so the chain continues — downstream jobs (pick_outcome_check, loss_check) should still run on existing data
-4. If watchlist is empty, skip AI analysis but still generate a log entry in job_executions as "skipped"
-
-**Detection:** Job execution records showing "skipped" status. Health dashboard shows 0 tickers analyzed.
-
-### Pitfall 2: Chain Fork Breaks Job Execution Tracking
-
-**What goes wrong:** Inserting `daily_discovery_scan` between `daily_indicator_compute` and `daily_ai_analysis` in the chain breaks the `_on_job_executed` listener. If the job ID doesn't exactly match the expected pattern, the next job in the chain never fires.
-
-**Why it happens:** The chain logic in `manager.py` uses exact string matching: `if event.job_id in ("daily_indicator_compute_triggered", "daily_indicator_compute_manual")`. Adding a new intermediate job requires updating BOTH the outgoing chain (indicator to discovery) AND the incoming chain (discovery to AI analysis).
-
-**Consequences:** The entire AI pipeline stops running. No analysis, no picks, no outcome checks. The pipeline silently dies at the fork point.
+**Consequences:**
+- Connection pool exhaustion during peak pipeline runs causing API request timeouts
+- Exceeding 750 free hours causes service to stop for the rest of the month
+- If keep-alive pings a heavy endpoint (like `/api/health`), it triggers DB queries every N minutes forever
 
 **Prevention:**
-1. Update `_on_job_executed` in exact sequence:
-   - `daily_indicator_compute_triggered` chains to `daily_discovery_scan`
-   - `daily_discovery_scan_triggered` chains to `daily_ai_analysis`
-2. Add `daily_discovery_scan_triggered` and `daily_discovery_scan_manual` to `_JOB_NAMES` dict
-3. Test the full chain end-to-end after modification
-4. Keep the existing `daily_indicator_compute_manual` behavior (manual triggers should still work)
+- Keep-alive should ping the root `/` endpoint which returns `{"status": "ok"}` with **zero DB access** (already exists in `main.py`)
+- Use an EXTERNAL pinger (UptimeRobot, cron-job.org, or GitHub Action cron) — NOT an in-process APScheduler job. External pinger doesn't consume your app's resources
+- Calculate hours: 24h x 31 days = 744 hours. Ping interval of 14 min keeps it just under. But consider: ping only during 8:00-22:00 ICT = ~420 hours/month, well within limits
+- Never let the keep-alive endpoint query the database
 
-**Detection:** Health dashboard pipeline timeline shows gap. Job execution records stop after indicator compute.
+**Detection:** Monitor Render dashboard for hours consumed. If approaching 700 hours by mid-month, you're over-pinging.
 
-### Pitfall 3: Discovery Scan Monopolizes DB Pool During AI Pipeline
+**Confidence:** HIGH — derived from render.yaml (`plan: free`), database.py (`pool_size=5`), and main.py root endpoint.
 
-**What goes wrong:** If discovery scan runs concurrently with AI analysis (parallel fork), both compete for the DB connection pool (pool_size=5, max_overflow=3 = 8 max connections). Discovery reads ~400 tickers of indicators. AI analysis reads contexts + writes results. Pool exhaustion causes connection errors.
+---
 
-**Why it happens:** Aiven PostgreSQL has strict connection limits. The pool settings are intentionally conservative. Two heavy jobs running simultaneously is the exact scenario these limits prevent.
+### Pitfall 2: Intraday AI Analysis Blowing Through Gemini Rate Limits
 
-**Consequences:** One or both jobs fail with connection errors. Partial data in both discovery and AI results. Dead letter queue fills with false failures.
+**What goes wrong:** Moving from EOD-only to intraday AI analysis multiplies Gemini API calls by 3-4x. With 15 RPM free tier, batch_size=8, and 4s delay between batches, a single full pipeline run for ~10-20 watchlist tickers takes ~3-8 batches across 5 analysis types (technical, fundamental, sentiment, combined, trading signals). That's potentially 40+ API calls per run. Three runs per day = 120+ calls, competing with the existing daily chain.
 
-**Prevention:** Use sequential chain (recommended architecture). Discovery runs first (no Gemini, fast), then AI pipeline starts. Never run both simultaneously. If discovery takes >30s, investigate — it should be pure computation on cached indicator data.
+**Why it happens:** The existing pipeline is designed for one full run per day. Adding intraday runs without reducing scope means the same heavy pipeline runs multiple times. The `_gemini_lock` serializes access but doesn't prevent rate limit exhaustion.
 
-**Detection:** DB pool monitoring on health dashboard. `asyncpg.exceptions.TooManyConnectionsError` in logs.
+**Consequences:**
+- 429 rate limit errors from Gemini with exponential backoff making pipeline take 30+ minutes
+- Intraday run collides with daily chain if timing overlaps (e.g., 14:00 intraday vs 15:30 daily)
+- Dead letter queue fills with "rate limit exceeded" failures
+- Circuit breaker trips blocking all Gemini calls for 2 minutes
+
+**Prevention:**
+- Intraday runs should ONLY refresh `combined` analysis, NOT re-run all 5 types. Fundamental doesn't change intraday. Sentiment only when new news arrives
+- Scope intraday to watchlist tickers only (already gated in v10.0)
+- Budget: 10 watchlist tickers x 1 combined call = 2 batches = 2 RPM. That's safe
+- Add a "last_analyzed" check: skip tickers analyzed within the last 2 hours
+- NEVER run full 5-type pipeline intraday
+
+**Detection:** Check `gemini_usage` table for calls-per-hour trending up.
+
+**Confidence:** HIGH — config.py shows exact batch/delay settings; rate limit is 15 RPM per PROJECT.md.
+
+---
+
+### Pitfall 3: Connection Pool Exhaustion from Concurrent Jobs + API + WebSocket
+
+**What goes wrong:** The system has exactly 8 DB connections (pool_size=5 + max_overflow=3). Currently running simultaneously: real-time price polling (every 30s), heartbeat (every 15s), API requests, AND the daily pipeline chain. Adding intraday AI analysis adds more concurrent DB access. If all 8 are in use, new requests block waiting for a connection.
+
+**Why it happens:** Every scheduled job creates its own session. WebSocket polling runs on an interval timer in parallel with everything else. The pool has no priority system.
+
+**Consequences:**
+- `TimeoutError: QueuePool limit of 5 overflow 3 reached` in logs
+- API endpoints return 500 errors during pipeline runs
+- WebSocket disconnects when it can't get a connection
+
+**Prevention:**
+- Add `pool_recycle=300` to prevent Aiven from closing idle connections
+- Add `pool_timeout=10` explicitly (default 30s is too long for API requests)
+- During pipeline runs, pause WebSocket polling (market is closed at 15:30 when pipeline runs)
+- **Do NOT increase pool_size** — Aiven free tier has ~20-25 max connections total
+
+**Detection:** Monitor `/api/health/db-pool` during pipeline runs. Watch for overflow approaching max.
+
+**Confidence:** HIGH — database.py shows exact pool config; scheduler/manager.py shows concurrent interval jobs.
+
+---
+
+### Pitfall 4: Ticker Search Only Shows First 50 of 400+ Tickers
+
+**What goes wrong:** `ticker-search.tsx` line 54: `tickers?.slice(0, 50).map(...)` renders only 50 tickers. The API defaults to `limit=100`. cmdk's `shouldFilter={true}` filters **rendered** items, not the full dataset. Searching for ticker #300 alphabetically returns "not found" even though it exists.
+
+**Why it happens:** Performance cap that prevents search from working. The API also caps at 100, so even removing the slice won't show all 400.
+
+**Consequences:**
+- Users can't find ~300+ tickers via search
+- Reported as "search is broken" when it's data truncation
+
+**Prevention:**
+- Remove `.slice(0, 50)` — cmdk handles filtering fine
+- Increase API `limit` to 500 for the ticker list fetch (400 items x ~100 bytes = 40KB — trivially small)
+- Cache with `staleTime: 5 * 60 * 1000` (already set), let cmdk filter locally
+- Alternative: add server-side `/api/tickers/search?q=VNM` with `ILIKE` on symbol and name
+
+**Detection:** Test by searching for tickers starting with letters T-Z (beyond position 50).
+
+**Confidence:** HIGH — directly observed in `ticker-search.tsx:54` and `tickers.py:57`.
+
+---
 
 ## Moderate Pitfalls
 
-### Pitfall 4: Heatmap Shows Stale Data When Watchlist Changes
+### Pitfall 5: Cold Start Triggers APScheduler Misfire Storm
 
-**What goes wrong:** User adds a ticker to watchlist. The heatmap doesn't show it because the market-overview data (cached by React Query) doesn't include sector_group. Or user removes a ticker but it still appears.
+**What goes wrong:** When Render wakes from sleep, APScheduler recalculates run times. Weekly jobs (`weekly_behavior_analysis`, `weekly_financial_crawl`, `weekly_ticker_refresh`) could all misfire simultaneously if service was asleep during their Sat/Sun scheduled times = 3 concurrent DB-heavy operations.
 
-**Prevention:**
-1. Invalidate both `watchlist` and `market-overview` React Query caches on watchlist mutation
-2. Frontend composition: intersection of watchlist + market data. If either updates, the composition re-runs
-3. `useWatchlist()` hook already returns on mutation success via `onSuccess: () => queryClient.invalidateQueries(["watchlist"])`. Extend to also invalidate heatmap-related queries
-
-### Pitfall 5: Sector Group Defaults Don't Match vnstock Sector Names
-
-**What goes wrong:** User adds ticker from discovery. System auto-fills `sector_group` from `Ticker.sector` (vnstock ICB classification). But vnstock sector names are long, inconsistent, or in English. User sees unexpected group names in heatmap.
+**Why it happens:** APScheduler 3.x in-process scheduler doesn't persist job state. Jobs with `misfire_grace_time=3600` fire immediately if their scheduled time was within the last hour.
 
 **Prevention:**
-1. Map vnstock sector names to consistent Vietnamese short names in the auto-suggest logic
-2. Make sector_group user-editable (inline edit on watchlist table) — user can fix any bad default
-3. Keep a small mapping dict server-side
-4. If no mapping exists, use the raw vnstock sector name as-is
+- Daily chain is safe — only the trigger job fires on misfire; rest chain sequentially
+- IntervalTrigger jobs recalculate from "now" — no storm
+- For weekly jobs: consider `misfire_grace_time=None` (coalesce) — skip if missed
+- Add startup guard: check current time before running misfired jobs
 
-### Pitfall 6: Discovery Scoring Produces Unintuitive Rankings
+**Detection:** Check logs after wake for multiple "Running job..." entries in the same second.
 
-**What goes wrong:** Pure technical scoring ranks a low-volume penny stock as "strong buy" because it has RSI < 30 + MACD crossover. But the ticker is illiquid garbage. User loses trust in discovery.
+**Confidence:** HIGH — manager.py shows all misfire_grace_time values.
 
-**Prevention:**
-1. Include volume and market cap as scoring factors (like `pick_service.py`'s `compute_safety_score`)
-2. Filter out tickers with avg daily volume < 100,000 shares from discovery results
-3. Include ADX (trend strength) — strong signals in non-trending markets are noise
-4. Show the score breakdown in the UI so user understands the ranking logic
+---
 
-### Pitfall 7: AI Analysis for Newly-Added Watchlist Tickers is Missing Until Next Day
+### Pitfall 6: Market Overview Query Scanning Entire daily_prices Table
 
-**What goes wrong:** User adds ticker from discovery page at 10 AM. The daily AI pipeline ran at 15:30 yesterday and won't run again until 15:30 today. The ticker has no AI analysis until then.
+**What goes wrong:** The `market-overview` endpoint uses `ROW_NUMBER() OVER (PARTITION BY ticker_id ORDER BY date DESC)` across the ENTIRE `daily_prices` table. With ~400 tickers x ~500 days = 200,000+ rows scanned, this is the likely cause of the 3-minute load time on Aiven free tier.
 
-**Prevention:**
-1. When user adds ticker, show existing AI analysis if any exists (the system may have analyzed it before watchlist-gating)
-2. Offer the "Phan tich ngay" button (already exists as `POST /api/analysis/{symbol}/analyze-now`) for immediate on-demand analysis
-3. Set appropriate expectations in UI: "AI se phan tich ma nay vao phien toi (15:30)"
-4. Don't block the add-to-watchlist flow on missing analysis
+**Why it happens:** No date filter on the window function. PostgreSQL must sort all rows per partition.
 
-### Pitfall 8: Discovery Results Table Grows Unbounded
-
-**What goes wrong:** 400 rows/day with no cleanup. Not catastrophic, but unnecessary storage on Aiven.
+**Consequences:**
+- First page load takes 3+ minutes (the reported performance issue)
+- Connection held for entire duration adding pool pressure
+- Gets worse over time as data grows
 
 **Prevention:**
-1. Retention policy: keep 7-14 days of discovery results
-2. Add cleanup to the discovery job: `DELETE FROM discovery_results WHERE scan_date < NOW() - INTERVAL '14 days'`
-3. Inline the cleanup in the discovery scan job for simplicity
+- Add `WHERE date >= CURRENT_DATE - INTERVAL '7 days'` to ranked subquery — ~2,800 rows instead of 200,000+
+- Create `latest_prices` cache table updated by daily pipeline — O(1) lookup
+- Add composite index: `(ticker_id, date DESC)` for index-only scans
+- In-memory TTL cache (60s) for the result — single-user app
+
+**Detection:** `EXPLAIN ANALYZE` the query. `Seq Scan on daily_prices` = scanning everything.
+
+**Confidence:** HIGH — tickers.py:176-228 shows the query; no date filter exists.
+
+---
+
+### Pitfall 7: Keep-Alive Creating Self-Referential Dependency Loop
+
+**What goes wrong:** An APScheduler interval job pinging the app's own endpoint creates circular dependency: app must be awake to run the scheduler that keeps it awake. When Render sleeps the process, the scheduler stops too.
+
+**Prevention:**
+- Keep-alive MUST be external: UptimeRobot (free, 5-min intervals), cron-job.org, GitHub Actions cron, or Vercel cron (frontend already on Vercel with `vercel.json`)
+- Vercel cron is easiest — add a cron hitting the Render backend URL every 10 minutes
+
+**Detection:** Service still sleeps despite "having keep-alive" = pinger is internal.
+
+**Confidence:** HIGH — fundamental Render free tier constraint.
+
+---
+
+### Pitfall 8: Intraday Analysis Running When Market Is Closed
+
+**What goes wrong:** Fixed-interval intraday AI analysis runs on weekends, holidays, and after market close. Data hasn't changed but Gemini API calls and DB connections are consumed.
+
+**Prevention:**
+- Use `CronTrigger(day_of_week="mon-fri", hour="9,11,13", timezone=settings.timezone)`
+- Skip analysis if latest price timestamp hasn't changed since last analysis
+- Maintain simple Vietnamese holiday list (Tet, April 30, May 1, September 2, January 1)
+
+**Detection:** Check `gemini_usage` for weekend/holiday API calls.
+
+**Confidence:** HIGH — existing CronTrigger patterns in scheduler/manager.py to follow.
+
+---
+
+### Pitfall 9: UX Onboarding Overcomplicating a Single-User App
+
+**What goes wrong:** Building full onboarding (tooltips, wizards, feature tours) for a personal single-user app.
+
+**Prevention:**
+- Focus on: clear homepage layout, sensible defaults, empty states with actionable CTAs
+- Show immediately useful data (watchlist summary, today's signals, market status)
+- Skip: tooltip tours, multi-step wizards, progress bars, feature flags
+
+**Detection:** If you're building auth/user-state tracking for onboarding, you've gone too far.
+
+**Confidence:** HIGH — PROJECT.md: "single-user personal app."
+
+---
 
 ## Minor Pitfalls
 
-### Pitfall 9: Navigation Gets Crowded Again
+### Pitfall 10: cachetools TTLCache Not Async-Safe
 
-**What goes wrong:** v9.0 reduced navigation from 7 to 5 items. Adding "Kham pha" (Discovery) makes it 6.
+**What goes wrong:** `cachetools.TTLCache` isn't async-safe. Interleaving between check and write possible if `await` occurs between them.
 
-**Prevention:** Discovery is high-value enough to justify a nav slot. Alternatively, make it a tab on the existing home/overview page. But a dedicated route is cleaner.
+**Prevention:** Use sync check then async DB then sync write pattern. `asyncio.Lock()` if paranoid. Single-user makes races extremely unlikely.
 
-### Pitfall 10: Sector Group Names Aren't Validated
+**Confidence:** MEDIUM.
 
-**What goes wrong:** User types different spellings for the same sector. Heatmap shows two separate groups.
+### Pitfall 11: Adding Redis/External Cache for a Single-User App
 
-**Prevention:**
-1. Provide a dropdown/combobox with existing group names + free text option
-2. Show existing sector_group values as suggestions
-3. Case-normalize on save
+**What goes wrong:** Redis adds a service to manage and a failure point. Render free tier doesn't include Redis.
+
+**Prevention:** In-memory `cachetools.TTLCache`. Single-user = no cache invalidation complexity.
+
+**Confidence:** HIGH.
+
+### Pitfall 12: SSL Patches Interfering with New HTTP Clients
+
+**What goes wrong:** `config.py` globally disables SSL verification. New HTTP clients inherit this behavior silently.
+
+**Prevention:** Keep-alive should be external (Pitfall 7). Be aware of the patch if adding internal HTTP clients.
+
+**Confidence:** MEDIUM.
+
+---
 
 ## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| DB Migration | Column added NOT NULL without default | `sector_group` must be NULLABLE (existing rows have no value) |
-| Discovery scheduler job | Job ID mismatch breaks chain | Exact string match in _on_job_executed; test full chain |
-| Watchlist-gating AI jobs | Empty watchlist crashes pipeline | Guard clause in every gated job; return normally |
-| Heatmap rework | Stale data after watchlist change | React Query cache invalidation on mutation |
-| Discovery page | No discovery data on first deploy | Discovery job must run at least once; handle empty state in UI |
-| Sector grouping | Inconsistent naming | Combobox with existing values as suggestions |
-| Add-to-watchlist from discovery | Missing sector_group assignment | Auto-suggest from Ticker.sector; user can edit |
+| Phase Topic | Likely Pitfall | Severity | Mitigation |
+|-------------|---------------|----------|------------|
+| Keep-alive service | Internal pinger (7) + hour budget (1) | CRITICAL | External pinger, limit to market hours |
+| Ticker search fix | Only fixing slice without API limit (4) | CRITICAL | Remove `.slice(0,50)` AND increase API limit to 500+ |
+| Intraday AI analysis | Full pipeline re-run (2) + weekend runs (8) | CRITICAL | Watchlist-only combined, CronTrigger with market hours |
+| UX/Onboarding | Over-engineering for single user (9) | MODERATE | Homepage layout + empty states, skip tutorials |
+| API performance | Market overview query bottleneck (6) | CRITICAL | Date filter + in-memory TTL cache |
+| All phases | Connection pool exhaustion (3) | CRITICAL | Audit concurrent DB usage, pool_timeout=10 |
+
+## Integration Risk Matrix
+
+| Combination | Risk | Why |
+|---|---|---|
+| Keep-alive + Intraday AI | Pool exhaustion | Both add concurrent DB load |
+| Intraday AI + API optimization | Conflicting freshness | Caching stale data vs. wanting fresh analysis |
+| Search fix + API performance | False victory | 400 tickers load but API still slow = different broken |
+| Keep-alive + Cold start | Misfire on failure | If pinger fails once, next real request triggers cold start + misfires |
+
+## Recommended Implementation Order (Pitfall-Informed)
+
+1. **API Performance (Pitfall 6)** — Fix root cause. Everything feels broken with 3-min loads
+2. **Ticker Search (Pitfall 4)** — Surgical fix, low risk, immediate UX win
+3. **Keep-Alive (Pitfalls 1, 7)** — External pinger, 10 min setup, prevents cold starts
+4. **Intraday AI (Pitfalls 2, 3, 8)** — Highest complexity, needs stable base from 1-3
+5. **UX/Onboarding (Pitfall 9)** — Lowest risk, iterate freely once platform is stable
 
 ## Sources
 
-- Scheduler chain analysis: `manager.py` lines 58-162 (exact job ID matching)
-- DB pool config: `config.py` pool_size=5, max_overflow=3
-- AIAnalysisService ticker_filter behavior: `ai_analysis_service.py` line 87-98
-- Existing safety scoring pattern: `pick_service.py` compute_safety_score
-- Watchlist cache invalidation: `hooks.ts` useMutation onSuccess patterns
-- React Query stale data: `hooks.ts` staleTime settings
+- Direct codebase analysis: `main.py`, `database.py`, `config.py`, `scheduler/manager.py`, `ticker-search.tsx`, `tickers.py`, `watchlist.py`, `ai_analysis_service.py`, `jobs.py`
+- Render.com free tier: 750 hours/month, 15-min sleep — per `render.yaml` and PROJECT.md
+- Gemini free tier: 15 RPM — per `config.py` and PROJECT.md
+- Aiven PostgreSQL: pool_size=5, max_overflow=3 — per `database.py`
+- APScheduler 3.x misfire behavior — well-documented upstream
