@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v12.0
-milestone_name: Rumor Intelligence
-status: complete
-stopped_at: All 4 phases (60-63) complete
-last_updated: "2026-05-05T10:00:00.000Z"
-last_activity: 2026-05-05 — v12.0 Rumor Intelligence complete
+milestone: none
+milestone_name: none
+status: idle
+stopped_at: v12.0 archived, ready for next milestone
+last_updated: "2026-05-05T10:30:00.000Z"
+last_activity: 2026-05-05 — v12.0 Rumor Intelligence archived
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v12.0 Rumor Intelligence — Roadmap complete, ready for Phase 60 planning
+**Current focus:** No active milestone — ready for v13.0
 
 ## Current Position
 
-Phase: 60 (Database & Fireant Crawler) — not started
+Phase: —
 Plan: —
-Status: Ready for planning
-Last activity: 2025-07-21 — Roadmap created
+Status: Idle — ready for `/gsd-new-milestone`
+Last activity: 2026-05-05 — v12.0 archived
 
 ## Shipped Milestones
 
@@ -46,6 +46,7 @@ Last activity: 2025-07-21 — Roadmap created
 | v9.0 | UX Rework & Simplification | 4 | 8 | 2026-05-04 |
 | v10.0 | Watchlist-Centric & Stock Discovery | 4 | 7 | 2026-05-05 |
 | v11.0 | UX & Reliability Overhaul | 4 | 6 | 2026-05-05 |
+| v12.0 | Rumor Intelligence | 4 | 7 | 2026-05-05 |
 
 ## Accumulated Context
 

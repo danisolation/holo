@@ -18,7 +18,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v9.0 UX Rework & Simplification** — Phases 48-51 (shipped 2026-05-04)
 - ✅ **v10.0 Watchlist-Centric & Stock Discovery** — Phases 52-55 (shipped 2026-05-05)
 - ✅ **v11.0 UX & Reliability Overhaul** — Phases 56-59 (shipped 2026-05-05)
-- 🔄 **v12.0 Rumor Intelligence** — Phases 60-63
+- ✅ **v12.0 Rumor Intelligence** — Phases 60-63 (shipped 2026-05-05)
 
 ## Phases
 
@@ -177,75 +177,14 @@ Full details: [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md)
 
 </details>
 
-### v12.0 Rumor Intelligence (Phases 60-63)
+<details>
+<summary>✅ v12.0 Rumor Intelligence (Phases 60-63) — SHIPPED 2026-05-05</summary>
 
-- [x] **Phase 60: Database & Fireant Crawler** — `community_posts` table, Fireant REST API crawler, post deduplication (completed 2026-05-05)
-- [x] **Phase 61: AI Rumor Scoring** — Gemini credibility/impact scoring, direction classification, key claims extraction (completed 2026-05-05)
-- [x] **Phase 62: API Endpoints & Frontend Display** — Rumor score panel, feed timeline, watchlist badges (completed 2026-05-05)
-- [ ] **Phase 63: Scheduler Integration** — Wire crawler + scoring into daily APScheduler job chain
+- [x] Phase 60: Database & Fireant Crawler (2/2 plans) — Rumor model, Fireant REST API crawler, dedup
+- [x] Phase 61: AI Rumor Scoring (2/2 plans) — Gemini credibility/impact scoring, Vietnamese prompts
+- [x] Phase 62: API Endpoints & Frontend Display (2/2 plans) — Rumor score panel, watchlist badges
+- [x] Phase 63: Scheduler Integration (1/1 plan) — Chain wiring, manual triggers
 
-## Phase Details
+Full details: [milestones/v12.0-ROADMAP.md](milestones/v12.0-ROADMAP.md)
 
-### Phase 60: Database & Fireant Crawler
-**Goal**: System can ingest and store community posts from Fireant.vn for watchlist tickers
-**Depends on**: Nothing (first phase of v12.0)
-**Requirements**: RUMOR-01, RUMOR-02
-**Success Criteria** (what must be TRUE):
-  1. Running the crawler for a watchlist ticker fetches posts from Fireant.vn and stores them in the database
-  2. Re-running the crawler for the same ticker does not create duplicate posts (ON CONFLICT dedup)
-  3. Stored posts contain content, author info, engagement metrics (likes, replies), and verified user status
-  4. Crawler handles Vietnamese content encoding correctly (no HTML entities in stored text)
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 60-01-PLAN.md — Schema foundation: Rumor model, Alembic migration, config, circuit breaker, types
-- [x] 60-02-PLAN.md — FireantCrawler implementation + unit tests
-
-### Phase 61: AI Rumor Scoring
-**Goal**: Each crawled rumor receives AI-generated credibility, impact, and directional assessment
-**Depends on**: Phase 60
-**Requirements**: RUMOR-04, RUMOR-05, RUMOR-06, RUMOR-07, RUMOR-08
-**Success Criteria** (what must be TRUE):
-  1. Each scored rumor has a credibility score (1-10) and an impact score (1-10) stored in `rumor_scores` table
-  2. Each scored rumor has a bullish/bearish/neutral classification
-  3. Scoring output includes extracted key factual claims as a structured list
-  4. All AI assessments include Vietnamese explanations for the scores
-  5. Posts with higher engagement (likes, replies) and verified authors receive appropriately weighted credibility signals
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 61-01-PLAN.md — Schema foundation: RumorScore model, migration, Pydantic schemas, Vietnamese prompts
-- [x] 61-02-PLAN.md — RumorScoringService implementation + unit tests
-
-### Phase 62: API Endpoints & Frontend Display
-**Goal**: User can view rumor intelligence on the ticker detail page and watchlist
-**Depends on**: Phase 61
-**Requirements**: RUMOR-09, RUMOR-10, RUMOR-11
-**Success Criteria** (what must be TRUE):
-  1. Ticker detail page shows a rumor score panel with latest credibility and impact scores
-  2. Ticker detail page shows a chronological feed of scored rumor posts with their assessments
-  3. Watchlist table rows show a badge indicating recent rumor count and overall sentiment for each ticker
-**Plans:** 2/2 plans complete
-Plans:
-- [x] 62-01-PLAN.md — Backend FastAPI rumor router (2 GET endpoints + Pydantic schemas)
-- [x] 62-02-PLAN.md — Frontend components, hooks, ticker page + watchlist integration
-**UI hint**: yes
-
-### Phase 63: Scheduler Integration
-**Goal**: Rumor crawling and scoring run automatically as part of the daily pipeline
-**Depends on**: Phase 62
-**Requirements**: RUMOR-03
-**Success Criteria** (what must be TRUE):
-  1. Fireant crawl + rumor scoring execute automatically in the daily APScheduler job chain
-  2. Rumor jobs run after `trading_signal` and before `pick_generation` in the chain
-  3. A scheduler failure in rumor jobs does not break the rest of the pipeline
-**Plans:** 1 plan
-Plans:
-- [x] 63-01-PLAN.md — Job functions, chain wiring, manual triggers
-
-## Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 60. Database & Fireant Crawler | 2/2 | Complete   | 2026-05-05 |
-| 61. AI Rumor Scoring | 2/2 | Complete   | 2026-05-05 |
-| 62. API Endpoints & Frontend Display | 2/2 | Complete   | 2026-05-05 |
-| 63. Scheduler Integration | 1/1 | Complete   | 2026-05-05 |
+</details>
