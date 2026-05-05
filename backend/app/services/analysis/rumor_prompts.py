@@ -25,18 +25,19 @@ Mức tác động (impact_score):
 Sử dụng TOÀN BỘ thang điểm. Điểm 1-2 và 9-10 hợp lệ cho trường hợp cực đoan."""
 
 RUMOR_SYSTEM_INSTRUCTION = (
-    "Bạn là chuyên gia phân tích tin đồn thị trường chứng khoán Việt Nam (HOSE). "
-    "Cho mỗi mã cổ phiếu, đánh giá TẤT CẢ các bài đăng cộng đồng và cho:\n"
-    "- credibility_score (1-10): Độ tin cậy tổng hợp của các tin đồn\n"
+    "Bạn là chuyên gia phân tích tin tức và tin đồn thị trường chứng khoán Việt Nam (HOSE). "
+    "Cho mỗi mã cổ phiếu, đánh giá TẤT CẢ các nguồn thông tin (bài đăng cộng đồng Fireant + tin tức CafeF) và cho:\n"
+    "- credibility_score (1-10): Độ tin cậy tổng hợp của các thông tin\n"
     "- impact_score (1-10): Mức tác động tiềm tàng đến giá cổ phiếu\n"
     "- direction: bullish (tích cực), bearish (tiêu cực), hoặc neutral (trung tính)\n"
     "- key_claims: Danh sách các tuyên bố/thông tin chính được rút trích (tiếng Việt)\n"
     "- reasoning: Giải thích chi tiết bằng tiếng Việt (5-8 câu) — tại sao cho điểm này\n\n"
     "XEM XÉT các yếu tố:\n"
+    "- Tin tức chính thống (CafeF) đáng tin hơn bài đăng cộng đồng\n"
     "- Tài khoản xác thực (is_authentic=true) đáng tin hơn tài khoản thường\n"
     "- Bài có nhiều likes và replies cho thấy cộng đồng quan tâm/đồng tình\n"
     "- Nội dung có số liệu cụ thể đáng tin hơn nhận định chung chung\n"
-    "- Nhiều bài cùng hướng (bullish/bearish) tăng độ tin cậy\n\n"
+    "- Nhiều nguồn cùng hướng (bullish/bearish) tăng độ tin cậy\n\n"
     + RUMOR_SCORING_RUBRIC
 )
 

@@ -1,7 +1,8 @@
-"""Rumor scoring service — Gemini AI credibility/impact assessment of community posts.
+"""Rumor scoring service — Gemini AI credibility/impact assessment.
 
-Reads unscored Fireant posts from `rumors` table, groups by ticker, sends each
-ticker's posts to Gemini in a single prompt, stores results in `rumor_scores`.
+Combines Fireant community posts (`rumors` table) and CafeF news headlines
+(`news_articles` table) for each ticker, sends to Gemini in a single prompt,
+stores results in `rumor_scores`.
 
 Architecture: Standalone service (D-1), NOT embedded in AIAnalysisService.
 Uses same GeminiClient pattern + _gemini_lock for RPM serialization (D-2, D-4).
@@ -47,7 +48,7 @@ class RumorScoringService:
 
         Returns dict mapping ticker symbol to success/failure.
         """
-        tickers = await self._get_tickers_with_unscored_rumors()
+        tickers = await self._get_tickers_with_unscored_data()
         if not tickers:
             logger.info("Rumor scoring: no tickers with unscored rumors")
             return {}
@@ -78,14 +79,14 @@ class RumorScoringService:
     async def score_ticker(
         self, ticker_id: int, ticker_symbol: str
     ) -> TickerRumorScore | None:
-        """Score all rumors for a single ticker.
+        """Score a ticker using both Fireant community posts and CafeF news.
 
-        1. Query rumors for this ticker
-        2. Build prompt with engagement metrics
+        1. Query rumors + news_articles for this ticker (7-day window)
+        2. Build combined prompt with engagement metrics + news headlines
         3. Call Gemini (with lock) for credibility/impact scoring
         4. Store result via upsert
         """
-        # Fetch rumors for this ticker
+        # Fetch Fireant community posts
         result = await self.session.execute(
             text("""
                 SELECT id, content, author_name, is_authentic,
@@ -99,12 +100,26 @@ class RumorScoringService:
         )
         rumors = result.fetchall()
 
-        if not rumors:
-            logger.debug(f"Rumor scoring: no rumors for {ticker_symbol}, skipping")
+        # Fetch CafeF news headlines
+        news_result = await self.session.execute(
+            text("""
+                SELECT id, title, published_at
+                FROM news_articles
+                WHERE ticker_id = :tid
+                  AND published_at >= CURRENT_DATE - INTERVAL '7 days'
+                ORDER BY published_at DESC
+                LIMIT 20
+            """),
+            {"tid": ticker_id},
+        )
+        news_articles = news_result.fetchall()
+
+        if not rumors and not news_articles:
+            logger.debug(f"Rumor scoring: no data for {ticker_symbol}, skipping")
             return None
 
-        rumor_ids = [r[0] for r in rumors]
-        prompt = self._build_prompt(ticker_symbol, rumors)
+        rumor_ids = [r[0] for r in rumors] if rumors else []
+        prompt = self._build_prompt(ticker_symbol, rumors, news_articles)
 
         # Acquire lock to serialize Gemini API access (D-4)
         async with _gemini_lock:
@@ -176,47 +191,75 @@ class RumorScoringService:
     # Internal Methods
     # ------------------------------------------------------------------
 
-    async def _get_tickers_with_unscored_rumors(self) -> list[tuple[int, str]]:
-        """Find tickers with rumors but no score for today."""
+    async def _get_tickers_with_unscored_data(self) -> list[tuple[int, str]]:
+        """Find watchlist tickers with rumors OR news articles but no score for today.
+
+        Limits to watchlist tickers to keep Gemini API usage manageable —
+        CafeF has news for all 400 tickers but we only score what the user tracks.
+        """
         today = date.today()
         result = await self.session.execute(
             text("""
-                SELECT DISTINCT r.ticker_id, t.symbol
-                FROM rumors r
-                JOIN tickers t ON t.id = r.ticker_id
-                WHERE NOT EXISTS (
+                SELECT DISTINCT ticker_id, symbol FROM (
+                    SELECT r.ticker_id, t.symbol
+                    FROM rumors r
+                    JOIN tickers t ON t.id = r.ticker_id
+                    WHERE r.posted_at >= CURRENT_DATE - INTERVAL '7 days'
+                    UNION
+                    SELECT na.ticker_id, t.symbol
+                    FROM news_articles na
+                    JOIN tickers t ON t.id = na.ticker_id
+                    WHERE na.published_at >= CURRENT_DATE - INTERVAL '7 days'
+                ) combined
+                WHERE combined.symbol IN (SELECT symbol FROM user_watchlist)
+                AND NOT EXISTS (
                     SELECT 1 FROM rumor_scores rs
-                    WHERE rs.ticker_id = r.ticker_id AND rs.scored_date = :today
+                    WHERE rs.ticker_id = combined.ticker_id AND rs.scored_date = :today
                 )
             """),
             {"today": today},
         )
         return result.fetchall()
 
-    def _build_prompt(self, ticker_symbol: str, rumors: list) -> str:
-        """Build Vietnamese prompt with engagement metrics for Gemini.
+    def _build_prompt(
+        self, ticker_symbol: str, rumors: list, news_articles: list | None = None
+    ) -> str:
+        """Build Vietnamese prompt combining Fireant posts + CafeF news.
 
-        Each post is tagged with verification status, likes, and replies
-        per D-5 (all posts in one prompt) and D-15 (engagement context).
+        Two sections: community posts (with engagement metrics) and news headlines.
+        Gemini evaluates both sources for a comprehensive score.
         """
         lines = [RUMOR_FEW_SHOT, ""]
-        lines.append(f"\n--- {ticker_symbol} ({len(rumors)} bài đăng) ---")
+        total_items = len(rumors) + (len(news_articles) if news_articles else 0)
+        lines.append(
+            f"\n--- {ticker_symbol} ({total_items} nguồn thông tin) ---"
+        )
 
-        for i, r in enumerate(rumors, 1):
-            # r is a Row: (id, content, author_name, is_authentic,
-            #              total_likes, total_replies, posted_at)
-            is_authentic = r[3]
-            total_likes = r[4]
-            total_replies = r[5]
-            content = r[1]
+        idx = 1
+        # Section 1: Fireant community posts
+        if rumors:
+            lines.append(f"\n📢 Bài đăng cộng đồng Fireant ({len(rumors)}):")
+            for r in rumors:
+                is_authentic = r[3]
+                total_likes = r[4]
+                total_replies = r[5]
+                content = r[1]
 
-            auth_label = "Xác thực ✓" if is_authentic else "Thường"
-            # Truncate user content to limit prompt size and mitigate injection risk
-            safe_content = self._sanitize_content(content)
-            lines.append(
-                f"{i}. [{auth_label} | {total_likes} likes | {total_replies} replies] "
-                f'"{safe_content}"'
-            )
+                auth_label = "Xác thực ✓" if is_authentic else "Thường"
+                safe_content = self._sanitize_content(content)
+                lines.append(
+                    f"{idx}. [{auth_label} | {total_likes} likes | "
+                    f'{total_replies} replies] "{safe_content}"'
+                )
+                idx += 1
+
+        # Section 2: CafeF news headlines
+        if news_articles:
+            lines.append(f"\n📰 Tin tức CafeF ({len(news_articles)}):")
+            for na in news_articles:
+                title = self._sanitize_content(na[1], max_len=200)
+                lines.append(f"{idx}. [Tin tức chính thống] \"{title}\"")
+                idx += 1
 
         return "\n".join(lines)
 

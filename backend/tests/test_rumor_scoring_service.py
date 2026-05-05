@@ -55,6 +55,17 @@ def _make_batch_response(ticker="VNM"):
     return RumorBatchResponse(scores=[_make_ticker_score(ticker=ticker)])
 
 
+def _make_news_row(
+    id=100,
+    title="HPG: Thông báo về ngày đăng ký cuối cùng chi trả cổ tức năm 2025",
+    published_at=None,
+):
+    """Create a mock DB row matching news_articles SELECT: (id, title, published_at)."""
+    if published_at is None:
+        published_at = datetime(2025, 7, 21, 10, 0, 0, tzinfo=timezone.utc)
+    return (id, title, published_at)
+
+
 def _make_gemini_response(batch: RumorBatchResponse | None = None):
     """Mock Gemini API response with .parsed and .text."""
     if batch is None:
@@ -140,7 +151,7 @@ class TestBuildPrompt:
         ]
         prompt = service._build_prompt("FPT", rows)
 
-        assert "FPT (2 bài đăng)" in prompt
+        assert "FPT (2 nguồn thông tin)" in prompt
 
     def test_build_prompt_includes_few_shot(self, service):
         """Prompt starts with few-shot example from rumor_prompts."""
@@ -148,6 +159,28 @@ class TestBuildPrompt:
         prompt = service._build_prompt("VNM", [row])
 
         assert "Ví dụ phân tích:" in prompt
+
+    def test_build_prompt_with_news_only(self, service):
+        """Prompt built with only CafeF news (no Fireant posts)."""
+        news = [_make_news_row(title="HPG chia cổ tức tiền mặt 1500đ/cp")]
+        prompt = service._build_prompt("HPG", [], news)
+
+        assert "📰 Tin tức CafeF (1):" in prompt
+        assert "[Tin tức chính thống]" in prompt
+        assert "HPG chia cổ tức" in prompt
+        assert "📢 Bài đăng cộng đồng" not in prompt
+
+    def test_build_prompt_combined_sources(self, service):
+        """Prompt includes both Fireant posts and CafeF news."""
+        rumors = [_make_rumor_row(content="HPG đang tích lũy")]
+        news = [_make_news_row(title="HPG: Kết quả KQKD Q2/2025")]
+        prompt = service._build_prompt("HPG", rumors, news)
+
+        assert "HPG (2 nguồn thông tin)" in prompt
+        assert "📢 Bài đăng cộng đồng Fireant (1):" in prompt
+        assert "📰 Tin tức CafeF (1):" in prompt
+        assert "HPG đang tích lũy" in prompt
+        assert "KQKD Q2/2025" in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -164,12 +197,14 @@ class TestScoreTicker:
         rumor_row = _make_rumor_row()
         gemini_resp = _make_gemini_response()
 
-        # Mock DB: SELECT rumors returns rows
-        select_result = MagicMock()
-        select_result.fetchall.return_value = [rumor_row]
+        # Mock DB: SELECT rumors returns rows, SELECT news returns empty
+        select_rumors = MagicMock()
+        select_rumors.fetchall.return_value = [rumor_row]
+        select_news = MagicMock()
+        select_news.fetchall.return_value = []
 
-        # First call = SELECT rumors, second call = INSERT upsert
-        mock_session.execute = AsyncMock(side_effect=[select_result, MagicMock()])
+        # 1st call = SELECT rumors, 2nd = SELECT news, 3rd = INSERT upsert
+        mock_session.execute = AsyncMock(side_effect=[select_rumors, select_news, MagicMock()])
 
         with patch.object(
             service.gemini_client, "_call_gemini", new_callable=AsyncMock, return_value=gemini_resp
@@ -183,16 +218,16 @@ class TestScoreTicker:
         assert result.credibility_score == 7
         assert result.impact_score == 6
         assert result.direction == RumorDirection.BULLISH
-        # Verify upsert was called (second execute call)
-        assert mock_session.execute.call_count == 2
+        # Verify upsert was called (third execute call)
+        assert mock_session.execute.call_count == 3
         mock_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_score_ticker_skips_empty(self, service, mock_session):
-        """Ticker with 0 rumors returns None, no Gemini call."""
-        select_result = MagicMock()
-        select_result.fetchall.return_value = []
-        mock_session.execute = AsyncMock(return_value=select_result)
+        """Ticker with 0 rumors and 0 news returns None, no Gemini call."""
+        empty_result = MagicMock()
+        empty_result.fetchall.return_value = []
+        mock_session.execute = AsyncMock(return_value=empty_result)
 
         with patch.object(
             service.gemini_client, "_call_gemini", new_callable=AsyncMock
@@ -208,9 +243,11 @@ class TestScoreTicker:
         rumor_row = _make_rumor_row()
         gemini_resp = _make_gemini_response()
 
-        select_result = MagicMock()
-        select_result.fetchall.return_value = [rumor_row]
-        mock_session.execute = AsyncMock(side_effect=[select_result, MagicMock()])
+        select_rumors = MagicMock()
+        select_rumors.fetchall.return_value = [rumor_row]
+        select_news = MagicMock()
+        select_news.fetchall.return_value = []
+        mock_session.execute = AsyncMock(side_effect=[select_rumors, select_news, MagicMock()])
 
         # Use a real lock to verify acquisition
         real_lock = asyncio.Lock()
@@ -289,10 +326,10 @@ class TestScoreAllTickers:
 
     @pytest.mark.asyncio
     async def test_score_all_tickers_skips_already_scored(self, service, mock_session):
-        """Tickers already scored today are not returned by _get_tickers_with_unscored_rumors."""
-        # Mock _get_tickers_with_unscored_rumors returning empty (all scored)
+        """Tickers already scored today are not returned by _get_tickers_with_unscored_data."""
+        # Mock _get_tickers_with_unscored_data returning empty (all scored)
         with patch.object(
-            service, "_get_tickers_with_unscored_rumors",
+            service, "_get_tickers_with_unscored_data",
             new_callable=AsyncMock, return_value=[]
         ):
             results = await service.score_all_tickers()
@@ -307,7 +344,7 @@ class TestScoreAllTickers:
         score_fpt = _make_ticker_score(ticker="FPT")
 
         with patch.object(
-            service, "_get_tickers_with_unscored_rumors",
+            service, "_get_tickers_with_unscored_data",
             new_callable=AsyncMock, return_value=tickers
         ), patch.object(
             service, "score_ticker",
