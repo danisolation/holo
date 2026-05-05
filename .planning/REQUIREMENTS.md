@@ -12,20 +12,20 @@
 
 ### Watchlist Pipeline (WL)
 
-- [ ] **WL-01**: AI analysis (Gemini) chỉ chạy trên các mã trong watchlist của user, không phân tích toàn sàn
-- [ ] **WL-02**: Daily picks chỉ chọn từ các mã trong watchlist
+- [x] **WL-01**: AI analysis (Gemini) chỉ chạy trên các mã trong watchlist của user, không phân tích toàn sàn
+- [x] **WL-02**: Daily picks chỉ chọn từ các mã trong watchlist
 
 ### Discovery Frontend (DPAGE)
 
-- [ ] **DPAGE-01**: Trang Discovery hiển thị top mã tiềm năng với điểm số và lý do gợi ý (RSI oversold, MACD cross, volume spike...)
-- [ ] **DPAGE-02**: User bấm một nút để thêm mã từ Discovery vào watchlist
-- [ ] **DPAGE-03**: User có thể filter gợi ý theo ngành hoặc loại tín hiệu
+- [x] **DPAGE-01**: Trang Discovery hiển thị top mã tiềm năng với điểm số và lý do gợi ý (RSI oversold, MACD cross, volume spike...)
+- [x] **DPAGE-02**: User bấm một nút để thêm mã từ Discovery vào watchlist
+- [x] **DPAGE-03**: User có thể filter gợi ý theo ngành hoặc loại tín hiệu
 
 ### Sector & Heatmap (TAG)
 
-- [ ] **TAG-01**: User gán sector/nhóm ngành cho mỗi mã trong watchlist
-- [ ] **TAG-02**: Khi thêm mã mới, sector tự động gợi ý từ data vnstock (ICB classification)
-- [ ] **TAG-03**: Heatmap trên trang chủ chỉ hiện các mã trong watchlist, phân nhóm theo sector user đã gán
+- [x] **TAG-01**: User gán sector/nhóm ngành cho mỗi mã trong watchlist
+- [x] **TAG-02**: Khi thêm mã mới, sector tự động gợi ý từ data vnstock (ICB classification)
+- [x] **TAG-03**: Heatmap trên trang chủ chỉ hiện các mã trong watchlist, phân nhóm theo sector user đã gán
 
 ## Future Requirements
 
