@@ -180,7 +180,7 @@ Full details: [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md)
 ### v12.0 Rumor Intelligence (Phases 60-63)
 
 - [x] **Phase 60: Database & Fireant Crawler** — `community_posts` table, Fireant REST API crawler, post deduplication (completed 2026-05-05)
-- [ ] **Phase 61: AI Rumor Scoring** — Gemini credibility/impact scoring, direction classification, key claims extraction
+- [x] **Phase 61: AI Rumor Scoring** — Gemini credibility/impact scoring, direction classification, key claims extraction (completed 2026-05-05)
 - [ ] **Phase 62: API Endpoints & Frontend Display** — Rumor score panel, feed timeline, watchlist badges
 - [ ] **Phase 63: Scheduler Integration** — Wire crawler + scoring into daily APScheduler job chain
 
@@ -210,10 +210,10 @@ Plans:
   3. Scoring output includes extracted key factual claims as a structured list
   4. All AI assessments include Vietnamese explanations for the scores
   5. Posts with higher engagement (likes, replies) and verified authors receive appropriately weighted credibility signals
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 61-01-PLAN.md — Schema foundation: RumorScore model, migration, Pydantic schemas, Vietnamese prompts
-- [ ] 61-02-PLAN.md — RumorScoringService implementation + unit tests
+- [x] 61-02-PLAN.md — RumorScoringService implementation + unit tests
 
 ### Phase 62: API Endpoints & Frontend Display
 **Goal**: User can view rumor intelligence on the ticker detail page and watchlist
@@ -241,6 +241,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 60. Database & Fireant Crawler | 2/2 | Complete   | 2026-05-05 |
-| 61. AI Rumor Scoring | 1/2 | In Progress|  |
+| 61. AI Rumor Scoring | 2/2 | Complete   | 2026-05-05 |
 | 62. API Endpoints & Frontend Display | 0/? | Not started | - |
 | 63. Scheduler Integration | 0/? | Not started | - |
