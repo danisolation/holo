@@ -184,6 +184,7 @@ async def market_overview(
                 )
                 .label("rn"),
             )
+            .where(DailyPrice.date >= func.current_date() - 7)
             .subquery("ranked")
         )
 
