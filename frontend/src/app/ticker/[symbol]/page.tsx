@@ -37,7 +37,6 @@ import {
 } from "@/components/analysis-card";
 import { TradingPlanPanel } from "@/components/trading-plan-panel";
 import { RumorScorePanel } from "@/components/rumor-score-panel";
-import { RumorFeed } from "@/components/rumor-feed";
 import {
   usePrices,
   useIndicators,
@@ -382,7 +381,6 @@ export default function TickerDetailPage({
         ) : rumorData ? (
           <div className="space-y-4">
             <RumorScorePanel data={rumorData} />
-            <RumorFeed posts={rumorData.posts} />
           </div>
         ) : null}
       </section>
