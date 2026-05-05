@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, BarChart3, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, RefreshCw, Compass } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -152,12 +152,27 @@ export default function Home() {
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground font-medium mb-2">
+            <Compass className="size-10 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground font-medium mb-1">
               Chưa có mã trong danh mục
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mb-4">
               Thêm mã vào danh mục theo dõi để xem bản đồ nhiệt theo nhóm ngành.
             </p>
+            <div className="flex gap-2">
+              <Link
+                href="/watchlist"
+                className="inline-flex items-center justify-center rounded-[min(var(--radius-md),12px)] border border-input bg-background px-2.5 h-7 text-[0.8rem] font-medium shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Mở danh mục
+              </Link>
+              <Link
+                href="/discovery"
+                className="inline-flex items-center justify-center rounded-[min(var(--radius-md),12px)] border border-input bg-background px-2.5 h-7 text-[0.8rem] font-medium shadow-xs hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Khám phá cổ phiếu
+              </Link>
+            </div>
           </CardContent>
         </Card>
       )}
