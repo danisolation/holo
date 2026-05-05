@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v11.0
-milestone_name: UX & Reliability Overhaul
-status: executing
-stopped_at: Milestone v10.0 shipped
-last_updated: "2026-05-05T05:21:10.841Z"
+milestone: v12.0
+milestone_name: Rumor Intelligence
+status: defining
+stopped_at: Milestone v11.0 shipped
+last_updated: "2026-05-05T14:18:00.000Z"
 last_activity: 2026-05-05
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** Phase 59 — UX & Onboarding
+**Current focus:** Defining requirements for v12.0 Rumor Intelligence
 
 ## Current Position
 
-Phase: 59
-Plan: Not started
-Status: Executing Phase 59
-Last activity: 2026-05-05
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-05 — Milestone v12.0 started
 
 ## Shipped Milestones
 
