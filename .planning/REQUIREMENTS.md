@@ -7,27 +7,27 @@
 
 ### Performance & Reliability (PERF)
 
-- [ ] **PERF-01**: Market overview API responds in < 3s (currently ~3 min due to unfiltered ROW_NUMBER scan)
-- [ ] **PERF-02**: Backend stays awake via external keep-alive ping (UptimeRobot/cron-job.org, every 5-14 min)
-- [ ] **PERF-03**: Frequently-accessed API endpoints use in-memory TTL cache (cachetools) to reduce DB load
-- [ ] **PERF-04**: Daily prices query uses date-bounded filter (WHERE date >= CURRENT_DATE - 7) instead of full table scan
+- [x] **PERF-01**: Market overview API responds in < 3s (currently ~3 min due to unfiltered ROW_NUMBER scan)
+- [x] **PERF-02**: Backend stays awake via external keep-alive ping (UptimeRobot/cron-job.org, every 5-14 min)
+- [x] **PERF-03**: Frequently-accessed API endpoints use in-memory TTL cache (cachetools) to reduce DB load
+- [x] **PERF-04**: Daily prices query uses date-bounded filter (WHERE date >= CURRENT_DATE - 7) instead of full table scan
 
 ### Search (SRCH)
 
-- [ ] **SRCH-01**: Ticker search returns all ~400 HOSE tickers (fix .slice(0,50) truncation + API limit=100 cap)
-- [ ] **SRCH-02**: Search supports recent searches history (client-side, localStorage)
+- [x] **SRCH-01**: Ticker search returns all ~400 HOSE tickers (fix .slice(0,50) truncation + API limit=100 cap)
+- [x] **SRCH-02**: Search supports recent searches history (client-side, localStorage)
 
 ### AI Freshness (AI)
 
-- [ ] **AI-01**: AI analysis runs a morning refresh (8:30 AM) for watchlist tickers before market opens
-- [ ] **AI-02**: Morning refresh runs shortened chain (price → indicators → AI analysis → signals) to respect Gemini 15 RPM limit
-- [ ] **AI-03**: Dashboard shows analysis freshness indicator (age of last AI run per ticker)
+- [x] **AI-01**: AI analysis runs a morning refresh (8:30 AM) for watchlist tickers before market opens
+- [x] **AI-02**: Morning refresh runs shortened chain (price → indicators → AI analysis → signals) to respect Gemini 15 RPM limit
+- [x] **AI-03**: Dashboard shows analysis freshness indicator (age of last AI run per ticker)
 
 ### UX & Onboarding (UX)
 
-- [ ] **UX-01**: First-time users see preset watchlist option (VN30 blue-chips one-click add)
-- [ ] **UX-02**: Empty states show helpful guidance instead of blank screens (heatmap, watchlist, discovery)
-- [ ] **UX-03**: Navigation includes feature descriptions/tooltips explaining each section
+- [x] **UX-01**: First-time users see preset watchlist option (VN30 blue-chips one-click add)
+- [x] **UX-02**: Empty states show helpful guidance instead of blank screens (heatmap, watchlist, discovery)
+- [x] **UX-03**: Navigation includes feature descriptions/tooltips explaining each section
 
 ## v12.0+ Requirements (Deferred)
 
@@ -58,18 +58,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERF-01 | Phase 56 | Pending |
-| PERF-02 | Phase 56 | Pending |
-| PERF-03 | Phase 56 | Pending |
-| PERF-04 | Phase 56 | Pending |
-| SRCH-01 | Phase 57 | Pending |
-| SRCH-02 | Phase 57 | Pending |
-| AI-01 | Phase 58 | Pending |
-| AI-02 | Phase 58 | Pending |
-| AI-03 | Phase 58 | Pending |
-| UX-01 | Phase 59 | Pending |
-| UX-02 | Phase 59 | Pending |
-| UX-03 | Phase 59 | Pending |
+| PERF-01 | Phase 56 | Complete |
+| PERF-02 | Phase 56 | Complete |
+| PERF-03 | Phase 56 | Complete |
+| PERF-04 | Phase 56 | Complete |
+| SRCH-01 | Phase 57 | Complete |
+| SRCH-02 | Phase 57 | Complete |
+| AI-01 | Phase 58 | Complete |
+| AI-02 | Phase 58 | Complete |
+| AI-03 | Phase 58 | Complete |
+| UX-01 | Phase 59 | Complete |
+| UX-02 | Phase 59 | Complete |
+| UX-03 | Phase 59 | Complete |
 
 **Coverage:**
 - v11.0 requirements: 12 total
