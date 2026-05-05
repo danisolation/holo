@@ -20,12 +20,12 @@ import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/", label: "Tổng quan" },
-  { href: "/discovery", label: "Khám phá" },
-  { href: "/watchlist", label: "Danh mục" },
-  { href: "/coach", label: "Huấn luyện" },
-  { href: "/journal", label: "Nhật ký" },
-  { href: "/dashboard/health", label: "Hệ thống" },
+  { href: "/", label: "Tổng quan", description: "Bảng giá & heatmap thị trường" },
+  { href: "/discovery", label: "Khám phá", description: "Gợi ý cổ phiếu từ AI, cập nhật hàng ngày" },
+  { href: "/watchlist", label: "Danh mục", description: "Danh mục theo dõi & phân tích AI" },
+  { href: "/coach", label: "Huấn luyện", description: "AI coach & nhật ký giao dịch" },
+  { href: "/journal", label: "Nhật ký", description: "Lịch sử giao dịch & hiệu suất" },
+  { href: "/dashboard/health", label: "Hệ thống", description: "Trạng thái hệ thống & API" },
 ];
 
 export function Navbar() {
@@ -49,6 +49,7 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
+              title={link.description}
               className={cn(
                 "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                 pathname === link.href
@@ -129,7 +130,8 @@ export function Navbar() {
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                     )}
                   >
-                    {link.label}
+                    <span>{link.label}</span>
+                    <span className="block text-xs font-normal text-muted-foreground/70 mt-0.5">{link.description}</span>
                   </Link>
                 ))}
               </nav>
