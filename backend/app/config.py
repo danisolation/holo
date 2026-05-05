@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     cafef_delay_seconds: float = 1.0  # Delay between requests per CONTEXT.md
     cafef_news_days: int = 7  # Scrape news from last N days per CONTEXT.md
 
+    # Fireant Community Crawling (Phase 60)
+    fireant_token: str = ""  # Guest JWT from Fireant.vn — get from __NEXT_DATA__
+    fireant_delay_seconds: float = 1.5  # Between ticker requests
+    fireant_post_limit: int = 20  # Posts per ticker per crawl
+    fireant_retention_days: int = 30  # Delete posts older than N days
+
     # Circuit Breaker (Phase 6)
     circuit_breaker_fail_max: int = 3
     circuit_breaker_reset_timeout: float = 120.0  # 2 minutes cooldown

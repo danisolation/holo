@@ -101,3 +101,8 @@ vndirect_breaker = AsyncCircuitBreaker(
     fail_max=settings.circuit_breaker_fail_max,
     reset_timeout=settings.circuit_breaker_reset_timeout,
 )
+fireant_breaker = AsyncCircuitBreaker(
+    "fireant",
+    fail_max=settings.circuit_breaker_fail_max,
+    reset_timeout=settings.circuit_breaker_reset_timeout,
+)
