@@ -195,9 +195,9 @@ Full details: [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md)
   2. Re-running the crawler for the same ticker does not create duplicate posts (ON CONFLICT dedup)
   3. Stored posts contain content, author info, engagement metrics (likes, replies), and verified user status
   4. Crawler handles Vietnamese content encoding correctly (no HTML entities in stored text)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 60-01-PLAN.md — Schema foundation: Rumor model, Alembic migration, config, circuit breaker, types
+- [x] 60-01-PLAN.md — Schema foundation: Rumor model, Alembic migration, config, circuit breaker, types
 - [ ] 60-02-PLAN.md — FireantCrawler implementation + unit tests
 
 ### Phase 61: AI Rumor Scoring
@@ -237,7 +237,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 60. Database & Fireant Crawler | 0/? | Not started | - |
+| 60. Database & Fireant Crawler | 1/2 | In Progress|  |
 | 61. AI Rumor Scoring | 0/? | Not started | - |
 | 62. API Endpoints & Frontend Display | 0/? | Not started | - |
 | 63. Scheduler Integration | 0/? | Not started | - |

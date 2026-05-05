@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Rumor Intelligence
-status: roadmapped
-stopped_at: Roadmap created
-last_updated: "2025-07-21T00:00:00.000Z"
-last_activity: 2025-07-21
+status: planning
+stopped_at: Completed 60-01-PLAN.md
+last_updated: "2026-05-05T08:11:21.100Z"
+last_activity: 2025-07-21 — Roadmap created
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 50
 ---
 
 # Project State
@@ -55,6 +55,7 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 
 - [Phase 52]: Pure scoring functions at module level for testability; 3 batch queries for N+1 avoidance; PostgreSQL ON CONFLICT upsert for idempotency
 - [Phase 52]: Discovery scoring inserted between indicators and AI in scheduler chain — replaces old direct link
+- [Phase 60]: Rumor model mirrors NewsArticle with BigInteger post_id as dedup key; fireant_delay=1.5s
 
 ### Research Context (v10.0)
 
@@ -115,7 +116,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2025-07-21
-Stopped at: Roadmap created for v12.0
+Last session: 2026-05-05T08:11:21.095Z
+Stopped at: Completed 60-01-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 60`
