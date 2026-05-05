@@ -57,6 +57,10 @@ class FireantCrawler:
 
         Returns: {success: int, failed: int, total_posts: int, failed_symbols: list[str]}
         """
+        if not settings.fireant_token:
+            logger.warning("Fireant crawl skipped: fireant_token not configured")
+            return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
+
         # Inline watchlist query (same pattern as jobs.py _get_watchlist_ticker_map)
         from app.models.user_watchlist import UserWatchlist
         from app.models.ticker import Ticker
@@ -160,22 +164,30 @@ class FireantCrawler:
         Applies html.unescape() for Vietnamese content encoding (e.g. &#225; → á).
         Filters out posts shorter than MIN_CONTENT_LENGTH characters.
         """
+        if not isinstance(posts_json, list):
+            logger.warning(f"Fireant API returned non-list response: {type(posts_json)}")
+            return []
+
         parsed = []
         for post in posts_json:
-            content = html.unescape(post.get("content", "")).strip()
-            if len(content) < self.MIN_CONTENT_LENGTH:
-                continue
+            try:
+                content = html.unescape(post.get("content", "")).strip()
+                if len(content) < self.MIN_CONTENT_LENGTH:
+                    continue
 
-            parsed.append({
-                "post_id": post["postID"],
-                "content": content,
-                "author_name": post.get("user", {}).get("name", "Unknown"),
-                "is_authentic": post.get("user", {}).get("isAuthentic", False),
-                "total_likes": post.get("totalLikes", 0),
-                "total_replies": post.get("totalReplies", 0),
-                "fireant_sentiment": post.get("sentiment", 0),
-                "posted_at": datetime.fromisoformat(post["date"]),
-            })
+                parsed.append({
+                    "post_id": post["postID"],
+                    "content": content,
+                    "author_name": post.get("user", {}).get("name", "Unknown"),
+                    "is_authentic": post.get("user", {}).get("isAuthentic", False),
+                    "total_likes": post.get("totalLikes", 0),
+                    "total_replies": post.get("totalReplies", 0),
+                    "fireant_sentiment": post.get("sentiment", 0),
+                    "posted_at": datetime.fromisoformat(post["date"]),
+                })
+            except (KeyError, ValueError, AttributeError) as e:
+                logger.debug(f"Skipping malformed Fireant post: {e}")
+                continue
 
         return parsed
 
