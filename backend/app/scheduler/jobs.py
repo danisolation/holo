@@ -800,6 +800,39 @@ async def generate_weekly_review():
 # ── Phase 52: Discovery scoring engine ──────────────────────────────────────
 
 
+# ── Phase 65: AI Accuracy Tracking ──────────────────────────────────────────
+
+
+async def daily_accuracy_tracking():
+    """Backfill AI prediction accuracy by comparing signals against actual prices.
+
+    Chains after daily_consecutive_loss_check. Checks combined analysis signals
+    from 1, 3, and 7 days ago against actual closing prices.
+    """
+    logger.info("=== DAILY ACCURACY TRACKING START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_accuracy_tracking")
+        try:
+            from app.services.accuracy_tracking_service import AccuracyTrackingService
+
+            service = AccuracyTrackingService(session)
+            result = await service.backfill_accuracy()
+            await job_svc.complete(
+                execution,
+                status="success",
+                result_summary=result,
+            )
+            await session.commit()
+            logger.info(f"=== DAILY ACCURACY TRACKING DONE: {result} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"Daily accuracy tracking failed: {e}")
+            raise
+
+
 # ── Phase 58: Morning AI refresh chain ──────────────────────────────────────
 
 

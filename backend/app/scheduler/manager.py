@@ -46,6 +46,9 @@ _JOB_NAMES = {
     "weekly_behavior_analysis": "Weekly Behavior Analysis",
     "daily_consecutive_loss_check": "Daily Consecutive Loss Check",
     "daily_consecutive_loss_check_triggered": "Daily Consecutive Loss Check",
+    # Phase 65: Accuracy tracking
+    "daily_accuracy_tracking": "Daily AI Accuracy Tracking",
+    "daily_accuracy_tracking_triggered": "Daily AI Accuracy Tracking",
     "create_weekly_risk_prompt": "Weekly Risk Tolerance Prompt",
     "generate_weekly_review": "AI Weekly Performance Review",
     "generate_weekly_review_triggered": "AI Weekly Performance Review",
@@ -216,6 +219,16 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_consecutive_loss_check,
             id="daily_consecutive_loss_check_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_consecutive_loss_check_triggered",):
+        # Phase 65: Chain to accuracy tracking after consecutive loss check
+        from app.scheduler.jobs import daily_accuracy_tracking
+        logger.info("Chaining: daily_consecutive_loss_check → daily_accuracy_tracking")
+        scheduler.add_job(
+            daily_accuracy_tracking,
+            id="daily_accuracy_tracking_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -399,7 +412,7 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → consecutive_loss_check], "
+        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → consecutive_loss_check → accuracy_tracking], "
         "morning_price_crawl_hose → [indicators → AI → trading_signal]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")
