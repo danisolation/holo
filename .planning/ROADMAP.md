@@ -169,6 +169,9 @@ Full details: [milestones/v10.0-ROADMAP.md](milestones/v10.0-ROADMAP.md)
 **Milestone Goal:** Sửa các thiếu sót thực tế về trải nghiệm người dùng, data freshness, AI timeliness, và performance trên production — app load < 3s, search tìm tất cả mã, AI analysis fresh trước giờ mở cửa, UX rõ ràng cho người mới.
 
 - [ ] **Phase 56: Keep-Alive & API Performance** - External pinger, query optimization, in-memory cache, date-bounded queries
+  Plans:
+  - [ ] 56-01-PLAN.md — Query optimization: Alembic index + date-bounded ranked subquery
+  - [ ] 56-02-PLAN.md — In-memory TTL cache + keep-alive documentation
 - [ ] **Phase 57: Search Fix** - Remove ticker search truncation, add recent searches
 - [ ] **Phase 58: AI Analysis Freshness** - Morning AI refresh chain, freshness indicator in dashboard
 - [ ] **Phase 59: UX & Onboarding** - Preset watchlist, empty state guidance, navigation descriptions
@@ -184,7 +187,10 @@ Full details: [milestones/v10.0-ROADMAP.md](milestones/v10.0-ROADMAP.md)
   2. Market overview API responds in under 3 seconds with current-day price data for all ~400 HOSE tickers
   3. Repeated requests to the same API endpoint within 60 seconds return instantly from cache without hitting the database
   4. Daily prices queries scan only the last 7 days of data, not the entire table history
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 56-01-PLAN.md — Query optimization: Alembic index + date-bounded ranked subquery
+- [ ] 56-02-PLAN.md — In-memory TTL cache + keep-alive documentation
 
 ### Phase 57: Search Fix
 **Goal**: User can find and select any of the ~400 HOSE tickers through the search dialog
@@ -228,7 +234,7 @@ Full details: [milestones/v10.0-ROADMAP.md](milestones/v10.0-ROADMAP.md)
 | 53. Watchlist-Gated AI Pipeline | v10.0 | 1/1 | Complete | 2026-05-04 |
 | 54. Sector Grouping & Heatmap Rework | v10.0 | 2/2 | Complete | 2026-05-04 |
 | 55. Discovery Frontend | v10.0 | 2/2 | Complete | 2026-05-04 |
-| 56. Keep-Alive & API Performance | v11.0 | 0/? | Not started | - |
+| 56. Keep-Alive & API Performance | v11.0 | 0/2 | Not started | - |
 | 57. Search Fix | v11.0 | 0/? | Not started | - |
 | 58. AI Analysis Freshness | v11.0 | 0/? | Not started | - |
 | 59. UX & Onboarding | v11.0 | 0/? | Not started | - |
