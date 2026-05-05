@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import {
@@ -15,19 +15,31 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTickers } from "@/lib/hooks";
 import { postBehaviorEvent } from "@/lib/api";
+import { getRecentSearches, addRecentSearch } from "@/lib/recent-searches";
 
 export function TickerSearch() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { data: tickers } = useTickers(undefined, undefined, 500);
+  const [recentSearches, setRecentSearches] = useState<Array<{ symbol: string; name: string }>>([]);
+
+  useEffect(() => {
+    if (open) {
+      setRecentSearches(getRecentSearches());
+    }
+  }, [open]);
 
   const handleSelect = useCallback(
     (symbol: string) => {
       setOpen(false);
+      const ticker = tickers?.find((t) => t.symbol === symbol);
+      if (ticker) {
+        addRecentSearch({ symbol: ticker.symbol, name: ticker.name });
+      }
       postBehaviorEvent({ event_type: "search_click", ticker_symbol: symbol }).catch(() => {});
       router.push(`/ticker/${symbol}`);
     },
-    [router]
+    [router, tickers]
   );
 
   return (
@@ -50,6 +62,25 @@ export function TickerSearch() {
           <CommandInput placeholder="Nhập mã CK hoặc tên công ty..." />
           <CommandList>
             <CommandEmpty>Không tìm thấy mã nào.</CommandEmpty>
+            {recentSearches.length > 0 && (
+              <CommandGroup heading="Tìm kiếm gần đây">
+                {recentSearches.map((recent) => (
+                  <CommandItem
+                    key={`recent-${recent.symbol}`}
+                    value={`${recent.symbol} ${recent.name}`}
+                    onSelect={() => handleSelect(recent.symbol)}
+                    className="cursor-pointer"
+                  >
+                    <span className="font-mono font-bold text-sm w-16">
+                      {recent.symbol}
+                    </span>
+                    <span className="text-muted-foreground text-sm truncate">
+                      {recent.name}
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
             <CommandGroup heading="Mã chứng khoán">
               {tickers?.map((ticker) => (
                 <CommandItem
