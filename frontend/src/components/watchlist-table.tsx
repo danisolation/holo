@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PriceFlashCell } from "@/components/price-flash-cell";
 import { SectorCombobox } from "@/components/sector-combobox";
+import { Vn30Preset } from "@/components/vn30-preset";
 import { useMarketOverview, useWatchlist, useRemoveFromWatchlist, useSectors, useUpdateSectorGroup } from "@/lib/hooks";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import type { MarketTicker } from "@/lib/api";
@@ -311,16 +312,7 @@ export function WatchlistTable() {
   }
 
   if (!watchlistData || watchlistData.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <p className="text-muted-foreground">
-          Chưa có mã nào trong danh mục.
-        </p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Duyệt tổng quan thị trường để thêm.
-        </p>
-      </div>
-    );
+    return <Vn30Preset />;
   }
 
   return (
