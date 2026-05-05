@@ -1,5 +1,17 @@
 # Milestones
 
+## v10.0 Watchlist-Centric & Stock Discovery (Shipped: 2026-05-05)
+
+**Phases completed:** 4 phases, 7 plans, 14 tasks
+
+**Key accomplishments:**
+
+- Commit:
+- Commit:
+- Commit:
+
+---
+
 ## v3.0 Smart Trading Signals (Shipped: 2026-04-20)
 
 **Phases completed:** 5 phases, 10 plans, 12 tasks
