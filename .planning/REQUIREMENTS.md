@@ -45,14 +45,14 @@ Crawl tin đồn từ cộng đồng chứng khoán VN (Fireant.vn), dùng Gemin
 
 | REQ | Phase | Status |
 |-----|-------|--------|
-| RUMOR-01 | — | Pending |
-| RUMOR-02 | — | Pending |
-| RUMOR-03 | — | Pending |
-| RUMOR-04 | — | Pending |
-| RUMOR-05 | — | Pending |
-| RUMOR-06 | — | Pending |
-| RUMOR-07 | — | Pending |
-| RUMOR-08 | — | Pending |
-| RUMOR-09 | — | Pending |
-| RUMOR-10 | — | Pending |
-| RUMOR-11 | — | Pending |
+| RUMOR-01 | Phase 60 | Pending |
+| RUMOR-02 | Phase 60 | Pending |
+| RUMOR-03 | Phase 63 | Pending |
+| RUMOR-04 | Phase 61 | Pending |
+| RUMOR-05 | Phase 61 | Pending |
+| RUMOR-06 | Phase 61 | Pending |
+| RUMOR-07 | Phase 61 | Pending |
+| RUMOR-08 | Phase 61 | Pending |
+| RUMOR-09 | Phase 62 | Pending |
+| RUMOR-10 | Phase 62 | Pending |
+| RUMOR-11 | Phase 62 | Pending |

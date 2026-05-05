@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Rumor Intelligence
-status: defining
-stopped_at: Milestone v11.0 shipped
-last_updated: "2026-05-05T14:18:00.000Z"
-last_activity: 2026-05-05
+status: roadmapped
+stopped_at: Roadmap created
+last_updated: "2025-07-21T00:00:00.000Z"
+last_activity: 2025-07-21
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** Defining requirements for v12.0 Rumor Intelligence
+**Current focus:** v12.0 Rumor Intelligence — Roadmap complete, ready for Phase 60 planning
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 60 (Database & Fireant Crawler) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-05 — Milestone v12.0 started
+Status: Ready for planning
+Last activity: 2025-07-21 — Roadmap created
 
 ## Shipped Milestones
 
@@ -45,6 +45,7 @@ Last activity: 2026-05-05 — Milestone v12.0 started
 | v8.0 | AI Trading Coach | 5 | 14 | 2026-04-23 |
 | v9.0 | UX Rework & Simplification | 4 | 8 | 2026-05-04 |
 | v10.0 | Watchlist-Centric & Stock Discovery | 4 | 7 | 2026-05-05 |
+| v11.0 | UX & Reliability Overhaul | 4 | 6 | 2026-05-05 |
 
 ## Accumulated Context
 
@@ -65,6 +66,18 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - Empty watchlist must skip gracefully (log + return normally) — not crash the chain
 - Heatmap rework is frontend composition (existing APIs) — no new backend endpoint needed
 - Discovery retention: 14 days (5,600 rows max)
+
+### Research Context (v12.0)
+
+- CafeF forum is DEAD (404) — Fireant.vn is sole source
+- Zero new Python dependencies — httpx, tenacity, google-genai, SQLAlchemy all existing
+- 2 new DB tables: `community_posts` (raw posts) + `rumor_scores` (Gemini output)
+- Chain placement: after `trading_signal`, before `pick_generation`
+- Gemini RPM budget safe (~21 calls/day with rumors added)
+- Fireant REST API at `restv2.fireant.vn/posts` with guest JWT (exp 2029)
+- Watchlist-gated crawling (~15-30 tickers, not all 400)
+- Pre-filter posts <20 chars, weight by engagement, `html.unescape()` before storing
+- Token refresh fallback: on 401 → fetch homepage → parse `__NEXT_DATA__` → extract new JWT
 
 ### Research Context (v11.0)
 
@@ -102,6 +115,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-05
-Stopped at: Milestone v10.0 shipped
+Last session: 2025-07-21
+Stopped at: Roadmap created for v12.0
 Resume file: None
+Next action: `/gsd-plan-phase 60`
