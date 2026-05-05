@@ -26,10 +26,18 @@ class Rumor(Base):
     post_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     author_name: Mapped[str] = mapped_column(String(200), nullable=False)
-    is_authentic: Mapped[bool] = mapped_column(Boolean, default=False)
-    total_likes: Mapped[int] = mapped_column(Integer, default=0)
-    total_replies: Mapped[int] = mapped_column(Integer, default=0)
-    fireant_sentiment: Mapped[int] = mapped_column(Integer, default=0)
+    is_authentic: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    total_likes: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0")
+    )
+    total_replies: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0")
+    )
+    fireant_sentiment: Mapped[int] = mapped_column(
+        Integer, default=0, server_default=text("0")
+    )
     posted_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False
     )
