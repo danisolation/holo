@@ -175,11 +175,13 @@ Full details: [milestones/v10.0-ROADMAP.md](milestones/v10.0-ROADMAP.md)
 - [x] **Phase 57: Search Fix** - Remove ticker search truncation, add recent searches (completed 2026-05-05)
   Plans:
   - [x] 57-01-PLAN.md — Remove .slice(0,50) truncation, pass limit=500, add recent searches
-- [ ] **Phase 58: AI Analysis Freshness** - Morning AI refresh chain, freshness indicator in dashboard (2 plans)
+- [x] **Phase 58: AI Analysis Freshness** - Morning AI refresh chain, freshness indicator in dashboard (2 plans) (completed 2026-05-05)
   Plans:
-  - [ ] 58-01-PLAN.md — Morning CronTrigger + shortened chain + watchlist API freshness field
-  - [ ] 58-02-PLAN.md — Frontend freshness badge in watchlist table
-- [ ] **Phase 59: UX & Onboarding** - Preset watchlist, empty state guidance, navigation descriptions
+  - [x] 58-01-PLAN.md — Morning CronTrigger + shortened chain + watchlist API freshness field
+  - [x] 58-02-PLAN.md — Frontend freshness badge in watchlist table
+- [ ] **Phase 59: UX & Onboarding** - Preset watchlist, empty state guidance, navigation descriptions (1 plan)
+  Plans:
+  - [ ] 59-01-PLAN.md — VN30 preset, empty states, nav descriptions
 
 ## Phase Details
 
@@ -231,7 +233,9 @@ Plans:
   1. A user with an empty watchlist sees a one-click option to add VN30 blue-chip tickers as a preset watchlist
   2. Empty states on heatmap, watchlist, and discovery pages show helpful guidance text with a clear call-to-action (not blank screens)
   3. Navigation items include short descriptions or tooltips explaining what each section does (e.g., "Discovery — AI-scored stock recommendations updated daily")
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 59-01-PLAN.md — VN30 preset, empty states, nav descriptions
 **UI hint**: yes
 
 ## Progress
@@ -246,5 +250,5 @@ Plans:
 | 55. Discovery Frontend | v10.0 | 2/2 | Complete | 2026-05-04 |
 | 56. Keep-Alive & API Performance | v11.0 | 2/2 | Complete    | 2026-05-05 |
 | 57. Search Fix | v11.0 | 1/1 | Complete    | 2026-05-05 |
-| 58. AI Analysis Freshness | v11.0 | 0/2 | Not started | - |
+| 58. AI Analysis Freshness | v11.0 | 2/2 | Complete    | 2026-05-05 |
 | 59. UX & Onboarding | v11.0 | 0/? | Not started | - |
