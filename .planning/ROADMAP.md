@@ -223,7 +223,10 @@ Plans:
   1. Ticker detail page shows a rumor score panel with latest credibility and impact scores
   2. Ticker detail page shows a chronological feed of scored rumor posts with their assessments
   3. Watchlist table rows show a badge indicating recent rumor count and overall sentiment for each ticker
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 62-01-PLAN.md — Backend FastAPI rumor router (2 GET endpoints + Pydantic schemas)
+- [ ] 62-02-PLAN.md — Frontend components, hooks, ticker page + watchlist integration
 **UI hint**: yes
 
 ### Phase 63: Scheduler Integration
