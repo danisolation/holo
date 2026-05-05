@@ -32,3 +32,40 @@ class TickerRumorScore(BaseModel):
 class RumorBatchResponse(BaseModel):
     """Batch response for rumor scoring (one entry per ticker)."""
     scores: list[TickerRumorScore]
+
+
+# --- API Response Schemas ---
+
+class RumorPostResponse(BaseModel):
+    """Single rumor post in the feed (from Fireant community)."""
+    content: str
+    author_name: str
+    is_authentic: bool
+    total_likes: int
+    total_replies: int
+    posted_at: str
+
+
+class RumorScoreResponse(BaseModel):
+    """Ticker detail response: latest rumor score + recent posts.
+
+    All score fields are Optional because a ticker may have posts but
+    no score yet (or no rumor data at all).
+    """
+    symbol: str
+    scored_date: str | None = None
+    credibility_score: int | None = None
+    impact_score: int | None = None
+    direction: str | None = None
+    key_claims: list[str] = []
+    reasoning: str | None = None
+    posts: list[RumorPostResponse] = []
+
+
+class WatchlistRumorSummary(BaseModel):
+    """Watchlist badge data: aggregated rumor stats per ticker (last 7 days)."""
+    symbol: str
+    rumor_count: int
+    avg_credibility: float | None = None
+    avg_impact: float | None = None
+    dominant_direction: str | None = None
