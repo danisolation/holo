@@ -237,7 +237,9 @@ Plans:
   1. Fireant crawl + rumor scoring execute automatically in the daily APScheduler job chain
   2. Rumor jobs run after `trading_signal` and before `pick_generation` in the chain
   3. A scheduler failure in rumor jobs does not break the rest of the pipeline
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 63-01-PLAN.md — Job functions, chain wiring, manual triggers
 
 ## Progress
 
