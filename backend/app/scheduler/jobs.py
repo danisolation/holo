@@ -800,6 +800,154 @@ async def generate_weekly_review():
 # ── Phase 52: Discovery scoring engine ──────────────────────────────────────
 
 
+# ── Phase 58: Morning AI refresh chain ──────────────────────────────────────
+
+
+async def morning_price_crawl_hose():
+    """Morning pre-market price crawl for HOSE (8:30 AM Mon-Fri).
+
+    Reuses daily crawl logic. Chains to morning_indicator_compute
+    via _on_job_executed (shortened chain, no discovery/news/sentiment).
+    """
+    await daily_price_crawl_for_exchange("HOSE")
+
+
+async def morning_indicator_compute():
+    """Morning indicator compute — part of shortened morning chain."""
+    logger.info("=== MORNING INDICATOR COMPUTE START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("morning_indicator_compute")
+        try:
+            from app.services.indicator_service import IndicatorService
+            service = IndicatorService(session)
+            result = await service.compute_all_tickers()
+
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "morning_indicator_compute", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== MORNING INDICATOR COMPUTE COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete morning indicator compute failure: all tickers failed")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== MORNING INDICATOR COMPUTE FAILED: {e} ===")
+            raise
+
+
+async def morning_ai_analysis():
+    """Morning AI analysis — part of shortened morning chain.
+
+    Runs technical+fundamental analysis for watchlist tickers only.
+    """
+    logger.info("=== MORNING AI ANALYSIS START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("morning_ai_analysis")
+        try:
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping morning AI analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Morning watchlist gating: analyzing {len(ticker_filter)} tickers")
+
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            results = await service.analyze_all_tickers(
+                analysis_type="both", ticker_filter=ticker_filter
+            )
+
+            result = _sum_ai_results(results)
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "morning_ai_analysis", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== MORNING AI ANALYSIS COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete morning AI analysis failure: all tickers failed")
+
+        except ValueError as e:
+            await job_svc.complete(execution, status="skipped", result_summary={"reason": str(e)})
+            await session.commit()
+            logger.warning(f"=== MORNING AI ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== MORNING AI ANALYSIS FAILED: {e} ===")
+            raise
+
+
+async def morning_trading_signal_analysis():
+    """Morning trading signal analysis — part of shortened morning chain.
+
+    Generates trading signals for watchlist tickers only.
+    Final step in morning chain (no picks/discovery in morning).
+    """
+    logger.info("=== MORNING TRADING SIGNAL ANALYSIS START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("morning_trading_signal_analysis")
+        try:
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping morning trading signal analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Morning watchlist gating: trading signals for {len(ticker_filter)} tickers")
+
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            results = await service.analyze_all_tickers(
+                analysis_type="trading_signal", ticker_filter=ticker_filter
+            )
+
+            result = _sum_ai_results(results)
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "morning_trading_signal_analysis", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== MORNING TRADING SIGNAL ANALYSIS COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete morning trading signal analysis failure")
+
+        except ValueError as e:
+            await job_svc.complete(execution, status="skipped", result_summary={"reason": str(e)})
+            await session.commit()
+            logger.warning(f"=== MORNING TRADING SIGNAL ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== MORNING TRADING SIGNAL ANALYSIS FAILED: {e} ===")
+            raise
+
+
 async def daily_discovery_scoring():
     """Score all HOSE tickers for discovery.
 

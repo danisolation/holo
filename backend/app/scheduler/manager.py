@@ -47,6 +47,11 @@ _JOB_NAMES = {
     "generate_weekly_review_triggered": "AI Weekly Performance Review",
     "realtime_price_poll": "Real-Time Price Poll",
     "realtime_heartbeat": "Real-Time Heartbeat",
+    # Phase 58: Morning AI refresh chain
+    "morning_price_crawl_hose": "Morning Price Crawl (HOSE)",
+    "morning_indicator_compute_triggered": "Morning Indicator Compute",
+    "morning_ai_analysis_triggered": "Morning AI Analysis",
+    "morning_trading_signal_triggered": "Morning Trading Signal",
 }
 
 
@@ -67,7 +72,36 @@ def _on_job_executed(event: events.JobExecutionEvent):
         logger.warning(f"Job {event.job_id} failed with exception, not chaining next job")
         return
 
-    if event.job_id == "daily_price_crawl_hose":
+    if event.job_id == "morning_price_crawl_hose":
+        # Phase 58: Morning shortened chain (price → indicators → AI → trading signals)
+        from app.scheduler.jobs import morning_indicator_compute
+        logger.info("Morning chain: morning_price_crawl_hose → morning_indicator_compute")
+        scheduler.add_job(
+            morning_indicator_compute,
+            id="morning_indicator_compute_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id == "morning_indicator_compute_triggered":
+        from app.scheduler.jobs import morning_ai_analysis
+        logger.info("Morning chain: morning_indicator_compute → morning_ai_analysis")
+        scheduler.add_job(
+            morning_ai_analysis,
+            id="morning_ai_analysis_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id == "morning_ai_analysis_triggered":
+        from app.scheduler.jobs import morning_trading_signal_analysis
+        logger.info("Morning chain: morning_ai_analysis → morning_trading_signal_analysis")
+        scheduler.add_job(
+            morning_trading_signal_analysis,
+            id="morning_trading_signal_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    # morning_trading_signal_triggered ends chain (no pick generation in morning)
+    elif event.job_id == "daily_price_crawl_hose":
         from app.scheduler.jobs import daily_indicator_compute
         logger.info("Chaining: daily_price_crawl_hose → daily_indicator_compute")
         scheduler.add_job(
@@ -318,12 +352,30 @@ def configure_jobs():
         f"realtime_heartbeat (every 15s)"
     )
 
+    # ── Phase 58: Morning AI refresh (8:30 AM Mon-Fri) ─────────────────
+    from app.scheduler.jobs import morning_price_crawl_hose
+
+    scheduler.add_job(
+        morning_price_crawl_hose,
+        trigger=CronTrigger(
+            hour=8, minute=30,
+            day_of_week="mon-fri",
+            timezone=settings.timezone,
+        ),
+        id="morning_price_crawl_hose",
+        name="Morning Pre-Market Price Crawl (HOSE)",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    logger.info(f"Morning refresh: morning_price_crawl_hose (Mon-Fri 08:30 {settings.timezone})")
+
     # Register job chaining listener (Phase 2 + Phase 4 + Phase 12)
     scheduler.add_listener(_on_job_executed, events.EVENT_JOB_EXECUTED)
     # Register failure notification listener (Phase 6 — ERR-05)
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → pick_generation → pick_outcome_check → consecutive_loss_check]"
+        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → pick_generation → pick_outcome_check → consecutive_loss_check], "
+        "morning_price_crawl_hose → [indicators → AI → trading_signal]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")
