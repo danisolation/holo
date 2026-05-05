@@ -1,5 +1,15 @@
 # Milestones
 
+## v11.0 UX & Reliability Overhaul (Shipped: 2026-05-05)
+
+**Phases completed:** 4 phases, 6 plans, 10 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
 ## v10.0 Watchlist-Centric & Stock Discovery (Shipped: 2026-05-05)
 
 **Phases completed:** 4 phases, 7 plans, 14 tasks
