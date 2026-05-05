@@ -8,7 +8,7 @@ Crawl tin đồn từ cộng đồng chứng khoán VN (Fireant.vn), dùng Gemin
 
 ### Data Crawling
 
-- [ ] **RUMOR-01**: User can see community posts from Fireant.vn crawled automatically for watchlist tickers
+- [x] **RUMOR-01**: User can see community posts from Fireant.vn crawled automatically for watchlist tickers
 - [x] **RUMOR-02**: System deduplicates posts on crawl (ON CONFLICT on post_id) and stores in dedicated `rumors` table
 - [ ] **RUMOR-03**: Rumor crawl runs automatically as part of daily APScheduler job chain
 
@@ -45,7 +45,7 @@ Crawl tin đồn từ cộng đồng chứng khoán VN (Fireant.vn), dùng Gemin
 
 | REQ | Phase | Status |
 |-----|-------|--------|
-| RUMOR-01 | Phase 60 | Pending |
+| RUMOR-01 | Phase 60 | Complete |
 | RUMOR-02 | Phase 60 | Complete |
 | RUMOR-03 | Phase 63 | Pending |
 | RUMOR-04 | Phase 61 | Pending |

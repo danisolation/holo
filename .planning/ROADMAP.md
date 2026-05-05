@@ -179,7 +179,7 @@ Full details: [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md)
 
 ### v12.0 Rumor Intelligence (Phases 60-63)
 
-- [ ] **Phase 60: Database & Fireant Crawler** — `community_posts` table, Fireant REST API crawler, post deduplication
+- [x] **Phase 60: Database & Fireant Crawler** — `community_posts` table, Fireant REST API crawler, post deduplication (completed 2026-05-05)
 - [ ] **Phase 61: AI Rumor Scoring** — Gemini credibility/impact scoring, direction classification, key claims extraction
 - [ ] **Phase 62: API Endpoints & Frontend Display** — Rumor score panel, feed timeline, watchlist badges
 - [ ] **Phase 63: Scheduler Integration** — Wire crawler + scoring into daily APScheduler job chain
@@ -195,10 +195,10 @@ Full details: [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md)
   2. Re-running the crawler for the same ticker does not create duplicate posts (ON CONFLICT dedup)
   3. Stored posts contain content, author info, engagement metrics (likes, replies), and verified user status
   4. Crawler handles Vietnamese content encoding correctly (no HTML entities in stored text)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 60-01-PLAN.md — Schema foundation: Rumor model, Alembic migration, config, circuit breaker, types
-- [ ] 60-02-PLAN.md — FireantCrawler implementation + unit tests
+- [x] 60-02-PLAN.md — FireantCrawler implementation + unit tests
 
 ### Phase 61: AI Rumor Scoring
 **Goal**: Each crawled rumor receives AI-generated credibility, impact, and directional assessment
@@ -237,7 +237,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 60. Database & Fireant Crawler | 1/2 | In Progress|  |
+| 60. Database & Fireant Crawler | 2/2 | Complete   | 2026-05-05 |
 | 61. AI Rumor Scoring | 0/? | Not started | - |
 | 62. API Endpoints & Frontend Display | 0/? | Not started | - |
 | 63. Scheduler Integration | 0/? | Not started | - |

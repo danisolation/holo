@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Rumor Intelligence
 status: planning
-stopped_at: Completed 60-01-PLAN.md
-last_updated: "2026-05-05T08:11:21.100Z"
+stopped_at: Completed 60-02-PLAN.md
+last_updated: "2026-05-05T08:15:05.250Z"
 last_activity: 2025-07-21 — Roadmap created
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -56,6 +56,8 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 52]: Pure scoring functions at module level for testability; 3 batch queries for N+1 avoidance; PostgreSQL ON CONFLICT upsert for idempotency
 - [Phase 52]: Discovery scoring inserted between indicators and AI in scheduler chain — replaces old direct link
 - [Phase 60]: Rumor model mirrors NewsArticle with BigInteger post_id as dedup key; fireant_delay=1.5s
+- [Phase 60]: Inline watchlist query in FireantCrawler to avoid circular imports with jobs.py
+- [Phase 60]: Mirror CafeFCrawler pattern exactly for consistency — constructor, retry, breaker, store
 
 ### Research Context (v10.0)
 
@@ -116,7 +118,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-05T08:11:21.095Z
-Stopped at: Completed 60-01-PLAN.md
+Last session: 2026-05-05T08:15:05.078Z
+Stopped at: Completed 60-02-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 60`
