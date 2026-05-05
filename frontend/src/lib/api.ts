@@ -893,3 +893,37 @@ export async function fetchRumorScores(symbol: string): Promise<RumorScoreData> 
 export async function fetchWatchlistRumors(): Promise<WatchlistRumorSummary[]> {
   return apiFetch<WatchlistRumorSummary[]>("/rumors/watchlist/summary");
 }
+
+// --- Phase 65: Accuracy API ---
+
+export interface AccuracyStats {
+  total: number;
+  correct?: number;
+  overall_accuracy_pct: number;
+  by_direction: Record<string, { total: number; correct: number; accuracy_pct: number }>;
+  by_timeframe?: Record<string, { total: number; correct: number; accuracy_pct: number }>;
+  period_days: number;
+}
+
+export interface TickerAccuracyHistory {
+  date: string;
+  predicted: string;
+  confidence: number;
+  pct_change_7d: number | null;
+  verdict: string | null;
+}
+
+export interface TickerAccuracy {
+  total: number;
+  correct: number;
+  accuracy_pct: number;
+  history: TickerAccuracyHistory[];
+}
+
+export async function fetchAccuracyStats(days: number = 30): Promise<AccuracyStats> {
+  return apiFetch<AccuracyStats>(`/accuracy/stats?days=${days}`);
+}
+
+export async function fetchTickerAccuracy(tickerId: number, days: number = 30): Promise<TickerAccuracy> {
+  return apiFetch<TickerAccuracy>(`/accuracy/ticker/${tickerId}?days=${days}`);
+}

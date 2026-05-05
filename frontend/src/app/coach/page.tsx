@@ -26,6 +26,7 @@ import { SectorPreferencesCard } from "@/components/sector-preferences-card";
 import { MonthlyGoalCard } from "@/components/monthly-goal-card";
 import { WeeklyPromptCard } from "@/components/weekly-prompt-card";
 import { WeeklyReviewCard } from "@/components/weekly-review-card";
+import { AccuracyCard } from "@/components/accuracy-card";
 
 export default function CoachPage() {
   const { data: picksData, isLoading, isError, refetch } = useDailyPicks();
@@ -208,6 +209,9 @@ export default function CoachPage() {
             {picksData?.almost_selected && picksData.almost_selected.length > 0 && (
               <AlmostSelectedList tickers={picksData.almost_selected} />
             )}
+
+            {/* AI Accuracy Stats (Phase 66) */}
+            <AccuracyCard />
           </div>
         </TabsContent>
 

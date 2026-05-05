@@ -45,6 +45,8 @@ import {
   fetchDiscovery,
   fetchRumorScores,
   fetchWatchlistRumors,
+  fetchAccuracyStats,
+  fetchTickerAccuracy,
 } from "@/lib/api";
 import type { ProfileUpdate, TradeCreate } from "@/lib/api";
 
@@ -521,5 +523,24 @@ export function useWatchlistRumors() {
     queryKey: ["watchlist-rumors"],
     queryFn: fetchWatchlistRumors,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+// --- Phase 65: Accuracy Hooks ---
+
+export function useAccuracyStats(days: number = 30) {
+  return useQuery({
+    queryKey: ["accuracy-stats", days],
+    queryFn: () => fetchAccuracyStats(days),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useTickerAccuracy(tickerId: number | undefined, days: number = 30) {
+  return useQuery({
+    queryKey: ["ticker-accuracy", tickerId, days],
+    queryFn: () => fetchTickerAccuracy(tickerId!, days),
+    enabled: !!tickerId,
+    staleTime: 10 * 60 * 1000,
   });
 }

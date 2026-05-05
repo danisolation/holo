@@ -12,6 +12,7 @@ from decimal import Decimal
 import google.genai as genai
 from google.genai.errors import ClientError, ServerError
 from loguru import logger
+import sqlalchemy as sa
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -521,6 +522,43 @@ class PickService:
 
             if boosted:
                 logger.info(f"Applied rumor boost to {boosted}/{len(candidates)} candidates")
+
+        # --- Step 6.7: Apply accuracy feedback (ACC-04) ---
+        from app.models.ai_accuracy import AIAccuracy
+        accuracy_result = await self.session.execute(
+            select(
+                AIAccuracy.ticker_id,
+                func.count().label("total"),
+                func.sum(
+                    func.cast(AIAccuracy.verdict_7d == "correct", sa.Integer)
+                ).label("correct"),
+            )
+            .where(AIAccuracy.ticker_id.in_(ticker_ids))
+            .where(AIAccuracy.verdict_7d.isnot(None))
+            .where(AIAccuracy.analysis_date >= func.now() - text("INTERVAL '30 days'"))
+            .group_by(AIAccuracy.ticker_id)
+        )
+        accuracy_map: dict[int, float] = {}
+        for row in accuracy_result.all():
+            if row.total >= 3:  # Need at least 3 data points
+                accuracy_map[row.ticker_id] = row.correct / row.total * 100
+
+        acc_adjusted = 0
+        for c in candidates:
+            acc_pct = accuracy_map.get(c["ticker_id"])
+            if acc_pct is None:
+                continue
+            if acc_pct > 60:
+                # High accuracy → confidence boost up to +10%
+                c["composite_score"] *= (1 + (acc_pct - 60) / 400)
+                acc_adjusted += 1
+            elif acc_pct < 40:
+                # Low accuracy → confidence penalty up to -10%
+                c["composite_score"] *= (1 - (40 - acc_pct) / 400)
+                acc_adjusted += 1
+
+        if acc_adjusted:
+            logger.info(f"Applied accuracy feedback to {acc_adjusted}/{len(candidates)} candidates")
 
         # --- Step 7: Sort and select ---
         candidates.sort(key=lambda c: c["composite_score"], reverse=True)
