@@ -22,9 +22,9 @@ Crawl tin đồn từ cộng đồng chứng khoán VN (Fireant.vn), dùng Gemin
 
 ### Frontend Display
 
-- [ ] **RUMOR-09**: Ticker detail page shows a rumor score panel with latest credibility and impact scores
-- [ ] **RUMOR-10**: Ticker detail page shows a chronological rumor feed timeline with scored posts
-- [ ] **RUMOR-11**: Watchlist table shows rumor badge indicating recent rumor count and overall sentiment
+- [x] **RUMOR-09**: Ticker detail page shows a rumor score panel with latest credibility and impact scores
+- [x] **RUMOR-10**: Ticker detail page shows a chronological rumor feed timeline with scored posts
+- [x] **RUMOR-11**: Watchlist table shows rumor badge indicating recent rumor count and overall sentiment
 
 ## Future Requirements (Deferred)
 
@@ -53,6 +53,6 @@ Crawl tin đồn từ cộng đồng chứng khoán VN (Fireant.vn), dùng Gemin
 | RUMOR-06 | Phase 61 | Complete |
 | RUMOR-07 | Phase 61 | Complete |
 | RUMOR-08 | Phase 61 | Complete |
-| RUMOR-09 | Phase 62 | Pending |
-| RUMOR-10 | Phase 62 | Pending |
-| RUMOR-11 | Phase 62 | Pending |
+| RUMOR-09 | Phase 62 | Complete |
+| RUMOR-10 | Phase 62 | Complete |
+| RUMOR-11 | Phase 62 | Complete |

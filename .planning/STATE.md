@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Rumor Intelligence
 status: planning
-stopped_at: Completed 61-02-PLAN.md
-last_updated: "2026-05-05T08:39:23.066Z"
+stopped_at: Completed 62-02-PLAN.md
+last_updated: "2026-05-05T08:57:01.842Z"
 last_activity: 2025-07-21 — Roadmap created
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -60,6 +60,7 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 60]: Mirror CafeFCrawler pattern exactly for consistency — constructor, retry, breaker, store
 - [Phase 61]: JSONB for key_claims/post_ids; UniqueConstraint(ticker_id, scored_date) for daily upsert; Pydantic Field(ge=1,le=10) validates at boundary
 - [Phase 61]: Standalone RumorScoringService with shared _gemini_lock for RPM serialization
+- [Phase 62]: RumorScorePanel shows empty state when credibility_score is null; direction badge reuses #26a69a/#ef5350 color scheme; rumor section after news on ticker page
 
 ### Research Context (v10.0)
 
@@ -120,7 +121,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-05T08:39:23.061Z
-Stopped at: Completed 61-02-PLAN.md
+Last session: 2026-05-05T08:57:01.837Z
+Stopped at: Completed 62-02-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 60`

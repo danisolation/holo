@@ -181,7 +181,7 @@ Full details: [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md)
 
 - [x] **Phase 60: Database & Fireant Crawler** — `community_posts` table, Fireant REST API crawler, post deduplication (completed 2026-05-05)
 - [x] **Phase 61: AI Rumor Scoring** — Gemini credibility/impact scoring, direction classification, key claims extraction (completed 2026-05-05)
-- [ ] **Phase 62: API Endpoints & Frontend Display** — Rumor score panel, feed timeline, watchlist badges
+- [x] **Phase 62: API Endpoints & Frontend Display** — Rumor score panel, feed timeline, watchlist badges (completed 2026-05-05)
 - [ ] **Phase 63: Scheduler Integration** — Wire crawler + scoring into daily APScheduler job chain
 
 ## Phase Details
@@ -223,10 +223,10 @@ Plans:
   1. Ticker detail page shows a rumor score panel with latest credibility and impact scores
   2. Ticker detail page shows a chronological feed of scored rumor posts with their assessments
   3. Watchlist table rows show a badge indicating recent rumor count and overall sentiment for each ticker
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 62-01-PLAN.md — Backend FastAPI rumor router (2 GET endpoints + Pydantic schemas)
-- [ ] 62-02-PLAN.md — Frontend components, hooks, ticker page + watchlist integration
+- [x] 62-01-PLAN.md — Backend FastAPI rumor router (2 GET endpoints + Pydantic schemas)
+- [x] 62-02-PLAN.md — Frontend components, hooks, ticker page + watchlist integration
 **UI hint**: yes
 
 ### Phase 63: Scheduler Integration
@@ -245,5 +245,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 60. Database & Fireant Crawler | 2/2 | Complete   | 2026-05-05 |
 | 61. AI Rumor Scoring | 2/2 | Complete   | 2026-05-05 |
-| 62. API Endpoints & Frontend Display | 0/? | Not started | - |
+| 62. API Endpoints & Frontend Display | 2/2 | Complete   | 2026-05-05 |
 | 63. Scheduler Integration | 0/? | Not started | - |
