@@ -14,11 +14,11 @@ Crawl tin đồn từ cộng đồng chứng khoán VN (Fireant.vn), dùng Gemin
 
 ### AI Scoring
 
-- [ ] **RUMOR-04**: Each rumor receives a Gemini AI credibility score (1-10) assessing source reliability and claim plausibility
-- [ ] **RUMOR-05**: Each rumor receives an impact score (1-10) and bullish/bearish/neutral classification
-- [ ] **RUMOR-06**: Scoring incorporates engagement metrics (likes, replies) and verified user status as credibility signals
-- [ ] **RUMOR-07**: AI extracts key factual claims from rumor content as a structured list
-- [ ] **RUMOR-08**: All AI assessments include Vietnamese explanations
+- [x] **RUMOR-04**: Each rumor receives a Gemini AI credibility score (1-10) assessing source reliability and claim plausibility
+- [x] **RUMOR-05**: Each rumor receives an impact score (1-10) and bullish/bearish/neutral classification
+- [x] **RUMOR-06**: Scoring incorporates engagement metrics (likes, replies) and verified user status as credibility signals
+- [x] **RUMOR-07**: AI extracts key factual claims from rumor content as a structured list
+- [x] **RUMOR-08**: All AI assessments include Vietnamese explanations
 
 ### Frontend Display
 
@@ -48,11 +48,11 @@ Crawl tin đồn từ cộng đồng chứng khoán VN (Fireant.vn), dùng Gemin
 | RUMOR-01 | Phase 60 | Complete |
 | RUMOR-02 | Phase 60 | Complete |
 | RUMOR-03 | Phase 63 | Pending |
-| RUMOR-04 | Phase 61 | Pending |
-| RUMOR-05 | Phase 61 | Pending |
-| RUMOR-06 | Phase 61 | Pending |
-| RUMOR-07 | Phase 61 | Pending |
-| RUMOR-08 | Phase 61 | Pending |
+| RUMOR-04 | Phase 61 | Complete |
+| RUMOR-05 | Phase 61 | Complete |
+| RUMOR-06 | Phase 61 | Complete |
+| RUMOR-07 | Phase 61 | Complete |
+| RUMOR-08 | Phase 61 | Complete |
 | RUMOR-09 | Phase 62 | Pending |
 | RUMOR-10 | Phase 62 | Pending |
 | RUMOR-11 | Phase 62 | Pending |

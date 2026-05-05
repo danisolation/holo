@@ -210,9 +210,9 @@ Plans:
   3. Scoring output includes extracted key factual claims as a structured list
   4. All AI assessments include Vietnamese explanations for the scores
   5. Posts with higher engagement (likes, replies) and verified authors receive appropriately weighted credibility signals
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 61-01-PLAN.md — Schema foundation: RumorScore model, migration, Pydantic schemas, Vietnamese prompts
+- [x] 61-01-PLAN.md — Schema foundation: RumorScore model, migration, Pydantic schemas, Vietnamese prompts
 - [ ] 61-02-PLAN.md — RumorScoringService implementation + unit tests
 
 ### Phase 62: API Endpoints & Frontend Display
@@ -241,6 +241,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 60. Database & Fireant Crawler | 2/2 | Complete   | 2026-05-05 |
-| 61. AI Rumor Scoring | 0/? | Not started | - |
+| 61. AI Rumor Scoring | 1/2 | In Progress|  |
 | 62. API Endpoints & Frontend Display | 0/? | Not started | - |
 | 63. Scheduler Integration | 0/? | Not started | - |

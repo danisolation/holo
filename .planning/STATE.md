@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Rumor Intelligence
-status: executing
-stopped_at: Phase 60 complete, starting Phase 61
-last_updated: "2026-05-05T09:00:00.000Z"
-last_activity: 2026-05-05 — Phase 60 executed + reviewed + fixed
+status: planning
+stopped_at: Completed 61-01-PLAN.md
+last_updated: "2026-05-05T08:34:07.132Z"
+last_activity: 2025-07-21 — Roadmap created
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 25
+  total_plans: 4
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -58,6 +58,7 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 60]: Rumor model mirrors NewsArticle with BigInteger post_id as dedup key; fireant_delay=1.5s
 - [Phase 60]: Inline watchlist query in FireantCrawler to avoid circular imports with jobs.py
 - [Phase 60]: Mirror CafeFCrawler pattern exactly for consistency — constructor, retry, breaker, store
+- [Phase 61]: JSONB for key_claims/post_ids; UniqueConstraint(ticker_id, scored_date) for daily upsert; Pydantic Field(ge=1,le=10) validates at boundary
 
 ### Research Context (v10.0)
 
@@ -118,7 +119,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-05T08:15:05.078Z
-Stopped at: Completed 60-02-PLAN.md
+Last session: 2026-05-05T08:34:07.039Z
+Stopped at: Completed 61-01-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 60`
