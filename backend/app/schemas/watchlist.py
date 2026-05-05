@@ -10,6 +10,7 @@ class WatchlistItemResponse(BaseModel):
     ai_signal: str | None = None      # e.g. "buy", "sell", "hold"
     ai_score: int | None = None        # 1-10
     signal_date: str | None = None     # ISO date of the signal
+    last_analysis_at: str | None = None  # Phase 58: ISO timestamp of most recent AI analysis
 
 
 class WatchlistUpdateRequest(BaseModel):

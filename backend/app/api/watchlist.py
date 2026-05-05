@@ -38,6 +38,16 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
         .subquery()
     )
 
+    # Phase 58: Subquery — most recent AI analysis created_at per ticker (any type)
+    latest_created = (
+        select(
+            AIAnalysis.ticker_id,
+            sa_func.max(AIAnalysis.created_at).label("max_created_at"),
+        )
+        .group_by(AIAnalysis.ticker_id)
+        .subquery()
+    )
+
     # Main query: watchlist LEFT JOIN ticker LEFT JOIN latest combined analysis
     stmt = (
         select(
@@ -47,6 +57,7 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
             AIAnalysis.signal,
             AIAnalysis.score,
             AIAnalysis.analysis_date,
+            latest_created.c.max_created_at,
         )
         .outerjoin(Ticker, UserWatchlist.symbol == Ticker.symbol)
         .outerjoin(
@@ -60,6 +71,10 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
                 AIAnalysis.analysis_type == AnalysisType.COMBINED,
                 AIAnalysis.analysis_date == latest_analysis.c.max_date,
             ),
+        )
+        .outerjoin(
+            latest_created,
+            Ticker.id == latest_created.c.ticker_id,
         )
         .order_by(UserWatchlist.created_at.desc())
     )
@@ -75,6 +90,7 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
             ai_signal=row.signal,
             ai_score=row.score,
             signal_date=row.analysis_date.isoformat() if row.analysis_date else None,
+            last_analysis_at=row.max_created_at.isoformat() if row.max_created_at else None,
         )
         for row in rows
     ]
