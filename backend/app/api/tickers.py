@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select, func, literal_column, text
 from sqlalchemy.orm import aliased
+from cachetools import TTLCache
 from loguru import logger
 
 from app.database import async_session
@@ -143,6 +144,9 @@ async def get_ticker_prices(
 ALLOWED_SORTS = {"change_pct", "market_cap", "symbol"}
 ALLOWED_ORDERS = {"desc", "asc"}
 
+# In-memory cache for market overview — 60s TTL, max 32 entries
+_market_overview_cache: TTLCache = TTLCache(maxsize=32, ttl=60)
+
 
 @router.get("/market-overview", response_model=list[MarketTickerResponse])
 async def market_overview(
@@ -171,6 +175,13 @@ async def market_overview(
             status_code=400,
             detail=f"Invalid order. Must be one of: {', '.join(sorted(ALLOWED_ORDERS))}",
         )
+
+    # Check cache first
+    cache_key = f"{exchange}:{sort}:{order}:{top}"
+    cached = _market_overview_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     async with async_session() as session:
         # Subquery: rank prices per ticker by date desc, keep top 2
         ranked = (
@@ -259,5 +270,8 @@ async def market_overview(
     # Limit results
     if top is not None:
         items = items[:top]
+
+    # Cache the result
+    _market_overview_cache[cache_key] = items
 
     return items
