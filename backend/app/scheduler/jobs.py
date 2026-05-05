@@ -979,3 +979,91 @@ async def daily_discovery_scoring():
             logger.error(f"=== DAILY DISCOVERY SCORING FAILED: {e} ===")
             raise
 
+
+async def daily_rumor_crawl():
+    """Crawl Fireant community posts for watchlist tickers.
+
+    Triggered after daily_trading_signal via job chaining.
+    Phase 63: Part of rumor intelligence pipeline.
+    """
+    logger.info("=== DAILY RUMOR CRAWL START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_rumor_crawl")
+        try:
+            from app.crawlers.fireant_crawler import FireantCrawler
+            crawler = FireantCrawler(session)
+            result = await crawler.crawl_watchlist_tickers()
+
+            # result shape: {success, failed, total_posts, failed_symbols}
+            final_failed = result.get("failed_symbols", [])
+            await _dlq_failures(session, "daily_rumor_crawl", final_failed)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(final_failed))
+            summary["total_posts"] = result.get("total_posts", 0)
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY RUMOR CRAWL COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete rumor crawl failure: all tickers failed")
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY RUMOR CRAWL FAILED: {e} ===")
+            raise
+
+
+async def daily_rumor_scoring():
+    """Score crawled rumors with Gemini AI credibility/impact assessment.
+
+    Triggered after daily_rumor_crawl via job chaining.
+    Phase 63: Part of rumor intelligence pipeline.
+    """
+    logger.info("=== DAILY RUMOR SCORING START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_rumor_scoring")
+        try:
+            from app.services.rumor_scoring_service import RumorScoringService
+            service = RumorScoringService(session)
+            ticker_results = await service.score_all_tickers()
+
+            # Convert {symbol: bool} to standard result dict
+            success = sum(1 for v in ticker_results.values() if v)
+            failed = sum(1 for v in ticker_results.values() if not v)
+            failed_symbols = [s for s, v in ticker_results.items() if not v]
+            result = {"success": success, "failed": failed, "failed_symbols": failed_symbols}
+
+            await _dlq_failures(session, "daily_rumor_scoring", failed_symbols)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, dlq_count=len(failed_symbols))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== DAILY RUMOR SCORING COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete rumor scoring failure: all tickers failed")
+
+        except ValueError as e:
+            # Missing GEMINI_API_KEY — skip gracefully (same pattern as daily_ai_analysis)
+            logger.warning(f"Rumor scoring skipped: {e}")
+            if execution.status == "running":
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": str(e)},
+                )
+                await session.commit()
+            return
+
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY RUMOR SCORING FAILED: {e} ===")
+            raise
+
