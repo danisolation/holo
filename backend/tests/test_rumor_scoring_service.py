@@ -94,6 +94,7 @@ def service(mock_session):
             mock_settings.gemini_api_key = "test-key"
             mock_settings.gemini_model = "gemini-2.5-flash-lite"
             mock_settings.gemini_batch_size = 8
+            mock_settings.rumor_batch_size = 6
             mock_settings.gemini_delay_seconds = 0  # No delay in tests
             svc = RumorScoringService(mock_session)
     return svc
@@ -181,6 +182,41 @@ class TestBuildPrompt:
         assert "📰 Tin tức CafeF (1):" in prompt
         assert "HPG đang tích lũy" in prompt
         assert "KQKD Q2/2025" in prompt
+
+
+class TestBuildBatchPrompt:
+    """Test multi-ticker batch prompt building."""
+
+    def test_batch_prompt_includes_all_tickers(self, service):
+        """Batch prompt contains sections for each ticker."""
+        ticker_data = [
+            {
+                "symbol": "VNM",
+                "rumors": [_make_rumor_row(content="VNM chia cổ tức")],
+                "news_articles": [],
+            },
+            {
+                "symbol": "HPG",
+                "rumors": [],
+                "news_articles": [_make_news_row(title="HPG lợi nhuận Q2 tăng")],
+            },
+        ]
+        prompt = service._build_batch_prompt(ticker_data)
+
+        assert "VNM (1 nguồn thông tin)" in prompt
+        assert "HPG (1 nguồn thông tin)" in prompt
+        assert "Phân tích 2 mã cổ phiếu: VNM, HPG" in prompt
+        assert "VNM chia cổ tức" in prompt
+        assert "HPG lợi nhuận Q2 tăng" in prompt
+
+    def test_batch_prompt_instruction(self, service):
+        """Batch prompt instructs Gemini to return one score per ticker."""
+        ticker_data = [
+            {"symbol": "FPT", "rumors": [_make_rumor_row()], "news_articles": []},
+        ]
+        prompt = service._build_batch_prompt(ticker_data)
+
+        assert "Trả về scores array với MỘT entry cho MỖI mã" in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +363,6 @@ class TestScoreAllTickers:
     @pytest.mark.asyncio
     async def test_score_all_tickers_skips_already_scored(self, service, mock_session):
         """Tickers already scored today are not returned by _get_tickers_with_unscored_data."""
-        # Mock _get_tickers_with_unscored_data returning empty (all scored)
         with patch.object(
             service, "_get_tickers_with_unscored_data",
             new_callable=AsyncMock, return_value=[]
@@ -337,19 +372,51 @@ class TestScoreAllTickers:
         assert results == {}
 
     @pytest.mark.asyncio
-    async def test_score_all_tickers_processes_multiple(self, service, mock_session):
-        """Multiple tickers are scored, results mapped by symbol."""
-        tickers = [(1, "VNM"), (2, "FPT")]
-        score_vnm = _make_ticker_score(ticker="VNM")
-        score_fpt = _make_ticker_score(ticker="FPT")
+    async def test_score_all_tickers_batches_tickers(self, service, mock_session):
+        """Multiple tickers are batched into single Gemini calls."""
+        tickers = [(1, "VNM"), (2, "FPT"), (3, "HPG")]
 
         with patch.object(
             service, "_get_tickers_with_unscored_data",
             new_callable=AsyncMock, return_value=tickers
         ), patch.object(
-            service, "score_ticker",
-            new_callable=AsyncMock, side_effect=[score_vnm, score_fpt]
-        ):
+            service, "score_batch",
+            new_callable=AsyncMock,
+            return_value={"VNM": True, "FPT": True, "HPG": True}
+        ) as mock_batch, patch(
+            "app.services.rumor_scoring_service.settings"
+        ) as mock_settings:
+            mock_settings.rumor_batch_size = 6
+            mock_settings.gemini_delay_seconds = 0
             results = await service.score_all_tickers()
 
-        assert results == {"VNM": True, "FPT": True}
+        assert results == {"VNM": True, "FPT": True, "HPG": True}
+        # All 3 fit in 1 batch (batch_size=6)
+        mock_batch.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_score_all_tickers_splits_batches(self, service, mock_session):
+        """Tickers exceeding batch_size are split into multiple batches."""
+        tickers = [(i, f"T{i}") for i in range(1, 8)]  # 7 tickers
+
+        batch1_result = {f"T{i}": True for i in range(1, 4)}  # 3 tickers
+        batch2_result = {f"T{i}": True for i in range(4, 7)}  # 3 tickers
+        batch3_result = {"T7": True}  # 1 ticker
+
+        with patch.object(
+            service, "_get_tickers_with_unscored_data",
+            new_callable=AsyncMock, return_value=tickers
+        ), patch.object(
+            service, "score_batch",
+            new_callable=AsyncMock,
+            side_effect=[batch1_result, batch2_result, batch3_result]
+        ) as mock_batch, patch(
+            "app.services.rumor_scoring_service.settings"
+        ) as mock_settings:
+            mock_settings.rumor_batch_size = 3
+            mock_settings.gemini_delay_seconds = 0
+            results = await service.score_all_tickers()
+
+        assert len(results) == 7
+        assert all(v is True for v in results.values())
+        assert mock_batch.await_count == 3  # 7 tickers / 3 per batch = 3 calls

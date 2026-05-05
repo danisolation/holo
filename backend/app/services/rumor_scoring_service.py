@@ -46,6 +46,9 @@ class RumorScoringService:
     async def score_all_tickers(self) -> dict[str, bool]:
         """Score all tickers that have unscored rumors today.
 
+        Batches multiple tickers into single Gemini calls to conserve API quota.
+        With rumor_batch_size=6, 30 tickers need only 5 calls (vs 30 without batching).
+
         Returns dict mapping ticker symbol to success/failure.
         """
         tickers = await self._get_tickers_with_unscored_data()
@@ -53,27 +56,157 @@ class RumorScoringService:
             logger.info("Rumor scoring: no tickers with unscored rumors")
             return {}
 
+        batch_size = settings.rumor_batch_size
+        batches = [
+            tickers[i : i + batch_size]
+            for i in range(0, len(tickers), batch_size)
+        ]
+
         results: dict[str, bool] = {}
         total = len(tickers)
         scored = 0
 
-        for i, row in enumerate(tickers):
-            ticker_id, symbol = row[0], row[1]
+        for batch_idx, batch in enumerate(batches):
+            symbols = [row[1] for row in batch]
+            logger.info(
+                f"Rumor scoring batch {batch_idx + 1}/{len(batches)}: "
+                f"{', '.join(symbols)}"
+            )
             try:
-                score = await self.score_ticker(ticker_id, symbol)
-                success = score is not None
-                results[symbol] = success
-                if success:
-                    scored += 1
+                batch_results = await self.score_batch(batch)
+                for symbol, success in batch_results.items():
+                    results[symbol] = success
+                    if success:
+                        scored += 1
             except Exception as e:
-                logger.error(f"Rumor scoring failed for {symbol}: {e}")
-                results[symbol] = False
+                logger.error(f"Rumor scoring batch {batch_idx + 1} failed: {e}")
+                for row in batch:
+                    results[row[1]] = False
 
-            # Delay between tickers to respect RPM limits
-            if i < total - 1:
+            # Delay between batches to respect RPM limits
+            if batch_idx < len(batches) - 1:
                 await asyncio.sleep(settings.gemini_delay_seconds)
 
-        logger.info(f"Rumor scoring complete: {scored}/{total} tickers scored")
+        logger.info(
+            f"Rumor scoring complete: {scored}/{total} tickers in "
+            f"{len(batches)} Gemini calls"
+        )
+        return results
+
+    async def score_batch(
+        self, tickers: list[tuple[int, str]]
+    ) -> dict[str, bool]:
+        """Score multiple tickers in a single Gemini call.
+
+        1. Fetch rumors + news for each ticker
+        2. Build combined multi-ticker prompt
+        3. Single Gemini call → RumorBatchResponse with scores per ticker
+        4. Store each ticker's score
+        """
+        # Gather data for all tickers in batch
+        ticker_data: list[dict] = []
+        for ticker_id, symbol in tickers:
+            result = await self.session.execute(
+                text("""
+                    SELECT id, content, author_name, is_authentic,
+                           total_likes, total_replies, posted_at
+                    FROM rumors
+                    WHERE ticker_id = :tid
+                      AND posted_at >= CURRENT_DATE - INTERVAL '7 days'
+                    ORDER BY posted_at DESC
+                """),
+                {"tid": ticker_id},
+            )
+            rumors = result.fetchall()
+
+            news_result = await self.session.execute(
+                text("""
+                    SELECT id, title, published_at
+                    FROM news_articles
+                    WHERE ticker_id = :tid
+                      AND published_at >= CURRENT_DATE - INTERVAL '7 days'
+                    ORDER BY published_at DESC
+                    LIMIT 20
+                """),
+                {"tid": ticker_id},
+            )
+            news_articles = news_result.fetchall()
+
+            if rumors or news_articles:
+                ticker_data.append({
+                    "ticker_id": ticker_id,
+                    "symbol": symbol,
+                    "rumors": rumors,
+                    "news_articles": news_articles,
+                    "rumor_ids": [r[0] for r in rumors] if rumors else [],
+                })
+
+        if not ticker_data:
+            return {row[1]: False for row in tickers}
+
+        # Build combined prompt for all tickers in batch
+        prompt = self._build_batch_prompt(ticker_data)
+
+        # Single Gemini call for entire batch
+        async with _gemini_lock:
+            response = await self.gemini_client._call_gemini(
+                prompt, RumorBatchResponse, RUMOR_TEMPERATURE, RUMOR_SYSTEM_INSTRUCTION
+            )
+            await self.gemini_client._record_usage("rumor_scoring", 1, response)
+
+        batch_result = response.parsed
+
+        if batch_result is None and response.text:
+            logger.warning("Rumor batch: response.parsed is None, retrying at temperature=0.05")
+            async with _gemini_lock:
+                response = await self.gemini_client._call_gemini(
+                    prompt, RumorBatchResponse, 0.05, RUMOR_SYSTEM_INSTRUCTION
+                )
+            batch_result = response.parsed
+
+        if batch_result is None and response.text:
+            logger.warning("Low-temp retry failed, falling back to manual JSON parse")
+            try:
+                data = json.loads(response.text)
+                batch_result = RumorBatchResponse.model_validate(data)
+            except Exception as e:
+                logger.error(f"Manual parse failed for batch: {e}")
+                return {td["symbol"]: False for td in ticker_data}
+
+        if batch_result is None:
+            logger.error("Rumor batch: no parseable response")
+            return {td["symbol"]: False for td in ticker_data}
+
+        # Map scores to tickers and store
+        results: dict[str, bool] = {}
+        score_map = {s.ticker.upper(): s for s in batch_result.scores}
+
+        for td in ticker_data:
+            symbol = td["symbol"]
+            ticker_score = score_map.get(symbol.upper())
+            if ticker_score is None:
+                logger.warning(f"Rumor batch: no score returned for {symbol}")
+                results[symbol] = False
+                continue
+
+            try:
+                await self._store_score(td["ticker_id"], ticker_score, td["rumor_ids"])
+                logger.info(
+                    f"Rumor score: {symbol} — "
+                    f"credibility={ticker_score.credibility_score}, "
+                    f"impact={ticker_score.impact_score}, "
+                    f"direction={ticker_score.direction.value}"
+                )
+                results[symbol] = True
+            except Exception as e:
+                logger.error(f"Store score failed for {symbol}: {e}")
+                results[symbol] = False
+
+        # Mark tickers with no data as failed
+        for row in tickers:
+            if row[1] not in results:
+                results[row[1]] = False
+
         return results
 
     async def score_ticker(
@@ -260,6 +393,48 @@ class RumorScoringService:
                 title = self._sanitize_content(na[1], max_len=200)
                 lines.append(f"{idx}. [Tin tức chính thống] \"{title}\"")
                 idx += 1
+
+        return "\n".join(lines)
+
+    def _build_batch_prompt(self, ticker_data: list[dict]) -> str:
+        """Build Vietnamese prompt for multiple tickers in one Gemini call.
+
+        Each ticker gets its own section with Fireant posts + CafeF news.
+        Gemini returns a scores array with one entry per ticker.
+        """
+        lines = [RUMOR_FEW_SHOT, ""]
+        symbols = [td["symbol"] for td in ticker_data]
+        lines.append(
+            f"Phân tích {len(ticker_data)} mã cổ phiếu: {', '.join(symbols)}"
+        )
+        lines.append("Trả về scores array với MỘT entry cho MỖI mã bên dưới.\n")
+
+        for td in ticker_data:
+            symbol = td["symbol"]
+            rumors = td["rumors"]
+            news_articles = td["news_articles"]
+            total_items = len(rumors) + len(news_articles)
+
+            lines.append(f"\n--- {symbol} ({total_items} nguồn thông tin) ---")
+
+            idx = 1
+            if rumors:
+                lines.append(f"\n📢 Bài đăng cộng đồng Fireant ({len(rumors)}):")
+                for r in rumors:
+                    auth_label = "Xác thực ✓" if r[3] else "Thường"
+                    safe_content = self._sanitize_content(r[1])
+                    lines.append(
+                        f"{idx}. [{auth_label} | {r[4]} likes | "
+                        f'{r[5]} replies] "{safe_content}"'
+                    )
+                    idx += 1
+
+            if news_articles:
+                lines.append(f"\n📰 Tin tức CafeF ({len(news_articles)}):")
+                for na in news_articles:
+                    title = self._sanitize_content(na[1], max_len=200)
+                    lines.append(f'{idx}. [Tin tức chính thống] "{title}"')
+                    idx += 1
 
         return "\n".join(lines)
 
