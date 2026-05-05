@@ -29,5 +29,6 @@ from app.models.trading_goal import TradingGoal  # noqa: E402
 from app.models.weekly_prompt import WeeklyPrompt  # noqa: E402
 from app.models.weekly_review import WeeklyReview  # noqa: E402
 from app.models.discovery_result import DiscoveryResult  # noqa: E402
+from app.models.rumor import Rumor  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "BehaviorEvent", "HabitDetection", "RiskSuggestion", "SectorPreference", "TradingGoal", "WeeklyPrompt", "WeeklyReview", "DiscoveryResult"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "BehaviorEvent", "HabitDetection", "RiskSuggestion", "SectorPreference", "TradingGoal", "WeeklyPrompt", "WeeklyReview", "DiscoveryResult", "Rumor"]
