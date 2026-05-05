@@ -210,7 +210,10 @@ Plans:
   3. Scoring output includes extracted key factual claims as a structured list
   4. All AI assessments include Vietnamese explanations for the scores
   5. Posts with higher engagement (likes, replies) and verified authors receive appropriately weighted credibility signals
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 61-01-PLAN.md — Schema foundation: RumorScore model, migration, Pydantic schemas, Vietnamese prompts
+- [ ] 61-02-PLAN.md — RumorScoringService implementation + unit tests
 
 ### Phase 62: API Endpoints & Frontend Display
 **Goal**: User can view rumor intelligence on the ticker detail page and watchlist
