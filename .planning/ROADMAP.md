@@ -172,10 +172,13 @@ Full details: [milestones/v10.0-ROADMAP.md](milestones/v10.0-ROADMAP.md)
   Plans:
   - [x] 56-01-PLAN.md — Query optimization: Alembic index + date-bounded ranked subquery
   - [x] 56-02-PLAN.md — In-memory TTL cache + keep-alive documentation
-- [ ] **Phase 57: Search Fix** - Remove ticker search truncation, add recent searches
+- [x] **Phase 57: Search Fix** - Remove ticker search truncation, add recent searches (completed 2026-05-05)
   Plans:
-  - [ ] 57-01-PLAN.md — Remove .slice(0,50) truncation, pass limit=500, add recent searches
-- [ ] **Phase 58: AI Analysis Freshness** - Morning AI refresh chain, freshness indicator in dashboard
+  - [x] 57-01-PLAN.md — Remove .slice(0,50) truncation, pass limit=500, add recent searches
+- [ ] **Phase 58: AI Analysis Freshness** - Morning AI refresh chain, freshness indicator in dashboard (2 plans)
+  Plans:
+  - [ ] 58-01-PLAN.md — Morning CronTrigger + shortened chain + watchlist API freshness field
+  - [ ] 58-02-PLAN.md — Frontend freshness badge in watchlist table
 - [ ] **Phase 59: UX & Onboarding** - Preset watchlist, empty state guidance, navigation descriptions
 
 ## Phase Details
@@ -214,7 +217,10 @@ Plans:
   1. On weekday mornings by 9:00 AM ICT, watchlist tickers have AI analysis updated after 8:30 AM (not stale from previous day's 15:30 run)
   2. Morning refresh completes within Gemini free tier limits (15 RPM) by running a shortened chain (price → indicators → AI analysis → signals only, skipping discovery/news/sentiment)
   3. Dashboard shows a freshness indicator per ticker displaying the age of the last AI analysis (e.g., "2h ago", "18h ago") with visual distinction for stale (>12h) vs fresh
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 58-01-PLAN.md — Morning CronTrigger + shortened chain + watchlist API freshness field
+- [ ] 58-02-PLAN.md — Frontend freshness badge in watchlist table
 **UI hint**: yes
 
 ### Phase 59: UX & Onboarding
@@ -239,6 +245,6 @@ Plans:
 | 54. Sector Grouping & Heatmap Rework | v10.0 | 2/2 | Complete | 2026-05-04 |
 | 55. Discovery Frontend | v10.0 | 2/2 | Complete | 2026-05-04 |
 | 56. Keep-Alive & API Performance | v11.0 | 2/2 | Complete    | 2026-05-05 |
-| 57. Search Fix | v11.0 | 0/? | Not started | - |
-| 58. AI Analysis Freshness | v11.0 | 0/? | Not started | - |
+| 57. Search Fix | v11.0 | 1/1 | Complete    | 2026-05-05 |
+| 58. AI Analysis Freshness | v11.0 | 0/2 | Not started | - |
 | 59. UX & Onboarding | v11.0 | 0/? | Not started | - |
