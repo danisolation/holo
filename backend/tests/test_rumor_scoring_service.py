@@ -97,23 +97,22 @@ class TestBuildPrompt:
     """Test prompt building with engagement metrics."""
 
     def test_build_prompt_includes_engagement_metrics(self, service):
-        """Verified post shows [Xác thực ✓], likes, and replies in prompt."""
+        """Verified post shows [Xác thực ✓ | ...] bracket format matching few-shot."""
         row = _make_rumor_row(is_authentic=True, total_likes=25, total_replies=8)
         prompt = service._build_prompt("VNM", [row])
 
-        assert "[Xác thực ✓]" in prompt
-        assert "25 likes" in prompt
-        assert "8 replies" in prompt
+        assert "[Xác thực ✓ | 25 likes | 8 replies]" in prompt
 
     def test_build_prompt_regular_user(self, service):
-        """Non-verified post shows [Thường] tag."""
+        """Non-verified post shows [Thường | ...] bracket format."""
         row = _make_rumor_row(is_authentic=False, total_likes=2, total_replies=0)
         prompt = service._build_prompt("VNM", [row])
 
-        assert "[Thường]" in prompt
-        assert "[Xác thực ✓]" not in prompt
-        assert "2 likes" in prompt
-        assert "0 replies" in prompt
+        assert "[Thường | 2 likes | 0 replies]" in prompt
+        # The generated post line should not contain the verified tag
+        post_lines = [l for l in prompt.split("\n") if l.startswith("1. [")]
+        assert any("Thường" in l for l in post_lines)
+        assert not any("Xác thực ✓ | 2 likes" in l for l in post_lines)
 
     def test_build_prompt_vietnamese_content(self, service):
         """Vietnamese content is preserved in prompt without mangling."""
@@ -123,6 +122,15 @@ class TestBuildPrompt:
 
         assert content in prompt
         assert "HPG" in prompt
+
+    def test_build_prompt_truncates_long_content(self, service):
+        """Content exceeding 500 chars is truncated to mitigate prompt injection."""
+        long_content = "A" * 600
+        row = _make_rumor_row(content=long_content)
+        prompt = service._build_prompt("VNM", [row])
+
+        assert "A" * 500 in prompt
+        assert "A" * 501 not in prompt
 
     def test_build_prompt_includes_ticker_header(self, service):
         """Prompt includes ticker symbol and post count."""

@@ -92,6 +92,7 @@ class RumorScoringService:
                        total_likes, total_replies, posted_at
                 FROM rumors
                 WHERE ticker_id = :tid
+                  AND posted_at >= CURRENT_DATE - INTERVAL '7 days'
                 ORDER BY posted_at DESC
             """),
             {"tid": ticker_id},
@@ -209,13 +210,26 @@ class RumorScoringService:
             total_replies = r[5]
             content = r[1]
 
-            auth_tag = "[Xác thực ✓]" if is_authentic else "[Thường]"
+            auth_label = "Xác thực ✓" if is_authentic else "Thường"
+            # Truncate user content to limit prompt size and mitigate injection risk
+            safe_content = self._sanitize_content(content)
             lines.append(
-                f"{i}. {auth_tag} | {total_likes} likes | {total_replies} replies] "
-                f'"{content}"'
+                f"{i}. [{auth_label} | {total_likes} likes | {total_replies} replies] "
+                f'"{safe_content}"'
             )
 
         return "\n".join(lines)
+
+    def _sanitize_content(self, content: str, max_len: int = 500) -> str:
+        """Truncate and basic-sanitize user content for prompt inclusion.
+
+        Mitigates prompt injection risk by limiting content length and stripping
+        characters that could break prompt formatting.
+        """
+        truncated = content[:max_len]
+        # Strip characters that could break prompt formatting
+        truncated = truncated.replace('"', "'")
+        return truncated
 
     async def _store_score(
         self,
