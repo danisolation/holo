@@ -19,7 +19,7 @@ import { postBehaviorEvent } from "@/lib/api";
 export function TickerSearch() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const { data: tickers } = useTickers();
+  const { data: tickers } = useTickers(undefined, undefined, 500);
 
   const handleSelect = useCallback(
     (symbol: string) => {
@@ -51,7 +51,7 @@ export function TickerSearch() {
           <CommandList>
             <CommandEmpty>Không tìm thấy mã nào.</CommandEmpty>
             <CommandGroup heading="Mã chứng khoán">
-              {tickers?.slice(0, 50).map((ticker) => (
+              {tickers?.map((ticker) => (
                 <CommandItem
                   key={ticker.symbol}
                   value={`${ticker.symbol} ${ticker.name}`}

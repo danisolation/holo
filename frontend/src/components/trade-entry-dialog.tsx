@@ -95,7 +95,7 @@ export function TradeEntryDialog({
   const [pickLinkChecked, setPickLinkChecked] = useState(false);
 
   const mutation = useCreateTrade();
-  const { data: tickers } = useTickers();
+  const { data: tickers } = useTickers(undefined, undefined, 500);
   const { data: dailyPicksData } = useDailyPicks();
   const { data: profile } = useProfile();
 
@@ -277,7 +277,7 @@ export function TradeEntryDialog({
                       <CommandList>
                         <CommandEmpty>Không tìm thấy mã nào.</CommandEmpty>
                         <CommandGroup>
-                          {tickers?.slice(0, 50).map((ticker) => (
+                          {tickers?.map((ticker) => (
                             <CommandItem
                               key={ticker.symbol}
                               value={`${ticker.symbol} ${ticker.name}`}
