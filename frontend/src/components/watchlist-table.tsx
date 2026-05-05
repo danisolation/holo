@@ -17,6 +17,7 @@ import {
   TrendingDown,
   Minus,
   Clock,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PriceFlashCell } from "@/components/price-flash-cell";
 import { SectorCombobox } from "@/components/sector-combobox";
 import { Vn30Preset } from "@/components/vn30-preset";
-import { useMarketOverview, useWatchlist, useRemoveFromWatchlist, useSectors, useUpdateSectorGroup } from "@/lib/hooks";
+import { useMarketOverview, useWatchlist, useRemoveFromWatchlist, useSectors, useUpdateSectorGroup, useWatchlistRumors } from "@/lib/hooks";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import type { MarketTicker } from "@/lib/api";
 
@@ -68,6 +69,7 @@ export function WatchlistTable() {
   const { prices: realtimePrices } = useRealtimePrices(watchlistSymbols);
   const { data: sectorsData } = useSectors();
   const updateSectorMutation = useUpdateSectorGroup();
+  const { data: rumorSummary } = useWatchlistRumors();
 
   // Filter market data to only watchlist symbols
   const rows = useMemo(() => {
@@ -248,6 +250,30 @@ export function WatchlistTable() {
         enableSorting: false,
       },
       {
+        id: "rumors",
+        header: "Tin đồn",
+        cell: ({ row }) => {
+          const rumor = rumorSummary?.find((r) => r.symbol === row.original.symbol);
+          if (!rumor || rumor.rumor_count === 0) {
+            return <span className="text-xs text-muted-foreground">—</span>;
+          }
+          const dir = rumor.dominant_direction;
+          const dotColor = dir === "bullish"
+            ? "bg-[#26a69a]"
+            : dir === "bearish"
+              ? "bg-[#ef5350]"
+              : "bg-amber-500";
+          return (
+            <div className="flex items-center gap-1.5">
+              <span className={`size-2 rounded-full ${dotColor}`} />
+              <MessageCircle className="size-3 text-muted-foreground" />
+              <span className="text-xs font-mono">{rumor.rumor_count}</span>
+            </div>
+          );
+        },
+        enableSorting: false,
+      },
+      {
         id: "freshness",
         header: "AI",
         cell: ({ row }) => {
@@ -289,7 +315,7 @@ export function WatchlistTable() {
         enableSorting: false,
       },
     ],
-    [watchlistData, removeMutation, realtimePrices, sectorsData, updateSectorMutation],
+    [watchlistData, removeMutation, realtimePrices, sectorsData, updateSectorMutation, rumorSummary],
   );
 
   const table = useReactTable({
