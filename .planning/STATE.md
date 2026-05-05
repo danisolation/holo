@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: UX & Reliability Overhaul
-status: defining-requirements
-stopped_at: Milestone v11.0 started
-last_updated: "2026-05-05T10:40:00.000Z"
-last_activity: 2026-05-05
+status: roadmap-complete
+stopped_at: Roadmap created — 4 phases (56-59), 12 requirements mapped
+last_updated: "2026-05-06T12:00:00.000Z"
+last_activity: 2026-05-06
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** Defining requirements for v11.0
+**Current focus:** v11.0 Phase 56 — Keep-Alive & API Performance
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 56 — Keep-Alive & API Performance
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-05 — Milestone v11.0 started
+Status: Awaiting planning (`/gsd-plan-phase 56`)
+Last activity: 2026-05-06 — Roadmap created
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -67,6 +67,19 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - Empty watchlist must skip gracefully (log + return normally) — not crash the chain
 - Heatmap rework is frontend composition (existing APIs) — no new backend endpoint needed
 - Discovery retention: 14 days (5,600 rows max)
+
+### Research Context (v11.0)
+
+- Market overview ~3 min load = TWO causes: Render cold start + ROW_NUMBER full table scan (200K+ rows)
+- External pinger (UptimeRobot/cron-job.org) is zero-code — NOT in-process APScheduler (dies when Render sleeps)
+- Ping root `/` only (zero DB access) — budget 750 hrs/month, consider market-hours-only pinging
+- Search bug: `ticker-search.tsx:54` `.slice(0,50)` + API `limit=100` — 2-line fix
+- Morning AI chain: shortened pipeline (price → indicators → AI → signals), skip discovery/news/sentiment
+- Gemini budget: 15 RPM, morning run for ~15-20 watchlist tickers = ~2-4 batches = safe
+- Keep-alive MUST be confirmed working before morning AI cron deploys (dependency)
+- UX: simple empty states + VN30 preset + nav tooltips — NOT wizard/tour (single-user app)
+- cachetools TTLCache for in-memory API caching — no Redis needed
+- Query fix: `WHERE date >= CURRENT_DATE - 7` reduces 200K→2,800 rows
 
 ### Pending Todos
 

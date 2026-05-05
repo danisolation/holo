@@ -17,6 +17,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v8.0 AI Trading Coach** — Phases 43-47 (shipped 2026-04-23)
 - ✅ **v9.0 UX Rework & Simplification** — Phases 48-51 (shipped 2026-05-04)
 - ✅ **v10.0 Watchlist-Centric & Stock Discovery** — Phases 52-55 (shipped 2026-05-05)
+- 🚧 **v11.0 UX & Reliability Overhaul** — Phases 56-59 (in progress)
 
 ## Phases
 
@@ -163,7 +164,63 @@ Full details: [milestones/v10.0-ROADMAP.md](milestones/v10.0-ROADMAP.md)
 
 </details>
 
+### 🚧 v11.0 UX & Reliability Overhaul (In Progress)
+
+**Milestone Goal:** Sửa các thiếu sót thực tế về trải nghiệm người dùng, data freshness, AI timeliness, và performance trên production — app load < 3s, search tìm tất cả mã, AI analysis fresh trước giờ mở cửa, UX rõ ràng cho người mới.
+
+- [ ] **Phase 56: Keep-Alive & API Performance** - External pinger, query optimization, in-memory cache, date-bounded queries
+- [ ] **Phase 57: Search Fix** - Remove ticker search truncation, add recent searches
+- [ ] **Phase 58: AI Analysis Freshness** - Morning AI refresh chain, freshness indicator in dashboard
+- [ ] **Phase 59: UX & Onboarding** - Preset watchlist, empty state guidance, navigation descriptions
+
+## Phase Details
+
+### Phase 56: Keep-Alive & API Performance
+**Goal**: App loads in under 3 seconds on production — no cold start delay, no slow queries
+**Depends on**: Phase 55 (v10.0 shipped)
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04
+**Success Criteria** (what must be TRUE):
+  1. Opening the app in a browser after 30+ minutes of inactivity returns the home page within 5 seconds (no cold start)
+  2. Market overview API responds in under 3 seconds with current-day price data for all ~400 HOSE tickers
+  3. Repeated requests to the same API endpoint within 60 seconds return instantly from cache without hitting the database
+  4. Daily prices queries scan only the last 7 days of data, not the entire table history
+**Plans**: TBD
+
+### Phase 57: Search Fix
+**Goal**: User can find and select any of the ~400 HOSE tickers through the search dialog
+**Depends on**: Phase 56
+**Requirements**: SRCH-01, SRCH-02
+**Success Criteria** (what must be TRUE):
+  1. Typing any valid HOSE ticker symbol (including tickers beyond position 50 alphabetically, e.g., VNM, VPB, TCB) into the search dialog shows and selects that ticker
+  2. After searching for a ticker, the search dialog shows up to 5 recent searches on next open (persisted across browser sessions via localStorage)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 58: AI Analysis Freshness
+**Goal**: AI analysis is fresh before market opens each trading day, and user can see how recent each analysis is
+**Depends on**: Phase 56 (keep-alive must be active for morning cron to fire)
+**Requirements**: AI-01, AI-02, AI-03
+**Success Criteria** (what must be TRUE):
+  1. On weekday mornings by 9:00 AM ICT, watchlist tickers have AI analysis updated after 8:30 AM (not stale from previous day's 15:30 run)
+  2. Morning refresh completes within Gemini free tier limits (15 RPM) by running a shortened chain (price → indicators → AI analysis → signals only, skipping discovery/news/sentiment)
+  3. Dashboard shows a freshness indicator per ticker displaying the age of the last AI analysis (e.g., "2h ago", "18h ago") with visual distinction for stale (>12h) vs fresh
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 59: UX & Onboarding
+**Goal**: First-time users immediately understand what each section does and have data to explore within 30 seconds
+**Depends on**: Phase 57 (search must work for onboarding guidance)
+**Requirements**: UX-01, UX-02, UX-03
+**Success Criteria** (what must be TRUE):
+  1. A user with an empty watchlist sees a one-click option to add VN30 blue-chip tickers as a preset watchlist
+  2. Empty states on heatmap, watchlist, and discovery pages show helpful guidance text with a clear call-to-action (not blank screens)
+  3. Navigation items include short descriptions or tooltips explaining what each section does (e.g., "Discovery — AI-scored stock recommendations updated daily")
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
+
+**Execution Order:** 56 → 57 → 58 → 59
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -171,3 +228,7 @@ Full details: [milestones/v10.0-ROADMAP.md](milestones/v10.0-ROADMAP.md)
 | 53. Watchlist-Gated AI Pipeline | v10.0 | 1/1 | Complete | 2026-05-04 |
 | 54. Sector Grouping & Heatmap Rework | v10.0 | 2/2 | Complete | 2026-05-04 |
 | 55. Discovery Frontend | v10.0 | 2/2 | Complete | 2026-05-04 |
+| 56. Keep-Alive & API Performance | v11.0 | 0/? | Not started | - |
+| 57. Search Fix | v11.0 | 0/? | Not started | - |
+| 58. AI Analysis Freshness | v11.0 | 0/? | Not started | - |
+| 59. UX & Onboarding | v11.0 | 0/? | Not started | - |
