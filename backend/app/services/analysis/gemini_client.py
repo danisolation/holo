@@ -375,6 +375,18 @@ class GeminiClient:
             lines.append(f"Tâm lý: sentiment={data.get('sent_signal', 'neutral')}, score={data.get('sent_score', 5)}")
             if data.get('sent_reasoning'):
                 lines.append(f"  Chi tiết tâm lý: {data['sent_reasoning']}")
+            # Phase 64: Rumor intelligence section (AIUP-01)
+            if data.get('rumor_direction'):
+                lines.append(
+                    f"Tin đồn: hướng={data['rumor_direction']}, "
+                    f"tin cậy={data.get('rumor_credibility', 'N/A')}/10, "
+                    f"tác động={data.get('rumor_impact', 'N/A')}/10"
+                )
+                if data.get('rumor_key_claims'):
+                    claims = data['rumor_key_claims'][:3]  # Top 3 claims
+                    lines.append(f"  Thông tin chính: {'; '.join(claims)}")
+                if data.get('rumor_reasoning'):
+                    lines.append(f"  Phân tích tin đồn: {data['rumor_reasoning'][:200]}")
 
         return "\n".join(lines)
 
@@ -422,5 +434,13 @@ class GeminiClient:
                 lines.append(
                     f"52-week High: {data['week_52_high']:,.0f} | "
                     f"52-week Low: {data['week_52_low']:,.0f}"
+                )
+            # Phase 64: Rumor context for trading signals (AIUP-02)
+            if data.get("rumor_direction"):
+                claims = data.get("rumor_key_claims", [])[:2]
+                claims_str = "; ".join(claims) if claims else "không rõ"
+                lines.append(
+                    f"Tin đồn: {data['rumor_direction']} "
+                    f"(tác động={data.get('rumor_impact', 'N/A')}/10) — {claims_str}"
                 )
         return "\n".join(lines)

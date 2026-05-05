@@ -216,7 +216,10 @@ class TestSentimentSchema:
         data = {
             "analyses": [
                 {"ticker": "VNM", "recommendation": "mua", "confidence": 8,
-                 "explanation": "Tất cả tín hiệu đồng thuận tích cực."},
+                 "summary": "Tất cả tín hiệu đồng thuận tích cực.",
+                 "key_levels": "Hỗ trợ 80,000. Kháng cự 85,000.",
+                 "risks": "Rủi ro thị trường chung.",
+                 "action": "MUA tại 82,000."},
             ]
         }
         resp = CombinedBatchResponse(**data)
@@ -231,7 +234,8 @@ class TestSentimentSchema:
             CombinedBatchResponse(**{
                 "analyses": [
                     {"ticker": "VNM", "recommendation": "mua", "confidence": 11,
-                     "explanation": "Test"},
+                     "summary": "Test", "key_levels": "Test",
+                     "risks": "Test", "action": "Test"},
                 ]
             })
 

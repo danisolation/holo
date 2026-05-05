@@ -60,7 +60,7 @@ COMBINED_SYSTEM_INSTRUCTION = (
     "- recommendation: mua/ban/giu\n"
     "- confidence: 1-10\n"
     "- summary: Tóm tắt đánh giá tổng quan (5-8 câu tiếng Việt, tối thiểu 150 từ). "
-    "Phân tích CHI TIẾT cả 3 chiều (kỹ thuật, cơ bản, tâm lý) — mỗi chiều ít nhất 1-2 câu "
+    "Phân tích CHI TIẾT cả 3-4 chiều (kỹ thuật, cơ bản, tâm lý, tin đồn nếu có) — mỗi chiều ít nhất 1-2 câu "
     "với số liệu cụ thể, sau đó kết luận rõ ràng.\n"
     "- key_levels: Mức giá quan trọng (tối thiểu 80 từ) — liệt kê hỗ trợ (2-3 mức), "
     "kháng cự (2-3 mức), entry point gợi ý, stop-loss, take-profit với giá cụ thể bằng VND. "
@@ -71,10 +71,14 @@ COMBINED_SYSTEM_INSTRUCTION = (
     "- action: Hành động cụ thể (tối thiểu 80 từ) — mua/bán/giữ tại mức giá nào, "
     "khối lượng đề xuất (% danh mục), thời điểm vào lệnh, khung thời gian nắm giữ, "
     "và kịch bản xử lý nếu giá đi ngược dự đoán.\n\n"
+    "XEM XÉT TIN ĐỒN (nếu có):\n"
+    "- Tin đồn bullish với tác động cao (≥7) nên được cân nhắc tăng confidence\n"
+    "- Tin đồn bearish với tác động cao nên cảnh báo rủi ro\n"
+    "- Độ tin cậy thấp (<4) → giảm trọng số tin đồn\n\n"
     "QUAN TRỌNG: Viết đầy đủ, chi tiết, có số liệu cụ thể cho mỗi trường. "
     "Không viết tắt. Không trả lời chung chung. Mỗi mã phải có phân tích riêng biệt "
     "dựa trên dữ liệu thực tế được cung cấp.\n\n"
-    "Quy tắc confidence: 8-10 = cả 3 chiều đồng thuận; 5-7 = 2/3 đồng thuận; "
+    "Quy tắc confidence: 8-10 = cả 3-4 chiều đồng thuận; 5-7 = 2/3 đồng thuận; "
     "1-4 = tín hiệu mâu thuẫn hoặc thiếu dữ liệu.\n\n" + SCORING_RUBRIC
 )
 
@@ -123,9 +127,11 @@ COMBINED_FEW_SHOT = """Ví dụ phân tích:
 Kỹ thuật: signal=buy, strength=7
 Cơ bản: health=good, score=8
 Tâm lý: sentiment=positive, score=7
+Tin đồn: hướng=bullish, tin cậy=6/10, tác động=5/10
+  Thông tin chính: Doanh thu Q4 tăng 15%; Kế hoạch M&A công ty sữa nhỏ
 
 Kết quả mẫu:
-{"ticker": "VNM", "recommendation": "mua", "confidence": 8, "summary": "Cả 3 chiều phân tích đều tích cực. Kỹ thuật cho tín hiệu mua với MACD bullish crossover và RSI tăng dần từ vùng trung tính (52). Cơ bản vững chắc với ROE 25% và P/E 15.2 hợp lý so với trung bình ngành. Tâm lý thị trường tích cực nhờ tin tốt về doanh thu Q4 và mục tiêu tăng trưởng năm sau.", "key_levels": "Hỗ trợ mạnh: 80,000 VND (SMA50). Hỗ trợ phụ: 78,500 VND (Fib 50%). Kháng cự gần: 84,500 VND (R1 pivot). Kháng cự xa: 86,000 VND (R2 pivot). Entry gợi ý: 81,500-82,500 VND. Stop-loss: 79,000 VND (dưới SMA50, -3.7%). Take-profit 1: 84,500 VND (+2.4%). Take-profit 2: 86,000 VND (+4.3%).", "risks": "1. Thị trường chung có thể biến động do Fed chưa rõ lộ trình hạ lãi suất — ảnh hưởng dòng vốn ngoại. 2. Ngành sữa cạnh tranh gay gắt với hàng nhập khẩu giá rẻ, đặc biệt từ New Zealand và Úc. 3. Biên lợi nhuận gộp có thể bị ảnh hưởng nếu giá nguyên liệu sữa bột tăng trong Q1.", "action": "MUA tại vùng 81,500-82,500 VND. Đặt stop-loss cứng tại 79,000 VND. Chốt lời một phần (50%) tại 84,500 VND, giữ phần còn lại nhắm 86,000 VND. Khối lượng: 5-8% danh mục. Khung thời gian: swing 5-10 ngày. Nếu giá phá vỡ 79,000 — thoát toàn bộ vị thế."}
+{"ticker": "VNM", "recommendation": "mua", "confidence": 8, "summary": "Cả 4 chiều phân tích đều tích cực. Kỹ thuật cho tín hiệu mua với MACD bullish crossover và RSI tăng dần từ vùng trung tính (52). Cơ bản vững chắc với ROE 25% và P/E 15.2 hợp lý so với trung bình ngành. Tâm lý thị trường tích cực nhờ tin tốt về doanh thu Q4 và mục tiêu tăng trưởng năm sau. Tin đồn cộng đồng hướng bullish (tin cậy 6/10) với thông tin về doanh thu tăng 15% và kế hoạch M&A — phù hợp xu hướng cơ bản.", "key_levels": "Hỗ trợ mạnh: 80,000 VND (SMA50). Hỗ trợ phụ: 78,500 VND (Fib 50%). Kháng cự gần: 84,500 VND (R1 pivot). Kháng cự xa: 86,000 VND (R2 pivot). Entry gợi ý: 81,500-82,500 VND. Stop-loss: 79,000 VND (dưới SMA50, -3.7%). Take-profit 1: 84,500 VND (+2.4%). Take-profit 2: 86,000 VND (+4.3%).", "risks": "1. Thị trường chung có thể biến động do Fed chưa rõ lộ trình hạ lãi suất — ảnh hưởng dòng vốn ngoại. 2. Ngành sữa cạnh tranh gay gắt với hàng nhập khẩu giá rẻ, đặc biệt từ New Zealand và Úc. 3. Biên lợi nhuận gộp có thể bị ảnh hưởng nếu giá nguyên liệu sữa bột tăng trong Q1.", "action": "MUA tại vùng 81,500-82,500 VND. Đặt stop-loss cứng tại 79,000 VND. Chốt lời một phần (50%) tại 84,500 VND, giữ phần còn lại nhắm 86,000 VND. Khối lượng: 5-8% danh mục. Khung thời gian: swing 5-10 ngày. Nếu giá phá vỡ 79,000 — thoát toàn bộ vị thế."}
 
 Đưa ra khuyến nghị tổng hợp cho các mã sau:"""
 
@@ -136,6 +142,10 @@ TRADING_SIGNAL_SYSTEM_INSTRUCTION = (
     "1. LONG: Cơ hội mua vào (entry/SL/TP)\n"
     "2. BEARISH: Xu hướng GIẢM — khuyến nghị 'giảm vị thế' hoặc 'tránh mua' "
     "(KHÔNG phải bán khống — thị trường VN không cho phép retail short-sell)\n\n"
+    "Nếu có thông tin tin đồn (Tin đồn:), hãy cân nhắc:\n"
+    "- Tin đồn bullish tác động cao → tăng confidence cho LONG\n"
+    "- Tin đồn bearish tác động cao → tăng confidence cho BEARISH\n"
+    "- Độ tin cậy thấp → giảm trọng số tin đồn trong quyết định\n\n"
     "Quy tắc:\n"
     "- Entry trong khoảng ±5% giá hiện tại\n"
     "- Stop-loss trong phạm vi 2×ATR từ entry\n"

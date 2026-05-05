@@ -17,6 +17,7 @@ from app.models.daily_price import DailyPrice
 from app.models.financial import Financial
 from app.models.news_article import NewsArticle
 from app.models.technical_indicator import TechnicalIndicator
+from app.models.rumor_score import RumorScore
 
 
 def _sanitize_title(title: str, max_length: int = 300) -> str:
@@ -252,7 +253,43 @@ class ContextBuilder:
             context["sent_score"] = 5
             context["sent_reasoning"] = "Không có tin tức đặc biệt."
 
+        # Phase 64: Include rumor intelligence in combined analysis (AIUP-01)
+        rumor = await self.get_rumor_context(ticker_id, symbol)
+        if rumor:
+            context["rumor_direction"] = rumor["direction"]
+            context["rumor_credibility"] = rumor["credibility_score"]
+            context["rumor_impact"] = rumor["impact_score"]
+            context["rumor_reasoning"] = rumor["reasoning"]
+            context["rumor_key_claims"] = rumor["key_claims"]
+
         return context
+
+    async def get_rumor_context(
+        self, ticker_id: int, symbol: str
+    ) -> dict | None:
+        """Get latest rumor score for a ticker.
+
+        Returns dict with credibility, impact, direction, key_claims, reasoning.
+        Returns None if no rumor score exists (ticker gracefully skipped in prompts).
+        """
+        result = await self.session.execute(
+            select(RumorScore)
+            .where(RumorScore.ticker_id == ticker_id)
+            .order_by(RumorScore.scored_date.desc())
+            .limit(1)
+        )
+        score = result.scalar_one_or_none()
+
+        if score is None:
+            return None
+
+        return {
+            "credibility_score": score.credibility_score,
+            "impact_score": score.impact_score,
+            "direction": score.direction,
+            "key_claims": score.key_claims or [],
+            "reasoning": score.reasoning or "",
+        }
 
     async def get_trading_signal_context(
         self, ticker_id: int, symbol: str
@@ -330,6 +367,13 @@ class ContextBuilder:
         if row and row[0] is not None:
             context["week_52_high"] = float(row[0])
             context["week_52_low"] = float(row[1])
+
+        # Phase 64: Include rumor context for trading signals (AIUP-02)
+        rumor = await self.get_rumor_context(ticker_id, symbol)
+        if rumor:
+            context["rumor_direction"] = rumor["direction"]
+            context["rumor_impact"] = rumor["impact_score"]
+            context["rumor_key_claims"] = rumor["key_claims"]
 
         return context
 

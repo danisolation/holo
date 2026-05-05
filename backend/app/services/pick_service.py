@@ -12,7 +12,7 @@ from decimal import Decimal
 import google.genai as genai
 from google.genai.errors import ClientError, ServerError
 from loguru import logger
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -480,6 +480,47 @@ class PickService:
                     # Max bias is ±10% of composite_score (Pitfall 4)
                     c["composite_score"] *= (1 + bias * 0.1)
             logger.info(f"Applied sector bias from {len(sector_prefs)} sectors to {len(candidates)} candidates")
+
+        # --- Step 6.6: Apply rumor boost (AIUP-03) ---
+        from app.models.rumor_score import RumorScore
+        ticker_ids = [c["ticker_id"] for c in candidates]
+        if ticker_ids:
+            rumor_result = await self.session.execute(
+                select(RumorScore)
+                .where(RumorScore.ticker_id.in_(ticker_ids))
+                .where(RumorScore.scored_at >= func.now() - text("INTERVAL '3 days'"))
+            )
+            rumor_map: dict[int, RumorScore] = {}
+            for rs in rumor_result.scalars():
+                # Keep the most recent score per ticker
+                if rs.ticker_id not in rumor_map or rs.scored_at > rumor_map[rs.ticker_id].scored_at:
+                    rumor_map[rs.ticker_id] = rs
+
+            boosted = 0
+            for c in candidates:
+                rs = rumor_map.get(c["ticker_id"])
+                if not rs:
+                    continue
+                impact = float(rs.impact_score) if rs.impact_score else 0
+                credibility = float(rs.credibility_score) if rs.credibility_score else 0
+                direction = (rs.direction or "").lower()
+
+                # Only boost if credibility >= 4 and impact >= 5
+                if credibility < 4 or impact < 5:
+                    continue
+
+                # Rumor weight: (credibility/10) * (impact/10) → max 1.0
+                weight = (credibility / 10) * (impact / 10)
+                # Bullish rumor → boost up to +15%, bearish → penalize up to -10%
+                if direction == "bullish":
+                    c["composite_score"] *= (1 + weight * 0.15)
+                    boosted += 1
+                elif direction == "bearish":
+                    c["composite_score"] *= (1 - weight * 0.10)
+                    boosted += 1
+
+            if boosted:
+                logger.info(f"Applied rumor boost to {boosted}/{len(candidates)} candidates")
 
         # --- Step 7: Sort and select ---
         candidates.sort(key=lambda c: c["composite_score"], reverse=True)
