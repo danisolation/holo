@@ -195,7 +195,10 @@ Full details: [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md)
   2. Re-running the crawler for the same ticker does not create duplicate posts (ON CONFLICT dedup)
   3. Stored posts contain content, author info, engagement metrics (likes, replies), and verified user status
   4. Crawler handles Vietnamese content encoding correctly (no HTML entities in stored text)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 60-01-PLAN.md — Schema foundation: Rumor model, Alembic migration, config, circuit breaker, types
+- [ ] 60-02-PLAN.md — FireantCrawler implementation + unit tests
 
 ### Phase 61: AI Rumor Scoring
 **Goal**: Each crawled rumor receives AI-generated credibility, impact, and directional assessment
