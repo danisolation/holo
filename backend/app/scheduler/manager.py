@@ -35,6 +35,10 @@ _JOB_NAMES = {
     "daily_combined_manual": "Daily Combined Analysis",
     "daily_trading_signal_triggered": "Daily Trading Signal Analysis",
     "daily_trading_signal_manual": "Daily Trading Signal Analysis",
+    "daily_rumor_crawl_triggered": "Daily Rumor Crawl",
+    "daily_rumor_crawl_manual": "Daily Rumor Crawl",
+    "daily_rumor_scoring_triggered": "Daily Rumor Scoring",
+    "daily_rumor_scoring_manual": "Daily Rumor Scoring",
     "daily_pick_generation_triggered": "Daily Pick Generation",
     "daily_pick_generation_manual": "Daily Pick Generation",
     "daily_pick_outcome_check_triggered": "Daily Pick Outcome Check",
@@ -166,9 +170,29 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_trading_signal_triggered",):
-        # Phase 48: Chain directly to pick generation (HNX/UPCOM analysis removed)
+        # Phase 63: Chain to rumor crawl (rumor → scoring → pick_generation)
+        from app.scheduler.jobs import daily_rumor_crawl
+        logger.info("Chaining: daily_trading_signal → daily_rumor_crawl")
+        scheduler.add_job(
+            daily_rumor_crawl,
+            id="daily_rumor_crawl_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_rumor_crawl_triggered", "daily_rumor_crawl_manual"):
+        # Phase 63: Chain rumor crawl → rumor scoring
+        from app.scheduler.jobs import daily_rumor_scoring
+        logger.info("Chaining: daily_rumor_crawl → daily_rumor_scoring")
+        scheduler.add_job(
+            daily_rumor_scoring,
+            id="daily_rumor_scoring_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_rumor_scoring_triggered", "daily_rumor_scoring_manual"):
+        # Phase 63: Chain rumor scoring → pick generation
         from app.scheduler.jobs import daily_pick_generation
-        logger.info("Chaining: daily_trading_signal → daily_pick_generation")
+        logger.info("Chaining: daily_rumor_scoring → daily_pick_generation")
         scheduler.add_job(
             daily_pick_generation,
             id="daily_pick_generation_triggered",
@@ -375,7 +399,7 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → pick_generation → pick_outcome_check → consecutive_loss_check], "
+        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → consecutive_loss_check], "
         "morning_price_crawl_hose → [indicators → AI → trading_signal]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")

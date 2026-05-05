@@ -25,6 +25,8 @@ JOB_TRIGGER_MAP: dict[str, tuple[str, str]] = {
     "news": ("daily_news_crawl_manual", "daily_news_crawl"),
     "sentiment": ("daily_sentiment_manual", "daily_sentiment_analysis"),
     "combined": ("daily_combined_manual", "daily_combined_analysis"),
+    "rumor_crawl": ("daily_rumor_crawl_manual", "daily_rumor_crawl"),
+    "rumor_scoring": ("daily_rumor_scoring_manual", "daily_rumor_scoring"),
 }
 
 
