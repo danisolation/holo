@@ -14,6 +14,7 @@ from app.schemas.rumor import (
     RumorScoreResponse,
     RumorPostResponse,
     WatchlistRumorSummary,
+    PaginatedRumorSummaryResponse,
 )
 
 router = APIRouter(prefix="/rumors", tags=["rumors"])
@@ -37,20 +38,31 @@ async def _get_ticker_by_symbol(session: AsyncSession, symbol: str) -> Ticker:
 # otherwise FastAPI treats "watchlist" as a {symbol} parameter.
 
 
-@router.get("/watchlist/summary", response_model=list[WatchlistRumorSummary])
-async def get_watchlist_rumor_summary():
-    """Get rumor badge data for all watchlist tickers (last 7 days).
+@router.get("/watchlist/summary", response_model=PaginatedRumorSummaryResponse)
+async def get_watchlist_rumor_summary(page: int = 1, per_page: int = 50):
+    """Get rumor badge data for watchlist tickers (last 7 days), paginated.
 
     Returns aggregated rumor counts, average scores, and dominant direction
     for each ticker in the user's watchlist.
     """
+    per_page = min(per_page, 100)
     seven_days_ago = date.today() - timedelta(days=7)
 
     async with async_session() as session:
-        # Get all watchlist symbols with their ticker IDs
+        # Total count of watchlist items
+        count_result = await session.execute(
+            select(func.count()).select_from(UserWatchlist)
+        )
+        total = count_result.scalar_one()
+
+        # Get paginated watchlist symbols with their ticker IDs (stable order)
+        offset = (page - 1) * per_page
         wl_stmt = (
             select(UserWatchlist.symbol, Ticker.id.label("ticker_id"))
             .outerjoin(Ticker, UserWatchlist.symbol == Ticker.symbol)
+            .order_by(UserWatchlist.symbol.asc())
+            .offset(offset)
+            .limit(per_page)
         )
         wl_result = await session.execute(wl_stmt)
         watchlist_items = wl_result.all()
@@ -144,17 +156,20 @@ async def get_watchlist_rumor_summary():
                 dominant_direction=directions.get(tid),
             ))
 
-        return summaries
+        return PaginatedRumorSummaryResponse(
+            items=summaries, total=total, page=page, per_page=per_page
+        )
 
 
 @router.get("/{symbol}", response_model=RumorScoreResponse)
-async def get_ticker_rumors(symbol: str):
+async def get_ticker_rumors(symbol: str, page: int = 1, per_page: int = 20):
     """Get latest rumor score and recent posts for a ticker.
 
     Returns score fields from the most recent RumorScore (or None if no score),
-    and the 20 most recent Rumor posts for the feed.
+    and paginated Rumor posts for the feed.
     If ticker exists but has no rumor data, returns empty response (not 404).
     """
+    per_page = min(per_page, 50)
     async with async_session() as session:
         ticker = await _get_ticker_by_symbol(session, symbol)
 
@@ -167,12 +182,21 @@ async def get_ticker_rumors(symbol: str):
         )
         latest_score = score_result.scalar_one_or_none()
 
-        # Recent posts (limit 20)
+        # Total post count for this ticker
+        count_result = await session.execute(
+            select(func.count()).select_from(Rumor)
+            .where(Rumor.ticker_id == ticker.id)
+        )
+        posts_total = count_result.scalar_one()
+
+        # Paginated posts
+        offset = (page - 1) * per_page
         posts_result = await session.execute(
             select(Rumor)
             .where(Rumor.ticker_id == ticker.id)
             .order_by(Rumor.posted_at.desc())
-            .limit(20)
+            .offset(offset)
+            .limit(per_page)
         )
         posts = posts_result.scalars().all()
 
@@ -195,4 +219,5 @@ async def get_ticker_rumors(symbol: str):
                 )
                 for post in posts
             ],
+            posts_total=posts_total,
         )

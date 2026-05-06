@@ -209,20 +209,26 @@ class TestEnrichedWatchlistIncludesSector:
         row2.analysis_date = None
         row2.max_created_at = None
 
-        mock_result = MagicMock()
-        mock_result.all.return_value = [row1, row2]
-        mock_session.execute = AsyncMock(return_value=mock_result)
+        # First execute call = COUNT query, second = main query
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 2
+
+        main_result = MagicMock()
+        main_result.all.return_value = [row1, row2]
+
+        mock_session.execute = AsyncMock(side_effect=[count_result, main_result])
 
         with patch("app.api.watchlist.async_session", mock_factory):
             from app.api.watchlist import get_watchlist
 
             response = await get_watchlist()
 
-            assert len(response) == 2
-            assert response[0].sector_group == "Thực phẩm"
-            assert response[0].symbol == "VNM"
-            assert response[1].sector_group == "Công nghệ"
-            assert response[1].symbol == "FPT"
+            assert response.total == 2
+            assert len(response.items) == 2
+            assert response.items[0].sector_group == "Thực phẩm"
+            assert response.items[0].symbol == "VNM"
+            assert response.items[1].sector_group == "Công nghệ"
+            assert response.items[1].symbol == "FPT"
 
 
 # ── Class 4: TestListSectors ────────────────────────────────────────────────

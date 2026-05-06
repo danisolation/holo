@@ -16,17 +16,26 @@ from app.schemas.watchlist import (
     WatchlistAddRequest,
     WatchlistUpdateRequest,
     WatchlistMigrateRequest,
+    PaginatedWatchlistResponse,
 )
 
 router = APIRouter(prefix="/watchlist", tags=["watchlist"])
 
 
-async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
-    """Fetch all watchlist items enriched with latest combined AI signal.
+async def _get_enriched_watchlist(
+    session, page: int = 1, per_page: int = 50
+) -> PaginatedWatchlistResponse:
+    """Fetch paginated watchlist items enriched with latest combined AI signal.
 
     JOIN path: UserWatchlist.symbol → Ticker.symbol → Ticker.id → AIAnalysis.ticker_id
     Only the most recent 'combined' analysis per ticker is used.
     """
+    # Total count for pagination
+    count_result = await session.execute(
+        select(sa_func.count()).select_from(UserWatchlist)
+    )
+    total = count_result.scalar_one()
+
     # Subquery: latest combined analysis date per ticker
     latest_analysis = (
         select(
@@ -49,6 +58,7 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
     )
 
     # Main query: watchlist LEFT JOIN ticker LEFT JOIN latest combined analysis
+    offset = (page - 1) * per_page
     stmt = (
         select(
             UserWatchlist.symbol,
@@ -76,13 +86,15 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
             latest_created,
             Ticker.id == latest_created.c.ticker_id,
         )
-        .order_by(UserWatchlist.created_at.desc())
+        .order_by(UserWatchlist.created_at.desc(), UserWatchlist.symbol.asc())
+        .offset(offset)
+        .limit(per_page)
     )
 
     result = await session.execute(stmt)
     rows = result.all()
 
-    return [
+    items = [
         WatchlistItemResponse(
             symbol=row.symbol,
             created_at=row.created_at.isoformat(),
@@ -95,12 +107,17 @@ async def _get_enriched_watchlist(session) -> list[WatchlistItemResponse]:
         for row in rows
     ]
 
+    return PaginatedWatchlistResponse(
+        items=items, total=total, page=page, per_page=per_page
+    )
 
-@router.get("/", response_model=list[WatchlistItemResponse])
-async def get_watchlist():
-    """Get all watchlist items with AI signal enrichment."""
+
+@router.get("/", response_model=PaginatedWatchlistResponse)
+async def get_watchlist(page: int = 1, per_page: int = 50):
+    """Get paginated watchlist items with AI signal enrichment."""
+    per_page = min(per_page, 100)
     async with async_session() as session:
-        return await _get_enriched_watchlist(session)
+        return await _get_enriched_watchlist(session, page=page, per_page=per_page)
 
 
 @router.post("/", response_model=WatchlistItemResponse, status_code=201)
@@ -177,7 +194,7 @@ async def remove_from_watchlist(symbol: str):
             raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not in watchlist")
 
 
-@router.post("/migrate", response_model=list[WatchlistItemResponse])
+@router.post("/migrate", response_model=PaginatedWatchlistResponse)
 async def migrate_watchlist(body: WatchlistMigrateRequest):
     """Bulk add symbols from localStorage migration.
 
@@ -201,5 +218,5 @@ async def migrate_watchlist(body: WatchlistMigrateRequest):
 
         await session.commit()
 
-        # Return full enriched watchlist
-        return await _get_enriched_watchlist(session)
+        # Return full enriched watchlist (first page)
+        return await _get_enriched_watchlist(session, page=1, per_page=50)

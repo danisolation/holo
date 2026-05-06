@@ -60,6 +60,7 @@ class RumorScoreResponse(BaseModel):
     key_claims: list[str] = []
     reasoning: str | None = None
     posts: list[RumorPostResponse] = []
+    posts_total: int | None = None
 
 
 class WatchlistRumorSummary(BaseModel):
@@ -69,3 +70,11 @@ class WatchlistRumorSummary(BaseModel):
     avg_credibility: float | None = None
     avg_impact: float | None = None
     dominant_direction: str | None = None
+
+
+class PaginatedRumorSummaryResponse(BaseModel):
+    """Paginated rumor summary response."""
+    items: list[WatchlistRumorSummary]
+    total: int
+    page: int
+    per_page: int

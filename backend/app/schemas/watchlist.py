@@ -27,3 +27,11 @@ class WatchlistAddRequest(BaseModel):
 class WatchlistMigrateRequest(BaseModel):
     """POST /api/watchlist/migrate — bulk add from localStorage migration."""
     symbols: list[str] = Field(max_length=50, description="List of ticker symbols to migrate")
+
+
+class PaginatedWatchlistResponse(BaseModel):
+    """Paginated watchlist response."""
+    items: list[WatchlistItemResponse]
+    total: int
+    page: int
+    per_page: int
