@@ -45,9 +45,12 @@ def _strip_html(text: str) -> str:
 
 
 class F319Crawler:
-    """Crawls F319.com RSS feed for stock discussion threads."""
+    """Crawls F319.com RSS feeds for stock discussion threads."""
 
-    RSS_URL = "https://f319.com/forums/thi-truong-chung-khoan.3/index.rss"
+    RSS_URLS = [
+        "https://f319.com/forums/thi-truong-chung-khoan.3/index.rss",
+        "https://f319.com/forums/giao-luu.4/index.rss",
+    ]
     MIN_CONTENT_LENGTH = 20
 
     def __init__(self, session: AsyncSession):
@@ -75,23 +78,33 @@ class F319Crawler:
             return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
 
         watchlist_symbols = set(ticker_map.keys())
-        logger.info(f"Starting F319 RSS crawl (watchlist: {len(watchlist_symbols)} tickers)")
+        logger.info(f"Starting F319 RSS crawl (watchlist: {len(watchlist_symbols)} tickers, {len(self.RSS_URLS)} feeds)")
 
-        # Fetch RSS
+        # Fetch all RSS feeds
+        rss_contents: list[str] = []
         try:
             async with httpx.AsyncClient(
                 headers=self.headers, timeout=15, follow_redirects=True
             ) as client:
-                resp = await client.get(self.RSS_URL)
-                resp.raise_for_status()
-                rss_xml = resp.text
+                for url in self.RSS_URLS:
+                    try:
+                        resp = await client.get(url)
+                        resp.raise_for_status()
+                        rss_contents.append(resp.text)
+                    except Exception as e:
+                        logger.warning(f"F319 RSS fetch failed for {url}: {e}")
         except Exception as e:
-            logger.error(f"F319 RSS fetch failed: {e}")
+            logger.error(f"F319 RSS client error: {e}")
             return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["RSS"]}
 
-        # Parse RSS items
-        items = await asyncio.to_thread(self._parse_rss, rss_xml)
-        logger.debug(f"F319: parsed {len(items)} RSS items")
+        if not rss_contents:
+            return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["RSS"]}
+
+        # Parse all RSS items from all feeds
+        items: list[dict] = []
+        for rss_xml in rss_contents:
+            items.extend(await asyncio.to_thread(self._parse_rss, rss_xml))
+        logger.debug(f"F319: parsed {len(items)} RSS items from {len(rss_contents)} feeds")
 
         # Extract ticker mentions and store via bulk insert
         rows_to_insert: list[dict] = []

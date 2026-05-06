@@ -1045,18 +1045,22 @@ async def daily_rumor_crawl():
             from app.crawlers.f319_crawler import F319Crawler
             from app.crawlers.vnexpress_crawler import VnExpressCrawler
             from app.crawlers.vietstock_crawler import VietstockCrawler
+            from app.crawlers.nhadautu_crawler import NhaDauTuCrawler
 
             async with async_session() as f319_session, \
                        async_session() as vnex_session, \
-                       async_session() as vs_session:
+                       async_session() as vs_session, \
+                       async_session() as ndt_session:
                 f319 = F319Crawler(f319_session)
                 vnexpress = VnExpressCrawler(vnex_session)
                 vietstock = VietstockCrawler(vs_session)
+                nhadautu = NhaDauTuCrawler(ndt_session)
 
-                f319_result, vnexpress_result, vietstock_result = await asyncio.gather(
+                f319_result, vnexpress_result, vietstock_result, nhadautu_result = await asyncio.gather(
                     f319.crawl_rss(ticker_map=ticker_map),
                     vnexpress.crawl_rss(ticker_map=ticker_map),
                     vietstock.crawl_rss(ticker_map=ticker_map),
+                    nhadautu.crawl_rss(ticker_map=ticker_map),
                 )
 
             # Merge results
@@ -1065,12 +1069,14 @@ async def daily_rumor_crawl():
                 + f319_result.get("total_posts", 0)
                 + vnexpress_result.get("total_posts", 0)
                 + vietstock_result.get("total_posts", 0)
+                + nhadautu_result.get("total_posts", 0)
             )
             result["success"] = (
                 result.get("success", 0)
                 + f319_result.get("success", 0)
                 + vnexpress_result.get("success", 0)
                 + vietstock_result.get("success", 0)
+                + nhadautu_result.get("success", 0)
             )
 
             # 3. Telegram channels (Phase 83 — if enabled)
@@ -1086,6 +1092,18 @@ async def daily_rumor_crawl():
                     result["success"] = result.get("success", 0) + telegram_result.get("success", 0)
                 except Exception as e:
                     logger.warning(f"Telegram crawl error (non-fatal): {e}")
+
+            # 4. tinnhanhchungkhoan.vn news (Phase 84)
+            tnck_result = {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
+            try:
+                from app.crawlers.tnck_crawler import TNCKCrawler
+                async with async_session() as tnck_session:
+                    tnck_crawler = TNCKCrawler(tnck_session)
+                    tnck_result = await tnck_crawler.crawl_articles(ticker_map=ticker_map)
+                result["total_posts"] = result.get("total_posts", 0) + tnck_result.get("total_posts", 0)
+                result["success"] = result.get("success", 0) + tnck_result.get("success", 0)
+            except Exception as e:
+                logger.warning(f"TNCK crawl error (non-fatal): {e}")
 
             # result shape: {success, failed, total_posts, failed_symbols}
             final_failed = result.get("failed_symbols", [])
