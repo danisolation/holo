@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: — (awaiting roadmap)
+Phase: 76 (VNDirect WebSocket Client) — complete
 Plan: —
-Status: Milestone initialized
-Last activity: 2026-05-06 — v16.0 milestone created
+Status: Phase 76 complete, moving to Phase 77
+Last activity: 2026-05-06 — Phase 76 complete (2 plans)
 
 ```
 v16.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/? phases (0%)

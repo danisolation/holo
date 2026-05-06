@@ -136,6 +136,7 @@ async def websocket_prices(ws: WebSocket) -> None:
 
     Accepts connection, listens for subscribe messages, removes on disconnect.
     Validates: max 50 symbols per subscribe, symbols must be uppercase.
+    Sends latest price snapshot immediately after subscribe (BC-02).
     """
     await ws.accept()
     await connection_manager.connect(ws)
@@ -160,6 +161,29 @@ async def websocket_prices(ws: WebSocket) -> None:
                     "type": "subscribed",
                     "symbols": clean_symbols,
                 })
+                # BC-02: Send latest price snapshot for subscribed symbols
+                from app.services.realtime_price_service import get_realtime_price_service
+                try:
+                    svc = get_realtime_price_service()
+                    snapshot = svc.get_latest_prices(clean_symbols)
+                    if snapshot:
+                        await ws.send_json({
+                            "type": "price_update",
+                            "data": snapshot,
+                        })
+                except Exception:
+                    pass  # Best-effort snapshot — don't break subscription flow
+
+                # Update VNDirect WS client with all currently subscribed symbols
+                try:
+                    from fastapi import Request
+                    from starlette.websockets import WebSocket as StarletteWS
+                    app = ws.app
+                    if hasattr(app, 'state') and hasattr(app.state, 'vndirect_client'):
+                        all_symbols = list(connection_manager.get_all_subscribed_symbols())
+                        app.state.vndirect_client.update_symbols(all_symbols)
+                except Exception:
+                    pass  # Best-effort — VNDirect client update is non-critical
             elif msg_type == "unsubscribe":
                 symbols = data.get("symbols", [])
                 if not isinstance(symbols, list):
