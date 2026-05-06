@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v17.0
 milestone_name: AI Consistency & UX
 status: active
-stopped_at: Defining requirements
-last_updated: "2026-05-06T06:35:00.000Z"
-last_activity: 2026-05-06 — Milestone v17.0 started
+stopped_at: Roadmap created, ready for phase planning
+last_updated: "2026-05-06T07:00:00.000Z"
+last_activity: 2026-05-06 — Roadmap created for v17.0
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,18 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v17.0 AI Consistency & UX — Defining requirements
+**Current focus:** v17.0 AI Consistency & UX — Phase 80 (AI Prompt Consistency)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 80 (AI Prompt Consistency)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-06 — Milestone v17.0 started
-Last activity: 2026-05-06 — v16.0 milestone complete
+Status: Not started — awaiting plan creation
+Last activity: 2026-05-06 — Roadmap created for v17.0
 
 ```
-v16.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/? phases (0%)
+v17.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/3 phases (0%)
 ```
 
 ## Shipped Milestones
@@ -54,6 +53,8 @@ v16.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0
 | v12.0 | Rumor Intelligence | 4 | 7 | 2026-05-05 |
 | v13.0 | AI Context & Accuracy | 4 | 7 | 2026-05-05 |
 | v14.0 | Multi-Source Rumor & Quota Fix | 3 | 3 | 2026-05-06 |
+| v15.0 | Performance Optimization | 5 | 6 | 2026-05-06 |
+| v16.0 | Real-Time Price | 4 | 4 | 2026-05-06 |
 
 ## Accumulated Context
 

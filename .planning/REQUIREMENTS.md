@@ -24,12 +24,17 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| APC-01 | — | Pending |
-| APC-02 | — | Pending |
-| APC-03 | — | Pending |
-| FED-01 | — | Pending |
-| FED-02 | — | Pending |
-| RTC-01 | — | Pending |
+| APC-01 | Phase 80 | Pending |
+| APC-02 | Phase 80 | Pending |
+| APC-03 | Phase 80 | Pending |
+| FED-01 | Phase 81 | Pending |
+| FED-02 | Phase 81 | Pending |
+| RTC-01 | Phase 82 | Pending |
+
+**Coverage:**
+- v17.0 requirements: 6 total
+- Mapped to phases: 6 ✓
+- Unmapped: 0
 
 ## Future Requirements
 

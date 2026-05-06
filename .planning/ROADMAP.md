@@ -23,6 +23,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v14.0 Multi-Source Rumor & Quota Fix** — Phases 68-70 (shipped 2026-05-06)
 - ✅ **v15.0 Performance Optimization** — Phases 71-75 (shipped 2026-05-06)
 - ✅ **v16.0 Real-Time Price** — Phases 76-79 (shipped 2026-05-06)
+- 🔄 **v17.0 AI Consistency & UX** — Phases 80-82 (active)
 
 ## Phases
 
@@ -341,11 +342,50 @@ Plans:
   3. Visual indicator shows spread between best bid and best ask
 **Plans**: TBD
 
+### v17.0: AI Consistency & UX (Phases 80-82)
+
+- [ ] **Phase 80: AI Prompt Consistency** — Fix combined/trading signal prompts to output coherent, single-direction recommendations
+- [ ] **Phase 81: Frontend Signal Display** — Simplify trading plan panel to show recommended direction only with consistent badges
+- [ ] **Phase 82: VNDirect WS Render Fix** — Fix WebSocket DNS/connectivity on Render production deployment
+
+## Phase Details — v17.0
+
+### Phase 80: AI Prompt Consistency
+**Goal**: AI analysis outputs are internally consistent — combined recommendation aligns with technical/fundamental signals, and trading signal outputs exactly one recommended direction
+**Depends on**: Phase 79 (v16.0 complete)
+**Requirements**: APC-01, APC-02, APC-03
+**Success Criteria** (what must be TRUE):
+  1. Combined analysis recommendation explicitly references and aligns with technical/fundamental/sentiment scores — no silent contradictions between "Technical = SELL" and "Combined = BUY" without explanation
+  2. Combined prompt receives technical, fundamental, and sentiment scores as structured input and the AI reasoning text references these scores by name
+  3. Trading signal endpoint returns exactly 1 recommended direction per ticker (not dual LONG+BEARISH), with a single trading plan containing entry/SL/TP
+  4. Existing unit tests and API contract remain stable (no breaking schema changes to consumers)
+**Plans**: TBD
+
+### Phase 81: Frontend Signal Display
+**Goal**: Trading plan panel shows only the recommended direction with visual consistency across all analysis cards
+**Depends on**: Phase 80
+**Requirements**: FED-01, FED-02
+**Success Criteria** (what must be TRUE):
+  1. Trading Plan panel on ticker detail page displays only the recommended direction's plan (no secondary/alternative direction panel visible)
+  2. Analysis cards (technical, fundamental, sentiment, combined) show direction badges/icons that are visually consistent with the final recommendation
+  3. When AI recommends HOLD/neutral, trading plan panel shows appropriate empty/neutral state instead of stale directional data
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 82: VNDirect WS Render Fix
+**Goal**: VNDirect WebSocket connects successfully from Render production environment and streams live prices
+**Depends on**: Phase 80 (independent of Phase 81, but sequenced after for deployment clarity)
+**Requirements**: RTC-01
+**Success Criteria** (what must be TRUE):
+  1. VNDirect WebSocket client establishes connection from Render deployment and receives SP messages during market hours
+  2. If direct DNS resolution fails on Render, a fallback mechanism (proxy, alternative endpoint, or VCI polling) activates automatically
+  3. Frontend receives real-time price updates on production (not just localhost) during market hours
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 76. VNDirect WebSocket Client | 0/? | Not started | - |
-| 77. Backend WebSocket Broadcasting | 0/? | Not started | - |
-| 78. Frontend Real-Time Price Display | 0/? | Not started | - |
-| 79. Bid/Ask Depth Display | 0/? | Not started | - |
+| 80. AI Prompt Consistency | 0/? | Not started | - |
+| 81. Frontend Signal Display | 0/? | Not started | - |
+| 82. VNDirect WS Render Fix | 0/? | Not started | - |
