@@ -20,7 +20,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v11.0 UX & Reliability Overhaul** — Phases 56-59 (shipped 2026-05-05)
 - ✅ **v12.0 Rumor Intelligence** — Phases 60-63 (shipped 2026-05-05)
 - ✅ **v13.0 AI Context & Accuracy** — Phases 64-67 (shipped 2026-05-05)
-- 🔄 **v14.0 Multi-Source Rumor & Quota Fix** — Phases 68-70
+- ✅ **v14.0 Multi-Source Rumor & Quota Fix** — Phases 68-70 (shipped 2026-05-06)
+- 🔄 **v15.0 Performance Optimization** — Phases 71-75
 
 ## Phases
 
@@ -203,49 +204,83 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 
 </details>
 
-### v14.0 Multi-Source Rumor & Quota Fix (Phases 68-70)
+<details>
+<summary>✅ v14.0 Multi-Source Rumor & Quota Fix (Phases 68-70) — SHIPPED 2026-05-06</summary>
 
-- [ ] **Phase 68: Gemini Quota Fix & Scoring Repair** — Switch rumor scoring to gemini-2.0-flash, verify scoring runs
-- [ ] **Phase 69: Multi-Source Crawlers** — Build VnExpress, Vietstock, Stockbiz crawlers
-- [ ] **Phase 70: Pipeline Integration** — Wire all sources into scoring, scheduler, and prompts
+- [x] Phase 68: Gemini Quota Fix & Scoring Repair (1/1 plan) — Switch to gemini-2.5-flash, verify scoring
+- [x] Phase 69: Multi-Source Crawlers (1/1 plan) — VnExpress, Vietstock, Stockbiz crawlers
+- [x] Phase 70: Pipeline Integration (1/1 plan) — Wire all sources into scoring, scheduler, prompts
+
+</details>
+
+### v15.0 Performance Optimization (Phases 71-75)
+
+- [ ] **Phase 71: Database Indexes & Pool Tuning** — Composite indexes on 7 hot tables + connection pool optimization
+- [ ] **Phase 72: N+1 Query Fixes & Pagination** — Batch queries for rumor/AI context + paginated list endpoints
+- [ ] **Phase 73: API Response Caching** — TTLCache for expensive endpoints + dashboard payload caching
+- [ ] **Phase 74: Crawler Efficiency** — Parallel fetch with bounded concurrency + bulk inserts + ticker map reuse
+- [ ] **Phase 75: Async Patterns & Bulk Operations** — CPU parsing offloaded to thread pool + financial bulk upsert
 
 ## Phase Details
 
-### Phase 68: Gemini Quota Fix & Scoring Repair
-**Goal**: Rumor scoring works reliably within Gemini free tier quota
-**Depends on**: Phase 67 (v13.0 complete)
-**Requirements**: QFIX-01, QFIX-02
+### Phase 71: Database Indexes & Pool Tuning
+**Goal**: Database queries hit indexes on hot paths and connection pool handles concurrent load without exhaustion
+**Depends on**: Phase 70 (v14.0 complete)
+**Requirements**: DB-IDX-01, DB-POOL-01
 **Success Criteria** (what must be TRUE):
-  1. Rumor scoring service uses gemini-2.5-flash model (working within free tier quota)
-  2. Scheduler-triggered rumor scoring completes without quota errors and scores >0 tickers
-  3. Scored rumor data appears correctly in RumorScorePanel on ticker page
+  1. Queries on daily_prices, technical_indicators, ai_analyses, daily_picks, weekly_reviews, job_executions, and community_posts use composite indexes (verified via EXPLAIN ANALYZE)
+  2. API endpoints that query these tables show measurably lower latency under normal load
+  3. Connection pool settings (pool_size, max_overflow, pool_recycle) are tuned so concurrent scheduler jobs + API requests don't produce "pool exhausted" errors
 **Plans**: TBD
 
-### Phase 69: Multi-Source Crawlers
-**Goal**: Three new news sources crawled and stored alongside existing Fireant/F319 data
-**Depends on**: Phase 68
+### Phase 72: N+1 Query Fixes & Pagination
+**Goal**: List and summary endpoints use batch queries instead of per-item loops, and return paginated results with stable ordering
+**Depends on**: Phase 71
+**Requirements**: DB-N1-01, DB-N1-02, DB-PAGE-01
+**Success Criteria** (what must be TRUE):
+  1. Rumor watchlist summary endpoint returns aggregated data via a single batch query instead of issuing one query per ticker
+  2. AI context builder fetches all dimension data (technical, fundamental, sentiment) in batch queries per dimension rather than sequential per-ticker queries
+  3. Watchlist, rumor list, and analysis list endpoints return paginated responses with page/limit parameters and consistent sort order
+  4. Total query count for summary endpoints scales O(1) with ticker count, not O(N)
+**Plans**: TBD
+
+### Phase 73: API Response Caching
+**Goal**: Expensive read endpoints return cached responses, eliminating redundant computation within TTL windows
+**Depends on**: Phase 72
+**Requirements**: CACHE-01, CACHE-02
+**Success Criteria** (what must be TRUE):
+  1. Sectors, discovery, goals, analysis summary, and rumor summary endpoints serve cached responses within TTL (repeated calls within window don't hit DB)
+  2. Dashboard overview endpoint (latest prices, SMA deltas, volume stats) returns a pre-computed cached payload
+  3. Cache invalidation occurs naturally via TTL expiry — no stale data persists beyond configured window
+**Plans**: TBD
+
+### Phase 74: Crawler Efficiency
+**Goal**: Crawlers fetch data in parallel with controlled concurrency, insert in bulk, and share a single ticker map per job run
+**Depends on**: Phase 71
 **Requirements**: CRAWL-01, CRAWL-02, CRAWL-03
 **Success Criteria** (what must be TRUE):
-  1. VnExpress crawler fetches chứng khoán articles and stores them in community_posts table
-  2. Vietstock crawler fetches tài chính news and stores them in community_posts table
-  3. Stockbiz crawler fetches tin tổng hợp and stores them in community_posts table
-  4. Each crawler follows existing pattern (retry, circuit breaker, dedup, watchlist-gated)
+  1. Crawler fetch phase runs requests in parallel with asyncio.Semaphore bounding max concurrent connections
+  2. Rumor/news crawlers use multi-row INSERT ON CONFLICT instead of single-row inserts (fewer round-trips to DB)
+  3. Ticker symbol-to-ID map is loaded once per job run and reused across all crawlers — no redundant ticker queries
+  4. Total crawler job duration is measurably shorter than sequential baseline
 **Plans**: TBD
 
-### Phase 70: Pipeline Integration
-**Goal**: All 5 sources (Fireant + F319 + VnExpress + Vietstock + Stockbiz) feed into unified rumor scoring
-**Depends on**: Phase 69
-**Requirements**: PIPE-01, PIPE-02, PIPE-03
+### Phase 75: Async Patterns & Bulk Operations
+**Goal**: CPU-heavy sync work runs in thread pool without blocking the event loop, and financial data uses bulk upsert
+**Depends on**: Phase 72
+**Requirements**: PERF-01, PERF-02
 **Success Criteria** (what must be TRUE):
-  1. Gemini rumor scoring evaluates posts from all 5 sources combined per ticker
-  2. Scheduler chain runs all crawlers sequentially before scoring (Fireant → F319 → VnExpress → Vietstock → Stockbiz → score)
-  3. Rumor scoring prompt distinguishes source type (cộng đồng vs tin chính thống vs forum) in context sent to Gemini
+  1. BeautifulSoup HTML parsing and DataFrame iterrows operations run inside asyncio.to_thread() — event loop stays responsive during parsing
+  2. Financial service upserts quarterly/annual data via bulk INSERT ON CONFLICT instead of row-by-row saves
+  3. No async event loop blocking warnings appear in logs during crawler or financial data processing
 **Plans**: TBD
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 68. Gemini Quota Fix & Scoring Repair | 1/1 | ✅ Complete | 2026-05-06 |
-| 69. Multi-Source Crawlers | 1/1 | ✅ Complete | 2026-05-06 |
-| 70. Pipeline Integration | 1/1 | ✅ Complete | 2026-05-06 |
+| 71. Database Indexes & Pool Tuning | 0/? | Not started | - |
+| 72. N+1 Query Fixes & Pagination | 0/? | Not started | - |
+| 73. API Response Caching | 0/? | Not started | - |
+| 74. Crawler Efficiency | 0/? | Not started | - |
+| 75. Async Patterns & Bulk Operations | 0/? | Not started | - |

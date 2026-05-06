@@ -46,23 +46,23 @@ None — performance optimization is self-contained.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-IDX-01 | TBD | Pending |
-| DB-N1-01 | TBD | Pending |
-| DB-N1-02 | TBD | Pending |
-| DB-PAGE-01 | TBD | Pending |
-| DB-POOL-01 | TBD | Pending |
-| CACHE-01 | TBD | Pending |
-| CACHE-02 | TBD | Pending |
-| CRAWL-01 | TBD | Pending |
-| CRAWL-02 | TBD | Pending |
-| CRAWL-03 | TBD | Pending |
-| PERF-01 | TBD | Pending |
-| PERF-02 | TBD | Pending |
+| DB-IDX-01 | Phase 71 | Pending |
+| DB-N1-01 | Phase 72 | Pending |
+| DB-N1-02 | Phase 72 | Pending |
+| DB-PAGE-01 | Phase 72 | Pending |
+| DB-POOL-01 | Phase 71 | Pending |
+| CACHE-01 | Phase 73 | Pending |
+| CACHE-02 | Phase 73 | Pending |
+| CRAWL-01 | Phase 74 | Pending |
+| CRAWL-02 | Phase 74 | Pending |
+| CRAWL-03 | Phase 74 | Pending |
+| PERF-01 | Phase 75 | Pending |
+| PERF-02 | Phase 75 | Pending |
 
 **Coverage:**
 - v15.0 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 ⚠️ (pending roadmap creation)
+- Mapped to phases: 12 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-06*

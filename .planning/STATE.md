@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Performance Optimization
 status: in_progress
-stopped_at: Defining requirements
-last_updated: "2026-05-06T12:00:00.000Z"
-last_activity: 2026-05-06 — Milestone v15.0 started
+stopped_at: Roadmap created, ready for phase planning
+last_updated: "2026-05-06T13:00:00.000Z"
+last_activity: 2026-05-06 — Roadmap created for v15.0 (Phases 71-75)
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v15.0 Performance Optimization — Tối ưu DB, caching, crawlers, async patterns
+**Current focus:** v15.0 Performance Optimization — DB indexes, N+1 fixes, caching, crawler parallelization, async patterns
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 71 (Database Indexes & Pool Tuning) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-06 — Milestone v15.0 started
+Status: Roadmap created, ready for phase planning
+Last activity: 2026-05-06 — Roadmap created for v15.0 (Phases 71-75)
+
+```
+v15.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/5 phases (0%)
+```
 
 ## Shipped Milestones
 
