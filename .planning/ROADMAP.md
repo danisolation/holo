@@ -245,10 +245,10 @@ Plans:
   2. AI context builder fetches all dimension data (technical, fundamental, sentiment) in batch queries per dimension rather than sequential per-ticker queries
   3. Watchlist, rumor list, and analysis list endpoints return paginated responses with page/limit parameters and consistent sort order
   4. Total query count for summary endpoints scales O(1) with ticker count, not O(N)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 72-01-PLAN.md — Batch aggregate queries for rumor summary + AI context builder
+- [x] 72-01-PLAN.md — Batch aggregate queries for rumor summary + AI context builder
 - [ ] 72-02-PLAN.md — Pagination with stable ordering on list endpoints
 
 ### Phase 73: API Response Caching
@@ -287,7 +287,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 71. Database Indexes & Pool Tuning | 1/1 | Complete   | 2026-05-06 |
-| 72. N+1 Query Fixes & Pagination | 0/? | Not started | - |
+| 72. N+1 Query Fixes & Pagination | 1/2 | In Progress|  |
 | 73. API Response Caching | 0/? | Not started | - |
 | 74. Crawler Efficiency | 0/? | Not started | - |
 | 75. Async Patterns & Bulk Operations | 0/? | Not started | - |
