@@ -52,6 +52,7 @@ import {
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { useBehaviorTracking } from "@/lib/use-behavior-tracking";
 import { PriceFlashCell } from "@/components/price-flash-cell";
+import { BidAskPanel } from "@/components/bid-ask-panel";
 import { NewsList } from "@/components/news-list";
 import { NewsListSkeleton } from "@/components/news-list-skeleton";
 
@@ -257,6 +258,18 @@ export default function TickerDetailPage({
           />
         ) : null}
       </section>
+
+      {/* Bid/Ask Depth Panel (FE-03) */}
+      {rtPrice?.bid_ask && (
+        <section data-testid="bid-ask-panel">
+          <h2 className="text-lg font-semibold mb-3">Sổ lệnh (Bid/Ask)</h2>
+          <Card>
+            <CardContent className="py-4">
+              <BidAskPanel data={rtPrice.bid_ask} refPrice={rtPrice.ref_price} />
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       {/* Indicator Charts */}
       <section>

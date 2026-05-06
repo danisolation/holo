@@ -27,6 +27,15 @@ export interface RealtimePrice {
   ref_price?: number;
   ceiling?: number;
   floor?: number;
+  bid_ask?: {
+    symbol: string;
+    bids: { price: number; volume: number }[];
+    asks: { price: number; volume: number }[];
+    match_price?: number;
+    match_volume?: number;
+    total_bid_volume?: number;
+    total_ask_volume?: number;
+  };
 }
 
 export type ConnectionStatus =
@@ -166,6 +175,19 @@ export function RealtimePriceProvider({ children }: { children: ReactNode }) {
         switch (msg.type) {
           case "price_update":
             setPrices((prev) => ({ ...prev, ...msg.data }));
+            break;
+          case "bid_ask_update":
+            // Store bid/ask data alongside prices
+            setPrices((prev) => {
+              const updated = { ...prev };
+              for (const [symbol, baData] of Object.entries(msg.data as Record<string, any>)) {
+                updated[symbol] = {
+                  ...updated[symbol],
+                  bid_ask: baData,
+                };
+              }
+              return updated;
+            });
             break;
           case "heartbeat":
             // Keep-alive — no action needed
