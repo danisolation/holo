@@ -303,7 +303,11 @@ Plans:
   3. Client auto-reconnects with exponential backoff (1s, 2s, 4s, 8s... max 60s) on disconnect
   4. Client only connects during market hours (9:00-11:30, 13:00-14:45 UTC+7) and sleeps outside
   5. Unit tests verify message parsing for SP and BA message types
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 76-01-PLAN.md — VNDirect WS client class with SP/BA message parsing + unit tests
+- [ ] 76-02-PLAN.md — Integration with RealtimePriceService + app startup lifecycle
 
 ### Phase 77: Backend WebSocket Broadcasting
 **Goal**: Backend server broadcasts real-time price updates to connected frontend clients
