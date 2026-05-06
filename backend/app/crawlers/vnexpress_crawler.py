@@ -68,9 +68,14 @@ class VnExpressCrawler:
             ),
         }
 
-    async def crawl_rss(self) -> RumorCrawlResult:
-        """Fetch VnExpress RSS, extract ticker-tagged articles, store in rumors."""
-        ticker_map = await self._get_watchlist_ticker_map()
+    async def crawl_rss(self, *, ticker_map: dict[str, int] | None = None) -> RumorCrawlResult:
+        """Fetch VnExpress RSS, extract ticker-tagged articles, store in rumors.
+
+        Args:
+            ticker_map: Pre-loaded {symbol: ticker_id} map. If None, queries DB.
+        """
+        if ticker_map is None:
+            ticker_map = await self._get_watchlist_ticker_map()
         if not ticker_map:
             logger.warning("VnExpress crawler: no watchlist tickers found")
             return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
@@ -92,7 +97,7 @@ class VnExpressCrawler:
         items = self._parse_rss(rss_xml)
         logger.debug(f"VnExpress: parsed {len(items)} RSS items")
 
-        stored = 0
+        rows_to_insert: list[dict] = []
         tickers_found: set[str] = set()
 
         for item in items:
@@ -110,25 +115,26 @@ class VnExpressCrawler:
             for symbol in matched:
                 ticker_id = ticker_map[symbol]
                 post_id = _guid_to_post_id(f"vnexpress:{item['guid']}:{symbol}")
+                rows_to_insert.append({
+                    "ticker_id": ticker_id,
+                    "post_id": post_id,
+                    "content": content[:2000],
+                    "author_name": "VnExpress",
+                    "is_authentic": True,
+                    "total_likes": 0,
+                    "total_replies": 0,
+                    "fireant_sentiment": 0,
+                    "posted_at": item["pub_date"],
+                })
+                tickers_found.add(symbol)
 
-                try:
-                    stmt = insert(Rumor).values(
-                        ticker_id=ticker_id,
-                        post_id=post_id,
-                        content=content[:2000],
-                        author_name="VnExpress",
-                        is_authentic=True,  # official news source
-                        total_likes=0,
-                        total_replies=0,
-                        fireant_sentiment=0,
-                        posted_at=item["pub_date"],
-                    ).on_conflict_do_nothing(constraint="uq_rumors_post_id")
-                    result = await self.session.execute(stmt)
-                    if result.rowcount > 0:
-                        stored += 1
-                        tickers_found.add(symbol)
-                except Exception as e:
-                    logger.warning(f"VnExpress: failed to store post for {symbol}: {e}")
+        stored = 0
+        if rows_to_insert:
+            stmt = insert(Rumor).values(rows_to_insert).on_conflict_do_nothing(
+                constraint="uq_rumors_post_id"
+            )
+            result = await self.session.execute(stmt)
+            stored = result.rowcount
 
         await self.session.commit()
 

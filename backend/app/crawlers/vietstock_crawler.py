@@ -70,9 +70,14 @@ class VietstockCrawler:
             ),
         }
 
-    async def crawl_rss(self) -> RumorCrawlResult:
-        """Fetch all Vietstock RSS feeds, extract ticker-tagged articles."""
-        ticker_map = await self._get_watchlist_ticker_map()
+    async def crawl_rss(self, *, ticker_map: dict[str, int] | None = None) -> RumorCrawlResult:
+        """Fetch all Vietstock RSS feeds, extract ticker-tagged articles.
+
+        Args:
+            ticker_map: Pre-loaded {symbol: ticker_id} map. If None, queries DB.
+        """
+        if ticker_map is None:
+            ticker_map = await self._get_watchlist_ticker_map()
         if not ticker_map:
             logger.warning("Vietstock crawler: no watchlist tickers found")
             return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
@@ -114,7 +119,7 @@ class VietstockCrawler:
 
         logger.debug(f"Vietstock: {len(all_items)} unique items from {feeds_ok} feeds")
 
-        stored = 0
+        rows_to_insert: list[dict] = []
         tickers_found: set[str] = set()
 
         for item in all_items:
@@ -132,25 +137,26 @@ class VietstockCrawler:
             for symbol in matched:
                 ticker_id = ticker_map[symbol]
                 post_id = _guid_to_post_id(f"vietstock:{item['guid']}:{symbol}")
+                rows_to_insert.append({
+                    "ticker_id": ticker_id,
+                    "post_id": post_id,
+                    "content": content[:2000],
+                    "author_name": f"Vietstock/{item['feed']}",
+                    "is_authentic": True,
+                    "total_likes": 0,
+                    "total_replies": 0,
+                    "fireant_sentiment": 0,
+                    "posted_at": item["pub_date"],
+                })
+                tickers_found.add(symbol)
 
-                try:
-                    stmt = insert(Rumor).values(
-                        ticker_id=ticker_id,
-                        post_id=post_id,
-                        content=content[:2000],
-                        author_name=f"Vietstock/{item['feed']}",
-                        is_authentic=True,
-                        total_likes=0,
-                        total_replies=0,
-                        fireant_sentiment=0,
-                        posted_at=item["pub_date"],
-                    ).on_conflict_do_nothing(constraint="uq_rumors_post_id")
-                    result = await self.session.execute(stmt)
-                    if result.rowcount > 0:
-                        stored += 1
-                        tickers_found.add(symbol)
-                except Exception as e:
-                    logger.warning(f"Vietstock: failed to store post for {symbol}: {e}")
+        stored = 0
+        if rows_to_insert:
+            stmt = insert(Rumor).values(rows_to_insert).on_conflict_do_nothing(
+                constraint="uq_rumors_post_id"
+            )
+            result = await self.session.execute(stmt)
+            stored = result.rowcount
 
         await self.session.commit()
 

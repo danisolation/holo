@@ -52,8 +52,11 @@ class FireantCrawler:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         }
 
-    async def crawl_watchlist_tickers(self) -> RumorCrawlResult:
+    async def crawl_watchlist_tickers(self, *, ticker_map: dict[str, int] | None = None) -> RumorCrawlResult:
         """Crawl Fireant posts for all watchlist tickers.
+
+        Args:
+            ticker_map: Pre-loaded {symbol: ticker_id} map. If None, queries DB.
 
         Returns: {success: int, failed: int, total_posts: int, failed_symbols: list[str]}
         """
@@ -61,17 +64,17 @@ class FireantCrawler:
             logger.warning("Fireant crawl skipped: fireant_token not configured")
             return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
 
-        # Inline watchlist query (same pattern as jobs.py _get_watchlist_ticker_map)
-        from app.models.user_watchlist import UserWatchlist
-        from app.models.ticker import Ticker
+        if ticker_map is None:
+            from app.models.user_watchlist import UserWatchlist
+            from app.models.ticker import Ticker
 
-        stmt = (
-            select(Ticker.symbol, Ticker.id)
-            .join(UserWatchlist, UserWatchlist.symbol == Ticker.symbol)
-            .where(Ticker.is_active == True)  # noqa: E712
-        )
-        result = await self.session.execute(stmt)
-        ticker_map = {row[0]: row[1] for row in result.fetchall()}
+            stmt = (
+                select(Ticker.symbol, Ticker.id)
+                .join(UserWatchlist, UserWatchlist.symbol == Ticker.symbol)
+                .where(Ticker.is_active == True)  # noqa: E712
+            )
+            result = await self.session.execute(stmt)
+            ticker_map = {row[0]: row[1] for row in result.fetchall()}
 
         if not ticker_map:
             logger.warning("Fireant crawl: no watchlist tickers found — skipping")
@@ -194,24 +197,18 @@ class FireantCrawler:
     async def _store_posts(self, ticker_id: int, posts: list[dict]) -> int:
         """Store posts in rumors table with deduplication.
 
-        Uses INSERT ... ON CONFLICT DO NOTHING on post_id unique constraint.
+        Uses bulk INSERT ... ON CONFLICT DO NOTHING on post_id unique constraint.
         Returns: number of newly inserted posts.
         """
         if not posts:
             return 0
 
-        stored = 0
-        for post in posts:
-            stmt = insert(Rumor).values(
-                ticker_id=ticker_id,
-                **post,
-            ).on_conflict_do_nothing(
-                constraint="uq_rumors_post_id"
-            )
-            result = await self.session.execute(stmt)
-            stored += result.rowcount
-
-        return stored
+        rows = [{"ticker_id": ticker_id, **post} for post in posts]
+        stmt = insert(Rumor).values(rows).on_conflict_do_nothing(
+            constraint="uq_rumors_post_id"
+        )
+        result = await self.session.execute(stmt)
+        return result.rowcount
 
     async def _cleanup_old_posts(self) -> None:
         """Delete posts older than retention_days."""

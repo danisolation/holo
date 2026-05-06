@@ -50,13 +50,17 @@ class CafeFCrawler:
             "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
         }
 
-    async def crawl_all_tickers(self) -> NewsCrawlResult:
+    async def crawl_all_tickers(self, *, ticker_map: dict[str, int] | None = None) -> NewsCrawlResult:
         """Scrape news for all active tickers.
+
+        Args:
+            ticker_map: Pre-loaded {symbol: ticker_id} map. If None, queries DB.
 
         Returns: {success: int, failed: int, total_articles: int, failed_symbols: list[str]}
         """
-        ticker_service = TickerService(self.session)
-        ticker_map = await ticker_service.get_ticker_id_map()
+        if ticker_map is None:
+            ticker_service = TickerService(self.session)
+            ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting CafeF news crawl for {len(ticker_map)} tickers")
 
         success = 0
@@ -184,27 +188,23 @@ class CafeFCrawler:
     async def _store_articles(self, ticker_id: int, articles: list[dict]) -> int:
         """Store articles in news_articles table with deduplication.
 
-        Uses INSERT ... ON CONFLICT DO NOTHING on (ticker_id, url) unique constraint.
-        Per RESEARCH.md pitfall 4: 7-day rolling window produces duplicate articles
-        across daily runs — ON CONFLICT DO NOTHING handles this cleanly.
-
+        Uses bulk INSERT ... ON CONFLICT DO NOTHING on (ticker_id, url) unique constraint.
         Returns: number of newly inserted articles.
         """
         if not articles:
             return 0
 
-        stored = 0
-        for article in articles:
-            stmt = insert(NewsArticle).values(
-                ticker_id=ticker_id,
-                title=article["title"],
-                url=article["url"],
-                published_at=article["published_at"],
-            ).on_conflict_do_nothing(
-                constraint="uq_news_articles_ticker_url"
-            )
-            result = await self.session.execute(stmt)
-            # rowcount = 1 if inserted, 0 if conflict (duplicate)
-            stored += result.rowcount
-
-        return stored
+        rows = [
+            {
+                "ticker_id": ticker_id,
+                "title": a["title"],
+                "url": a["url"],
+                "published_at": a["published_at"],
+            }
+            for a in articles
+        ]
+        stmt = insert(NewsArticle).values(rows).on_conflict_do_nothing(
+            constraint="uq_news_articles_ticker_url"
+        )
+        result = await self.session.execute(stmt)
+        return result.rowcount

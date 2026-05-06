@@ -369,9 +369,14 @@ async def daily_news_crawl():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_news_crawl")
         try:
+            # Centralized ticker map — queried once, passed to crawler
+            ticker_service = TickerService(session)
+            ticker_map = await ticker_service.get_ticker_id_map()
+            logger.info(f"Loaded ticker map: {len(ticker_map)} tickers for news crawl")
+
             from app.crawlers.cafef_crawler import CafeFCrawler
             crawler = CafeFCrawler(session)
-            result = await crawler.crawl_all_tickers()
+            result = await crawler.crawl_all_tickers(ticker_map=ticker_map)
 
             final_failed = result.get("failed_symbols", [])
             await _dlq_failures(session, "daily_news_crawl", final_failed)
@@ -1025,25 +1030,29 @@ async def daily_rumor_crawl():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("daily_rumor_crawl")
         try:
+            # Centralized ticker map — queried once, shared across all crawlers
+            ticker_map = await _get_watchlist_ticker_map(session)
+            logger.info(f"Loaded ticker map: {len(ticker_map)} tickers (shared across crawlers)")
+
             # 1. Fireant community posts
             from app.crawlers.fireant_crawler import FireantCrawler
             crawler = FireantCrawler(session)
-            result = await crawler.crawl_watchlist_tickers()
+            result = await crawler.crawl_watchlist_tickers(ticker_map=ticker_map)
 
             # 2. F319 forum RSS feed
             from app.crawlers.f319_crawler import F319Crawler
             f319 = F319Crawler(session)
-            f319_result = await f319.crawl_rss()
+            f319_result = await f319.crawl_rss(ticker_map=ticker_map)
 
             # 3. VnExpress business news RSS
             from app.crawlers.vnexpress_crawler import VnExpressCrawler
             vnexpress = VnExpressCrawler(session)
-            vnexpress_result = await vnexpress.crawl_rss()
+            vnexpress_result = await vnexpress.crawl_rss(ticker_map=ticker_map)
 
             # 4. Vietstock multi-feed RSS
             from app.crawlers.vietstock_crawler import VietstockCrawler
             vietstock = VietstockCrawler(session)
-            vietstock_result = await vietstock.crawl_rss()
+            vietstock_result = await vietstock.crawl_rss(ticker_map=ticker_map)
 
             # Merge results
             result["total_posts"] = (

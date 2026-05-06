@@ -333,16 +333,21 @@ class TestPhase3JobFunctions:
             with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
                 MockJobSvc.return_value = _mock_job_svc()
 
-                with patch("app.crawlers.cafef_crawler.CafeFCrawler") as MockCrawler:
-                    mock_crawler = AsyncMock()
-                    mock_crawler.crawl_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "total_articles": 100, "failed_symbols": []})
-                    MockCrawler.return_value = mock_crawler
+                with patch("app.scheduler.jobs.TickerService") as MockTickerSvc:
+                    mock_ticker_svc = AsyncMock()
+                    mock_ticker_svc.get_ticker_id_map = AsyncMock(return_value={"VNM": 1, "FPT": 2})
+                    MockTickerSvc.return_value = mock_ticker_svc
 
-                    from app.scheduler.jobs import daily_news_crawl
-                    await daily_news_crawl()
+                    with patch("app.crawlers.cafef_crawler.CafeFCrawler") as MockCrawler:
+                        mock_crawler = AsyncMock()
+                        mock_crawler.crawl_all_tickers = AsyncMock(return_value={"success": 400, "failed": 0, "total_articles": 100, "failed_symbols": []})
+                        MockCrawler.return_value = mock_crawler
 
-                    MockCrawler.assert_called_once()
-                    mock_crawler.crawl_all_tickers.assert_called_once()
+                        from app.scheduler.jobs import daily_news_crawl
+                        await daily_news_crawl()
+
+                        MockCrawler.assert_called_once()
+                        mock_crawler.crawl_all_tickers.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_daily_sentiment_calls_service(self):

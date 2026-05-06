@@ -59,13 +59,16 @@ class F319Crawler:
             ),
         }
 
-    async def crawl_rss(self) -> RumorCrawlResult:
+    async def crawl_rss(self, *, ticker_map: dict[str, int] | None = None) -> RumorCrawlResult:
         """Fetch RSS feed, extract ticker-tagged posts, store in rumors table.
+
+        Args:
+            ticker_map: Pre-loaded {symbol: ticker_id} map. If None, queries DB.
 
         Returns crawl stats.
         """
-        # Load watchlist ticker symbols + IDs
-        ticker_map = await self._get_watchlist_ticker_map()
+        if ticker_map is None:
+            ticker_map = await self._get_watchlist_ticker_map()
         if not ticker_map:
             logger.warning("F319 crawler: no watchlist tickers found")
             return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
@@ -89,8 +92,8 @@ class F319Crawler:
         items = self._parse_rss(rss_xml)
         logger.debug(f"F319: parsed {len(items)} RSS items")
 
-        # Extract ticker mentions and store
-        stored = 0
+        # Extract ticker mentions and store via bulk insert
+        rows_to_insert: list[dict] = []
         tickers_found: set[str] = set()
 
         for item in items:
@@ -109,25 +112,26 @@ class F319Crawler:
             for symbol in matched:
                 ticker_id = ticker_map[symbol]
                 post_id = _guid_to_post_id(f"{item['guid']}:{symbol}")
+                rows_to_insert.append({
+                    "ticker_id": ticker_id,
+                    "post_id": post_id,
+                    "content": content[:2000],
+                    "author_name": item["author"][:200],
+                    "is_authentic": False,
+                    "total_likes": 0,
+                    "total_replies": item["comments"],
+                    "fireant_sentiment": 0,
+                    "posted_at": item["pub_date"],
+                })
+                tickers_found.add(symbol)
 
-                try:
-                    stmt = insert(Rumor).values(
-                        ticker_id=ticker_id,
-                        post_id=post_id,
-                        content=content[:2000],
-                        author_name=item["author"][:200],
-                        is_authentic=False,
-                        total_likes=0,
-                        total_replies=item["comments"],
-                        fireant_sentiment=0,
-                        posted_at=item["pub_date"],
-                    ).on_conflict_do_nothing(constraint="uq_rumors_post_id")
-                    result = await self.session.execute(stmt)
-                    if result.rowcount > 0:
-                        stored += 1
-                        tickers_found.add(symbol)
-                except Exception as e:
-                    logger.warning(f"F319: failed to store post for {symbol}: {e}")
+        stored = 0
+        if rows_to_insert:
+            stmt = insert(Rumor).values(rows_to_insert).on_conflict_do_nothing(
+                constraint="uq_rumors_post_id"
+            )
+            result = await self.session.execute(stmt)
+            stored = result.rowcount
 
         await self.session.commit()
 
