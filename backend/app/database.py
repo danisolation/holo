@@ -4,8 +4,9 @@ from app.config import settings
 # Aiven requires SSL: ?ssl=require in the URL
 engine = create_async_engine(
     settings.database_url,
-    pool_size=5,           # Conservative for Aiven connection limits (~20-25 max)
-    max_overflow=3,        # Max 8 total connections
+    pool_size=10,          # Tuned for concurrent scheduler + API traffic (max 20 connections)
+    max_overflow=10,       # Allow burst to 20 total connections
+    pool_recycle=1800,     # Recycle connections every 30 min — Aiven may close idle connections
     pool_pre_ping=True,    # Detect stale connections from Aiven
     echo=False,
 )
