@@ -395,11 +395,11 @@ Plans:
 
 ### v18.0: Multi-Source Community Rumors (Phases 83-87)
 
-- [ ] **Phase 83: Telegram Channel Crawler** — Telethon MTProto client to read public VN stock Telegram channels
-- [ ] **Phase 84: News Source Expansion** — tinnhanhchungkhoan.vn scraper + F319 second feed + nhadautu.vn
-- [ ] **Phase 85: AI Rumor Scoring Enhancement** — Source weighting, credibility scoring, cross-source corroboration
-- [ ] **Phase 86: Frontend Source Tags** — Rumor panel shows source icons and tags per post
-- [ ] **Phase 87: Integration & Testing** — End-to-end rumor pipeline test, scheduler integration, monitoring
+- [x] **Phase 83: Telegram Channel Crawler** — Telethon MTProto client to read public VN stock Telegram channels
+- [x] **Phase 84: News Source Expansion** — tinnhanhchungkhoan.vn scraper + F319 second feed + nhadautu.vn
+- [x] **Phase 85: AI Rumor Scoring Enhancement** — Source weighting, credibility scoring, cross-source corroboration
+- [x] **Phase 86: Frontend Source Tags** — Rumor panel shows source icons and tags per post
+- [x] **Phase 87: Integration & Testing** — End-to-end rumor pipeline test, scheduler integration, monitoring
 
 ## Phase Details — v18.0
 
