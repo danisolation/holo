@@ -1,29 +1,61 @@
-# v13.0 Requirements — AI Context & Accuracy
+# Requirements: Holo v14.0 Multi-Source Rumor & Quota Fix
 
-## Goal
+**Defined:** 2026-05-06
+**Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment + tin đồn) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
 
-Cải thiện chất lượng phân tích AI bằng cách: (1) tích hợp rumor score vào combined analysis, (2) theo dõi accuracy của AI recommendations, (3) thêm volume profile + sector comparison vào Gemini context.
+## v14.0 Requirements
 
-## Requirements
+### Quota Fix
 
-### Rumor-to-Signal Integration
+- [ ] **QFIX-01**: Gemini rumor scoring sử dụng gemini-2.0-flash thay vì gemini-2.5-flash-lite (1500 RPD free tier)
+- [ ] **QFIX-02**: Rumor scoring chạy thành công (>0 tickers scored) khi scheduler trigger
 
-- [ ] **AIUP-01**: Combined analysis prompt includes latest rumor score (credibility, impact, direction) for each ticker alongside technical/fundamental/sentiment
-- [ ] **AIUP-02**: Trading signal prompt includes rumor context when available (key claims + direction) to inform entry/SL/TP decisions
-- [ ] **AIUP-03**: Daily picks scoring incorporates rumor impact score as a factor (high-impact bullish rumors boost pick ranking)
+### Multi-Source Crawlers
 
-### AI Accuracy Tracking
+- [ ] **CRAWL-01**: Crawler VnExpress chứng khoán — lấy tin bài từ vnexpress.net/kinh-doanh/chung-khoan
+- [ ] **CRAWL-02**: Crawler Vietstock.vn — lấy tin tức tài chính từ vietstock.vn
+- [ ] **CRAWL-03**: Crawler Stockbiz.vn — lấy tin chứng khoán tổng hợp
 
-- [ ] **ACC-01**: System tracks actual price change (%) at 1-day, 3-day, and 7-day intervals after each AI signal is generated
-- [ ] **ACC-02**: Each AI combined recommendation (mua/bán/giữ) gets a binary correct/incorrect verdict based on actual price movement vs direction
-- [ ] **ACC-03**: Dashboard shows AI accuracy stats: overall %, per-direction accuracy, rolling 30-day trend
-- [ ] **ACC-04**: Accuracy data feeds back into daily picks — tickers where AI has been historically accurate get a confidence boost
+### Pipeline Integration
 
-### Enhanced Gemini Context
+- [ ] **PIPE-01**: Tất cả nguồn mới tích hợp vào rumor scoring (Gemini đánh giá combined)
+- [ ] **PIPE-02**: Scheduler chain chạy tất cả crawlers (Fireant + F319 + VnExpress + Vietstock + Stockbiz)
+- [ ] **PIPE-03**: Rumor prompt phân biệt rõ nguồn (cộng đồng vs tin chính thống vs forum)
 
-- [ ] **CTX-01**: Technical analysis prompt includes 20-day volume profile (avg volume, volume trend, relative volume vs 20-day avg)
-- [ ] **CTX-02**: Combined analysis prompt includes sector peer comparison (ticker's score vs sector average for same analysis type)
-- [ ] **CTX-03**: Trading signal prompt includes 52-week price percentile and volume-price correlation
+## Future Requirements
+
+- **CRAWL-04**: Thêm nguồn TinHoc.vn / CafeF forum nếu cần
+- **PIPE-04**: Source reliability weighting (tin chính thống weight > forum)
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Full article content extraction | Title + summary đủ cho sentiment; full text tốn token Gemini |
+| Paid data sources | Chỉ nguồn miễn phí |
+| Real-time news streaming | Daily batch crawl đủ cho personal use |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| QFIX-01 | — | Pending |
+| QFIX-02 | — | Pending |
+| CRAWL-01 | — | Pending |
+| CRAWL-02 | — | Pending |
+| CRAWL-03 | — | Pending |
+| PIPE-01 | — | Pending |
+| PIPE-02 | — | Pending |
+| PIPE-03 | — | Pending |
+
+**Coverage:**
+- v14.0 requirements: 8 total
+- Mapped to phases: 0
+- Unmapped: 8 ⚠️
+
+---
+*Requirements defined: 2026-05-06*
+*Last updated: 2026-05-06 after initial definition*
 
 ## Future Requirements (Deferred)
 
