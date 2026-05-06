@@ -1073,6 +1073,20 @@ async def daily_rumor_crawl():
                 + vietstock_result.get("success", 0)
             )
 
+            # 3. Telegram channels (Phase 83 — if enabled)
+            telegram_result = {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
+            if settings.telegram_enabled:
+                try:
+                    from app.crawlers.telegram_crawler import TelegramCrawler
+                    async with async_session() as tg_session:
+                        tg_crawler = TelegramCrawler(tg_session, ticker_map)
+                        telegram_result = await tg_crawler.crawl_channels()
+                        await tg_crawler.close()
+                    result["total_posts"] = result.get("total_posts", 0) + telegram_result.get("total_posts", 0)
+                    result["success"] = result.get("success", 0) + telegram_result.get("success", 0)
+                except Exception as e:
+                    logger.warning(f"Telegram crawl error (non-fatal): {e}")
+
             # result shape: {success, failed, total_posts, failed_symbols}
             final_failed = result.get("failed_symbols", [])
             await _dlq_failures(session, "daily_rumor_crawl", final_failed)

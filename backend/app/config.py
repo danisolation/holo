@@ -88,6 +88,15 @@ class Settings(BaseSettings):
     vndirect_ws_url: str = "wss://price-cmc-04.vndirect.com.vn/realtime/websocket"
     vndirect_ws_enabled: bool = True  # True = use VNDirect WS; False = fallback to VCI polling
 
+    # Telegram Channel Monitor (Phase 83)
+    telegram_api_id: int = 0
+    telegram_api_hash: str = ""
+    telegram_session_string: str = ""
+    telegram_channels: list[str] = []
+    telegram_fetch_limit: int = 50
+    telegram_delay_seconds: float = 1.5
+    telegram_enabled: bool = False
+
     # Trading Signal Pipeline (Phase 19)
     trading_signal_batch_size: int = 8     # Reduced from 15 — more tokens per ticker
     trading_signal_thinking_budget: int = 2048  # Doubled from 1024 — complex dual-direction reasoning
