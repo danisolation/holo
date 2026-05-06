@@ -1,32 +1,44 @@
-# Requirements: Holo v16.0 Real-Time Price
+# Requirements: Holo v17.0 AI Consistency & UX
 
 **Defined:** 2026-05-06
 **Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment + tin đồn) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
 
-## v16.0 Requirements
+## v17.0 Requirements
 
-### WebSocket Data
+### AI Prompt Consistency
 
-- [ ] **WS-01**: System connects to VNDirect WebSocket and receives Stock Price (SP) messages
-- [ ] **WS-02**: System parses Bid/Ask (BA) messages for watchlist tickers
-- [ ] **WS-03**: System auto-reconnects with exponential backoff on disconnect
-- [ ] **WS-04**: System only operates during market hours (9:00-11:30, 13:00-14:45 UTC+7)
-
-### Backend Broadcasting
-
-- [ ] **BC-01**: Backend WebSocket server broadcasts real-time prices to connected frontend clients
-- [ ] **BC-02**: New clients receive latest snapshot of all subscribed tickers on connect
-- [ ] **BC-03**: Subscription filtered to watchlist tickers only
+- [ ] **APC-01**: Combined analysis recommendation nhất quán với technical signal direction (nếu technical=sell thì combined phải giải thích hoặc đồng thuận, không mâu thuẫn im lặng)
+- [ ] **APC-02**: Combined prompt nhận input trực tiếp từ technical/fundamental/sentiment scores và reference chúng trong reasoning
+- [ ] **APC-03**: Trading Signal chỉ output 1 hướng recommended (bỏ dual-direction output, chỉ giữ recommended_direction + 1 trading plan)
 
 ### Frontend Display
 
-- [ ] **FE-01**: Dashboard shows real-time price with flash animation (green up / red down)
-- [ ] **FE-02**: Live candlestick chart updates intraday bar in real-time
-- [ ] **FE-03**: Bid/Ask depth displayed on ticker detail page
+- [ ] **FED-01**: Trading Plan panel chỉ hiện hướng recommended (ẩn hướng thứ yếu)
+- [ ] **FED-02**: Analysis cards hiển thị tín hiệu nhất quán — badge/icon đồng bộ với recommendation
+
+### Real-Time Connectivity
+
+- [ ] **RTC-01**: VNDirect WebSocket kết nối được từ Render deployment (fix DNS/network hoặc add fallback mechanism)
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| APC-01 | — | Pending |
+| APC-02 | — | Pending |
+| APC-03 | — | Pending |
+| FED-01 | — | Pending |
+| FED-02 | — | Pending |
+| RTC-01 | — | Pending |
 
 ## Future Requirements
 
 None identified.
+
+## Out of Scope
+
+- Multi-model AI (chỉ dùng Gemini)
+- Hoàn toàn bỏ dual analysis (giữ internal logic, chỉ ẩn UI)
 
 ## Out of Scope
 
