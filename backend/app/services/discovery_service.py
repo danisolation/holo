@@ -195,12 +195,14 @@ class DiscoveryService:
         }
 
     async def _cleanup_old_results(self) -> int:
-        """Delete discovery results older than 14 days. Returns rows deleted."""
+        """Delete discovery results older than 14 days. Returns rows deleted.
+        
+        NOTE: Does NOT commit — caller must commit within the same transaction.
+        """
         cutoff = date.today() - timedelta(days=self.RETENTION_DAYS)
         stmt = delete(DiscoveryResult).where(DiscoveryResult.score_date < cutoff)
         result = await self.session.execute(stmt)
         deleted = result.rowcount
-        await self.session.commit()
         return deleted
 
     async def _fetch_latest_indicators(self, ticker_ids: list[int]) -> dict[int, dict]:

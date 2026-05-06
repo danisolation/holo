@@ -12,7 +12,7 @@ Resilience pattern per CONTEXT.md decisions:
 - Pitfall 2: Partial failure returns normally (chain continues);
   complete failure raises (chain breaks)
 """
-from datetime import date
+from datetime import date, timedelta
 
 from loguru import logger
 from sqlalchemy import select
@@ -103,7 +103,7 @@ async def daily_price_crawl():
                 logger.info(f"Retrying {retried} failed tickers...")
                 ticker_map = await service.ticker_service.get_ticker_id_map()
                 today = date.today().isoformat()
-                start = date.today().replace(day=max(1, date.today().day - 5)).isoformat()
+                start = (date.today() - timedelta(days=5)).isoformat()
                 retry_map = {s: ticker_map[s] for s in failed_symbols if s in ticker_map}
                 retry_result = await service._crawl_batch(
                     list(retry_map.keys()), retry_map, start, today
@@ -157,7 +157,7 @@ async def daily_price_crawl_for_exchange(exchange: str):
                 logger.info(f"Retrying {retried} failed {exchange} tickers...")
                 ticker_map = await service.ticker_service.get_ticker_id_map(exchange=exchange)
                 today = date.today().isoformat()
-                start = date.today().replace(day=max(1, date.today().day - 5)).isoformat()
+                start = (date.today() - timedelta(days=5)).isoformat()
                 retry_map = {s: ticker_map[s] for s in failed_symbols if s in ticker_map}
                 retry_result = await service._crawl_batch(
                     list(retry_map.keys()), retry_map, start, today

@@ -8,6 +8,7 @@ Three-state machine: CLOSED → OPEN → HALF_OPEN
 - OPEN: all calls rejected with CircuitOpenError (after fail_max failures)
 - HALF_OPEN: one probe call allowed after cooldown
 """
+import asyncio
 import time
 from enum import Enum
 
@@ -39,6 +40,7 @@ class AsyncCircuitBreaker:
         self._state = CircuitState.CLOSED
         self._fail_count = 0
         self._last_failure_time: float | None = None
+        self._lock = asyncio.Lock()
 
     @property
     def state(self) -> CircuitState:
@@ -53,17 +55,20 @@ class AsyncCircuitBreaker:
         return self._fail_count
 
     async def call(self, func, *args, **kwargs):
-        current = self.state
-        if current == CircuitState.OPEN:
-            raise CircuitOpenError(self.name, self._fail_count)
+        async with self._lock:
+            current = self.state
+            if current == CircuitState.OPEN:
+                raise CircuitOpenError(self.name, self._fail_count)
         try:
             result = await func(*args, **kwargs)
-            self._on_success()
+            async with self._lock:
+                self._on_success()
             return result
         except CircuitOpenError:
-            raise  # Don't count circuit errors as failures
+            raise
         except Exception:
-            self._on_failure()
+            async with self._lock:
+                self._on_failure()
             raise
 
     def _on_success(self):

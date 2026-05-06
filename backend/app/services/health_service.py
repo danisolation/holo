@@ -1,4 +1,5 @@
 """Health monitoring service — aggregation queries on existing data."""
+import re
 from collections import defaultdict
 from datetime import date as date_type, datetime, timedelta, timezone
 
@@ -21,6 +22,9 @@ _JOB_NAMES_VN = {
     "daily_combined_triggered": "Phân tích kết hợp",
 }
 
+# Whitelist of allowed table/column identifiers for freshness queries
+_VALID_SQL_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
 _FRESHNESS_SOURCES = [
     ("daily_prices", "Giá cổ phiếu", "date", 48),
     ("technical_indicators", "Chỉ báo kỹ thuật", "date", 48),
@@ -28,6 +32,11 @@ _FRESHNESS_SOURCES = [
     ("news_articles", "Tin tức", "created_at", 48),
     ("financials", "Báo cáo tài chính", "created_at", 168),
 ]
+
+# Validate all identifiers at import time
+for _table, _label, _col, _ in _FRESHNESS_SOURCES:
+    assert _VALID_SQL_IDENTIFIER.match(_table), f"Invalid table name: {_table}"
+    assert _VALID_SQL_IDENTIFIER.match(_col), f"Invalid column name: {_col}"
 
 
 class HealthService:
