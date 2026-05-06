@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.accuracy_tracking_service import AccuracyTrackingService
 
-router = APIRouter(prefix="/api/accuracy", tags=["accuracy"])
+router = APIRouter(prefix="/accuracy", tags=["accuracy"])
 
 
 @router.get("/stats")
