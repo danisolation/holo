@@ -247,5 +247,5 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 68. Gemini Quota Fix & Scoring Repair | 1/1 | ✅ Complete | 2026-05-06 |
-| 69. Multi-Source Crawlers | 0/? | Not started | - |
-| 70. Pipeline Integration | 0/? | Not started | - |
+| 69. Multi-Source Crawlers | 1/1 | ✅ Complete | 2026-05-06 |
+| 70. Pipeline Integration | 1/1 | ✅ Complete | 2026-05-06 |

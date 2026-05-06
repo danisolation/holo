@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Multi-Source Rumor & Quota Fix
-status: roadmap_complete
+status: complete
 stopped_at: Roadmap created, ready for phase planning
 last_updated: "2026-05-06T10:00:00.000Z"
 last_activity: 2026-05-06 — Roadmap created (Phases 68-70)
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 0
-  completed_plans: 0
-  percent: 33
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-06)
 
 ## Current Position
 
-Phase: 69 (Multi-Source Crawlers) — not started
+Phase: 70 (Pipeline Integration) — complete
 Plan: —
-Status: Phase 68 complete, advancing to Phase 69
-Last activity: 2026-05-06 — Phase 68 complete (Gemini model → gemini-2.5-flash, 25/30 tickers scored)
+Status: All 3 phases complete — v14.0 milestone done
+Last activity: 2026-05-06 — Phase 70 complete (multi-source scoring prompts)
 
 ## Shipped Milestones
 
@@ -48,6 +48,7 @@ Last activity: 2026-05-06 — Phase 68 complete (Gemini model → gemini-2.5-fla
 | v11.0 | UX & Reliability Overhaul | 4 | 6 | 2026-05-05 |
 | v12.0 | Rumor Intelligence | 4 | 7 | 2026-05-05 |
 | v13.0 | AI Context & Accuracy | 4 | 7 | 2026-05-05 |
+| v14.0 | Multi-Source Rumor & Quota Fix | 3 | 3 | 2026-05-06 |
 
 ## Accumulated Context
 
