@@ -20,30 +20,35 @@ def upgrade() -> None:
         "technical_indicators",
         ["ticker_id", sa.text("date DESC")],
         unique=False,
+        if_not_exists=True,
     )
     op.create_index(
         "ix_ai_analyses_ticker_type_date",
         "ai_analyses",
         ["ticker_id", "analysis_type", sa.text("analysis_date DESC")],
         unique=False,
+        if_not_exists=True,
     )
     op.create_index(
         "ix_daily_picks_date_ticker",
         "daily_picks",
         [sa.text("pick_date DESC"), "ticker_id"],
         unique=False,
+        if_not_exists=True,
     )
     op.create_index(
         "ix_weekly_reviews_week_start",
         "weekly_reviews",
         [sa.text("week_start DESC")],
         unique=False,
+        if_not_exists=True,
     )
     op.create_index(
         "ix_job_executions_job_started",
         "job_executions",
         ["job_id", sa.text("started_at DESC")],
         unique=False,
+        if_not_exists=True,
     )
 
 
