@@ -259,7 +259,10 @@ Plans:
   1. Sectors, discovery, goals, analysis summary, and rumor summary endpoints serve cached responses within TTL (repeated calls within window don't hit DB)
   2. Dashboard overview endpoint (latest prices, SMA deltas, volume stats) returns a pre-computed cached payload
   3. Cache invalidation occurs naturally via TTL expiry — no stale data persists beyond configured window
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 73-01-PLAN.md — TTLCache for 5 expensive endpoints (sectors, discovery, weekly-review, analysis/summary, rumor/watchlist/summary)
 
 ### Phase 74: Crawler Efficiency
 **Goal**: Crawlers fetch data in parallel with controlled concurrency, insert in bulk, and share a single ticker map per job run
