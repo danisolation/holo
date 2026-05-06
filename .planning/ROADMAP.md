@@ -216,7 +216,7 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 ### v15.0 Performance Optimization (Phases 71-75)
 
 - [x] **Phase 71: Database Indexes & Pool Tuning** — Composite indexes on 7 hot tables + connection pool optimization (completed 2026-05-06)
-- [ ] **Phase 72: N+1 Query Fixes & Pagination** — Batch queries for rumor/AI context + paginated list endpoints
+- [x] **Phase 72: N+1 Query Fixes & Pagination** — Batch queries for rumor/AI context + paginated list endpoints (completed 2026-05-06)
 - [ ] **Phase 73: API Response Caching** — TTLCache for expensive endpoints + dashboard payload caching
 - [ ] **Phase 74: Crawler Efficiency** — Parallel fetch with bounded concurrency + bulk inserts + ticker map reuse
 - [ ] **Phase 75: Async Patterns & Bulk Operations** — CPU parsing offloaded to thread pool + financial bulk upsert
@@ -245,11 +245,11 @@ Plans:
   2. AI context builder fetches all dimension data (technical, fundamental, sentiment) in batch queries per dimension rather than sequential per-ticker queries
   3. Watchlist, rumor list, and analysis list endpoints return paginated responses with page/limit parameters and consistent sort order
   4. Total query count for summary endpoints scales O(1) with ticker count, not O(N)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 72-01-PLAN.md — Batch aggregate queries for rumor summary + AI context builder
-- [ ] 72-02-PLAN.md — Pagination with stable ordering on list endpoints
+- [x] 72-02-PLAN.md — Pagination with stable ordering on list endpoints
 
 ### Phase 73: API Response Caching
 **Goal**: Expensive read endpoints return cached responses, eliminating redundant computation within TTL windows
@@ -287,7 +287,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 71. Database Indexes & Pool Tuning | 1/1 | Complete   | 2026-05-06 |
-| 72. N+1 Query Fixes & Pagination | 1/2 | In Progress|  |
+| 72. N+1 Query Fixes & Pagination | 2/2 | Complete   | 2026-05-06 |
 | 73. API Response Caching | 0/? | Not started | - |
 | 74. Crawler Efficiency | 0/? | Not started | - |
 | 75. Async Patterns & Bulk Operations | 0/? | Not started | - |

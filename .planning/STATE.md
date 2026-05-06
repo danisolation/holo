@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Performance Optimization
 status: planning
-stopped_at: Completed 72-01-PLAN.md
-last_updated: "2026-05-06T04:53:56.781Z"
+stopped_at: Completed 72-02-PLAN.md
+last_updated: "2026-05-06T04:58:48.776Z"
 last_activity: 2026-05-06 — Roadmap created for v15.0 (Phases 71-75)
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -70,6 +70,7 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 62]: RumorScorePanel shows empty state when credibility_score is null; direction badge reuses #26a69a/#ef5350 color scheme; rumor section after news on ticker page
 - [Phase 71]: Pool sized to 10+10=20 max, within Aiven ~25 limit; pool_recycle=1800 for idle connection stability
 - [Phase 72]: Used ROW_NUMBER window functions for batch per-ticker queries; kept per-ticker methods for on-demand use
+- [Phase 72]: Offset/limit pagination with COUNT totals matching PickHistoryListResponse pattern
 
 ### Research Context (v10.0)
 
@@ -130,7 +131,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-06T04:53:56.776Z
-Stopped at: Completed 72-01-PLAN.md
+Last session: 2026-05-06T04:58:48.771Z
+Stopped at: Completed 72-02-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 60`

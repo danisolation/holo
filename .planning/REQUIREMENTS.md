@@ -10,7 +10,7 @@
 - [x] **DB-IDX-01**: Composite indexes trên 7 hot tables (daily_prices, technical_indicators, ai_analyses, daily_picks, weekly_reviews, job_executions, community_posts) cho các query patterns phổ biến
 - [x] **DB-N1-01**: Rumor watchlist summary sử dụng batch aggregate query thay vì per-ticker queries
 - [x] **DB-N1-02**: AI context builder batch-fetch data per dimension thay vì sequential per-ticker queries
-- [ ] **DB-PAGE-01**: List endpoints (watchlist, rumor, analysis) có pagination với stable ordering
+- [x] **DB-PAGE-01**: List endpoints (watchlist, rumor, analysis) có pagination với stable ordering
 - [x] **DB-POOL-01**: DB connection pool tuned (pool_size, max_overflow, pool_recycle) cho concurrent jobs + API traffic
 
 ### API Caching
@@ -49,7 +49,7 @@ None — performance optimization is self-contained.
 | DB-IDX-01 | Phase 71 | Complete |
 | DB-N1-01 | Phase 72 | Complete |
 | DB-N1-02 | Phase 72 | Complete |
-| DB-PAGE-01 | Phase 72 | Pending |
+| DB-PAGE-01 | Phase 72 | Complete |
 | DB-POOL-01 | Phase 71 | Complete |
 | CACHE-01 | Phase 73 | Pending |
 | CACHE-02 | Phase 73 | Pending |
