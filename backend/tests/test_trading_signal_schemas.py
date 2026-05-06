@@ -133,23 +133,21 @@ def test_reasoning_field_present():
 # ---- TickerTradingSignal tests ----
 
 def test_ticker_trading_signal_structure():
-    """Full TickerTradingSignal with both directions, recommended_direction is Direction."""
-    from app.schemas.analysis import Direction, TickerTradingSignal, DirectionAnalysis
-
-    long_data = _make_analysis(direction=Direction.LONG, confidence=8)
-    bearish_data = _make_analysis(direction=Direction.BEARISH, confidence=4)
+    """TickerTradingSignal with single direction (Phase 80 update)."""
+    from app.schemas.analysis import Direction, TickerTradingSignal
 
     signal = TickerTradingSignal(
         ticker="VNM",
         recommended_direction=Direction.LONG,
-        long_analysis=long_data,
-        bearish_analysis=bearish_data,
+        confidence=8,
+        trading_plan=_make_plan(),
+        reasoning="RSI trung tính, xu hướng tăng rõ.",
     )
     assert signal.ticker == "VNM"
     assert isinstance(signal.recommended_direction, Direction)
     assert signal.recommended_direction == Direction.LONG
-    assert signal.long_analysis.confidence == 8
-    assert signal.bearish_analysis.confidence == 4
+    assert signal.confidence == 8
+    assert signal.trading_plan.entry_price == 25.0
 
 
 # ---- Full batch response test ----
@@ -164,14 +162,13 @@ def test_full_batch_response():
 
     signals_data = []
     for ticker in ["VNM", "FPT"]:
-        long_data = _make_analysis(direction=Direction.LONG, confidence=8)
-        bearish_data = _make_analysis(direction=Direction.BEARISH, confidence=3)
         signals_data.append(
             TickerTradingSignal(
                 ticker=ticker,
                 recommended_direction=Direction.LONG,
-                long_analysis=long_data,
-                bearish_analysis=bearish_data,
+                confidence=7,
+                trading_plan=_make_plan(),
+                reasoning="Test reasoning",
             )
         )
 

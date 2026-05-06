@@ -150,16 +150,31 @@ def extract_trading_plan(raw_response: dict) -> dict:
 
     Returns dict with: entry_price, stop_loss, take_profit_1, take_profit_2,
     risk_reward_ratio, position_size_pct, confidence.
+
+    Supports both new single-direction format and legacy dual-direction format.
     """
+    # New format: trading_plan at top level
+    plan = raw_response.get("trading_plan", {})
+    if plan:
+        return {
+            "entry_price": plan.get("entry_price"),
+            "stop_loss": plan.get("stop_loss"),
+            "take_profit_1": plan.get("take_profit_1"),
+            "take_profit_2": plan.get("take_profit_2"),
+            "risk_reward_ratio": plan.get("risk_reward_ratio"),
+            "position_size_pct": plan.get("position_size_pct", 10),
+            "confidence": raw_response.get("confidence", 5),
+        }
+    # Legacy format: long_analysis.trading_plan
     long = raw_response.get("long_analysis", {})
-    plan = long.get("trading_plan", {})
+    legacy_plan = long.get("trading_plan", {})
     return {
-        "entry_price": plan.get("entry_price"),
-        "stop_loss": plan.get("stop_loss"),
-        "take_profit_1": plan.get("take_profit_1"),
-        "take_profit_2": plan.get("take_profit_2"),
-        "risk_reward_ratio": plan.get("risk_reward_ratio"),
-        "position_size_pct": plan.get("position_size_pct", 10),
+        "entry_price": legacy_plan.get("entry_price"),
+        "stop_loss": legacy_plan.get("stop_loss"),
+        "take_profit_1": legacy_plan.get("take_profit_1"),
+        "take_profit_2": legacy_plan.get("take_profit_2"),
+        "risk_reward_ratio": legacy_plan.get("risk_reward_ratio"),
+        "position_size_pct": legacy_plan.get("position_size_pct", 10),
         "confidence": long.get("confidence", 5),
     }
 

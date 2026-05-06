@@ -112,10 +112,37 @@ class TestExplanationGeneration:
 # --- PICK-05: Entry/SL/TP inheritance ---
 
 class TestEntrySLTPInheritance:
-    """PICK-05: Entry/SL/TP inherited from trading signal long_analysis."""
+    """PICK-05: Entry/SL/TP inherited from trading signal."""
 
-    def test_extract_trading_plan_from_raw_response(self):
-        """Extract entry/SL/TP from raw_response JSONB structure."""
+    def test_extract_trading_plan_new_format(self):
+        """Extract entry/SL/TP from new single-direction format."""
+        from app.services.pick_service import extract_trading_plan
+        raw_response = {
+            "ticker": "VNM",
+            "recommended_direction": "long",
+            "confidence": 8,
+            "trading_plan": {
+                "entry_price": 60000,
+                "stop_loss": 57000,
+                "take_profit_1": 66000,
+                "take_profit_2": 72000,
+                "risk_reward_ratio": 2.0,
+                "position_size_pct": 8,
+                "timeframe": "swing",
+            },
+            "reasoning": "Test reasoning",
+        }
+        plan = extract_trading_plan(raw_response)
+        assert plan["entry_price"] == 60000
+        assert plan["stop_loss"] == 57000
+        assert plan["take_profit_1"] == 66000
+        assert plan["take_profit_2"] == 72000
+        assert plan["risk_reward_ratio"] == 2.0
+        assert plan["position_size_pct"] == 8
+        assert plan["confidence"] == 8
+
+    def test_extract_trading_plan_legacy_format(self):
+        """Extract entry/SL/TP from legacy dual-direction format (backward compat)."""
         from app.services.pick_service import extract_trading_plan
         raw_response = {
             "ticker": "VNM",

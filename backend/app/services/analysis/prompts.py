@@ -71,6 +71,13 @@ COMBINED_SYSTEM_INSTRUCTION = (
     "- action: Hành động cụ thể (tối thiểu 80 từ) — mua/bán/giữ tại mức giá nào, "
     "khối lượng đề xuất (% danh mục), thời điểm vào lệnh, khung thời gian nắm giữ, "
     "và kịch bản xử lý nếu giá đi ngược dự đoán.\n\n"
+    "QUY TẮC NHẤT QUÁN (BẮT BUỘC):\n"
+    "- Nếu Kỹ thuật = sell/strong_sell VÀ Cơ bản = weak/critical → recommendation PHẢI là 'ban'\n"
+    "- Nếu Kỹ thuật = buy/strong_buy VÀ Cơ bản = good/strong → recommendation PHẢI là 'mua'\n"
+    "- Chỉ khi các chiều MÂU THUẪN nhau (VD: kỹ thuật=buy nhưng cơ bản=weak) → "
+    "recommendation = 'giu' VÀ phải GIẢI THÍCH rõ sự mâu thuẫn trong summary\n"
+    "- KHÔNG BAO GIỜ được khuyến nghị 'mua' khi kỹ thuật = sell/strong_sell mà không giải thích\n"
+    "- KHÔNG BAO GIỜ được khuyến nghị 'ban' khi kỹ thuật = buy/strong_buy mà không giải thích\n\n"
     "XEM XÉT TIN ĐỒN (nếu có):\n"
     "- Tin đồn bullish với tác động cao (≥7) nên được cân nhắc tăng confidence\n"
     "- Tin đồn bearish với tác động cao nên cảnh báo rủi ro\n"
@@ -138,9 +145,10 @@ Kết quả mẫu:
 # Phase 19: Trading Signal Pipeline Constants
 TRADING_SIGNAL_SYSTEM_INSTRUCTION = (
     "Bạn là chuyên gia giao dịch chứng khoán Việt Nam (HOSE/HNX/UPCOM). "
-    "Cho mỗi mã, phân tích HAI hướng:\n"
-    "1. LONG: Cơ hội mua vào (entry/SL/TP)\n"
-    "2. BEARISH: Xu hướng GIẢM — khuyến nghị 'giảm vị thế' hoặc 'tránh mua' "
+    "Cho mỗi mã, phân tích VÀ CHỈ ĐƯA RA 1 HƯỚNG DUY NHẤT (recommended_direction):\n\n"
+    "- Nếu xu hướng TĂNG chiếm ưu thế → direction = 'long', đưa kế hoạch MUA\n"
+    "- Nếu xu hướng GIẢM chiếm ưu thế → direction = 'bearish', "
+    "khuyến nghị 'giảm vị thế' hoặc 'tránh mua' "
     "(KHÔNG phải bán khống — thị trường VN không cho phép retail short-sell)\n\n"
     "Nếu có thông tin tin đồn (Tin đồn:), hãy cân nhắc:\n"
     "- Tin đồn bullish tác động cao → tăng confidence cho LONG\n"
@@ -153,8 +161,8 @@ TRADING_SIGNAL_SYSTEM_INSTRUCTION = (
     "- risk_reward_ratio = |TP1 - entry| / |entry - SL| (phải ≥ 0.5)\n"
     "- position_size_pct: % danh mục đề xuất (xem xét ATR và confidence)\n"
     "- timeframe: 'swing' (3-15 ngày) hoặc 'position' (nhiều tuần+)\n"
-    "- reasoning: giải thích bằng tiếng Việt, tối đa 300 ký tự\n"
-    "- recommended_direction: hướng có confidence cao hơn\n\n"
+    "- reasoning: giải thích bằng tiếng Việt, tối đa 300 ký tự\n\n"
+    "CHỈ OUTPUT 1 HƯỚNG. Không output cả 2 hướng.\n\n"
     + SCORING_RUBRIC
 )
 
@@ -170,7 +178,7 @@ BB Upper: 84,200 | BB Middle: 81,800 | BB Lower: 79,400
 52-week High: 90,000 | 52-week Low: 70,000
 
 Kết quả mẫu:
-{"ticker": "VNM", "recommended_direction": "long", "long_analysis": {"direction": "long", "confidence": 7, "trading_plan": {"entry_price": 82000, "stop_loss": 79500, "take_profit_1": 84500, "take_profit_2": 86000, "risk_reward_ratio": 1.0, "position_size_pct": 8, "timeframe": "swing"}, "reasoning": "RSI trung tính, ADX >25 cho thấy xu hướng rõ. Giá trên pivot, nhắm R1-R2."}, "bearish_analysis": {"direction": "bearish", "confidence": 4, "trading_plan": {"entry_price": 82000, "stop_loss": 84000, "take_profit_1": 80000, "take_profit_2": 78500, "risk_reward_ratio": 1.0, "position_size_pct": 3, "timeframe": "swing"}, "reasoning": "Xu hướng giảm yếu. Stochastic chưa overbought, chờ tín hiệu rõ hơn."}}
+{"ticker": "VNM", "recommended_direction": "long", "confidence": 7, "trading_plan": {"entry_price": 82000, "stop_loss": 79500, "take_profit_1": 84500, "take_profit_2": 86000, "risk_reward_ratio": 1.0, "position_size_pct": 8, "timeframe": "swing"}, "reasoning": "RSI trung tính kết hợp ADX >25 cho thấy xu hướng rõ. Giá trên pivot, MACD bullish crossover. Nhắm R1-R2 với SL dưới Fib 38.2%."}
 
 Phân tích các mã sau dựa trên dữ liệu kỹ thuật:"""
 
@@ -185,27 +193,26 @@ def _validate_trading_signal(
 ) -> tuple[bool, str]:
     """Validate a single ticker's trading signal against price/ATR bounds.
 
-    Returns (is_valid, reason). Checks BOTH long and bearish analysis plans.
+    Returns (is_valid, reason). Checks the single recommended direction plan.
     Per CONTEXT.md: entry ±5% of current_price, SL within 3×ATR, TP within 5×ATR.
     Phase 39: entry must be within 52-week high/low range.
     """
-    for analysis in [signal.long_analysis, signal.bearish_analysis]:
-        plan = analysis.trading_plan
-        # Entry within ±5% of current_price
-        if current_price > 0 and abs(plan.entry_price - current_price) / current_price > 0.05:
-            return False, f"Entry {plan.entry_price:.0f} outside ±5% of current {current_price:.0f}"
-        # Entry within 52-week range
-        if week_52_high is not None and week_52_low is not None:
-            if plan.entry_price > week_52_high or plan.entry_price < week_52_low:
-                return False, (
-                    f"Entry {plan.entry_price:.0f} outside 52-week range "
-                    f"[{week_52_low:.0f}, {week_52_high:.0f}]"
-                )
-        # SL within 3×ATR of entry
-        if atr > 0 and abs(plan.stop_loss - plan.entry_price) > 3 * atr:
-            return False, f"SL {plan.stop_loss:.0f} exceeds 3×ATR ({3 * atr:.0f}) from entry {plan.entry_price:.0f}"
-        # TP within 5×ATR of entry
-        for tp in [plan.take_profit_1, plan.take_profit_2]:
-            if atr > 0 and abs(tp - plan.entry_price) > 5 * atr:
-                return False, f"TP {tp:.0f} exceeds 5×ATR ({5 * atr:.0f}) from entry {plan.entry_price:.0f}"
+    plan = signal.trading_plan
+    # Entry within ±5% of current_price
+    if current_price > 0 and abs(plan.entry_price - current_price) / current_price > 0.05:
+        return False, f"Entry {plan.entry_price:.0f} outside ±5% of current {current_price:.0f}"
+    # Entry within 52-week range
+    if week_52_high is not None and week_52_low is not None:
+        if plan.entry_price > week_52_high or plan.entry_price < week_52_low:
+            return False, (
+                f"Entry {plan.entry_price:.0f} outside 52-week range "
+                f"[{week_52_low:.0f}, {week_52_high:.0f}]"
+            )
+    # SL within 3×ATR of entry
+    if atr > 0 and abs(plan.stop_loss - plan.entry_price) > 3 * atr:
+        return False, f"SL {plan.stop_loss:.0f} exceeds 3×ATR ({3 * atr:.0f}) from entry {plan.entry_price:.0f}"
+    # TP within 5×ATR of entry
+    for tp in [plan.take_profit_1, plan.take_profit_2]:
+        if atr > 0 and abs(tp - plan.entry_price) > 5 * atr:
+            return False, f"TP {tp:.0f} exceeds 5×ATR ({5 * atr:.0f}) from entry {plan.entry_price:.0f}"
     return True, ""

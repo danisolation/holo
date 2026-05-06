@@ -420,11 +420,7 @@ class AIAnalysisService:
 
                             if is_valid:
                                 signal = analysis.recommended_direction.value
-                                score = (
-                                    analysis.long_analysis.confidence
-                                    if analysis.recommended_direction.value == "long"
-                                    else analysis.bearish_analysis.confidence
-                                )
+                                score = analysis.confidence
                             else:
                                 logger.warning(f"Trading signal validation failed for {symbol}: {reason}")
                                 signal = "invalid"
@@ -443,11 +439,7 @@ class AIAnalysisService:
                             )
                         elif analysis_type == AnalysisType.TRADING_SIGNAL:
                             if signal != "invalid":
-                                reasoning = (
-                                    analysis.long_analysis.reasoning
-                                    if analysis.recommended_direction.value == "long"
-                                    else analysis.bearish_analysis.reasoning
-                                )
+                                reasoning = analysis.reasoning
                             else:
                                 reasoning = f"Validation failed: {reason}"
                         else:

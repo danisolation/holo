@@ -153,8 +153,9 @@ export interface DirectionAnalysis {
 export interface TickerTradingSignal {
   ticker: string;
   recommended_direction: "long" | "bearish";
-  long_analysis: DirectionAnalysis;
-  bearish_analysis: DirectionAnalysis;
+  confidence: number;           // 1-10
+  trading_plan: TradingPlanDetail;
+  reasoning: string;            // Vietnamese text
 }
 
 // --- Phase 43: Daily Picks Types ---

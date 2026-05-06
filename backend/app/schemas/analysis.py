@@ -143,11 +143,12 @@ class DirectionAnalysis(BaseModel):
 
 
 class TickerTradingSignal(BaseModel):
-    """Dual-direction trading signal for one ticker."""
+    """Single-direction trading signal for one ticker."""
     ticker: str
     recommended_direction: Direction
-    long_analysis: DirectionAnalysis
-    bearish_analysis: DirectionAnalysis
+    confidence: int = Field(ge=1, le=10)
+    trading_plan: TradingPlanDetail
+    reasoning: str = Field(default="", description="Vietnamese explanation, max 300 chars")
 
 
 class TradingSignalBatchResponse(BaseModel):

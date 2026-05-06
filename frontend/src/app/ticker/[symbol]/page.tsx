@@ -122,18 +122,14 @@ export default function TickerDetailPage({
     refetch: refetchRumors,
   } = useRumorScores(upperSymbol);
 
-  // Derive recommended direction's trading plan for chart overlay
+  // Derive trading plan for chart overlay
   const tradingPlanForChart = useMemo(() => {
-    if (!tradingSignal) return undefined;
-    const analysis = tradingSignal.recommended_direction === "long"
-      ? tradingSignal.long_analysis
-      : tradingSignal.bearish_analysis;
-    if (analysis.confidence === 0) return undefined;
+    if (!tradingSignal || tradingSignal.confidence === 0) return undefined;
     return {
-      entry_price: analysis.trading_plan.entry_price,
-      stop_loss: analysis.trading_plan.stop_loss,
-      take_profit_1: analysis.trading_plan.take_profit_1,
-      take_profit_2: analysis.trading_plan.take_profit_2,
+      entry_price: tradingSignal.trading_plan.entry_price,
+      stop_loss: tradingSignal.trading_plan.stop_loss,
+      take_profit_1: tradingSignal.trading_plan.take_profit_1,
+      take_profit_2: tradingSignal.trading_plan.take_profit_2,
     };
   }, [tradingSignal]);
 
