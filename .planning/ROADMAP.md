@@ -19,7 +19,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v10.0 Watchlist-Centric & Stock Discovery** — Phases 52-55 (shipped 2026-05-05)
 - ✅ **v11.0 UX & Reliability Overhaul** — Phases 56-59 (shipped 2026-05-05)
 - ✅ **v12.0 Rumor Intelligence** — Phases 60-63 (shipped 2026-05-05)
-- 🔄 **v13.0 AI Context & Accuracy** — Phases 64-67
+- ✅ **v13.0 AI Context & Accuracy** — Phases 64-67 (shipped 2026-05-05)
+- 🔄 **v14.0 Multi-Source Rumor & Quota Fix** — Phases 68-70
 
 ## Phases
 
@@ -201,3 +202,50 @@ Full details: [milestones/v12.0-ROADMAP.md](milestones/v12.0-ROADMAP.md)
 Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 
 </details>
+
+### v14.0 Multi-Source Rumor & Quota Fix (Phases 68-70)
+
+- [ ] **Phase 68: Gemini Quota Fix & Scoring Repair** — Switch rumor scoring to gemini-2.0-flash, verify scoring runs
+- [ ] **Phase 69: Multi-Source Crawlers** — Build VnExpress, Vietstock, Stockbiz crawlers
+- [ ] **Phase 70: Pipeline Integration** — Wire all sources into scoring, scheduler, and prompts
+
+## Phase Details
+
+### Phase 68: Gemini Quota Fix & Scoring Repair
+**Goal**: Rumor scoring works reliably within Gemini free tier quota
+**Depends on**: Phase 67 (v13.0 complete)
+**Requirements**: QFIX-01, QFIX-02
+**Success Criteria** (what must be TRUE):
+  1. Rumor scoring service uses gemini-2.0-flash model (not gemini-2.5-flash-lite)
+  2. Scheduler-triggered rumor scoring completes without quota errors and scores >0 tickers
+  3. Scored rumor data appears correctly in RumorScorePanel on ticker page
+**Plans**: TBD
+
+### Phase 69: Multi-Source Crawlers
+**Goal**: Three new news sources crawled and stored alongside existing Fireant/F319 data
+**Depends on**: Phase 68
+**Requirements**: CRAWL-01, CRAWL-02, CRAWL-03
+**Success Criteria** (what must be TRUE):
+  1. VnExpress crawler fetches chứng khoán articles and stores them in community_posts table
+  2. Vietstock crawler fetches tài chính news and stores them in community_posts table
+  3. Stockbiz crawler fetches tin tổng hợp and stores them in community_posts table
+  4. Each crawler follows existing pattern (retry, circuit breaker, dedup, watchlist-gated)
+**Plans**: TBD
+
+### Phase 70: Pipeline Integration
+**Goal**: All 5 sources (Fireant + F319 + VnExpress + Vietstock + Stockbiz) feed into unified rumor scoring
+**Depends on**: Phase 69
+**Requirements**: PIPE-01, PIPE-02, PIPE-03
+**Success Criteria** (what must be TRUE):
+  1. Gemini rumor scoring evaluates posts from all 5 sources combined per ticker
+  2. Scheduler chain runs all crawlers sequentially before scoring (Fireant → F319 → VnExpress → Vietstock → Stockbiz → score)
+  3. Rumor scoring prompt distinguishes source type (cộng đồng vs tin chính thống vs forum) in context sent to Gemini
+**Plans**: TBD
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 68. Gemini Quota Fix & Scoring Repair | 0/? | Not started | - |
+| 69. Multi-Source Crawlers | 0/? | Not started | - |
+| 70. Pipeline Integration | 0/? | Not started | - |

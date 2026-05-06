@@ -39,19 +39,19 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QFIX-01 | — | Pending |
-| QFIX-02 | — | Pending |
-| CRAWL-01 | — | Pending |
-| CRAWL-02 | — | Pending |
-| CRAWL-03 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
+| QFIX-01 | Phase 68 | Pending |
+| QFIX-02 | Phase 68 | Pending |
+| CRAWL-01 | Phase 69 | Pending |
+| CRAWL-02 | Phase 69 | Pending |
+| CRAWL-03 | Phase 69 | Pending |
+| PIPE-01 | Phase 70 | Pending |
+| PIPE-02 | Phase 70 | Pending |
+| PIPE-03 | Phase 70 | Pending |
 
 **Coverage:**
 - v14.0 requirements: 8 total
-- Mapped to phases: 0
-- Unmapped: 8 ⚠️
+- Mapped to phases: 8 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-06*
