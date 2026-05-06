@@ -273,7 +273,11 @@ Plans:
   2. Rumor/news crawlers use multi-row INSERT ON CONFLICT instead of single-row inserts (fewer round-trips to DB)
   3. Ticker symbol-to-ID map is loaded once per job run and reused across all crawlers — no redundant ticker queries
   4. Total crawler job duration is measurably shorter than sequential baseline
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 74-01-PLAN.md — Centralize ticker map + bulk inserts (CRAWL-02, CRAWL-03)
+- [ ] 74-02-PLAN.md — Semaphore parallel fetch + concurrent RSS crawlers (CRAWL-01)
 
 ### Phase 75: Async Patterns & Bulk Operations
 **Goal**: CPU-heavy sync work runs in thread pool without blocking the event loop, and financial data uses bulk upsert
