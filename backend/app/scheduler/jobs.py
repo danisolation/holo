@@ -1014,10 +1014,11 @@ async def daily_discovery_scoring():
 
 
 async def daily_rumor_crawl():
-    """Crawl Fireant community posts + F319 RSS for watchlist tickers.
+    """Crawl all rumor sources for watchlist tickers.
 
+    Sources: Fireant (community) + F319 (forum) + VnExpress (news) + Vietstock (news).
     Triggered after daily_trading_signal via job chaining.
-    Phase 63: Part of rumor intelligence pipeline.
+    Phase 63/69: Part of rumor intelligence pipeline.
     """
     logger.info("=== DAILY RUMOR CRAWL START ===")
     async with async_session() as session:
@@ -1034,11 +1035,29 @@ async def daily_rumor_crawl():
             f319 = F319Crawler(session)
             f319_result = await f319.crawl_rss()
 
+            # 3. VnExpress business news RSS
+            from app.crawlers.vnexpress_crawler import VnExpressCrawler
+            vnexpress = VnExpressCrawler(session)
+            vnexpress_result = await vnexpress.crawl_rss()
+
+            # 4. Vietstock multi-feed RSS
+            from app.crawlers.vietstock_crawler import VietstockCrawler
+            vietstock = VietstockCrawler(session)
+            vietstock_result = await vietstock.crawl_rss()
+
             # Merge results
             result["total_posts"] = (
-                result.get("total_posts", 0) + f319_result.get("total_posts", 0)
+                result.get("total_posts", 0)
+                + f319_result.get("total_posts", 0)
+                + vnexpress_result.get("total_posts", 0)
+                + vietstock_result.get("total_posts", 0)
             )
-            result["success"] = result.get("success", 0) + f319_result.get("success", 0)
+            result["success"] = (
+                result.get("success", 0)
+                + f319_result.get("success", 0)
+                + vnexpress_result.get("success", 0)
+                + vietstock_result.get("success", 0)
+            )
 
             # result shape: {success, failed, total_posts, failed_symbols}
             final_failed = result.get("failed_symbols", [])
@@ -1048,6 +1067,8 @@ async def daily_rumor_crawl():
             summary = _build_summary(result, dlq_count=len(final_failed))
             summary["total_posts"] = result.get("total_posts", 0)
             summary["f319_posts"] = f319_result.get("total_posts", 0)
+            summary["vnexpress_posts"] = vnexpress_result.get("total_posts", 0)
+            summary["vietstock_posts"] = vietstock_result.get("total_posts", 0)
             await job_svc.complete(execution, status=status, result_summary=summary)
             await session.commit()
             logger.info(f"=== DAILY RUMOR CRAWL COMPLETE: {summary} ===")
