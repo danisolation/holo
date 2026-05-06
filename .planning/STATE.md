@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v16.0
-milestone_name: Real-Time Price
-status: complete
-stopped_at: All 4 phases complete
-last_updated: "2026-05-06T15:00:00.000Z"
-last_activity: 2026-05-06 — v16.0 milestone complete (Phases 76-79)
+milestone: v17.0
+milestone_name: AI Consistency & UX
+status: active
+stopped_at: Defining requirements
+last_updated: "2026-05-06T06:35:00.000Z"
+last_activity: 2026-05-06 — Milestone v17.0 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,13 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v16.0 Real-Time Price — COMPLETE
+**Current focus:** v17.0 AI Consistency & UX — Defining requirements
 
 ## Current Position
 
-Phase: 79 (Bid/Ask Depth Display) — complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: All 4 phases complete
+Status: Defining requirements
+Last activity: 2026-05-06 — Milestone v17.0 started
 Last activity: 2026-05-06 — v16.0 milestone complete
 
 ```
