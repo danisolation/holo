@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v13.0
-milestone_name: AI Context & Accuracy
-status: complete
-stopped_at: All 4 phases complete, ready for milestone audit
-last_updated: "2026-05-05T13:00:00.000Z"
-last_activity: 2026-05-05 — Phase 67 committed (943dc54)
+milestone: v14.0
+milestone_name: Multi-Source Rumor & Quota Fix
+status: defining_requirements
+stopped_at: Defining requirements
+last_updated: "2026-05-06T09:50:00.000Z"
+last_activity: 2026-05-06 — Milestone v14.0 started
 progress:
-  total_phases: 4
-  completed_phases: 4
+  total_phases: 0
+  completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 100
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-05)
+See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v13.0 AI Context & Accuracy — Roadmap created, ready for Phase 64 planning
+**Current focus:** v14.0 Multi-Source Rumor & Quota Fix — Mở rộng nguồn tin đồn + fix Gemini quota
 
 ## Current Position
 
-Phase: 65 (AI Accuracy Tracking Backend) — not started
+Phase: Not started (defining requirements)
 Plan: —
-Status: Ready for execution
-Last activity: 2026-05-05 — Phase 64 complete (0e2df0f)
+Status: Defining requirements
+Last activity: 2026-05-06 — Milestone v14.0 started
 
 ## Shipped Milestones
 
