@@ -1,6 +1,7 @@
 """Rumor intelligence API: scores and posts for tickers."""
 from datetime import date, timedelta
 
+from cachetools import TTLCache
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,9 @@ from app.schemas.rumor import (
 )
 
 router = APIRouter(prefix="/rumors", tags=["rumors"])
+
+# In-memory cache for watchlist rumor summary — 120s TTL, 8 entries for page combos
+_watchlist_rumor_cache: TTLCache = TTLCache(maxsize=8, ttl=120)
 
 
 # --- Helpers ---
@@ -46,6 +50,12 @@ async def get_watchlist_rumor_summary(page: int = 1, per_page: int = 50):
     for each ticker in the user's watchlist.
     """
     per_page = min(per_page, 100)
+
+    cache_key = f"{page}:{per_page}"
+    cached = _watchlist_rumor_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     seven_days_ago = date.today() - timedelta(days=7)
 
     async with async_session() as session:
@@ -156,9 +166,12 @@ async def get_watchlist_rumor_summary(page: int = 1, per_page: int = 50):
                 dominant_direction=directions.get(tid),
             ))
 
-        return PaginatedRumorSummaryResponse(
+        response = PaginatedRumorSummaryResponse(
             items=summaries, total=total, page=page, per_page=per_page
         )
+
+    _watchlist_rumor_cache[cache_key] = response
+    return response
 
 
 @router.get("/{symbol}", response_model=RumorScoreResponse)

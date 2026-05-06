@@ -8,6 +8,7 @@ POST /goals/weekly-prompt/{prompt_id}/respond — answer weekly prompt
 GET /goals/weekly-review — latest AI-generated weekly review
 GET /goals/weekly-reviews — review history paginated
 """
+from cachetools import TTLCache
 from fastapi import APIRouter, HTTPException, Query
 
 from app.database import async_session
@@ -23,6 +24,9 @@ from app.schemas.goals import (
 )
 
 router = APIRouter(prefix="/goals", tags=["goals"])
+
+# In-memory cache for weekly review — 300s TTL, only 1 result (latest review)
+_weekly_review_cache: TTLCache = TTLCache(maxsize=1, ttl=300)
 
 
 @router.post("", status_code=201, response_model=GoalResponse)
@@ -140,12 +144,17 @@ async def get_weekly_review():
 
     Per GOAL-03. Returns None if no reviews exist yet.
     """
+    cache_key = "latest"
+    cached = _weekly_review_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     async with async_session() as session:
         service = GoalService(session)
         review = await service.get_latest_review()
         if review is None:
             return None
-        return WeeklyReviewResponse(
+        result = WeeklyReviewResponse(
             id=review.id,
             week_start=review.week_start,
             week_end=review.week_end,
@@ -157,6 +166,9 @@ async def get_weekly_review():
             total_pnl=float(review.total_pnl) if review.total_pnl else 0,
             created_at=review.created_at,
         )
+
+    _weekly_review_cache[cache_key] = result
+    return result
 
 
 @router.get("/weekly-reviews", response_model=WeeklyReviewHistoryResponse)

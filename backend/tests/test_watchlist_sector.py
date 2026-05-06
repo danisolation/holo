@@ -252,7 +252,8 @@ class TestListSectors:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         with patch("app.api.tickers.async_session", mock_factory):
-            from app.api.tickers import list_sectors
+            from app.api.tickers import _sectors_cache, list_sectors
+            _sectors_cache.clear()
 
             result = await list_sectors()
 
@@ -275,7 +276,8 @@ class TestListSectors:
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         with patch("app.api.tickers.async_session", mock_factory):
-            from app.api.tickers import list_sectors
+            from app.api.tickers import _sectors_cache, list_sectors
+            _sectors_cache.clear()
 
             result = await list_sectors()
 

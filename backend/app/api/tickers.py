@@ -49,6 +49,9 @@ router = APIRouter(prefix="/tickers", tags=["tickers"])
 
 ALLOWED_EXCHANGES = {"HOSE"}
 
+# In-memory cache for sectors — 300s TTL, only 1 possible result (no params)
+_sectors_cache: TTLCache = TTLCache(maxsize=1, ttl=300)
+
 
 @router.get("/", response_model=list[TickerResponse])
 async def list_tickers(
@@ -90,6 +93,11 @@ async def list_tickers(
 @router.get("/sectors", response_model=list[str])
 async def list_sectors():
     """Return distinct ICB sector names from active tickers for auto-suggest."""
+    cache_key = "sectors"
+    cached = _sectors_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     async with async_session() as session:
         stmt = (
             select(Ticker.sector)
@@ -98,7 +106,10 @@ async def list_sectors():
             .order_by(Ticker.sector)
         )
         result = await session.execute(stmt)
-        return [row[0] for row in result.all()]
+        sectors = [row[0] for row in result.all()]
+
+    _sectors_cache[cache_key] = sectors
+    return sectors
 
 
 @router.get("/{symbol}/prices", response_model=list[PriceResponse])

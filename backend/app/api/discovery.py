@@ -3,6 +3,7 @@
 Returns latest-date discovery results with optional sector/signal filtering.
 Single JOIN query (no N+1). Decimal→float conversion for JSON safety.
 """
+from cachetools import TTLCache
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from sqlalchemy import select, func
@@ -42,6 +43,9 @@ SIGNAL_THRESHOLD = 7.0
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
 
+# In-memory cache for discovery — 120s TTL, 32 entries for filter combos
+_discovery_cache: TTLCache = TTLCache(maxsize=32, ttl=120)
+
 
 @router.get("/", response_model=list[DiscoveryItemResponse])
 async def get_discovery(
@@ -55,6 +59,11 @@ async def get_discovery(
     Joins discovery_results with tickers to return symbol/name/sector.
     Supports filtering by sector, signal type (score >= 7), and minimum total score.
     """
+    cache_key = f"{sector}:{signal_type}:{min_score}:{limit}"
+    cached = _discovery_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     async with async_session() as session:
         # Step 1: Get latest score_date
         latest_date_stmt = select(func.max(DiscoveryResult.score_date))
@@ -100,7 +109,7 @@ async def get_discovery(
         rows = result.all()
 
         # Convert Decimal fields to float for JSON serialization
-        return [
+        items = [
             DiscoveryItemResponse(
                 symbol=row.symbol,
                 name=row.name,
@@ -117,3 +126,6 @@ async def get_discovery(
             )
             for row in rows
         ]
+
+    _discovery_cache[cache_key] = items
+    return items

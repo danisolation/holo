@@ -5,6 +5,7 @@ Result endpoints return latest analysis for a ticker.
 """
 from datetime import date, datetime, timedelta, timezone
 
+from cachetools import TTLCache
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +25,9 @@ from app.schemas.analysis import (
 )
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
+
+# In-memory cache for analysis summary — 60s TTL, 128 entries (per-symbol)
+_summary_cache: TTLCache = TTLCache(maxsize=128, ttl=60)
 
 
 # --- On-Demand Single-Ticker Analysis ---
@@ -375,6 +379,11 @@ async def get_analysis_summary(symbol: str):
     Returns available analyses — does not 404 if some dimensions are missing.
     Per CONTEXT.md: GET /api/analysis/{symbol}/summary.
     """
+    cache_key = symbol.upper()
+    cached = _summary_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     async with async_session() as session:
         ticker = await _get_ticker_by_symbol(session, symbol)
 
@@ -411,7 +420,9 @@ async def get_analysis_summary(symbol: str):
                 raw_response=row["raw_response"],
             )
 
-        return SummaryResponse(**summary_data)
+    response = SummaryResponse(**summary_data)
+    _summary_cache[cache_key] = response
+    return response
 
 
 @router.get("/{symbol}/news", response_model=list[NewsArticleResponse])
