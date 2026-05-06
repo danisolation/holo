@@ -1,79 +1,52 @@
-# Requirements: Holo v17.0 AI Consistency & UX
+# Requirements: Holo v18.0 Multi-Source Community Rumors
 
 **Defined:** 2026-05-06
-**Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment + tin đồn) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
+**Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment + tin đồn đa nguồn) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
 
-## v17.0 Requirements
+## v18.0 Requirements
 
-### AI Prompt Consistency
+### Telegram Channel Monitoring
 
-- [ ] **APC-01**: Combined analysis recommendation nhất quán với technical signal direction (nếu technical=sell thì combined phải giải thích hoặc đồng thuận, không mâu thuẫn im lặng)
-- [ ] **APC-02**: Combined prompt nhận input trực tiếp từ technical/fundamental/sentiment scores và reference chúng trong reasoning
-- [ ] **APC-03**: Trading Signal chỉ output 1 hướng recommended (bỏ dual-direction output, chỉ giữ recommended_direction + 1 trading plan)
+- [ ] **TGM-01**: Crawl public VN stock Telegram channels (Telethon MTProto) và extract ticker mentions vào rumors table
+- [ ] **TGM-02**: Config-driven channel list (env var) + feature flag để enable/disable
+- [ ] **TGM-03**: APScheduler job chạy mỗi 30 phút (market hours) để backfill messages mới
+
+### News Source Expansion
+
+- [ ] **NSE-01**: Crawler tinnhanhchungkhoan.vn — scrape article listings, extract tickers, store vào news/rumors table
+- [ ] **NSE-02**: F319 second RSS feed (giao-lưu forum) — mở rộng f319_crawler hiện tại
+- [ ] **NSE-03**: nhadautu.vn crawler (nếu có RSS/crawlable)
+
+### AI Rumor Intelligence
+
+- [ ] **ARI-01**: Rumor scoring aggregate từ tất cả nguồn với source weighting (Fireant > F319 > Telegram > tinnhanhchungkhoan)
+- [ ] **ARI-02**: Source credibility scoring — weight higher cho nguồn uy tín, penalize pump-and-dump patterns
+- [ ] **ARI-03**: Cross-source corroboration — nếu ≥2 nguồn đề cập cùng ticker + direction → boost confidence
 
 ### Frontend Display
 
-- [ ] **FED-01**: Trading Plan panel chỉ hiện hướng recommended (ẩn hướng thứ yếu)
-- [ ] **FED-02**: Analysis cards hiển thị tín hiệu nhất quán — badge/icon đồng bộ với recommendation
-
-### Real-Time Connectivity
-
-- [ ] **RTC-01**: VNDirect WebSocket kết nối được từ Render deployment (fix DNS/network hoặc add fallback mechanism)
+- [ ] **FRD-01**: Dashboard rumor panel hiển thị source tag (Fireant/F319/Telegram/TNCK) + icon cho mỗi nguồn
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| APC-01 | Phase 80 | Pending |
-| APC-02 | Phase 80 | Pending |
-| APC-03 | Phase 80 | Pending |
-| FED-01 | Phase 81 | Pending |
-| FED-02 | Phase 81 | Pending |
-| RTC-01 | Phase 82 | Pending |
-
-**Coverage:**
-- v17.0 requirements: 6 total
-- Mapped to phases: 6 ✓
-- Unmapped: 0
-
-## Future Requirements
-
-None identified.
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| TGM-01 | TBD | Pending |
+| TGM-02 | TBD | Pending |
+| TGM-03 | TBD | Pending |
+| NSE-01 | TBD | Pending |
+| NSE-02 | TBD | Pending |
+| NSE-03 | TBD | Pending |
+| ARI-01 | TBD | Pending |
+| ARI-02 | TBD | Pending |
+| ARI-03 | TBD | Pending |
+| FRD-01 | TBD | Pending |
 
 ## Out of Scope
 
+- StockTraders.vn (paid login wall, no public content)
+- Facebook groups (aggressive bot blocking, login required)
 - Multi-model AI (chỉ dùng Gemini)
-- Hoàn toàn bỏ dual analysis (giữ internal logic, chỉ ẩn UI)
-
-## Out of Scope
-
-| Feature | Reason |
-|---------|--------|
-| Full order book | VNDirect WS only provides top 3 bid/ask levels |
-| Price alerts via WebSocket | Existing APScheduler polling alerts sufficient |
-| Historical tick data storage | OHLCV daily data already covers analysis needs |
-| Multi-exchange real-time | Focus HOSE only — HNX/UPCOM volume too low |
-
-## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| WS-01 | Phase 76 | Complete |
-| WS-02 | Phase 76 | Complete |
-| WS-03 | Phase 76 | Complete |
-| WS-04 | Phase 76 | Complete |
-| BC-01 | Phase 77 | Complete |
-| BC-02 | Phase 77 | Complete |
-| BC-03 | Phase 77 | Complete |
-| FE-01 | Phase 78 | Complete |
-| FE-02 | Phase 78 | Complete |
-| FE-03 | Phase 79 | Complete |
-
-**Coverage:**
-- v15.0 requirements: 12 total
-- Mapped to phases: 12 ✓
-- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-06*
-*Last updated: 2026-05-06 after initial definition*
