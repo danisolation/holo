@@ -20,14 +20,14 @@
 
 ### Crawler Efficiency
 
-- [ ] **CRAWL-01**: Crawler fetch phase chạy parallel với bounded concurrency (asyncio.Semaphore)
-- [ ] **CRAWL-02**: Bulk multi-row INSERT ON CONFLICT cho rumor/news crawlers thay vì single-row inserts
-- [ ] **CRAWL-03**: Centralized ticker map lookup — reuse per job run, không query lại mỗi crawler
+- [x] **CRAWL-01**: Crawler fetch phase chạy parallel với bounded concurrency (asyncio.Semaphore)
+- [x] **CRAWL-02**: Bulk multi-row INSERT ON CONFLICT cho rumor/news crawlers thay vì single-row inserts
+- [x] **CRAWL-03**: Centralized ticker map lookup — reuse per job run, không query lại mỗi crawler
 
 ### General Performance
 
-- [ ] **PERF-01**: CPU-heavy parsing (BeautifulSoup, DataFrame iterrows) chạy trong asyncio.to_thread()
-- [ ] **PERF-02**: Financial service sử dụng bulk upsert thay vì row-by-row
+- [x] **PERF-01**: CPU-heavy parsing (BeautifulSoup, DataFrame iterrows) chạy trong asyncio.to_thread()
+- [x] **PERF-02**: Financial service sử dụng bulk upsert thay vì row-by-row
 
 ## Future Requirements
 
@@ -53,11 +53,11 @@ None — performance optimization is self-contained.
 | DB-POOL-01 | Phase 71 | Complete |
 | CACHE-01 | Phase 73 | Complete |
 | CACHE-02 | Phase 73 | Complete |
-| CRAWL-01 | Phase 74 | Pending |
-| CRAWL-02 | Phase 74 | Pending |
-| CRAWL-03 | Phase 74 | Pending |
-| PERF-01 | Phase 75 | Pending |
-| PERF-02 | Phase 75 | Pending |
+| CRAWL-01 | Phase 74 | Complete |
+| CRAWL-02 | Phase 74 | Complete |
+| CRAWL-03 | Phase 74 | Complete |
+| PERF-01 | Phase 75 | Complete |
+| PERF-02 | Phase 75 | Complete |
 
 **Coverage:**
 - v15.0 requirements: 12 total

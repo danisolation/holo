@@ -218,8 +218,8 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 - [x] **Phase 71: Database Indexes & Pool Tuning** — Composite indexes on 7 hot tables + connection pool optimization (completed 2026-05-06)
 - [x] **Phase 72: N+1 Query Fixes & Pagination** — Batch queries for rumor/AI context + paginated list endpoints (completed 2026-05-06)
 - [x] **Phase 73: API Response Caching** — TTLCache for expensive endpoints + dashboard payload caching (completed 2026-05-06)
-- [ ] **Phase 74: Crawler Efficiency** — Parallel fetch with bounded concurrency + bulk inserts + ticker map reuse
-- [ ] **Phase 75: Async Patterns & Bulk Operations** — CPU parsing offloaded to thread pool + financial bulk upsert
+- [x] **Phase 74: Crawler Efficiency** — Parallel fetch with bounded concurrency + bulk inserts + ticker map reuse (completed 2026-05-06)
+- [x] **Phase 75: Async Patterns & Bulk Operations** — CPU parsing offloaded to thread pool + financial bulk upsert (completed 2026-05-06)
 
 ## Phase Details
 
