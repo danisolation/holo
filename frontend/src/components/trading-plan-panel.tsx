@@ -23,9 +23,12 @@ export function TradingPlanPanel({ data }: TradingPlanPanelProps) {
   const isLong = data.recommended_direction === "long";
   const borderColor = isLong ? "border-[#26a69a]" : "border-[#ef5350]";
   const bgTint = isLong ? "bg-[#26a69a]/5" : "bg-[#ef5350]/5";
-  const badgeClass = isLong
-    ? "text-[#26a69a] bg-[#26a69a]/10 text-xs"
-    : "text-[#ef5350] bg-[#ef5350]/10 text-xs";
+  const badgeLabel = data.confidence <= 3 ? "HOLD" : isLong ? "LONG" : "BEARISH";
+  const badgeClass = data.confidence <= 3
+    ? "text-muted-foreground bg-muted text-xs"
+    : isLong
+      ? "text-[#26a69a] bg-[#26a69a]/10 text-xs"
+      : "text-[#ef5350] bg-[#ef5350]/10 text-xs";
 
   const plan = data.trading_plan;
 
@@ -37,21 +40,21 @@ export function TradingPlanPanel({ data }: TradingPlanPanelProps) {
             Kế Hoạch Giao Dịch
           </CardTitle>
           <Badge variant="secondary" className={badgeClass}>
-            {isLong ? "LONG" : "BEARISH"}
+            {badgeLabel}
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
-        <div className={cn("rounded-lg p-4 border-l-2", borderColor, bgTint)}>
+        <div className={cn("rounded-lg p-4 border-l-2", data.confidence <= 3 ? "border-muted" : borderColor, data.confidence <= 3 ? "bg-muted/30" : bgTint)}>
           {/* Confidence */}
           <div className="mb-4">
             <p className="text-xs text-muted-foreground mb-1">Độ tin cậy</p>
             <ScoreBar score={data.confidence} />
           </div>
 
-          {data.confidence === 0 ? (
+          {data.confidence <= 3 ? (
             <p className="text-sm text-muted-foreground text-center py-4 opacity-60">
-              Tín hiệu không hợp lệ
+              {data.confidence === 0 ? "Tín hiệu không hợp lệ" : "Nên HOLD — tín hiệu chưa đủ mạnh"}
             </p>
           ) : (
             <>
