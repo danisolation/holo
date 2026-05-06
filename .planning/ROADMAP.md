@@ -215,7 +215,7 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 
 ### v15.0 Performance Optimization (Phases 71-75)
 
-- [ ] **Phase 71: Database Indexes & Pool Tuning** — Composite indexes on 7 hot tables + connection pool optimization
+- [x] **Phase 71: Database Indexes & Pool Tuning** — Composite indexes on 7 hot tables + connection pool optimization (completed 2026-05-06)
 - [ ] **Phase 72: N+1 Query Fixes & Pagination** — Batch queries for rumor/AI context + paginated list endpoints
 - [ ] **Phase 73: API Response Caching** — TTLCache for expensive endpoints + dashboard payload caching
 - [ ] **Phase 74: Crawler Efficiency** — Parallel fetch with bounded concurrency + bulk inserts + ticker map reuse
@@ -231,10 +231,10 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
   1. Queries on daily_prices, technical_indicators, ai_analyses, daily_picks, weekly_reviews, job_executions, and community_posts use composite indexes (verified via EXPLAIN ANALYZE)
   2. API endpoints that query these tables show measurably lower latency under normal load
   3. Connection pool settings (pool_size, max_overflow, pool_recycle) are tuned so concurrent scheduler jobs + API requests don't produce "pool exhausted" errors
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 71-01-PLAN.md — Alembic migration for 5 composite indexes + pool tuning
+- [x] 71-01-PLAN.md — Alembic migration for 5 composite indexes + pool tuning
 
 ### Phase 72: N+1 Query Fixes & Pagination
 **Goal**: List and summary endpoints use batch queries instead of per-item loops, and return paginated results with stable ordering
@@ -282,7 +282,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 71. Database Indexes & Pool Tuning | 0/? | Not started | - |
+| 71. Database Indexes & Pool Tuning | 1/1 | Complete   | 2026-05-06 |
 | 72. N+1 Query Fixes & Pagination | 0/? | Not started | - |
 | 73. API Response Caching | 0/? | Not started | - |
 | 74. Crawler Efficiency | 0/? | Not started | - |
