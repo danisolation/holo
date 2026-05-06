@@ -41,16 +41,16 @@ None identified.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WS-01 | Phase 76 | Pending |
-| WS-02 | Phase 76 | Pending |
-| WS-03 | Phase 76 | Pending |
-| WS-04 | Phase 76 | Pending |
-| BC-01 | Phase 77 | Pending |
-| BC-02 | Phase 77 | Pending |
-| BC-03 | Phase 77 | Pending |
-| FE-01 | Phase 78 | Pending |
-| FE-02 | Phase 78 | Pending |
-| FE-03 | Phase 79 | Pending |
+| WS-01 | Phase 76 | Complete |
+| WS-02 | Phase 76 | Complete |
+| WS-03 | Phase 76 | Complete |
+| WS-04 | Phase 76 | Complete |
+| BC-01 | Phase 77 | Complete |
+| BC-02 | Phase 77 | Complete |
+| BC-03 | Phase 77 | Complete |
+| FE-01 | Phase 78 | Complete |
+| FE-02 | Phase 78 | Complete |
+| FE-03 | Phase 79 | Complete |
 
 **Coverage:**
 - v15.0 requirements: 12 total
