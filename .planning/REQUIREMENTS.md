@@ -1,86 +1,69 @@
-# Requirements: Holo v14.0 Multi-Source Rumor & Quota Fix
+# Requirements: Holo v15.0 Performance Optimization
 
 **Defined:** 2026-05-06
 **Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment + tin đồn) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
 
-## v14.0 Requirements
+## v15.0 Requirements
 
-### Quota Fix
+### Database Performance
 
-- [ ] **QFIX-01**: Gemini rumor scoring sử dụng gemini-2.0-flash thay vì gemini-2.5-flash-lite (1500 RPD free tier)
-- [ ] **QFIX-02**: Rumor scoring chạy thành công (>0 tickers scored) khi scheduler trigger
+- [ ] **DB-IDX-01**: Composite indexes trên 7 hot tables (daily_prices, technical_indicators, ai_analyses, daily_picks, weekly_reviews, job_executions, community_posts) cho các query patterns phổ biến
+- [ ] **DB-N1-01**: Rumor watchlist summary sử dụng batch aggregate query thay vì per-ticker queries
+- [ ] **DB-N1-02**: AI context builder batch-fetch data per dimension thay vì sequential per-ticker queries
+- [ ] **DB-PAGE-01**: List endpoints (watchlist, rumor, analysis) có pagination với stable ordering
+- [ ] **DB-POOL-01**: DB connection pool tuned (pool_size, max_overflow, pool_recycle) cho concurrent jobs + API traffic
 
-### Multi-Source Crawlers
+### API Caching
 
-- [ ] **CRAWL-01**: Crawler VnExpress chứng khoán — lấy tin bài từ vnexpress.net/kinh-doanh/chung-khoan
-- [ ] **CRAWL-02**: Crawler Vietstock.vn — lấy tin tức tài chính từ vietstock.vn
-- [ ] **CRAWL-03**: Crawler Stockbiz.vn — lấy tin chứng khoán tổng hợp
+- [ ] **CACHE-01**: TTLCache cho expensive read endpoints (sectors, discovery, goals, analysis summary, rumor summary)
+- [ ] **CACHE-02**: Dashboard computed payloads cached (latest prices, SMA deltas, volume stats)
 
-### Pipeline Integration
+### Crawler Efficiency
 
-- [ ] **PIPE-01**: Tất cả nguồn mới tích hợp vào rumor scoring (Gemini đánh giá combined)
-- [ ] **PIPE-02**: Scheduler chain chạy tất cả crawlers (Fireant + F319 + VnExpress + Vietstock + Stockbiz)
-- [ ] **PIPE-03**: Rumor prompt phân biệt rõ nguồn (cộng đồng vs tin chính thống vs forum)
+- [ ] **CRAWL-01**: Crawler fetch phase chạy parallel với bounded concurrency (asyncio.Semaphore)
+- [ ] **CRAWL-02**: Bulk multi-row INSERT ON CONFLICT cho rumor/news crawlers thay vì single-row inserts
+- [ ] **CRAWL-03**: Centralized ticker map lookup — reuse per job run, không query lại mỗi crawler
+
+### General Performance
+
+- [ ] **PERF-01**: CPU-heavy parsing (BeautifulSoup, DataFrame iterrows) chạy trong asyncio.to_thread()
+- [ ] **PERF-02**: Financial service sử dụng bulk upsert thay vì row-by-row
 
 ## Future Requirements
 
-- **CRAWL-04**: Thêm nguồn TinHoc.vn / CafeF forum nếu cần
-- **PIPE-04**: Source reliability weighting (tin chính thống weight > forum)
+None — performance optimization is self-contained.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Full article content extraction | Title + summary đủ cho sentiment; full text tốn token Gemini |
-| Paid data sources | Chỉ nguồn miễn phí |
-| Real-time news streaming | Daily batch crawl đủ cho personal use |
+| Redis caching | Overkill for single-user — TTLCache in-memory đủ |
+| Read replicas | Single PostgreSQL instance đủ cho personal use |
+| CDN/Edge caching | Frontend assets already served by Vercel |
+| Query materialized views | Premature — indexes + caching giải quyết trước |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QFIX-01 | Phase 68 | Pending |
-| QFIX-02 | Phase 68 | Pending |
-| CRAWL-01 | Phase 69 | Pending |
-| CRAWL-02 | Phase 69 | Pending |
-| CRAWL-03 | Phase 69 | Pending |
-| PIPE-01 | Phase 70 | Pending |
-| PIPE-02 | Phase 70 | Pending |
-| PIPE-03 | Phase 70 | Pending |
+| DB-IDX-01 | TBD | Pending |
+| DB-N1-01 | TBD | Pending |
+| DB-N1-02 | TBD | Pending |
+| DB-PAGE-01 | TBD | Pending |
+| DB-POOL-01 | TBD | Pending |
+| CACHE-01 | TBD | Pending |
+| CACHE-02 | TBD | Pending |
+| CRAWL-01 | TBD | Pending |
+| CRAWL-02 | TBD | Pending |
+| CRAWL-03 | TBD | Pending |
+| PERF-01 | TBD | Pending |
+| PERF-02 | TBD | Pending |
 
 **Coverage:**
-- v14.0 requirements: 8 total
-- Mapped to phases: 8 ✓
-- Unmapped: 0
+- v15.0 requirements: 12 total
+- Mapped to phases: 0
+- Unmapped: 12 ⚠️ (pending roadmap creation)
 
 ---
 *Requirements defined: 2026-05-06*
 *Last updated: 2026-05-06 after initial definition*
-
-## Future Requirements (Deferred)
-
-- Multi-model consensus (Gemini + Claude/GPT comparison) — cost prohibitive for free tier, defer to v14+
-- Real-time intraday signal updates — overkill for EOD analysis cycle
-- AI self-reflection / chain-of-thought prompts — experimental, defer
-
-## Out of Scope
-
-- Automated trading based on AI signals — legal/financial risk, advisory only
-- Paid Gemini tier optimization — stay on free tier with batch scoring
-- Vietnamese NLP for rumor analysis — Gemini handles Vietnamese natively
-- ML model training on historical accuracy — insufficient data volume for personal use
-
-## Traceability
-
-| REQ | Phase | Status |
-|-----|-------|--------|
-| AIUP-01 | Phase 64 | ✅ Done |
-| AIUP-02 | Phase 64 | ✅ Done |
-| AIUP-03 | Phase 64 | ✅ Done |
-| ACC-01 | Phase 65 | ✅ Done |
-| ACC-02 | Phase 65 | ✅ Done |
-| ACC-03 | Phase 66 | ✅ Done |
-| ACC-04 | Phase 66 | ✅ Done |
-| CTX-01 | Phase 67 | ✅ Done |
-| CTX-02 | Phase 67 | ✅ Done |
-| CTX-03 | Phase 67 | ✅ Done |
