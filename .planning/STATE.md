@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v14.0
-milestone_name: Multi-Source Rumor & Quota Fix
-status: complete
-stopped_at: Roadmap created, ready for phase planning
-last_updated: "2026-05-06T10:00:00.000Z"
-last_activity: 2026-05-06 — Roadmap created (Phases 68-70)
+milestone: v15.0
+milestone_name: Performance Optimization
+status: in_progress
+stopped_at: Defining requirements
+last_updated: "2026-05-06T12:00:00.000Z"
+last_activity: 2026-05-06 — Milestone v15.0 started
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v14.0 Multi-Source Rumor & Quota Fix — Mở rộng nguồn tin đồn + fix Gemini quota
+**Current focus:** v15.0 Performance Optimization — Tối ưu DB, caching, crawlers, async patterns
 
 ## Current Position
 
-Phase: 70 (Pipeline Integration) — complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: All 3 phases complete — v14.0 milestone done
-Last activity: 2026-05-06 — Phase 70 complete (multi-source scoring prompts)
+Status: Defining requirements
+Last activity: 2026-05-06 — Milestone v15.0 started
 
 ## Shipped Milestones
 
