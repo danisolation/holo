@@ -813,7 +813,8 @@ export async function fetchLatestReview(): Promise<WeeklyReviewResponse | null> 
 // --- Phase 49: Watchlist API ---
 
 export async function fetchWatchlist(): Promise<WatchlistItem[]> {
-  return apiFetch<WatchlistItem[]>("/watchlist");
+  const resp = await apiFetch<{ items: WatchlistItem[]; total: number; page: number; per_page: number }>("/watchlist?per_page=100");
+  return resp.items;
 }
 
 export async function addWatchlistItem(symbol: string): Promise<WatchlistItem> {
@@ -830,10 +831,11 @@ export async function removeWatchlistItem(symbol: string): Promise<void> {
 }
 
 export async function migrateWatchlist(symbols: string[]): Promise<WatchlistItem[]> {
-  return apiFetch<WatchlistItem[]>("/watchlist/migrate", {
+  const resp = await apiFetch<{ items: WatchlistItem[]; total: number; page: number; per_page: number }>("/watchlist/migrate", {
     method: "POST",
     body: JSON.stringify({ symbols }),
   });
+  return resp.items;
 }
 
 // --- Phase 54: Sector Group API ---
@@ -891,7 +893,8 @@ export async function fetchRumorScores(symbol: string): Promise<RumorScoreData> 
 }
 
 export async function fetchWatchlistRumors(): Promise<WatchlistRumorSummary[]> {
-  return apiFetch<WatchlistRumorSummary[]>("/rumors/watchlist/summary");
+  const resp = await apiFetch<{ items: WatchlistRumorSummary[]; total: number; page: number; per_page: number }>("/rumors/watchlist/summary?per_page=100");
+  return resp.items;
 }
 
 // --- Phase 65: Accuracy API ---
