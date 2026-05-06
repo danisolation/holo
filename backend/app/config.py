@@ -19,11 +19,13 @@ def _patched_ssl_wrap(self, *args, **kwargs):
 ssl.SSLContext.wrap_socket = _patched_ssl_wrap
 
 # Also patch httpx async client (uses its own SSL handling)
-_original_httpx_client_init = httpx.AsyncClient.__init__
-def _patched_httpx_client_init(self, *args, **kwargs):
-    kwargs.setdefault("verify", False)
-    _original_httpx_client_init(self, *args, **kwargs)
-httpx.AsyncClient.__init__ = _patched_httpx_client_init
+if not getattr(httpx.AsyncClient.__init__, '_holo_patched', False):
+    _original_httpx_client_init = httpx.AsyncClient.__init__
+    def _patched_httpx_client_init(self, *args, **kwargs):
+        kwargs.setdefault("verify", False)
+        _original_httpx_client_init(self, *args, **kwargs)
+    _patched_httpx_client_init._holo_patched = True
+    httpx.AsyncClient.__init__ = _patched_httpx_client_init
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -53,7 +55,7 @@ class Settings(BaseSettings):
 
     # Gemini AI (Phase 2)
     gemini_api_key: str = ""  # Required — get from https://aistudio.google.com/apikey
-    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_model: str = "gemini-2.5-flash"
     gemini_batch_size: int = 8  # Reduced from 15 — more tokens per ticker for detailed analysis
     rumor_batch_size: int = 6  # Tickers per Gemini call for rumor scoring (30 tickers / 6 = 5 calls)
     gemini_delay_seconds: float = 4.0  # Delay between batches for rate-limit safety
