@@ -23,7 +23,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v14.0 Multi-Source Rumor & Quota Fix** — Phases 68-70 (shipped 2026-05-06)
 - ✅ **v15.0 Performance Optimization** — Phases 71-75 (shipped 2026-05-06)
 - ✅ **v16.0 Real-Time Price** — Phases 76-79 (shipped 2026-05-06)
-- 🔄 **v17.0 AI Consistency & UX** — Phases 80-82 (active)
+- ✅ **v17.0 AI Consistency & UX** — Phases 80-82 (shipped)
 
 ## Phases
 
@@ -344,9 +344,9 @@ Plans:
 
 ### v17.0: AI Consistency & UX (Phases 80-82)
 
-- [ ] **Phase 80: AI Prompt Consistency** — Fix combined/trading signal prompts to output coherent, single-direction recommendations
-- [ ] **Phase 81: Frontend Signal Display** — Simplify trading plan panel to show recommended direction only with consistent badges
-- [ ] **Phase 82: VNDirect WS Render Fix** — Fix WebSocket DNS/connectivity on Render production deployment
+- [x] **Phase 80: AI Prompt Consistency** — Fix combined/trading signal prompts to output coherent, single-direction recommendations
+- [x] **Phase 81: Frontend Signal Display** — Simplify trading plan panel to show recommended direction only with consistent badges
+- [x] **Phase 82: VNDirect WS Render Fix** — Fix WebSocket DNS/connectivity on Render production deployment
 
 ## Phase Details — v17.0
 
