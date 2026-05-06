@@ -24,6 +24,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v15.0 Performance Optimization** — Phases 71-75 (shipped 2026-05-06)
 - ✅ **v16.0 Real-Time Price** — Phases 76-79 (shipped 2026-05-06)
 - ✅ **v17.0 AI Consistency & UX** — Phases 80-82 (shipped)
+- 🔄 **v18.0 Multi-Source Community Rumors** — Phases 83-87 (active)
 
 ## Phases
 
@@ -386,6 +387,74 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 80. AI Prompt Consistency | 0/? | Not started | - |
-| 81. Frontend Signal Display | 0/? | Not started | - |
-| 82. VNDirect WS Render Fix | 0/? | Not started | - |
+| 80. AI Prompt Consistency | done | Complete | 2026-05-06 |
+| 81. Frontend Signal Display | done | Complete | 2026-05-06 |
+| 82. VNDirect WS Render Fix | done | Complete | 2026-05-06 |
+
+---
+
+### v18.0: Multi-Source Community Rumors (Phases 83-87)
+
+- [ ] **Phase 83: Telegram Channel Crawler** — Telethon MTProto client to read public VN stock Telegram channels
+- [ ] **Phase 84: News Source Expansion** — tinnhanhchungkhoan.vn scraper + F319 second feed + nhadautu.vn
+- [ ] **Phase 85: AI Rumor Scoring Enhancement** — Source weighting, credibility scoring, cross-source corroboration
+- [ ] **Phase 86: Frontend Source Tags** — Rumor panel shows source icons and tags per post
+- [ ] **Phase 87: Integration & Testing** — End-to-end rumor pipeline test, scheduler integration, monitoring
+
+## Phase Details — v18.0
+
+### Phase 83: Telegram Channel Crawler
+**Goal**: Crawl public Vietnamese stock Telegram channels via Telethon and store ticker-matched posts in rumors table
+**Depends on**: None (new feature)
+**Requirements**: TGM-01, TGM-02, TGM-03
+**Success Criteria** (what must be TRUE):
+  1. TelegramCrawler class connects via Telethon StringSession and fetches messages from configured channels
+  2. Ticker mentions extracted from messages and matched against known ticker list
+  3. Posts stored in rumors table with `author_name` prefixed `tg:` for source identification
+  4. APScheduler job runs every 30 min during market hours (configurable)
+  5. Feature flag `telegram_enabled` controls activation; graceful skip when disabled
+**Plans**: TBD
+
+### Phase 84: News Source Expansion
+**Goal**: Add tinnhanhchungkhoan.vn crawler, expand F319 to second feed, add nhadautu.vn
+**Depends on**: None (independent of Phase 83)
+**Requirements**: NSE-01, NSE-02, NSE-03
+**Success Criteria** (what must be TRUE):
+  1. tinnhanhchungkhoan.vn crawler fetches article listings, extracts tickers from titles/body, stores in news/rumors table
+  2. F319 crawler processes both main forum RSS and giao-lưu feed
+  3. nhadautu.vn crawler works (or documented as not feasible with fallback plan)
+  4. All new crawlers use existing patterns: ON CONFLICT dedup, tenacity retry, rate limiting
+**Plans**: TBD
+
+### Phase 85: AI Rumor Scoring Enhancement
+**Goal**: Upgrade rumor scoring to weight sources, detect credibility, and corroborate across sources
+**Depends on**: Phase 83, Phase 84 (needs multiple sources active)
+**Requirements**: ARI-01, ARI-02, ARI-03
+**Success Criteria** (what must be TRUE):
+  1. Rumor scoring prompt receives source metadata and applies different weight per source type
+  2. Pump-and-dump patterns detected (repeated ticker spam from same author, exaggerated claims) → lower credibility
+  3. Cross-source corroboration: when ≥2 different sources mention same ticker+direction within 24h → confidence boost
+  4. Final rumor score integrates all sources into single weighted score per ticker
+**Plans**: TBD
+
+### Phase 86: Frontend Source Tags
+**Goal**: Dashboard rumor panel displays source origin for each rumor post
+**Depends on**: Phase 83, Phase 84 (needs posts from new sources)
+**Requirements**: FRD-01
+**Success Criteria** (what must be TRUE):
+  1. Each rumor post shows source badge (Fireant / F319 / Telegram / TNCK / NĐT)
+  2. Source-specific icon or color distinguishes origins visually
+  3. Filter by source available in rumor list view
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 87: Integration & Testing
+**Goal**: End-to-end validation of multi-source rumor pipeline
+**Depends on**: Phase 85, Phase 86
+**Requirements**: All (integration)
+**Success Criteria** (what must be TRUE):
+  1. Scheduler orchestrates all crawlers (Fireant + F319 + Telegram + TNCK) in correct sequence
+  2. AI scoring processes posts from all sources without errors
+  3. Frontend displays mixed-source rumors correctly with proper tagging
+  4. Graceful degradation: if one source fails, others continue working
+**Plans**: TBD
