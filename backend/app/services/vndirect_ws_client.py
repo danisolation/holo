@@ -27,6 +27,7 @@ VNDIRECT_WS_URL = "wss://price-cmc-04.vndirect.com.vn/realtime/websocket"
 # Backoff constants
 _BACKOFF_BASE = 1.0
 _BACKOFF_MAX = 60.0
+_MAX_CONSECUTIVE_FAILURES = 5  # After this many failures, trigger fallback
 
 
 def _try_float(x: str) -> float:
@@ -144,6 +145,7 @@ class VNDirectWSClient:
         on_price_update: Callable[[dict[str, dict]], Awaitable[None]],
         on_bid_ask_update: Callable[[dict[str, dict]], Awaitable[None]] | None = None,
         ws_url: str = VNDIRECT_WS_URL,
+        on_fallback: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self._symbols = [s.upper() for s in symbols]
         self._on_price_update = on_price_update
@@ -152,6 +154,8 @@ class VNDirectWSClient:
         self._running = False
         self._ws = None
         self._reconnect_attempt = 0
+        self._on_fallback = on_fallback
+        self._fallback_triggered = False
 
     def update_symbols(self, symbols: list[str]) -> None:
         """Update the list of symbols to subscribe to."""
@@ -190,6 +194,20 @@ class VNDirectWSClient:
                     f"Reconnecting in {delay:.1f}s (attempt {self._reconnect_attempt})"
                 )
                 self._reconnect_attempt += 1
+
+                # Auto-fallback to VCI polling after N consecutive failures
+                if (
+                    self._reconnect_attempt >= _MAX_CONSECUTIVE_FAILURES
+                    and self._on_fallback
+                    and not self._fallback_triggered
+                ):
+                    logger.warning(
+                        f"VNDirect WS failed {self._reconnect_attempt} times — "
+                        f"activating VCI polling fallback"
+                    )
+                    self._fallback_triggered = True
+                    await self._on_fallback()
+
                 await asyncio.sleep(delay)
 
         logger.info("VNDirect WS client stopped")

@@ -42,6 +42,31 @@ async def lifespan(app: FastAPI):
             from app.ws.prices import connection_manager
 
             realtime_svc = get_realtime_price_service()
+
+            async def _activate_vci_polling_fallback():
+                """Start VCI polling when VNDirect WS fails repeatedly."""
+                from apscheduler.triggers.interval import IntervalTrigger
+                from app.scheduler.jobs import realtime_price_poll, realtime_heartbeat
+
+                if scheduler.get_job("realtime_price_poll"):
+                    return  # Already active
+                scheduler.add_job(
+                    realtime_price_poll,
+                    trigger=IntervalTrigger(seconds=settings.realtime_poll_interval),
+                    id="realtime_price_poll",
+                    name="Real-Time Price Poll (fallback)",
+                    replace_existing=True,
+                    misfire_grace_time=30,
+                )
+                scheduler.add_job(
+                    realtime_heartbeat,
+                    trigger=IntervalTrigger(seconds=15),
+                    id="realtime_heartbeat",
+                    name="Real-Time Heartbeat (fallback)",
+                    replace_existing=True,
+                    misfire_grace_time=10,
+                )
+                logger.info("VCI polling fallback activated")
             # Get watchlist symbols from connection manager subscriptions
             # (populated when frontend connects and subscribes)
             # The WS client will subscribe to all symbols initially;
@@ -57,6 +82,7 @@ async def lifespan(app: FastAPI):
                 on_price_update=realtime_svc.handle_ws_price_update,
                 on_bid_ask_update=realtime_svc.handle_ws_bid_ask_update,
                 ws_url=settings.vndirect_ws_url,
+                on_fallback=_activate_vci_polling_fallback,
             )
             vndirect_task = asyncio.create_task(vndirect_client.start())
             logger.info("VNDirect WebSocket client launched as background task")
