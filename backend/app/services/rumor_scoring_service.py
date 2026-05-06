@@ -359,8 +359,9 @@ class RumorScoringService:
     ) -> str:
         """Build Vietnamese prompt combining all sources.
 
-        Groups by source type: official news (VnExpress/Vietstock) vs community (Fireant/F319).
-        Gemini evaluates all sources for a comprehensive score.
+        Groups by source type based on author_name prefix:
+        - Official news: is_authentic=True OR prefix ndt:/tnck:
+        - Community: Fireant, F319, Telegram
         """
         lines = [RUMOR_FEW_SHOT, ""]
         total_items = len(rumors) + (len(news_articles) if news_articles else 0)
@@ -370,8 +371,15 @@ class RumorScoringService:
 
         idx = 1
         if rumors:
-            official_rumors = [r for r in rumors if r[3]]  # is_authentic=True
-            community_rumors = [r for r in rumors if not r[3]]
+            # Categorize rumors by source credibility
+            official_rumors = []
+            community_rumors = []
+            for r in rumors:
+                author = r[2] or ""
+                if r[3] or author.startswith("ndt:") or author.startswith("tnck:"):
+                    official_rumors.append(r)
+                else:
+                    community_rumors.append(r)
 
             if official_rumors:
                 lines.append(f"\n📰 Tin tức chính thống ({len(official_rumors)}):")
@@ -405,7 +413,7 @@ class RumorScoringService:
     def _build_batch_prompt(self, ticker_data: list[dict]) -> str:
         """Build Vietnamese prompt for multiple tickers in one Gemini call.
 
-        Each ticker gets its own section with Fireant posts + CafeF news.
+        Each ticker gets its own section with categorized sources.
         Gemini returns a scores array with one entry per ticker.
         """
         lines = [RUMOR_FEW_SHOT, ""]
@@ -425,14 +433,20 @@ class RumorScoringService:
 
             idx = 1
             if rumors:
-                # Group rumors by source type for clearer Gemini context
-                official_rumors = [r for r in rumors if r[3]]  # is_authentic=True (VnExpress, Vietstock)
-                community_rumors = [r for r in rumors if not r[3]]  # Fireant, F319
+                # Categorize by source credibility (prefix-based)
+                official_rumors = []
+                community_rumors = []
+                for r in rumors:
+                    author = r[2] or ""
+                    if r[3] or author.startswith("ndt:") or author.startswith("tnck:"):
+                        official_rumors.append(r)
+                    else:
+                        community_rumors.append(r)
 
                 if official_rumors:
                     lines.append(f"\n📰 Tin tức chính thống ({len(official_rumors)}):")
                     for r in official_rumors:
-                        source = r[2]  # author_name contains source
+                        source = r[2]
                         safe_content = self._sanitize_content(r[1])
                         lines.append(
                             f'{idx}. [{source}] "{safe_content}"'
@@ -442,11 +456,10 @@ class RumorScoringService:
                 if community_rumors:
                     lines.append(f"\n📢 Bài đăng cộng đồng ({len(community_rumors)}):")
                     for r in community_rumors:
-                        source = r[2]  # author_name
-                        auth_label = "Xác thực ✓" if r[3] else source
+                        source = r[2]
                         safe_content = self._sanitize_content(r[1])
                         lines.append(
-                            f"{idx}. [{auth_label} | {r[4]} likes | "
+                            f"{idx}. [{source} | {r[4]} likes | "
                             f'{r[5]} replies] "{safe_content}"'
                         )
                         idx += 1
