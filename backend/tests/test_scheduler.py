@@ -21,8 +21,8 @@ class TestSchedulerManager:
         from app.scheduler.manager import scheduler
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
-    def test_configure_jobs_registers_six_jobs(self):
-        """configure_jobs must register all expected jobs (HOSE-only, Phase 47 goal jobs)."""
+    def test_configure_jobs_registers_nine_jobs(self):
+        """configure_jobs must register all expected jobs."""
         from app.scheduler.manager import scheduler, configure_jobs
 
         # Remove any existing jobs first
@@ -39,7 +39,8 @@ class TestSchedulerManager:
         assert "weekly_behavior_analysis" in job_ids
         assert "create_weekly_risk_prompt" in job_ids
         assert "generate_weekly_review" in job_ids
-        assert len(job_ids) == 8
+        assert "morning_price_crawl_hose" in job_ids
+        assert len(job_ids) == 9
 
         # Clean up
         scheduler.remove_all_jobs()
@@ -152,8 +153,8 @@ class TestJobChaining:
             call_ids = [call.kwargs.get("id", "") or call[1].get("id", "") for call in mock_add.call_args_list]
             assert "daily_indicator_compute_triggered" in call_ids
 
-    def test_on_job_executed_chains_ai_after_indicators(self):
-        """Successful daily_indicator_compute must trigger daily_ai_analysis."""
+    def test_on_job_executed_chains_discovery_after_indicators(self):
+        """Successful daily_indicator_compute must trigger daily_discovery_scoring."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
@@ -164,8 +165,8 @@ class TestJobChaining:
             _on_job_executed(mock_event)
             mock_add.assert_called_once()
             call_kwargs = mock_add.call_args
-            assert call_kwargs.kwargs.get("id") == "daily_ai_analysis_triggered" or \
-                   call_kwargs[1].get("id") == "daily_ai_analysis_triggered"
+            assert call_kwargs.kwargs.get("id") == "daily_discovery_scoring_triggered" or \
+                   call_kwargs[1].get("id") == "daily_discovery_scoring_triggered"
 
     def test_on_job_executed_skips_on_failure(self):
         """Failed jobs must NOT trigger the next job in the chain."""

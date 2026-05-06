@@ -203,6 +203,6 @@ def test_config_trading_signal_settings():
 
     # Check field defaults from class metadata (avoid loading .env)
     fields = Settings.model_fields
-    assert fields["trading_signal_batch_size"].default == 15
+    assert fields["trading_signal_batch_size"].default == 8
     assert fields["trading_signal_thinking_budget"].default == 2048
     assert fields["trading_signal_max_tokens"].default == 32768

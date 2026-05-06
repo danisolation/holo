@@ -198,6 +198,7 @@ class TestEnrichedWatchlistIncludesSector:
         row1.signal = "buy"
         row1.score = 8
         row1.analysis_date = None
+        row1.max_created_at = None
 
         row2 = MagicMock()
         row2.symbol = "FPT"
@@ -206,6 +207,7 @@ class TestEnrichedWatchlistIncludesSector:
         row2.signal = None
         row2.score = None
         row2.analysis_date = None
+        row2.max_created_at = None
 
         mock_result = MagicMock()
         mock_result.all.return_value = [row1, row2]
