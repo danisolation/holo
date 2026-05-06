@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Performance Optimization
 status: planning
-stopped_at: Completed 72-02-PLAN.md
-last_updated: "2026-05-06T04:58:48.776Z"
+stopped_at: Completed 73-01-PLAN.md
+last_updated: "2026-05-06T05:07:18.674Z"
 last_activity: 2026-05-06 — Roadmap created for v15.0 (Phases 71-75)
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
@@ -71,6 +71,7 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 71]: Pool sized to 10+10=20 max, within Aiven ~25 limit; pool_recycle=1800 for idle connection stability
 - [Phase 72]: Used ROW_NUMBER window functions for batch per-ticker queries; kept per-ticker methods for on-demand use
 - [Phase 72]: Offset/limit pagination with COUNT totals matching PickHistoryListResponse pattern
+- [Phase 73]: TTLCache pattern: check->work->store with validated cache keys; TTL 60-300s per endpoint
 
 ### Research Context (v10.0)
 
@@ -131,7 +132,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-06T04:58:48.771Z
-Stopped at: Completed 72-02-PLAN.md
+Last session: 2026-05-06T05:07:18.669Z
+Stopped at: Completed 73-01-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 60`

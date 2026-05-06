@@ -15,8 +15,8 @@
 
 ### API Caching
 
-- [ ] **CACHE-01**: TTLCache cho expensive read endpoints (sectors, discovery, goals, analysis summary, rumor summary)
-- [ ] **CACHE-02**: Dashboard computed payloads cached (latest prices, SMA deltas, volume stats)
+- [x] **CACHE-01**: TTLCache cho expensive read endpoints (sectors, discovery, goals, analysis summary, rumor summary)
+- [x] **CACHE-02**: Dashboard computed payloads cached (latest prices, SMA deltas, volume stats)
 
 ### Crawler Efficiency
 
@@ -51,8 +51,8 @@ None — performance optimization is self-contained.
 | DB-N1-02 | Phase 72 | Complete |
 | DB-PAGE-01 | Phase 72 | Complete |
 | DB-POOL-01 | Phase 71 | Complete |
-| CACHE-01 | Phase 73 | Pending |
-| CACHE-02 | Phase 73 | Pending |
+| CACHE-01 | Phase 73 | Complete |
+| CACHE-02 | Phase 73 | Complete |
 | CRAWL-01 | Phase 74 | Pending |
 | CRAWL-02 | Phase 74 | Pending |
 | CRAWL-03 | Phase 74 | Pending |

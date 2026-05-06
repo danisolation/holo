@@ -217,7 +217,7 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 
 - [x] **Phase 71: Database Indexes & Pool Tuning** — Composite indexes on 7 hot tables + connection pool optimization (completed 2026-05-06)
 - [x] **Phase 72: N+1 Query Fixes & Pagination** — Batch queries for rumor/AI context + paginated list endpoints (completed 2026-05-06)
-- [ ] **Phase 73: API Response Caching** — TTLCache for expensive endpoints + dashboard payload caching
+- [x] **Phase 73: API Response Caching** — TTLCache for expensive endpoints + dashboard payload caching (completed 2026-05-06)
 - [ ] **Phase 74: Crawler Efficiency** — Parallel fetch with bounded concurrency + bulk inserts + ticker map reuse
 - [ ] **Phase 75: Async Patterns & Bulk Operations** — CPU parsing offloaded to thread pool + financial bulk upsert
 
@@ -259,10 +259,10 @@ Plans:
   1. Sectors, discovery, goals, analysis summary, and rumor summary endpoints serve cached responses within TTL (repeated calls within window don't hit DB)
   2. Dashboard overview endpoint (latest prices, SMA deltas, volume stats) returns a pre-computed cached payload
   3. Cache invalidation occurs naturally via TTL expiry — no stale data persists beyond configured window
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 73-01-PLAN.md — TTLCache for 5 expensive endpoints (sectors, discovery, weekly-review, analysis/summary, rumor/watchlist/summary)
+- [x] 73-01-PLAN.md — TTLCache for 5 expensive endpoints (sectors, discovery, weekly-review, analysis/summary, rumor/watchlist/summary)
 
 ### Phase 74: Crawler Efficiency
 **Goal**: Crawlers fetch data in parallel with controlled concurrency, insert in bulk, and share a single ticker map per job run
@@ -291,6 +291,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 71. Database Indexes & Pool Tuning | 1/1 | Complete   | 2026-05-06 |
 | 72. N+1 Query Fixes & Pagination | 2/2 | Complete   | 2026-05-06 |
-| 73. API Response Caching | 0/? | Not started | - |
+| 73. API Response Caching | 1/1 | Complete   | 2026-05-06 |
 | 74. Crawler Efficiency | 0/? | Not started | - |
 | 75. Async Patterns & Bulk Operations | 0/? | Not started | - |
