@@ -84,6 +84,10 @@ class Settings(BaseSettings):
     realtime_max_symbols: int = 50  # max symbols per poll request
     realtime_priority_exchanges: list[str] = ["HOSE", "HNX", "UPCOM"]  # exchange priority for symbol selection
 
+    # VNDirect WebSocket (Phase 76)
+    vndirect_ws_url: str = "wss://price-cmc-04.vndirect.com.vn/realtime/websocket"
+    vndirect_ws_enabled: bool = True  # True = use VNDirect WS; False = fallback to VCI polling
+
     # Trading Signal Pipeline (Phase 19)
     trading_signal_batch_size: int = 8     # Reduced from 15 — more tokens per ticker
     trading_signal_thinking_budget: int = 2048  # Doubled from 1024 — complex dual-direction reasoning

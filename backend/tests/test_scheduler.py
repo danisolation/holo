@@ -22,8 +22,13 @@ class TestSchedulerManager:
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
     def test_configure_jobs_registers_nine_jobs(self):
-        """configure_jobs must register all expected jobs."""
+        """configure_jobs must register all expected jobs.
+
+        With vndirect_ws_enabled=True (default), VCI polling jobs are skipped (7 jobs).
+        With vndirect_ws_enabled=False, all 9 jobs are registered.
+        """
         from app.scheduler.manager import scheduler, configure_jobs
+        from app.config import settings
 
         # Remove any existing jobs first
         scheduler.remove_all_jobs()
@@ -34,13 +39,20 @@ class TestSchedulerManager:
         assert "daily_price_crawl_hose" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
-        assert "realtime_price_poll" in job_ids
-        assert "realtime_heartbeat" in job_ids
         assert "weekly_behavior_analysis" in job_ids
         assert "create_weekly_risk_prompt" in job_ids
         assert "generate_weekly_review" in job_ids
         assert "morning_price_crawl_hose" in job_ids
-        assert len(job_ids) == 9
+
+        if settings.vndirect_ws_enabled:
+            # VCI polling jobs skipped when VNDirect WS is active
+            assert "realtime_price_poll" not in job_ids
+            assert "realtime_heartbeat" not in job_ids
+            assert len(job_ids) == 7
+        else:
+            assert "realtime_price_poll" in job_ids
+            assert "realtime_heartbeat" in job_ids
+            assert len(job_ids) == 9
 
         # Clean up
         scheduler.remove_all_jobs()

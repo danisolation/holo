@@ -106,6 +106,23 @@ class ConnectionManager:
         for ws in dead:
             self.disconnect(ws)
 
+    async def broadcast_bid_ask(self, bid_asks: dict[str, dict]) -> None:
+        """Send bid/ask updates to each client, filtered by subscriptions."""
+        dead: list[WebSocket] = []
+        for ws, symbols in list(self._connections.items()):
+            client_data = {s: d for s, d in bid_asks.items() if s in symbols}
+            if not client_data:
+                continue
+            try:
+                await ws.send_json({
+                    "type": "bid_ask_update",
+                    "data": client_data,
+                })
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+
 
 # ── Module-level singleton ──────────────────────────────────────────────────
 

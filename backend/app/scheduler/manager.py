@@ -364,30 +364,34 @@ def configure_jobs():
     logger.info("Goal jobs: create_weekly_risk_prompt (Mon 08:00), generate_weekly_review (Sun 21:00, also chained from weekly_behavior_analysis)")
 
     # ── Real-time WebSocket jobs (Phase 16) ──────────────────────────────────
-    from app.scheduler.jobs import realtime_price_poll, realtime_heartbeat
+    # Only add VCI polling jobs if VNDirect WS is disabled (fallback mode)
+    if not settings.vndirect_ws_enabled:
+        from app.scheduler.jobs import realtime_price_poll, realtime_heartbeat
 
-    scheduler.add_job(
-        realtime_price_poll,
-        trigger=IntervalTrigger(seconds=settings.realtime_poll_interval),
-        id="realtime_price_poll",
-        name="Real-Time Price Poll",
-        replace_existing=True,
-        misfire_grace_time=30,
-    )
+        scheduler.add_job(
+            realtime_price_poll,
+            trigger=IntervalTrigger(seconds=settings.realtime_poll_interval),
+            id="realtime_price_poll",
+            name="Real-Time Price Poll",
+            replace_existing=True,
+            misfire_grace_time=30,
+        )
 
-    scheduler.add_job(
-        realtime_heartbeat,
-        trigger=IntervalTrigger(seconds=15),
-        id="realtime_heartbeat",
-        name="Real-Time Heartbeat",
-        replace_existing=True,
-        misfire_grace_time=15,
-    )
+        scheduler.add_job(
+            realtime_heartbeat,
+            trigger=IntervalTrigger(seconds=15),
+            id="realtime_heartbeat",
+            name="Real-Time Heartbeat",
+            replace_existing=True,
+            misfire_grace_time=15,
+        )
 
-    logger.info(
-        f"Real-time jobs: realtime_price_poll (every {settings.realtime_poll_interval}s), "
-        f"realtime_heartbeat (every 15s)"
-    )
+        logger.info(
+            f"Real-time jobs: realtime_price_poll (every {settings.realtime_poll_interval}s), "
+            f"realtime_heartbeat (every 15s)"
+        )
+    else:
+        logger.info("VNDirect WS enabled — skipping VCI polling jobs")
 
     # ── Phase 58: Morning AI refresh (8:30 AM Mon-Fri) ─────────────────
     from app.scheduler.jobs import morning_price_crawl_hose

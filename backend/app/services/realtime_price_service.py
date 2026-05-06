@@ -92,6 +92,7 @@ class RealtimePriceService:
 
         Skips polling if no clients are subscribed.
         Limits symbols to realtime_max_symbols config.
+        Used as FALLBACK when vndirect_ws_enabled=False.
         """
         symbols = self._connection_manager.get_all_subscribed_symbols()
         if not symbols:
@@ -132,6 +133,30 @@ class RealtimePriceService:
             await self._connection_manager.broadcast(changed)
         else:
             logger.debug(f"0 of {len(prices)} symbols changed — skipping broadcast")
+
+    async def handle_ws_price_update(self, prices: dict[str, dict]) -> None:
+        """Handle price updates from VNDirect WebSocket client.
+
+        Same diff-detection logic as poll_and_broadcast but receives
+        pre-parsed price data from the WS client callback.
+        """
+        changed: dict[str, dict] = {}
+        for sym, price_data in prices.items():
+            cached = self._latest_prices.get(sym)
+            if cached != price_data:
+                changed[sym] = price_data
+
+        self._latest_prices.update(prices)
+
+        if changed:
+            await self._connection_manager.broadcast(changed)
+
+    async def handle_ws_bid_ask_update(self, bid_asks: dict[str, dict]) -> None:
+        """Handle bid/ask updates from VNDirect WebSocket client.
+
+        Broadcasts bid/ask data as a separate message type to subscribers.
+        """
+        await self._connection_manager.broadcast_bid_ask(bid_asks)
 
     def get_latest_prices(self, symbols: list[str]) -> dict[str, dict]:
         """Return cached prices for requested symbols only."""

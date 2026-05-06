@@ -21,6 +21,11 @@ from app.ws.prices import websocket_prices
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifecycle: start scheduler on startup, clean up on shutdown."""
+    import asyncio
+
+    vndirect_task = None
+    vndirect_client = None
+
     # Startup
     logger.info("Holo starting up...")
     if settings.holo_test_mode:
@@ -29,8 +34,43 @@ async def lifespan(app: FastAPI):
         configure_jobs()
         scheduler.start()
         logger.info("Scheduler started with configured jobs")
+
+        # Launch VNDirect WebSocket client if enabled
+        if settings.vndirect_ws_enabled:
+            from app.services.vndirect_ws_client import VNDirectWSClient
+            from app.services.realtime_price_service import get_realtime_price_service
+            from app.ws.prices import connection_manager
+
+            realtime_svc = get_realtime_price_service()
+            # Get watchlist symbols from connection manager subscriptions
+            # (populated when frontend connects and subscribes)
+            # The WS client will subscribe to all symbols initially;
+            # frontend subscription filtering happens at broadcast level
+            symbols = list(connection_manager.get_all_subscribed_symbols())
+            if not symbols:
+                # Default to empty — client will still connect and wait for subscriptions
+                # Symbols can be updated dynamically via client.update_symbols()
+                symbols = []
+
+            vndirect_client = VNDirectWSClient(
+                symbols=symbols,
+                on_price_update=realtime_svc.handle_ws_price_update,
+                on_bid_ask_update=realtime_svc.handle_ws_bid_ask_update,
+                ws_url=settings.vndirect_ws_url,
+            )
+            vndirect_task = asyncio.create_task(vndirect_client.start())
+            logger.info("VNDirect WebSocket client launched as background task")
+
+            # Store client on app state for dynamic symbol updates
+            app.state.vndirect_client = vndirect_client
+
     yield
     # Shutdown
+    if vndirect_client:
+        await vndirect_client.stop()
+        if vndirect_task:
+            vndirect_task.cancel()
+        logger.info("VNDirect WebSocket client stopped")
     if not settings.holo_test_mode:
         scheduler.shutdown(wait=False)
         logger.info("Scheduler shut down")
