@@ -125,6 +125,7 @@ export default function TickerDetailPage({
   // Derive trading plan for chart overlay
   const tradingPlanForChart = useMemo(() => {
     if (!tradingSignal || tradingSignal.confidence === 0) return undefined;
+    if (!tradingSignal.trading_plan) return undefined;
     return {
       entry_price: tradingSignal.trading_plan.entry_price,
       stop_loss: tradingSignal.trading_plan.stop_loss,
