@@ -109,21 +109,22 @@ class TestBuildPrompt:
     """Test prompt building with engagement metrics."""
 
     def test_build_prompt_includes_engagement_metrics(self, service):
-        """Verified post shows [Xác thực ✓ | ...] bracket format matching few-shot."""
+        """Verified/authentic post shows [source] bracket format in official section."""
         row = _make_rumor_row(is_authentic=True, total_likes=25, total_replies=8)
         prompt = service._build_prompt("VNM", [row])
 
-        assert "[Xác thực ✓ | 25 likes | 8 replies]" in prompt
+        assert "[trader1]" in prompt
+        assert "📰 Tin tức chính thống (1):" in prompt
 
     def test_build_prompt_regular_user(self, service):
-        """Non-verified post shows [Thường | ...] bracket format."""
+        """Non-verified post shows [source | ...] bracket format."""
         row = _make_rumor_row(is_authentic=False, total_likes=2, total_replies=0)
         prompt = service._build_prompt("VNM", [row])
 
-        assert "[Thường | 2 likes | 0 replies]" in prompt
+        assert "[trader1 | 2 likes | 0 replies]" in prompt
         # The generated post line should not contain the verified tag
         post_lines = [l for l in prompt.split("\n") if l.startswith("1. [")]
-        assert any("Thường" in l for l in post_lines)
+        assert any("trader1" in l for l in post_lines)
         assert not any("Xác thực ✓ | 2 likes" in l for l in post_lines)
 
     def test_build_prompt_vietnamese_content(self, service):
@@ -162,23 +163,23 @@ class TestBuildPrompt:
         assert "Ví dụ phân tích:" in prompt
 
     def test_build_prompt_with_news_only(self, service):
-        """Prompt built with only CafeF news (no Fireant posts)."""
+        """Prompt built with only CafeF news (no community posts)."""
         news = [_make_news_row(title="HPG chia cổ tức tiền mặt 1500đ/cp")]
         prompt = service._build_prompt("HPG", [], news)
 
         assert "📰 Tin tức CafeF (1):" in prompt
-        assert "[Tin tức chính thống]" in prompt
+        assert "[CafeF]" in prompt
         assert "HPG chia cổ tức" in prompt
         assert "📢 Bài đăng cộng đồng" not in prompt
 
     def test_build_prompt_combined_sources(self, service):
-        """Prompt includes both Fireant posts and CafeF news."""
+        """Prompt includes both community posts and CafeF news."""
         rumors = [_make_rumor_row(content="HPG đang tích lũy")]
         news = [_make_news_row(title="HPG: Kết quả KQKD Q2/2025")]
         prompt = service._build_prompt("HPG", rumors, news)
 
         assert "HPG (2 nguồn thông tin)" in prompt
-        assert "📢 Bài đăng cộng đồng Fireant (1):" in prompt
+        assert "📰 Tin tức chính thống (1):" in prompt
         assert "📰 Tin tức CafeF (1):" in prompt
         assert "HPG đang tích lũy" in prompt
         assert "KQKD Q2/2025" in prompt

@@ -357,10 +357,10 @@ class RumorScoringService:
     def _build_prompt(
         self, ticker_symbol: str, rumors: list, news_articles: list | None = None
     ) -> str:
-        """Build Vietnamese prompt combining Fireant posts + CafeF news.
+        """Build Vietnamese prompt combining all sources.
 
-        Two sections: community posts (with engagement metrics) and news headlines.
-        Gemini evaluates both sources for a comprehensive score.
+        Groups by source type: official news (VnExpress/Vietstock) vs community (Fireant/F319).
+        Gemini evaluates all sources for a comprehensive score.
         """
         lines = [RUMOR_FEW_SHOT, ""]
         total_items = len(rumors) + (len(news_articles) if news_articles else 0)
@@ -369,29 +369,35 @@ class RumorScoringService:
         )
 
         idx = 1
-        # Section 1: Fireant community posts
         if rumors:
-            lines.append(f"\n📢 Bài đăng cộng đồng Fireant ({len(rumors)}):")
-            for r in rumors:
-                is_authentic = r[3]
-                total_likes = r[4]
-                total_replies = r[5]
-                content = r[1]
+            official_rumors = [r for r in rumors if r[3]]  # is_authentic=True
+            community_rumors = [r for r in rumors if not r[3]]
 
-                auth_label = "Xác thực ✓" if is_authentic else "Thường"
-                safe_content = self._sanitize_content(content)
-                lines.append(
-                    f"{idx}. [{auth_label} | {total_likes} likes | "
-                    f'{total_replies} replies] "{safe_content}"'
-                )
-                idx += 1
+            if official_rumors:
+                lines.append(f"\n📰 Tin tức chính thống ({len(official_rumors)}):")
+                for r in official_rumors:
+                    source = r[2]
+                    safe_content = self._sanitize_content(r[1])
+                    lines.append(f'{idx}. [{source}] "{safe_content}"')
+                    idx += 1
 
-        # Section 2: CafeF news headlines
+            if community_rumors:
+                lines.append(f"\n📢 Bài đăng cộng đồng ({len(community_rumors)}):")
+                for r in community_rumors:
+                    source = r[2]
+                    safe_content = self._sanitize_content(r[1])
+                    lines.append(
+                        f"{idx}. [{source} | {r[4]} likes | "
+                        f'{r[5]} replies] "{safe_content}"'
+                    )
+                    idx += 1
+
+        # CafeF news headlines (separate table)
         if news_articles:
             lines.append(f"\n📰 Tin tức CafeF ({len(news_articles)}):")
             for na in news_articles:
                 title = self._sanitize_content(na[1], max_len=200)
-                lines.append(f"{idx}. [Tin tức chính thống] \"{title}\"")
+                lines.append(f"{idx}. [CafeF] \"{title}\"")
                 idx += 1
 
         return "\n".join(lines)
@@ -419,15 +425,31 @@ class RumorScoringService:
 
             idx = 1
             if rumors:
-                lines.append(f"\n📢 Bài đăng cộng đồng Fireant ({len(rumors)}):")
-                for r in rumors:
-                    auth_label = "Xác thực ✓" if r[3] else "Thường"
-                    safe_content = self._sanitize_content(r[1])
-                    lines.append(
-                        f"{idx}. [{auth_label} | {r[4]} likes | "
-                        f'{r[5]} replies] "{safe_content}"'
-                    )
-                    idx += 1
+                # Group rumors by source type for clearer Gemini context
+                official_rumors = [r for r in rumors if r[3]]  # is_authentic=True (VnExpress, Vietstock)
+                community_rumors = [r for r in rumors if not r[3]]  # Fireant, F319
+
+                if official_rumors:
+                    lines.append(f"\n📰 Tin tức chính thống ({len(official_rumors)}):")
+                    for r in official_rumors:
+                        source = r[2]  # author_name contains source
+                        safe_content = self._sanitize_content(r[1])
+                        lines.append(
+                            f'{idx}. [{source}] "{safe_content}"'
+                        )
+                        idx += 1
+
+                if community_rumors:
+                    lines.append(f"\n📢 Bài đăng cộng đồng ({len(community_rumors)}):")
+                    for r in community_rumors:
+                        source = r[2]  # author_name
+                        auth_label = "Xác thực ✓" if r[3] else source
+                        safe_content = self._sanitize_content(r[1])
+                        lines.append(
+                            f"{idx}. [{auth_label} | {r[4]} likes | "
+                            f'{r[5]} replies] "{safe_content}"'
+                        )
+                        idx += 1
 
             if news_articles:
                 lines.append(f"\n📰 Tin tức CafeF ({len(news_articles)}):")
