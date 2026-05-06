@@ -32,6 +32,36 @@ export function TradingPlanPanel({ data }: TradingPlanPanelProps) {
 
   const plan = data.trading_plan;
 
+  // If no trading plan available, show fallback
+  if (!plan) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">
+              Kế Hoạch Giao Dịch
+            </CardTitle>
+            <Badge className={badgeClass}>{badgeLabel}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className={cn("border-l-4", borderColor, bgTint)}>
+          <div className="mb-4">
+            <p className="text-xs text-muted-foreground mb-1">Độ tin cậy</p>
+            <ScoreBar score={data.confidence} />
+          </div>
+          <p className="text-sm text-muted-foreground text-center py-4 opacity-60">
+            Chưa có kế hoạch giao dịch cụ thể
+          </p>
+          {data.reasoning && (
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed border-t pt-3">
+              {data.reasoning}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
