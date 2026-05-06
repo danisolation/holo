@@ -12,6 +12,7 @@ Resilience pattern per CONTEXT.md decisions:
 - Pitfall 2: Partial failure returns normally (chain continues);
   complete failure raises (chain breaks)
 """
+import asyncio
 from datetime import date, timedelta
 
 from loguru import logger
@@ -1034,25 +1035,29 @@ async def daily_rumor_crawl():
             ticker_map = await _get_watchlist_ticker_map(session)
             logger.info(f"Loaded ticker map: {len(ticker_map)} tickers (shared across crawlers)")
 
-            # 1. Fireant community posts
+            # 1. Fireant community posts (rate-limited, runs alone)
             from app.crawlers.fireant_crawler import FireantCrawler
             crawler = FireantCrawler(session)
             result = await crawler.crawl_watchlist_tickers(ticker_map=ticker_map)
 
-            # 2. F319 forum RSS feed
+            # 2. RSS crawlers (independent domains, run concurrently)
+            # Each gets its own session — AsyncSession is not safe for concurrent use
             from app.crawlers.f319_crawler import F319Crawler
-            f319 = F319Crawler(session)
-            f319_result = await f319.crawl_rss(ticker_map=ticker_map)
-
-            # 3. VnExpress business news RSS
             from app.crawlers.vnexpress_crawler import VnExpressCrawler
-            vnexpress = VnExpressCrawler(session)
-            vnexpress_result = await vnexpress.crawl_rss(ticker_map=ticker_map)
-
-            # 4. Vietstock multi-feed RSS
             from app.crawlers.vietstock_crawler import VietstockCrawler
-            vietstock = VietstockCrawler(session)
-            vietstock_result = await vietstock.crawl_rss(ticker_map=ticker_map)
+
+            async with async_session() as f319_session, \
+                       async_session() as vnex_session, \
+                       async_session() as vs_session:
+                f319 = F319Crawler(f319_session)
+                vnexpress = VnExpressCrawler(vnex_session)
+                vietstock = VietstockCrawler(vs_session)
+
+                f319_result, vnexpress_result, vietstock_result = await asyncio.gather(
+                    f319.crawl_rss(ticker_map=ticker_map),
+                    vnexpress.crawl_rss(ticker_map=ticker_map),
+                    vietstock.crawl_rss(ticker_map=ticker_map),
+                )
 
             # Merge results
             result["total_posts"] = (

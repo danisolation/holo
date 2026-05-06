@@ -41,10 +41,11 @@ class CafeFCrawler:
     BASE_URL = "https://cafef.vn"
     AJAX_URL = f"{BASE_URL}/du-lieu/Ajax/Events_RelatedNews_New.aspx"
 
-    def __init__(self, session: AsyncSession, delay: float | None = None):
+    def __init__(self, session: AsyncSession, delay: float | None = None, concurrency: int = 5):
         self.session = session
         self.delay = delay if delay is not None else settings.cafef_delay_seconds
         self.news_days = settings.cafef_news_days
+        self.semaphore = asyncio.Semaphore(concurrency)
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
@@ -63,39 +64,31 @@ class CafeFCrawler:
             ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting CafeF news crawl for {len(ticker_map)} tickers")
 
-        success = 0
-        failed = 0
-        total_articles = 0
-        failed_symbols: list[str] = []
-
         async with httpx.AsyncClient(
             headers=self.headers,
             timeout=15,
             follow_redirects=True,
             verify=False,  # CafeF SSL cert chain issues (per RESEARCH.md pitfall 2)
         ) as client:
-            for i, (symbol, ticker_id) in enumerate(ticker_map.items()):
-                try:
-                    articles = await self._fetch_news(client, symbol)
-                    stored = await self._store_articles(ticker_id, articles)
-                    total_articles += stored
-                    success += 1
+            tasks = [
+                self._crawl_one_ticker(client, symbol, ticker_id)
+                for symbol, ticker_id in ticker_map.items()
+            ]
+            results = await asyncio.gather(*tasks)
 
-                    if articles:
-                        logger.debug(f"{symbol}: {len(articles)} articles fetched, {stored} new stored")
-                    # Don't log for tickers with 0 articles (common per RESEARCH.md)
+        success = 0
+        failed = 0
+        total_articles = 0
+        failed_symbols: list[str] = []
+        for symbol, stored, ok in results:
+            if ok:
+                success += 1
+                total_articles += stored
+            else:
+                failed += 1
+                failed_symbols.append(symbol)
 
-                except Exception as e:
-                    logger.warning(f"CafeF crawl failed for {symbol}: {type(e).__name__}: {e}")
-                    failed += 1
-                    failed_symbols.append(symbol)
-
-                # Rate limiting: delay between requests (except after last ticker)
-                if i < len(ticker_map) - 1:
-                    await asyncio.sleep(self.delay)
-
-            # Commit all stored articles
-            await self.session.commit()
+        await self.session.commit()
 
         result = {
             "success": success,
@@ -105,6 +98,23 @@ class CafeFCrawler:
         }
         logger.info(f"CafeF news crawl complete: {result}")
         return result
+
+    async def _crawl_one_ticker(
+        self, client: httpx.AsyncClient, symbol: str, ticker_id: int
+    ) -> tuple[str, int, bool]:
+        """Fetch and store news for one ticker, respecting rate limit."""
+        async with self.semaphore:
+            try:
+                articles = await self._fetch_news(client, symbol)
+                stored = await self._store_articles(ticker_id, articles)
+                if articles:
+                    logger.debug(f"{symbol}: {len(articles)} articles fetched, {stored} new stored")
+                return (symbol, stored, True)
+            except Exception as e:
+                logger.warning(f"CafeF crawl failed for {symbol}: {type(e).__name__}: {e}")
+                return (symbol, 0, False)
+            finally:
+                await asyncio.sleep(self.delay)
 
     @retry(
         stop=stop_after_attempt(3),

@@ -7,6 +7,7 @@ Extracts ticker mentions and stores in rumors table.
 Vietstock has a comprehensive, undocumented RSS system with
 category-ID-based URLs: vietstock.vn/{catID}/{slug}.rss
 """
+import asyncio
 import hashlib
 import html
 import re
@@ -96,22 +97,22 @@ class VietstockCrawler:
         async with httpx.AsyncClient(
             headers=self.headers, timeout=15, follow_redirects=True
         ) as client:
-            for feed_name, feed_url in RSS_FEEDS.items():
-                try:
-                    resp = await client.get(feed_url)
-                    resp.raise_for_status()
-                    items = self._parse_rss(resp.text)
-                    # Deduplicate across feeds (same article may appear in multiple categories)
+            feed_tasks = [
+                self._fetch_one_feed(client, name, url)
+                for name, url in RSS_FEEDS.items()
+            ]
+            feed_results = await asyncio.gather(*feed_tasks)
+
+            for feed_name, items, ok in feed_results:
+                if ok:
+                    feeds_ok += 1
                     for item in items:
                         if item["guid"] not in seen_guids:
                             seen_guids.add(item["guid"])
                             item["feed"] = feed_name
                             all_items.append(item)
-                    feeds_ok += 1
-                    logger.debug(f"Vietstock {feed_name}: {len(items)} items")
-                except Exception as e:
+                else:
                     feeds_failed += 1
-                    logger.warning(f"Vietstock {feed_name} feed failed: {e}")
 
         if not all_items:
             logger.warning("Vietstock: no items from any feed")
@@ -171,6 +172,20 @@ class VietstockCrawler:
             f"{len(tickers_found)} tickers from {feeds_ok}/{len(RSS_FEEDS)} feeds"
         )
         return result_dict
+
+    async def _fetch_one_feed(
+        self, client: httpx.AsyncClient, feed_name: str, feed_url: str
+    ) -> tuple[str, list[dict], bool]:
+        """Fetch and parse one RSS feed. Returns (feed_name, items, success)."""
+        try:
+            resp = await client.get(feed_url)
+            resp.raise_for_status()
+            items = self._parse_rss(resp.text)
+            logger.debug(f"Vietstock {feed_name}: {len(items)} items")
+            return (feed_name, items, True)
+        except Exception as e:
+            logger.warning(f"Vietstock {feed_name} feed failed: {e}")
+            return (feed_name, [], False)
 
     def _parse_rss(self, xml_text: str) -> list[dict]:
         """Parse Vietstock RSS 2.0 XML into list of article dicts."""

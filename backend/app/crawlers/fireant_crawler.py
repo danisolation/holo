@@ -42,11 +42,12 @@ class FireantCrawler:
     API_URL = "https://restv2.fireant.vn/posts"
     MIN_CONTENT_LENGTH = 20
 
-    def __init__(self, session: AsyncSession, delay: float | None = None):
+    def __init__(self, session: AsyncSession, delay: float | None = None, concurrency: int = 3):
         self.session = session
         self.delay = delay if delay is not None else settings.fireant_delay_seconds
         self.post_limit = settings.fireant_post_limit
         self.retention_days = settings.fireant_retention_days
+        self.semaphore = asyncio.Semaphore(concurrency)
         self.headers = {
             "Authorization": f"Bearer {settings.fireant_token}",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -82,37 +83,27 @@ class FireantCrawler:
 
         logger.info(f"Starting Fireant crawl for {len(ticker_map)} watchlist tickers")
 
-        success = 0
-        failed = 0
-        total_posts = 0
-        failed_symbols: list[str] = []
-
         async with httpx.AsyncClient(
             headers=self.headers,
             timeout=15,
         ) as client:
-            for i, (symbol, ticker_id) in enumerate(ticker_map.items()):
-                try:
-                    posts = await self._fetch_posts(client, symbol)
-                    stored = await self._store_posts(ticker_id, posts)
-                    total_posts += stored
-                    success += 1
+            tasks = [
+                self._crawl_one_ticker(client, symbol, ticker_id)
+                for symbol, ticker_id in ticker_map.items()
+            ]
+            results = await asyncio.gather(*tasks)
 
-                    if posts:
-                        logger.debug(
-                            f"{symbol}: {len(posts)} posts fetched, {stored} new stored"
-                        )
-
-                except Exception as e:
-                    logger.warning(
-                        f"Fireant crawl failed for {symbol}: {type(e).__name__}: {e}"
-                    )
-                    failed += 1
-                    failed_symbols.append(symbol)
-
-                # Rate limiting: delay between requests (except after last ticker)
-                if i < len(ticker_map) - 1:
-                    await asyncio.sleep(self.delay)
+        success = 0
+        failed = 0
+        total_posts = 0
+        failed_symbols: list[str] = []
+        for symbol, stored, ok in results:
+            if ok:
+                success += 1
+                total_posts += stored
+            else:
+                failed += 1
+                failed_symbols.append(symbol)
 
         # Cleanup old posts after all tickers processed
         await self._cleanup_old_posts()
@@ -128,6 +119,23 @@ class FireantCrawler:
         }
         logger.info(f"Fireant crawl complete: {result_dict}")
         return result_dict
+
+    async def _crawl_one_ticker(
+        self, client: httpx.AsyncClient, symbol: str, ticker_id: int
+    ) -> tuple[str, int, bool]:
+        """Fetch and store posts for one ticker, respecting rate limit."""
+        async with self.semaphore:
+            try:
+                posts = await self._fetch_posts(client, symbol)
+                stored = await self._store_posts(ticker_id, posts)
+                if posts:
+                    logger.debug(f"{symbol}: {len(posts)} posts fetched, {stored} new stored")
+                return (symbol, stored, True)
+            except Exception as e:
+                logger.warning(f"Fireant crawl failed for {symbol}: {type(e).__name__}: {e}")
+                return (symbol, 0, False)
+            finally:
+                await asyncio.sleep(self.delay)
 
     @retry(
         stop=stop_after_attempt(3),
