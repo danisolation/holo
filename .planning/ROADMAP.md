@@ -216,7 +216,7 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 **Depends on**: Phase 67 (v13.0 complete)
 **Requirements**: QFIX-01, QFIX-02
 **Success Criteria** (what must be TRUE):
-  1. Rumor scoring service uses gemini-2.0-flash model (not gemini-2.5-flash-lite)
+  1. Rumor scoring service uses gemini-2.5-flash model (working within free tier quota)
   2. Scheduler-triggered rumor scoring completes without quota errors and scores >0 tickers
   3. Scored rumor data appears correctly in RumorScorePanel on ticker page
 **Plans**: TBD
@@ -246,6 +246,6 @@ Full details: [milestones/v13.0-ROADMAP.md](milestones/v13.0-ROADMAP.md)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 68. Gemini Quota Fix & Scoring Repair | 0/? | Not started | - |
+| 68. Gemini Quota Fix & Scoring Repair | 1/1 | ✅ Complete | 2026-05-06 |
 | 69. Multi-Source Crawlers | 0/? | Not started | - |
 | 70. Pipeline Integration | 0/? | Not started | - |
