@@ -137,15 +137,9 @@ class AIAnalysisService:
             ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting technical analysis for {len(ticker_map)} tickers")
 
-        # Gather technical context for each ticker
-        ticker_data: dict[str, dict] = {}
-        ticker_ids: dict[str, int] = {}
-
-        for symbol, ticker_id in ticker_map.items():
-            context = await self.context_builder.get_technical_context(ticker_id, symbol)
-            if context is not None:
-                ticker_data[symbol] = context
-                ticker_ids[symbol] = ticker_id
+        # Gather technical context for all tickers in batch
+        ticker_data = await self.context_builder.batch_get_technical_contexts(ticker_map)
+        ticker_ids = {s: ticker_map[s] for s in ticker_data}
 
         logger.info(
             f"Technical context gathered: {len(ticker_data)} tickers with indicator data"
@@ -174,15 +168,9 @@ class AIAnalysisService:
             ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting fundamental analysis for {len(ticker_map)} tickers")
 
-        # Gather fundamental context for each ticker
-        ticker_data: dict[str, dict] = {}
-        ticker_ids: dict[str, int] = {}
-
-        for symbol, ticker_id in ticker_map.items():
-            context = await self.context_builder.get_fundamental_context(ticker_id, symbol)
-            if context is not None:
-                ticker_data[symbol] = context
-                ticker_ids[symbol] = ticker_id
+        # Gather fundamental context for all tickers in batch
+        ticker_data = await self.context_builder.batch_get_fundamental_contexts(ticker_map)
+        ticker_ids = {s: ticker_map[s] for s in ticker_data}
 
         logger.info(
             f"Fundamental context gathered: {len(ticker_data)} tickers with financial data"
@@ -215,13 +203,9 @@ class AIAnalysisService:
             ticker_map = await ticker_service.get_ticker_id_map()
         logger.info(f"Starting sentiment analysis for {len(ticker_map)} tickers")
 
-        ticker_data: dict[str, dict] = {}
-        ticker_ids: dict[str, int] = {}
-
-        for symbol, ticker_id in ticker_map.items():
-            context = await self.context_builder.get_sentiment_context(ticker_id, symbol)
-            ticker_data[symbol] = context
-            ticker_ids[symbol] = ticker_id
+        # Gather sentiment context for all tickers in batch
+        ticker_data = await self.context_builder.batch_get_sentiment_contexts(ticker_map)
+        ticker_ids = {s: ticker_map[s] for s in ticker_data}
 
         logger.info(
             f"Sentiment context gathered: {len(ticker_data)} tickers "

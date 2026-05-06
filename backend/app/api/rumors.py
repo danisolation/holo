@@ -55,66 +55,93 @@ async def get_watchlist_rumor_summary():
         wl_result = await session.execute(wl_stmt)
         watchlist_items = wl_result.all()
 
+        # Collect valid ticker IDs from watchlist
+        ticker_ids = [item.ticker_id for item in watchlist_items if item.ticker_id is not None]
+
+        # Batch Query A: Rumor counts per ticker (last 7 days)
+        counts: dict[int, int] = {}
+        if ticker_ids:
+            count_result = await session.execute(
+                select(
+                    Rumor.ticker_id,
+                    func.count(Rumor.id).label("rumor_count"),
+                )
+                .where(
+                    Rumor.ticker_id.in_(ticker_ids),
+                    Rumor.posted_at >= seven_days_ago,
+                )
+                .group_by(Rumor.ticker_id)
+            )
+            counts = {row.ticker_id: row.rumor_count for row in count_result.all()}
+
+        # Batch Query B: Score aggregates per ticker (last 7 days)
+        scores: dict[int, tuple] = {}
+        if ticker_ids:
+            score_result = await session.execute(
+                select(
+                    RumorScore.ticker_id,
+                    func.avg(RumorScore.credibility_score).label("avg_cred"),
+                    func.avg(RumorScore.impact_score).label("avg_impact"),
+                )
+                .where(
+                    RumorScore.ticker_id.in_(ticker_ids),
+                    RumorScore.scored_date >= seven_days_ago,
+                )
+                .group_by(RumorScore.ticker_id)
+            )
+            scores = {
+                row.ticker_id: (
+                    round(float(row.avg_cred), 1) if row.avg_cred else None,
+                    round(float(row.avg_impact), 1) if row.avg_impact else None,
+                )
+                for row in score_result.all()
+            }
+
+        # Batch Query C: Dominant direction per ticker (last 7 days)
+        directions: dict[int, str] = {}
+        if ticker_ids:
+            dir_subq = (
+                select(
+                    RumorScore.ticker_id,
+                    RumorScore.direction,
+                    func.count(RumorScore.id).label("cnt"),
+                )
+                .where(
+                    RumorScore.ticker_id.in_(ticker_ids),
+                    RumorScore.scored_date >= seven_days_ago,
+                )
+                .group_by(RumorScore.ticker_id, RumorScore.direction)
+                .subquery()
+            )
+            dir_stmt = (
+                select(
+                    dir_subq.c.ticker_id,
+                    dir_subq.c.direction,
+                )
+                .distinct(dir_subq.c.ticker_id)
+                .order_by(dir_subq.c.ticker_id, dir_subq.c.cnt.desc())
+            )
+            dir_result = await session.execute(dir_stmt)
+            directions = {row.ticker_id: row.direction for row in dir_result.all()}
+
+        # Assemble summaries from lookup dicts
         summaries = []
         for item in watchlist_items:
             if item.ticker_id is None:
-                # Ticker not in DB — no data
                 summaries.append(WatchlistRumorSummary(
                     symbol=item.symbol,
                     rumor_count=0,
                 ))
                 continue
 
-            ticker_id = item.ticker_id
-
-            # Rumor count (last 7 days)
-            count_result = await session.execute(
-                select(func.count(Rumor.id))
-                .where(
-                    Rumor.ticker_id == ticker_id,
-                    Rumor.posted_at >= seven_days_ago,
-                )
-            )
-            rumor_count = count_result.scalar() or 0
-
-            # Score aggregates (last 7 days)
-            score_result = await session.execute(
-                select(
-                    func.avg(RumorScore.credibility_score).label("avg_cred"),
-                    func.avg(RumorScore.impact_score).label("avg_impact"),
-                )
-                .where(
-                    RumorScore.ticker_id == ticker_id,
-                    RumorScore.scored_date >= seven_days_ago,
-                )
-            )
-            score_row = score_result.one()
-            avg_cred = round(float(score_row.avg_cred), 1) if score_row.avg_cred else None
-            avg_impact = round(float(score_row.avg_impact), 1) if score_row.avg_impact else None
-
-            # Dominant direction (mode — most frequent in last 7 days)
-            dir_result = await session.execute(
-                select(
-                    RumorScore.direction,
-                    func.count(RumorScore.id).label("cnt"),
-                )
-                .where(
-                    RumorScore.ticker_id == ticker_id,
-                    RumorScore.scored_date >= seven_days_ago,
-                )
-                .group_by(RumorScore.direction)
-                .order_by(func.count(RumorScore.id).desc())
-                .limit(1)
-            )
-            dir_row = dir_result.one_or_none()
-            dominant_direction = dir_row.direction if dir_row else None
-
+            tid = item.ticker_id
+            score_tuple = scores.get(tid, (None, None))
             summaries.append(WatchlistRumorSummary(
                 symbol=item.symbol,
-                rumor_count=rumor_count,
-                avg_credibility=avg_cred,
-                avg_impact=avg_impact,
-                dominant_direction=dominant_direction,
+                rumor_count=counts.get(tid, 0),
+                avg_credibility=score_tuple[0],
+                avg_impact=score_tuple[1],
+                dominant_direction=directions.get(tid),
             ))
 
         return summaries
