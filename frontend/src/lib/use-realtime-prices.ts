@@ -20,7 +20,13 @@ export interface RealtimePrice {
   change: number;
   change_pct: number;
   volume: number;
-  updated_at: string;
+  updated_at?: string;
+  high?: number;
+  low?: number;
+  open?: number;
+  ref_price?: number;
+  ceiling?: number;
+  floor?: number;
 }
 
 export type ConnectionStatus =

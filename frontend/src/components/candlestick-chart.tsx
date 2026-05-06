@@ -32,15 +32,18 @@ interface CandlestickChartProps {
   priceData: PriceData[];
   indicatorData?: IndicatorData[];
   tradingPlan?: TradingPlanOverlay;
+  realtimePrice?: { price: number; high?: number; low?: number; open?: number } | null;
 }
 
 export function CandlestickChart({
   priceData,
   indicatorData,
   tradingPlan,
+  realtimePrice,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<ReturnType<typeof Object> | null>(null);
   const [selectedRange, setSelectedRange] = useState(365);
 
   // Filter data by selected time range and ensure ascending sort by date
@@ -101,6 +104,7 @@ export function CandlestickChart({
       wickUpColor: "#26a69a",
       wickDownColor: "#ef5350",
     });
+    candleSeriesRef.current = candleSeries;
     candleSeries.setData(
       filteredPrices.map((d) => ({
         time: d.date as string,
@@ -272,8 +276,43 @@ export function CandlestickChart({
       observer.disconnect();
       chart.remove();
       chartRef.current = null;
+      candleSeriesRef.current = null;
     };
   }, [filteredPrices, filteredIndicators, tradingPlan]);
+
+  // Real-time: update last candle bar when realtimePrice changes
+  useEffect(() => {
+    if (!realtimePrice || !candleSeriesRef.current || filteredPrices.length === 0) return;
+    const lastBar = filteredPrices[filteredPrices.length - 1];
+    if (!lastBar) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const isToday = lastBar.date === today;
+
+    // Update today's bar or create new intraday bar
+    const time = isToday ? lastBar.date : today;
+    const open = isToday ? lastBar.open : (realtimePrice.open ?? realtimePrice.price);
+    const high = Math.max(
+      isToday ? lastBar.high : realtimePrice.price,
+      realtimePrice.high ?? realtimePrice.price
+    );
+    const low = Math.min(
+      isToday ? lastBar.low : realtimePrice.price,
+      realtimePrice.low ?? realtimePrice.price
+    );
+
+    try {
+      (candleSeriesRef.current as any).update({
+        time: time as string,
+        open,
+        high,
+        low,
+        close: realtimePrice.price,
+      });
+    } catch {
+      // Silently ignore update errors (chart may have been disposed)
+    }
+  }, [realtimePrice, filteredPrices]);
 
   if (priceData.length === 0) {
     return (

@@ -253,6 +253,7 @@ export default function TickerDetailPage({
             priceData={priceData}
             indicatorData={indicatorData ?? undefined}
             tradingPlan={tradingPlanForChart}
+            realtimePrice={rtPrice ? { price: rtPrice.price, high: rtPrice.high, low: rtPrice.low, open: rtPrice.open } : null}
           />
         ) : null}
       </section>
