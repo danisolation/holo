@@ -141,7 +141,7 @@ class CafeFCrawler:
         resp = await client.get(self.AJAX_URL, params=params)
         resp.raise_for_status()
 
-        return self._parse_articles(resp.text)
+        return await asyncio.to_thread(self._parse_articles, resp.text)
 
     async def _fetch_news(self, client: httpx.AsyncClient, symbol: str) -> list[dict]:
         """Fetch news for a single ticker with circuit breaker protection."""

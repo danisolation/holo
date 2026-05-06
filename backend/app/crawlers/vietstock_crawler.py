@@ -180,7 +180,7 @@ class VietstockCrawler:
         try:
             resp = await client.get(feed_url)
             resp.raise_for_status()
-            items = self._parse_rss(resp.text)
+            items = await asyncio.to_thread(self._parse_rss, resp.text)
             logger.debug(f"Vietstock {feed_name}: {len(items)} items")
             return (feed_name, items, True)
         except Exception as e:

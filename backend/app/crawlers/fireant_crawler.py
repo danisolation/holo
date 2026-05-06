@@ -161,7 +161,7 @@ class FireantCrawler:
         resp = await client.get(self.API_URL, params=params)
         resp.raise_for_status()
 
-        return self._parse_posts(resp.json())
+        return await asyncio.to_thread(self._parse_posts, resp.json())
 
     async def _fetch_posts(
         self, client: httpx.AsyncClient, symbol: str

@@ -7,6 +7,7 @@ in the rumors table alongside Fireant/F319 data.
 VnExpress is Vietnam's largest news site — their business feed
 covers chứng khoán, tài chính, doanh nghiệp.
 """
+import asyncio
 import hashlib
 import html
 import re
@@ -94,7 +95,7 @@ class VnExpressCrawler:
             logger.error(f"VnExpress RSS fetch failed: {e}")
             return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["RSS"]}
 
-        items = self._parse_rss(rss_xml)
+        items = await asyncio.to_thread(self._parse_rss, rss_xml)
         logger.debug(f"VnExpress: parsed {len(items)} RSS items")
 
         rows_to_insert: list[dict] = []

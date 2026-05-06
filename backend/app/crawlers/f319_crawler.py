@@ -6,6 +6,7 @@ via regex, and stores relevant posts in the rumors table.
 F319 is Vietnam's largest stock forum (34k+ pages, 1800+ concurrent users).
 RSS feed: https://f319.com/forums/thi-truong-chung-khoan.3/index.rss
 """
+import asyncio
 import hashlib
 import html
 import re
@@ -89,7 +90,7 @@ class F319Crawler:
             return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["RSS"]}
 
         # Parse RSS items
-        items = self._parse_rss(rss_xml)
+        items = await asyncio.to_thread(self._parse_rss, rss_xml)
         logger.debug(f"F319: parsed {len(items)} RSS items")
 
         # Extract ticker mentions and store via bulk insert

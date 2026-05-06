@@ -90,86 +90,76 @@ class FinancialService:
 
         vnstock finance.ratio() returns a MultiIndex DataFrame.
         We flatten it and extract the key metrics per period.
-        Uses INSERT ... ON CONFLICT (ticker_id, period) DO UPDATE.
+        Uses bulk INSERT ... ON CONFLICT (ticker_id, period) DO UPDATE.
         """
-        rows_stored = 0
-
         # finance.ratio() may return MultiIndex or flat DataFrame depending on version
-        # Reset index to get flat columns
         if isinstance(df.columns, pd.MultiIndex):
-            df = df.T  # Transpose if MultiIndex columns represent periods
+            df = df.T
             df = df.reset_index()
 
         if isinstance(df.index, pd.MultiIndex):
             df = df.reset_index()
 
-        # Try to iterate over periods in the DataFrame
-        # The exact structure depends on vnstock version; handle gracefully
+        rows = []
         for idx, row in df.iterrows():
             try:
                 year_val = self._safe_int(row.get("year", row.get("Year", None)))
                 quarter_val = self._safe_int(row.get("quarter", row.get("Quarter", None)))
 
                 if year_val is None:
-                    continue  # Skip rows without year info
+                    continue
 
                 if quarter_val is not None:
                     period_str = f"Q{quarter_val}-{year_val}"
                 else:
                     period_str = f"Y-{year_val}"
 
-                stmt = insert(Financial).values(
-                    ticker_id=ticker_id,
-                    period=period_str,
-                    year=year_val,
-                    quarter=quarter_val,
-                    pe=self._safe_decimal(row.get("pe", row.get("PE", None))),
-                    pb=self._safe_decimal(row.get("pb", row.get("PB", None))),
-                    eps=self._safe_decimal(row.get("eps", row.get("EPS", None))),
-                    roe=self._safe_decimal(row.get("roe", row.get("ROE", None))),
-                    roa=self._safe_decimal(row.get("roa", row.get("ROA", None))),
-                    revenue_growth=self._safe_decimal(
+                rows.append({
+                    "ticker_id": ticker_id,
+                    "period": period_str,
+                    "year": year_val,
+                    "quarter": quarter_val,
+                    "pe": self._safe_decimal(row.get("pe", row.get("PE", None))),
+                    "pb": self._safe_decimal(row.get("pb", row.get("PB", None))),
+                    "eps": self._safe_decimal(row.get("eps", row.get("EPS", None))),
+                    "roe": self._safe_decimal(row.get("roe", row.get("ROE", None))),
+                    "roa": self._safe_decimal(row.get("roa", row.get("ROA", None))),
+                    "revenue_growth": self._safe_decimal(
                         row.get("revenue_growth", row.get("revenueGrowth", None))
                     ),
-                    profit_growth=self._safe_decimal(
+                    "profit_growth": self._safe_decimal(
                         row.get("profit_growth", row.get("netProfitGrowth", None))
                     ),
-                    current_ratio=self._safe_decimal(
+                    "current_ratio": self._safe_decimal(
                         row.get("current_ratio", row.get("currentRatio", None))
                     ),
-                    debt_to_equity=self._safe_decimal(
+                    "debt_to_equity": self._safe_decimal(
                         row.get("debt_to_equity", row.get("debtToEquity", None))
                     ),
-                ).on_conflict_do_update(
-                    constraint="uq_financials_ticker_period",
-                    set_={
-                        "pe": self._safe_decimal(row.get("pe", row.get("PE", None))),
-                        "pb": self._safe_decimal(row.get("pb", row.get("PB", None))),
-                        "eps": self._safe_decimal(row.get("eps", row.get("EPS", None))),
-                        "roe": self._safe_decimal(row.get("roe", row.get("ROE", None))),
-                        "roa": self._safe_decimal(row.get("roa", row.get("ROA", None))),
-                        "revenue_growth": self._safe_decimal(
-                            row.get("revenue_growth", row.get("revenueGrowth", None))
-                        ),
-                        "profit_growth": self._safe_decimal(
-                            row.get("profit_growth", row.get("netProfitGrowth", None))
-                        ),
-                        "current_ratio": self._safe_decimal(
-                            row.get("current_ratio", row.get("currentRatio", None))
-                        ),
-                        "debt_to_equity": self._safe_decimal(
-                            row.get("debt_to_equity", row.get("debtToEquity", None))
-                        ),
-                    },
-                )
-                await self.session.execute(stmt)
-                rows_stored += 1
-
+                })
             except Exception as e:
-                logger.warning(f"{symbol} period {idx}: Failed to store — {e}")
+                logger.warning(f"{symbol} period {idx}: Failed to parse — {e}")
                 continue
 
-        return rows_stored
+        if not rows:
+            return 0
+
+        stmt = insert(Financial).values(rows).on_conflict_do_update(
+            constraint="uq_financials_ticker_period",
+            set_={
+                "pe": insert(Financial).excluded.pe,
+                "pb": insert(Financial).excluded.pb,
+                "eps": insert(Financial).excluded.eps,
+                "roe": insert(Financial).excluded.roe,
+                "roa": insert(Financial).excluded.roa,
+                "revenue_growth": insert(Financial).excluded.revenue_growth,
+                "profit_growth": insert(Financial).excluded.profit_growth,
+                "current_ratio": insert(Financial).excluded.current_ratio,
+                "debt_to_equity": insert(Financial).excluded.debt_to_equity,
+            },
+        )
+        await self.session.execute(stmt)
+        return len(rows)
 
     @staticmethod
     def _safe_decimal(value) -> Decimal | None:
