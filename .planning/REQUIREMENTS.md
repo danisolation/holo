@@ -1,63 +1,56 @@
-# Requirements: Holo v15.0 Performance Optimization
+# Requirements: Holo v16.0 Real-Time Price
 
 **Defined:** 2026-05-06
 **Core Value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment + tin đồn) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
 
-## v15.0 Requirements
+## v16.0 Requirements
 
-### Database Performance
+### WebSocket Data
 
-- [x] **DB-IDX-01**: Composite indexes trên 7 hot tables (daily_prices, technical_indicators, ai_analyses, daily_picks, weekly_reviews, job_executions, community_posts) cho các query patterns phổ biến
-- [x] **DB-N1-01**: Rumor watchlist summary sử dụng batch aggregate query thay vì per-ticker queries
-- [x] **DB-N1-02**: AI context builder batch-fetch data per dimension thay vì sequential per-ticker queries
-- [x] **DB-PAGE-01**: List endpoints (watchlist, rumor, analysis) có pagination với stable ordering
-- [x] **DB-POOL-01**: DB connection pool tuned (pool_size, max_overflow, pool_recycle) cho concurrent jobs + API traffic
+- [ ] **WS-01**: System connects to VNDirect WebSocket and receives Stock Price (SP) messages
+- [ ] **WS-02**: System parses Bid/Ask (BA) messages for watchlist tickers
+- [ ] **WS-03**: System auto-reconnects with exponential backoff on disconnect
+- [ ] **WS-04**: System only operates during market hours (9:00-11:30, 13:00-14:45 UTC+7)
 
-### API Caching
+### Backend Broadcasting
 
-- [x] **CACHE-01**: TTLCache cho expensive read endpoints (sectors, discovery, goals, analysis summary, rumor summary)
-- [x] **CACHE-02**: Dashboard computed payloads cached (latest prices, SMA deltas, volume stats)
+- [ ] **BC-01**: Backend WebSocket server broadcasts real-time prices to connected frontend clients
+- [ ] **BC-02**: New clients receive latest snapshot of all subscribed tickers on connect
+- [ ] **BC-03**: Subscription filtered to watchlist tickers only
 
-### Crawler Efficiency
+### Frontend Display
 
-- [x] **CRAWL-01**: Crawler fetch phase chạy parallel với bounded concurrency (asyncio.Semaphore)
-- [x] **CRAWL-02**: Bulk multi-row INSERT ON CONFLICT cho rumor/news crawlers thay vì single-row inserts
-- [x] **CRAWL-03**: Centralized ticker map lookup — reuse per job run, không query lại mỗi crawler
-
-### General Performance
-
-- [x] **PERF-01**: CPU-heavy parsing (BeautifulSoup, DataFrame iterrows) chạy trong asyncio.to_thread()
-- [x] **PERF-02**: Financial service sử dụng bulk upsert thay vì row-by-row
+- [ ] **FE-01**: Dashboard shows real-time price with flash animation (green up / red down)
+- [ ] **FE-02**: Live candlestick chart updates intraday bar in real-time
+- [ ] **FE-03**: Bid/Ask depth displayed on ticker detail page
 
 ## Future Requirements
 
-None — performance optimization is self-contained.
+None identified.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Redis caching | Overkill for single-user — TTLCache in-memory đủ |
-| Read replicas | Single PostgreSQL instance đủ cho personal use |
-| CDN/Edge caching | Frontend assets already served by Vercel |
-| Query materialized views | Premature — indexes + caching giải quyết trước |
+| Full order book | VNDirect WS only provides top 3 bid/ask levels |
+| Price alerts via WebSocket | Existing APScheduler polling alerts sufficient |
+| Historical tick data storage | OHLCV daily data already covers analysis needs |
+| Multi-exchange real-time | Focus HOSE only — HNX/UPCOM volume too low |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-IDX-01 | Phase 71 | Complete |
-| DB-N1-01 | Phase 72 | Complete |
-| DB-N1-02 | Phase 72 | Complete |
-| DB-PAGE-01 | Phase 72 | Complete |
-| DB-POOL-01 | Phase 71 | Complete |
-| CACHE-01 | Phase 73 | Complete |
-| CACHE-02 | Phase 73 | Complete |
-| CRAWL-01 | Phase 74 | Complete |
-| CRAWL-02 | Phase 74 | Complete |
-| CRAWL-03 | Phase 74 | Complete |
-| PERF-01 | Phase 75 | Complete |
-| PERF-02 | Phase 75 | Complete |
+| WS-01 | Phase 76 | Pending |
+| WS-02 | Phase 76 | Pending |
+| WS-03 | Phase 76 | Pending |
+| WS-04 | Phase 76 | Pending |
+| BC-01 | Phase 77 | Pending |
+| BC-02 | Phase 77 | Pending |
+| BC-03 | Phase 77 | Pending |
+| FE-01 | Phase 78 | Pending |
+| FE-02 | Phase 78 | Pending |
+| FE-03 | Phase 79 | Pending |
 
 **Coverage:**
 - v15.0 requirements: 12 total

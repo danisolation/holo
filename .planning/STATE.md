@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v15.0
-milestone_name: Performance Optimization
-status: complete
-stopped_at: All 5 phases complete
-last_updated: "2026-05-06T12:30:00.000Z"
-last_activity: 2026-05-06 — v15.0 milestone complete (Phases 71-75)
+milestone: v16.0
+milestone_name: Real-Time Price
+status: in_progress
+stopped_at: Milestone initialized, awaiting roadmap
+last_updated: "2026-05-06T14:00:00.000Z"
+last_activity: 2026-05-06 — v16.0 milestone created
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v15.0 Performance Optimization — COMPLETE
+**Current focus:** v16.0 Real-Time Price — VNDirect WebSocket integration
 
 ## Current Position
 
-Phase: 75 (Async Patterns & Bulk Operations) — complete
+Phase: — (awaiting roadmap)
 Plan: —
-Status: All 5 phases complete
-Last activity: 2026-05-06 — v15.0 milestone complete
+Status: Milestone initialized
+Last activity: 2026-05-06 — v16.0 milestone created
 
 ```
-v15.0 Progress: [████████████████████] 5/5 phases (100%)
+v16.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/? phases (0%)
 ```
 
 ## Shipped Milestones

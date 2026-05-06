@@ -21,7 +21,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v12.0 Rumor Intelligence** — Phases 60-63 (shipped 2026-05-05)
 - ✅ **v13.0 AI Context & Accuracy** — Phases 64-67 (shipped 2026-05-05)
 - ✅ **v14.0 Multi-Source Rumor & Quota Fix** — Phases 68-70 (shipped 2026-05-06)
-- 🔄 **v15.0 Performance Optimization** — Phases 71-75
+- ✅ **v15.0 Performance Optimization** — Phases 71-75 (shipped 2026-05-06)
+- 🔄 **v16.0 Real-Time Price** — Phases 76-79
 
 ## Phases
 
@@ -289,12 +290,58 @@ Plans:
   3. No async event loop blocking warnings appear in logs during crawler or financial data processing
 **Plans**: TBD
 
+</details>
+
+### v16.0: Real-Time Price (Phases 76-79)
+
+### Phase 76: VNDirect WebSocket Client
+**Goal**: Connect to VNDirect WebSocket, parse SP/BA messages, manage lifecycle with auto-reconnect
+**Requirements**: WS-01, WS-02, WS-03, WS-04
+**Success Criteria** (what must be TRUE):
+  1. WebSocket client connects to `wss://price-cmc-04.vndirect.com.vn/realtime/websocket` and receives SP messages
+  2. BA (Bid/Ask) messages are parsed into structured data for subscribed tickers
+  3. Client auto-reconnects with exponential backoff (1s, 2s, 4s, 8s... max 60s) on disconnect
+  4. Client only connects during market hours (9:00-11:30, 13:00-14:45 UTC+7) and sleeps outside
+  5. Unit tests verify message parsing for SP and BA message types
+**Plans**: TBD
+
+### Phase 77: Backend WebSocket Broadcasting
+**Goal**: Backend server broadcasts real-time price updates to connected frontend clients
+**Depends on**: Phase 76
+**Requirements**: BC-01, BC-02, BC-03
+**Success Criteria** (what must be TRUE):
+  1. FastAPI WebSocket endpoint accepts frontend connections and pushes price updates
+  2. New clients receive latest price snapshot for all subscribed tickers immediately on connect
+  3. Subscription is filtered to user's watchlist tickers only (no wasted bandwidth)
+  4. Multiple concurrent frontend clients can connect and receive updates independently
+**Plans**: TBD
+
+### Phase 78: Frontend Real-Time Price Display
+**Goal**: Dashboard shows live price updates with visual feedback
+**Depends on**: Phase 77
+**Requirements**: FE-01, FE-02
+**Success Criteria** (what must be TRUE):
+  1. Watchlist prices update in real-time without page refresh during market hours
+  2. Price changes show flash animation (green for up, red for down) lasting ~1 second
+  3. Candlestick chart on ticker page updates the current intraday bar in real-time
+  4. Price display gracefully falls back to last known price when WebSocket disconnects
+**Plans**: TBD
+
+### Phase 79: Bid/Ask Depth Display
+**Goal**: Show bid/ask depth data on ticker detail page
+**Depends on**: Phase 77
+**Requirements**: FE-03
+**Success Criteria** (what must be TRUE):
+  1. Ticker detail page shows top 3 bid/ask levels with volume
+  2. Bid/Ask display updates in real-time during market hours
+  3. Visual indicator shows spread between best bid and best ask
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 71. Database Indexes & Pool Tuning | 1/1 | Complete   | 2026-05-06 |
-| 72. N+1 Query Fixes & Pagination | 2/2 | Complete   | 2026-05-06 |
-| 73. API Response Caching | 1/1 | Complete   | 2026-05-06 |
-| 74. Crawler Efficiency | 0/? | Not started | - |
-| 75. Async Patterns & Bulk Operations | 0/? | Not started | - |
+| 76. VNDirect WebSocket Client | 0/? | Not started | - |
+| 77. Backend WebSocket Broadcasting | 0/? | Not started | - |
+| 78. Frontend Real-Time Price Display | 0/? | Not started | - |
+| 79. Bid/Ask Depth Display | 0/? | Not started | - |
