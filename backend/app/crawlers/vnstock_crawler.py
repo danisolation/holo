@@ -9,7 +9,29 @@ of the Vnstock().stock() factory because VCI's Company API changed and
 the factory's Company init now fails with KeyError: 'data'.
 """
 import asyncio
+import os
+import ssl
 import pandas as pd
+
+# Workaround: VietCap uses a self-signed cert in their chain.
+# Disable SSL verification for vnstock HTTP calls.
+os.environ.setdefault("CURL_CA_BUNDLE", "")
+os.environ.setdefault("REQUESTS_CA_BUNDLE", "")
+
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Monkey-patch requests Session to skip SSL verify for VietCap
+import requests
+_original_send = requests.Session.send
+
+def _patched_send(self, request, **kwargs):
+    if "vietcap.com.vn" in (request.url or ""):
+        kwargs["verify"] = False
+    return _original_send(self, request, **kwargs)
+
+requests.Session.send = _patched_send
+
 from vnstock.explorer.vci.listing import Listing
 from vnstock.explorer.vci.quote import Quote
 from vnstock.explorer.vci.financial import Finance

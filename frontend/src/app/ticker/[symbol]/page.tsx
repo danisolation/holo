@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -8,6 +8,8 @@ import {
   StarOff,
   BarChart3,
   RefreshCw,
+  Brain,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -143,6 +145,33 @@ export default function TickerDetailPage({
   // Ticker metadata
   const ticker = tickers?.find((t) => t.symbol === upperSymbol);
 
+  // On-demand AI analysis
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const handleAnalyzeNow = async () => {
+    setAnalyzing(true);
+    setAnalyzeError(null);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/analysis/${upperSymbol}/analyze-now`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `HTTP ${res.status}`);
+      }
+      // Wait a bit for background analysis to complete, then refetch
+      setTimeout(() => {
+        refetchAnalysis();
+        refetchTradingSignal();
+        setAnalyzing(false);
+      }, 15000);
+    } catch (e) {
+      setAnalyzeError(e instanceof Error ? e.message : "Lỗi không xác định");
+      setAnalyzing(false);
+    }
+  };
+
   // Real-time price
   const { prices: realtimePrices } = useRealtimePrices([upperSymbol]);
   const rtPrice = realtimePrices[upperSymbol];
@@ -189,7 +218,26 @@ export default function TickerDetailPage({
             </PriceFlashCell>
           )}
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleAnalyzeNow}
+            disabled={analyzing}
+            className="gap-1.5"
+          >
+            {analyzing ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                Đang phân tích...
+              </>
+            ) : (
+              <>
+                <Brain className="size-3.5" />
+                Phân tích AI
+              </>
+            )}
+          </Button>
           <Button
             variant={inWatchlist ? "default" : "outline"}
             size="sm"
@@ -214,6 +262,15 @@ export default function TickerDetailPage({
           </Button>
         </div>
       </div>
+
+      {/* Analyze error message */}
+      {analyzeError && (
+        <Card>
+          <CardContent className="py-3">
+            <p className="text-sm text-destructive">{analyzeError}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Candlestick Chart */}
       <section data-testid="ticker-chart">

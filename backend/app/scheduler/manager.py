@@ -90,23 +90,8 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id == "morning_indicator_compute_triggered":
-        from app.scheduler.jobs import morning_ai_analysis
-        logger.info("Morning chain: morning_indicator_compute → morning_ai_analysis")
-        scheduler.add_job(
-            morning_ai_analysis,
-            id="morning_ai_analysis_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-    elif event.job_id == "morning_ai_analysis_triggered":
-        from app.scheduler.jobs import morning_trading_signal_analysis
-        logger.info("Morning chain: morning_ai_analysis → morning_trading_signal_analysis")
-        scheduler.add_job(
-            morning_trading_signal_analysis,
-            id="morning_trading_signal_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
+        # Morning AI analysis disabled — on-demand only
+        logger.info("Morning chain: morning_indicator_compute completed (AI analysis skipped — on-demand)")
     # morning_trading_signal_triggered ends chain (no pick generation in morning)
     elif event.job_id == "daily_price_crawl_hose":
         from app.scheduler.jobs import daily_indicator_compute
@@ -127,17 +112,10 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_discovery_scoring_triggered", "daily_discovery_scoring_manual"):
-        from app.scheduler.jobs import daily_ai_analysis
-        logger.info("Chaining: daily_discovery_scoring → daily_ai_analysis")
-        scheduler.add_job(
-            daily_ai_analysis,
-            id="daily_ai_analysis_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-    elif event.job_id in ("daily_ai_analysis_triggered", "daily_ai_analysis_manual"):
+        # AI analysis disabled from scheduler — now on-demand only
+        # Skip directly to news crawl
         from app.scheduler.jobs import daily_news_crawl
-        logger.info("Chaining: daily_ai_analysis → daily_news_crawl")
+        logger.info("Chaining: daily_discovery_scoring → daily_news_crawl (AI analysis skipped — on-demand)")
         scheduler.add_job(
             daily_news_crawl,
             id="daily_news_crawl_triggered",
@@ -145,37 +123,10 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_news_crawl_triggered", "daily_news_crawl_manual"):
-        from app.scheduler.jobs import daily_sentiment_analysis
-        logger.info("Chaining: daily_news_crawl → daily_sentiment_analysis")
-        scheduler.add_job(
-            daily_sentiment_analysis,
-            id="daily_sentiment_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-    elif event.job_id in ("daily_sentiment_triggered", "daily_sentiment_manual"):
-        from app.scheduler.jobs import daily_combined_analysis
-        logger.info("Chaining: daily_sentiment → daily_combined_analysis")
-        scheduler.add_job(
-            daily_combined_analysis,
-            id="daily_combined_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-    elif event.job_id in ("daily_combined_triggered", "daily_combined_manual"):
-        # Phase 19: Chain to trading signal analysis (NOT directly to alerts)
-        from app.scheduler.jobs import daily_trading_signal_analysis
-        logger.info("Chaining: daily_combined → daily_trading_signal_analysis")
-        scheduler.add_job(
-            daily_trading_signal_analysis,
-            id="daily_trading_signal_triggered",
-            replace_existing=True,
-            misfire_grace_time=3600,
-        )
-    elif event.job_id in ("daily_trading_signal_triggered",):
-        # Phase 63: Chain to rumor crawl (rumor → scoring → pick_generation)
+        # Sentiment/combined/trading_signal AI analysis disabled from scheduler — on-demand only
+        # Skip directly to rumor crawl
         from app.scheduler.jobs import daily_rumor_crawl
-        logger.info("Chaining: daily_trading_signal → daily_rumor_crawl")
+        logger.info("Chaining: daily_news_crawl → daily_rumor_crawl (AI analysis skipped — on-demand)")
         scheduler.add_job(
             daily_rumor_crawl,
             id="daily_rumor_crawl_triggered",

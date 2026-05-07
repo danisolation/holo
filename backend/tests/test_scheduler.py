@@ -262,7 +262,7 @@ class TestPhase3Chaining:
     """Tests for Phase 3 job chaining: AI → news → sentiment → combined."""
 
     def test_on_job_executed_chains_news_after_ai(self):
-        """Successful daily_ai_analysis must trigger daily_news_crawl."""
+        """daily_ai_analysis no longer exists in chain — event is ignored."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
@@ -271,13 +271,10 @@ class TestPhase3Chaining:
 
         with patch.object(scheduler, "add_job") as mock_add:
             _on_job_executed(mock_event)
-            mock_add.assert_called_once()
-            call_kwargs = mock_add.call_args
-            assert call_kwargs.kwargs.get("id") == "daily_news_crawl_triggered" or \
-                   call_kwargs[1].get("id") == "daily_news_crawl_triggered"
+            mock_add.assert_not_called()
 
-    def test_on_job_executed_chains_sentiment_after_news(self):
-        """Successful daily_news_crawl must trigger daily_sentiment_analysis."""
+    def test_on_job_executed_chains_rumor_after_news(self):
+        """Successful daily_news_crawl must trigger daily_rumor_crawl (AI skipped)."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
@@ -288,38 +285,11 @@ class TestPhase3Chaining:
             _on_job_executed(mock_event)
             mock_add.assert_called_once()
             call_kwargs = mock_add.call_args
-            assert call_kwargs.kwargs.get("id") == "daily_sentiment_triggered" or \
-                   call_kwargs[1].get("id") == "daily_sentiment_triggered"
-
-    def test_on_job_executed_chains_combined_after_sentiment(self):
-        """Successful daily_sentiment must trigger daily_combined_analysis."""
-        from app.scheduler.manager import _on_job_executed, scheduler
-
-        mock_event = MagicMock()
-        mock_event.job_id = "daily_sentiment_triggered"
-        mock_event.exception = None
-
-        with patch.object(scheduler, "add_job") as mock_add:
-            _on_job_executed(mock_event)
-            mock_add.assert_called_once()
-            call_kwargs = mock_add.call_args
-            assert call_kwargs.kwargs.get("id") == "daily_combined_triggered" or \
-                   call_kwargs[1].get("id") == "daily_combined_triggered"
-
-    def test_on_job_executed_manual_ai_also_chains_news(self):
-        """Manual daily_ai_analysis must also chain to news crawl."""
-        from app.scheduler.manager import _on_job_executed, scheduler
-
-        mock_event = MagicMock()
-        mock_event.job_id = "daily_ai_analysis_manual"
-        mock_event.exception = None
-
-        with patch.object(scheduler, "add_job") as mock_add:
-            _on_job_executed(mock_event)
-            mock_add.assert_called_once()
+            assert call_kwargs.kwargs.get("id") == "daily_rumor_crawl_triggered" or \
+                   call_kwargs[1].get("id") == "daily_rumor_crawl_triggered"
 
     def test_on_job_executed_failed_news_does_not_chain(self):
-        """Failed news crawl must NOT trigger sentiment analysis."""
+        """Failed news crawl must NOT trigger rumor crawl."""
         from app.scheduler.manager import _on_job_executed, scheduler
 
         mock_event = MagicMock()
