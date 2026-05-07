@@ -541,6 +541,17 @@ class AIAnalysisService:
                             )
                             signal = corrected
 
+                        # Prepare extra columns for unified analysis
+                        extra_kwargs = {}
+                        if analysis_type == AnalysisType.UNIFIED and signal != "invalid":
+                            extra_kwargs = {
+                                "entry_price": analysis.entry_price,
+                                "stop_loss": analysis.stop_loss,
+                                "take_profit_1": analysis.take_profit_1,
+                                "take_profit_2": analysis.take_profit_2,
+                                "key_levels": analysis.key_levels,
+                            }
+
                         await self.storage.store_analysis(
                             ticker_id=tid,
                             analysis_type=analysis_type,
@@ -549,6 +560,7 @@ class AIAnalysisService:
                             score=score,
                             reasoning=reasoning,
                             raw_response=analysis.model_dump(),
+                            **extra_kwargs,
                         )
                         success += 1
 

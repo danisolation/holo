@@ -6,7 +6,7 @@ analysis_type enum accommodates Phase 3 sentiment.
 import enum
 from datetime import date, datetime
 
-from sqlalchemy import Integer, BigInteger, String, Text, Date, ForeignKey, UniqueConstraint
+from sqlalchemy import Integer, BigInteger, String, Text, Date, ForeignKey, UniqueConstraint, Numeric
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -50,6 +50,12 @@ class AIAnalysis(Base):
     reasoning: Mapped[str] = mapped_column(Text, nullable=False)
     model_version: Mapped[str] = mapped_column(String(50), nullable=False)
     raw_response: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Phase 89 / v19.0: Unified analysis trading plan columns
+    entry_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    stop_loss: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    take_profit_1: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    take_profit_2: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    key_levels: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )
