@@ -84,9 +84,9 @@ class Settings(BaseSettings):
     realtime_max_symbols: int = 50  # max symbols per poll request
     realtime_priority_exchanges: list[str] = ["HOSE", "HNX", "UPCOM"]  # exchange priority for symbol selection
 
-    # VNDirect WebSocket (Phase 76)
+    # VNDirect WebSocket (Phase 76) — domain decommissioned, disabled
     vndirect_ws_url: str = "wss://price-cmc-04.vndirect.com.vn/realtime/websocket"
-    vndirect_ws_enabled: bool = True  # True = use VNDirect WS; False = fallback to VCI polling
+    vndirect_ws_enabled: bool = False  # Domain no longer resolves; use VCI polling instead
 
     # Telegram Channel Monitor (Phase 83)
     telegram_api_id: int = 0
