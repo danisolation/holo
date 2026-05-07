@@ -886,7 +886,7 @@ class ContextBuilder:
             context["latest_volume"] = volumes[0]
             if avg_vol > 0:
                 context["relative_volume"] = round(volumes[0] / avg_vol, 2)
-            if len(volumes) >= 10:
+            if len(volumes) > 10:
                 recent_avg = sum(volumes[:10]) / 10
                 older_avg = sum(volumes[10:]) / len(volumes[10:])
                 if older_avg > 0:
