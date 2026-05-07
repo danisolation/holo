@@ -562,6 +562,64 @@ async def daily_trading_signal_analysis():
             raise
 
 
+async def daily_unified_analysis():
+    """Run Gemini unified analysis with DLQ.
+
+    Phase 88 / v19.0: Single prompt combining all dimensions → one output.
+    Triggered on-demand or via scheduler chain.
+    Requires GEMINI_API_KEY to be set.
+    """
+    logger.info("=== DAILY UNIFIED ANALYSIS START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_unified_analysis")
+        try:
+            # Watchlist gating
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping daily unified analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Watchlist gating: unified analysis for {len(ticker_filter)} tickers")
+
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            results = await service.run_unified_analysis(ticker_filter=ticker_filter)
+
+            result = _sum_ai_results({"unified": results})
+            final_failed = result.get("failed_symbols", [])
+
+            # DLQ for failed tickers
+            if final_failed:
+                from app.services.dlq_service import DLQService
+                dlq = DLQService(session)
+                await dlq.enqueue_batch(
+                    job_type="daily_unified_analysis",
+                    symbols=final_failed,
+                    error="Gemini unified analysis failed",
+                )
+
+            await job_svc.complete(execution, result_summary=result)
+            await session.commit()
+            logger.info(f"=== DAILY UNIFIED ANALYSIS DONE: {result} ===")
+        except ValueError as e:
+            await job_svc.complete(
+                execution, status="skipped",
+                result_summary={"reason": str(e)},
+            )
+            await session.commit()
+            logger.warning(f"=== DAILY UNIFIED ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY UNIFIED ANALYSIS FAILED: {e} ===")
+            raise
+
 
 
 async def daily_pick_generation():

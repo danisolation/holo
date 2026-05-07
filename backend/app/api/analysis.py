@@ -110,8 +110,8 @@ async def trigger_ai_analysis(
     Args:
         analysis_type: 'technical', 'fundamental', or 'both' (default)
     """
-    if analysis_type not in ("technical", "fundamental", "both"):
-        raise HTTPException(status_code=400, detail="analysis_type must be 'technical', 'fundamental', or 'both'")
+    if analysis_type not in ("technical", "fundamental", "both", "sentiment", "combined", "trading_signal", "unified", "all"):
+        raise HTTPException(status_code=400, detail="analysis_type must be 'technical', 'fundamental', 'sentiment', 'combined', 'trading_signal', 'unified', 'both', or 'all'")
 
     async def _run():
         async with async_session() as session:
@@ -206,6 +206,30 @@ async def trigger_trading_signal_analysis(background_tasks: BackgroundTasks):
     background_tasks.add_task(_run)
     return AnalysisTriggerResponse(
         message="Trading signal analysis triggered in background",
+        triggered=True,
+    )
+
+
+@router.post("/trigger/unified", response_model=AnalysisTriggerResponse)
+async def trigger_unified_analysis(background_tasks: BackgroundTasks):
+    """Manually trigger unified analysis for all tickers (runs in background).
+
+    Phase 88 / v19.0: Single prompt combining all dimensions → one coherent output
+    with signal + entry/SL/TP + key_levels + reasoning.
+    """
+    async def _run():
+        async with async_session() as session:
+            from app.services.ai_analysis_service import AIAnalysisService
+            try:
+                service = AIAnalysisService(session)
+                result = await service.run_unified_analysis()
+                logger.info(f"Manual unified analysis complete: {result}")
+            except ValueError as e:
+                logger.error(f"Unified analysis failed: {e}")
+
+    background_tasks.add_task(_run)
+    return AnalysisTriggerResponse(
+        message="Unified analysis triggered in background",
         triggered=True,
     )
 
@@ -369,6 +393,30 @@ async def get_trading_signal(symbol: str):
             reasoning=analysis.reasoning,
             model_version=analysis.model_version,
             raw_response=analysis.raw_response,  # Phase 20: expose full TickerTradingSignal JSONB
+        )
+
+
+@router.get("/{symbol}/unified", response_model=AnalysisResultResponse)
+async def get_unified_analysis(symbol: str):
+    """Get latest unified AI analysis for a ticker.
+
+    Phase 88 / v19.0: Returns single-prompt analysis with signal + trading plan.
+    raw_response contains full TickerUnifiedAnalysis data.
+    DB columns entry_price, stop_loss, take_profit_1, take_profit_2, key_levels
+    are also available in the raw_response JSONB.
+    """
+    async with async_session() as session:
+        ticker = await _get_ticker_by_symbol(session, symbol)
+        analysis = await _get_latest_analysis(session, ticker.id, AnalysisType.UNIFIED)
+        return AnalysisResultResponse(
+            ticker_symbol=symbol.upper(),
+            analysis_type="unified",
+            analysis_date=analysis.analysis_date.isoformat(),
+            signal=analysis.signal,
+            score=analysis.score,
+            reasoning=analysis.reasoning,
+            model_version=analysis.model_version,
+            raw_response=analysis.raw_response,
         )
 
 

@@ -262,3 +262,4 @@ class SummaryResponse(BaseModel):
     sentiment: AnalysisResultResponse | None = None
     combined: AnalysisResultResponse | None = None
     trading_signal: AnalysisResultResponse | None = None  # Phase 19
+    unified: AnalysisResultResponse | None = None  # Phase 88 / v19.0

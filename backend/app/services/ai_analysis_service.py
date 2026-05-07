@@ -372,6 +372,7 @@ class AIAnalysisService:
                 ("sentiment", self.run_sentiment_analysis),
                 ("combined", self.run_combined_analysis),
                 ("trading_signal", self.run_trading_signal_analysis),  # Phase 19
+                ("unified", self.run_unified_analysis),  # Phase 88 / v19.0
             ]:
                 try:
                     results[analysis_type] = await runner(ticker_filter=ticker_filter)

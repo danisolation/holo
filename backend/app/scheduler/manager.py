@@ -39,6 +39,8 @@ _JOB_NAMES = {
     "daily_rumor_crawl_manual": "Daily Rumor Crawl",
     "daily_rumor_scoring_triggered": "Daily Rumor Scoring",
     "daily_rumor_scoring_manual": "Daily Rumor Scoring",
+    "daily_unified_analysis_triggered": "Daily Unified Analysis",
+    "daily_unified_analysis_manual": "Daily Unified Analysis",
     "daily_pick_generation_triggered": "Daily Pick Generation",
     "daily_pick_generation_manual": "Daily Pick Generation",
     "daily_pick_outcome_check_triggered": "Daily Pick Outcome Check",
@@ -144,9 +146,19 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_rumor_scoring_triggered", "daily_rumor_scoring_manual"):
-        # Phase 63: Chain rumor scoring → pick generation
+        # Phase 88 / v19.0: Chain rumor scoring → unified analysis
+        from app.scheduler.jobs import daily_unified_analysis
+        logger.info("Chaining: daily_rumor_scoring → daily_unified_analysis")
+        scheduler.add_job(
+            daily_unified_analysis,
+            id="daily_unified_analysis_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_unified_analysis_triggered", "daily_unified_analysis_manual"):
+        # Phase 88 / v19.0: Chain unified analysis → pick generation
         from app.scheduler.jobs import daily_pick_generation
-        logger.info("Chaining: daily_rumor_scoring → daily_pick_generation")
+        logger.info("Chaining: daily_unified_analysis → daily_pick_generation")
         scheduler.add_job(
             daily_pick_generation,
             id="daily_pick_generation_triggered",
