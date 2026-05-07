@@ -25,6 +25,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v16.0 Real-Time Price** — Phases 76-79 (shipped 2026-05-06)
 - ✅ **v17.0 AI Consistency & UX** — Phases 80-82 (shipped)
 - ✅ **v18.0 Multi-Source Community Rumors** — Phases 84-87 (shipped 2026-05-07)
+- 🚧 **v19.0 Unified AI Analysis Pipeline** — Phases 88-91
 
 ## Phases
 
@@ -458,3 +459,57 @@ Plans:
   3. Frontend displays mixed-source rumors correctly with proper tagging
   4. Graceful degradation: if one source fails, others continue working
 **Plans**: TBD
+
+---
+
+### v19.0 Unified AI Analysis Pipeline
+
+- [ ] **Phase 88: Unified AI Prompt & Service** — New unified prompt + service replacing 5 separate analysis types
+- [ ] **Phase 89: DB Migration & Code Cleanup** — Schema changes, delete old code, migrate data
+- [ ] **Phase 90: API & Scheduler Refactor** — Unified endpoints + single scheduler job
+- [ ] **Phase 91: Frontend Ticker Redesign** — Single analysis panel replacing multi-tab layout
+
+### Phase 88: Unified AI Prompt & Service
+**Goal**: Create single Gemini prompt that receives ALL data (indicators, financials, news, rumors) and outputs one coherent analysis with signal + entry/SL/TP
+**Depends on**: None
+**Requirements**: UNIFY-01, PROMPT-01, PROMPT-02
+**Success Criteria** (what must be TRUE):
+  1. Single prompt template includes: technical indicators, fundamental data, news sentiment, rumor scores
+  2. Response schema: signal (mua/bán/giữ), score (1-10), entry_price, stop_loss, take_profit_1, take_profit_2, key_levels, reasoning
+  3. Output validation passes: entry ±5% current price, SL ≤3×ATR, TP ≤5×ATR
+  4. Running for 3+ tickers produces coherent, non-contradictory results
+**Plans**: TBD
+
+### Phase 89: DB Migration & Code Cleanup
+**Goal**: Clean up database schema and remove old analysis code
+**Depends on**: Phase 88
+**Requirements**: CLEAN-01, CLEAN-02, UNIFY-02
+**Success Criteria** (what must be TRUE):
+  1. ai_analyses table has new columns: entry_price, stop_loss, take_profit_1, take_profit_2, key_levels
+  2. Old analysis types (technical, fundamental, sentiment, combined, trading_signal) removed from code
+  3. Old data cleaned from DB (or marked deprecated)
+  4. Only 'unified' analysis_type exists in new records
+**Plans**: TBD
+
+### Phase 90: API & Scheduler Refactor
+**Goal**: Single scheduler job and unified API endpoints
+**Depends on**: Phase 89
+**Requirements**: UNIFY-03, UNIFY-04
+**Success Criteria** (what must be TRUE):
+  1. Single `daily_unified_analysis` job replaces 5 separate analysis jobs
+  2. API endpoint `/api/tickers/{id}/analysis` returns unified result
+  3. Watchlist endpoint returns unified signal for each ticker
+  4. No references to old analysis types in scheduler or API layer
+**Plans**: TBD
+
+### Phase 91: Frontend Ticker Redesign
+**Goal**: Single analysis panel on ticker page replacing multi-tab layout
+**Depends on**: Phase 90
+**Requirements**: FE-01, FE-02, FE-03
+**Success Criteria** (what must be TRUE):
+  1. Ticker detail page shows 1 unified analysis panel (no tabs for Technical/Fundamental/etc)
+  2. Panel displays: signal badge (mua/bán/giữ), score, entry/SL/TP prices, key levels, full reasoning
+  3. Market overview cards show unified signal + score
+  4. Watchlist items show unified signal badge
+**Plans**: TBD
+**UI hint**: yes

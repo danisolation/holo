@@ -42,14 +42,14 @@ None deferred.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| UNIFY-01 | TBD | Pending |
-| UNIFY-02 | TBD | Pending |
-| UNIFY-03 | TBD | Pending |
-| UNIFY-04 | TBD | Pending |
-| CLEAN-01 | TBD | Pending |
-| CLEAN-02 | TBD | Pending |
-| FE-01 | TBD | Pending |
-| FE-02 | TBD | Pending |
-| FE-03 | TBD | Pending |
-| PROMPT-01 | TBD | Pending |
-| PROMPT-02 | TBD | Pending |
+| UNIFY-01 | 88 | Pending |
+| UNIFY-02 | 89 | Pending |
+| UNIFY-03 | 90 | Pending |
+| UNIFY-04 | 90 | Pending |
+| CLEAN-01 | 89 | Pending |
+| CLEAN-02 | 89 | Pending |
+| FE-01 | 91 | Pending |
+| FE-02 | 91 | Pending |
+| FE-03 | 91 | Pending |
+| PROMPT-01 | 88 | Pending |
+| PROMPT-02 | 88 | Pending |
