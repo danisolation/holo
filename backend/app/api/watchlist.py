@@ -37,12 +37,13 @@ async def _get_enriched_watchlist(
     total = count_result.scalar_one()
 
     # Subquery: latest combined analysis date per ticker
+    # Phase 91 / v19.0: Prefer UNIFIED signal, fall back to COMBINED
     latest_analysis = (
         select(
             AIAnalysis.ticker_id,
             sa_func.max(AIAnalysis.analysis_date).label("max_date"),
         )
-        .where(AIAnalysis.analysis_type == AnalysisType.COMBINED)
+        .where(AIAnalysis.analysis_type.in_([AnalysisType.UNIFIED, AnalysisType.COMBINED]))
         .group_by(AIAnalysis.ticker_id)
         .subquery()
     )
@@ -78,7 +79,7 @@ async def _get_enriched_watchlist(
             AIAnalysis,
             and_(
                 AIAnalysis.ticker_id == Ticker.id,
-                AIAnalysis.analysis_type == AnalysisType.COMBINED,
+                AIAnalysis.analysis_type.in_([AnalysisType.UNIFIED, AnalysisType.COMBINED]),
                 AIAnalysis.analysis_date == latest_analysis.c.max_date,
             ),
         )

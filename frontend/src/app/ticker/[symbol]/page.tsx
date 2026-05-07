@@ -38,12 +38,14 @@ import {
   StructuredCombinedCard,
 } from "@/components/analysis-card";
 import { TradingPlanPanel } from "@/components/trading-plan-panel";
+import { UnifiedAnalysisPanel } from "@/components/unified-analysis-panel";
 import { RumorScorePanel } from "@/components/rumor-score-panel";
 import {
   usePrices,
   useIndicators,
   useAnalysisSummary,
   useTradingSignal,
+  useUnifiedAnalysis,
   useTickerNews,
   useRumorScores,
   useTickers,
@@ -123,6 +125,12 @@ export default function TickerDetailPage({
     error: rumorsError,
     refetch: refetchRumors,
   } = useRumorScores(upperSymbol);
+  const {
+    data: unifiedData,
+    isLoading: unifiedLoading,
+    error: unifiedError,
+    refetch: refetchUnified,
+  } = useUnifiedAnalysis(upperSymbol);
 
   // Derive trading plan for chart overlay
   const tradingPlanForChart = useMemo(() => {
@@ -181,11 +189,13 @@ export default function TickerDetailPage({
           );
           if (check.ok) {
             const data = await check.json();
-            // Check if combined analysis is fresh (updated in last 2 min)
-            if (data?.combined?.analysis_date === new Date().toISOString().slice(0, 10)) {
+            // Check if unified or combined analysis is fresh (updated today)
+            if (data?.unified?.analysis_date === new Date().toISOString().slice(0, 10)
+                || data?.combined?.analysis_date === new Date().toISOString().slice(0, 10)) {
               clearInterval(poll);
               refetchAnalysis();
               refetchTradingSignal();
+              refetchUnified();
               setAnalyzing(false);
               setAnalyzeProgress("");
               return;
@@ -196,6 +206,7 @@ export default function TickerDetailPage({
           clearInterval(poll);
           refetchAnalysis();
           refetchTradingSignal();
+          refetchUnified();
           setAnalyzing(false);
           setAnalyzeProgress("");
         }
@@ -397,70 +408,82 @@ export default function TickerDetailPage({
 
       <Separator />
 
-      {/* Combined Recommendation */}
-      {analysisLoading || analyzing ? (
-        <Skeleton className="h-32 rounded-xl" />
-      ) : analysisError ? (
-        <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
-      ) : analysisSummary?.combined ? (
-        <section>
-          <StructuredCombinedCard analysis={analysisSummary.combined} />
-        </section>
-      ) : null}
-
-      {/* Trading Plan Panel — Phase 20 */}
-      {tradingSignalLoading || analyzing ? (
+      {/* Unified Analysis Panel — Phase 91 / v19.0 (primary) */}
+      {unifiedLoading || analyzing ? (
         <Skeleton className="h-[320px] rounded-xl" />
-      ) : tradingSignalError ? (
-        <SectionError error={tradingSignalError} onRetry={() => refetchTradingSignal()} />
-      ) : tradingSignal ? (
+      ) : unifiedError ? (
+        <SectionError error={unifiedError} onRetry={() => refetchUnified()} />
+      ) : unifiedData ? (
         <section>
-          <TradingPlanPanel data={tradingSignal} symbol={upperSymbol} />
+          <UnifiedAnalysisPanel data={unifiedData} symbol={upperSymbol} />
         </section>
-      ) : null}
+      ) : (
+        <>
+          {/* Fallback: old Combined + Trading Plan when unified not available */}
+          {analysisLoading || analyzing ? (
+            <Skeleton className="h-32 rounded-xl" />
+          ) : analysisError ? (
+            <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
+          ) : analysisSummary?.combined ? (
+            <section>
+              <StructuredCombinedCard analysis={analysisSummary.combined} />
+            </section>
+          ) : null}
 
-      {/* Analysis Cards Grid */}
-      <section>
-        <h2 className="text-lg font-semibold mb-3">
-          Phân tích AI đa chiều
-        </h2>
-        {analysisLoading || analyzing ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-48 rounded-xl" />
-            ))}
-          </div>
-        ) : analysisError ? (
-          <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
-        ) : analysisSummary ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {analysisSummary.technical && (
-              <AnalysisCard
-                analysis={analysisSummary.technical}
-                type="technical"
-              />
+          {tradingSignalLoading || analyzing ? (
+            <Skeleton className="h-[320px] rounded-xl" />
+          ) : tradingSignalError ? (
+            <SectionError error={tradingSignalError} onRetry={() => refetchTradingSignal()} />
+          ) : tradingSignal ? (
+            <section>
+              <TradingPlanPanel data={tradingSignal} symbol={upperSymbol} />
+            </section>
+          ) : null}
+
+          {/* Analysis Cards Grid (fallback) */}
+          <section>
+            <h2 className="text-lg font-semibold mb-3">
+              Phân tích AI đa chiều
+            </h2>
+            {analysisLoading || analyzing ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-48 rounded-xl" />
+                ))}
+              </div>
+            ) : analysisError ? (
+              <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
+            ) : analysisSummary ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {analysisSummary.technical && (
+                  <AnalysisCard
+                    analysis={analysisSummary.technical}
+                    type="technical"
+                  />
+                )}
+                {analysisSummary.fundamental && (
+                  <AnalysisCard
+                    analysis={analysisSummary.fundamental}
+                    type="fundamental"
+                  />
+                )}
+                {analysisSummary.sentiment && (
+                  <AnalysisCard
+                    analysis={analysisSummary.sentiment}
+                    type="sentiment"
+                  />
+                )}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                  Chưa có phân tích AI. Nhấn &ldquo;Phân tích ngay&rdquo; để bắt đầu.
+                </CardContent>
+              </Card>
             )}
-            {analysisSummary.fundamental && (
-              <AnalysisCard
-                analysis={analysisSummary.fundamental}
-                type="fundamental"
-              />
-            )}
-            {analysisSummary.sentiment && (
-              <AnalysisCard
-                analysis={analysisSummary.sentiment}
-                type="sentiment"
-              />
-            )}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground text-sm">
-              Chưa có phân tích AI. Nhấn &ldquo;Phân tích ngay&rdquo; để bắt đầu.
-            </CardContent>
-          </Card>
-        )}
-      </section>
+          </section>
+        </>
+      )}
 
       {/* Recent News from CafeF */}
       <section>

@@ -304,6 +304,54 @@ export async function fetchTradingSignal(
   }
 }
 
+// --- Unified Analysis (Phase 88 / v19.0) ---
+
+export interface UnifiedAnalysisData {
+  ticker_symbol: string;
+  analysis_date: string;
+  signal: string;       // "mua" | "bán" | "giữ"
+  score: number;        // 1-10
+  reasoning: string;
+  entry_price?: number;
+  stop_loss?: number;
+  take_profit_1?: number;
+  take_profit_2?: number;
+  key_levels?: string;
+  risk_reward_ratio?: number;
+  position_size_pct?: number;
+  timeframe?: string;
+}
+
+export async function fetchUnifiedAnalysis(
+  symbol: string,
+): Promise<UnifiedAnalysisData | null> {
+  try {
+    const result = await apiFetch<AnalysisResult>(
+      `/analysis/${encodeURIComponent(symbol)}/unified`,
+    );
+    // Merge top-level fields with raw_response details
+    const raw = (result.raw_response ?? {}) as Record<string, unknown>;
+    return {
+      ticker_symbol: result.ticker_symbol,
+      analysis_date: result.analysis_date,
+      signal: result.signal,
+      score: result.score,
+      reasoning: result.reasoning,
+      entry_price: raw.entry_price as number | undefined,
+      stop_loss: raw.stop_loss as number | undefined,
+      take_profit_1: raw.take_profit_1 as number | undefined,
+      take_profit_2: raw.take_profit_2 as number | undefined,
+      key_levels: raw.key_levels as string | undefined,
+      risk_reward_ratio: raw.risk_reward_ratio as number | undefined,
+      position_size_pct: raw.position_size_pct as number | undefined,
+      timeframe: raw.timeframe as string | undefined,
+    };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
+}
+
 // --- Market Overview (heatmap data) ---
 
 export interface MarketTicker {

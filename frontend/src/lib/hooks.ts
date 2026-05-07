@@ -7,6 +7,7 @@ import {
   fetchIndicators,
   fetchAnalysisSummary,
   fetchTradingSignal,
+  fetchUnifiedAnalysis,
   fetchTickerNews,
   fetchMarketOverview,
   triggerOnDemandAnalysis,
@@ -226,6 +227,16 @@ export function useTradingSignal(symbol: string | undefined) {
   return useQuery({
     queryKey: ["trading-signal", symbol],
     queryFn: () => fetchTradingSignal(symbol!),
+    enabled: !!symbol,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  });
+}
+
+export function useUnifiedAnalysis(symbol: string | undefined) {
+  return useQuery({
+    queryKey: ["unified-analysis", symbol],
+    queryFn: () => fetchUnifiedAnalysis(symbol!),
     enabled: !!symbol,
     staleTime: 60 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
