@@ -86,6 +86,7 @@ class FireantCrawler:
         async with httpx.AsyncClient(
             headers=self.headers,
             timeout=15,
+            verify=False,
         ) as client:
             tasks = [
                 self._crawl_one_ticker(client, symbol, ticker_id)
