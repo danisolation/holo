@@ -84,7 +84,7 @@ class F319Crawler:
         rss_contents: list[str] = []
         try:
             async with httpx.AsyncClient(
-                headers=self.headers, timeout=15, follow_redirects=True
+                headers=self.headers, timeout=15, follow_redirects=True, verify=False
             ) as client:
                 for url in self.RSS_URLS:
                     try:

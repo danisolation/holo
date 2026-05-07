@@ -86,7 +86,7 @@ class VnExpressCrawler:
 
         try:
             async with httpx.AsyncClient(
-                headers=self.headers, timeout=15, follow_redirects=True
+                headers=self.headers, timeout=15, follow_redirects=True, verify=False
             ) as client:
                 resp = await client.get(RSS_URL)
                 resp.raise_for_status()

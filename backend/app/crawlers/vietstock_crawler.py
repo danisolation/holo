@@ -95,7 +95,7 @@ class VietstockCrawler:
         feeds_failed = 0
 
         async with httpx.AsyncClient(
-            headers=self.headers, timeout=15, follow_redirects=True
+            headers=self.headers, timeout=15, follow_redirects=True, verify=False
         ) as client:
             feed_tasks = [
                 self._fetch_one_feed(client, name, url)

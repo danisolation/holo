@@ -42,6 +42,33 @@ from loguru import logger
 from app.config import settings
 from app.resilience import vnstock_breaker
 
+# VCI Company API is broken (KeyError: 'data'), so Finance.__init__ fails
+# when calling _get_company_type(). Monkey-patch to return com_type_code
+# based on known industry classification without calling Company API.
+_BANK_SYMBOLS = {
+    "ACB", "BID", "CTG", "EIB", "HDB", "LPB", "MBB", "MSB", "NAB",
+    "OCB", "PGB", "SHB", "SSB", "STB", "TCB", "TPB", "VAB", "VCB",
+    "VIB", "VPB", "BAB", "BVB", "KLB", "SGB", "ABB", "NVB", "VBB",
+}
+_INSURANCE_SYMBOLS = {"BVH", "BMI", "MIG", "PVI", "BIC", "PTI", "VNR", "ABI"}
+_SECURITIES_SYMBOLS = {
+    "SSI", "VCI", "HCM", "VND", "MBS", "SHS", "VDS", "BSI", "CTS",
+    "ORS", "TVS", "AGR", "APG", "APS", "BMS", "BVS", "DIG", "EVS",
+    "FTS", "HAC", "IVS", "KIS", "PSI", "TCI", "TVB", "VIG", "WSS",
+}
+
+def _patched_get_company_type(self) -> str:
+    sym = self.symbol.upper()
+    if sym in _BANK_SYMBOLS:
+        return "NH"
+    if sym in _INSURANCE_SYMBOLS:
+        return "BH"
+    if sym in _SECURITIES_SYMBOLS:
+        return "CK"
+    return "CT"
+
+Finance._get_company_type = _patched_get_company_type
+
 # VCI API uses 'HSX' for HOSE exchange
 _EXCHANGE_MAP = {"HOSE": "HSX", "HNX": "HNX", "UPCOM": "UPCOM"}
 

@@ -1,24 +1,27 @@
-"""nhadautu.vn RSS crawler for rumor intelligence.
+"""nhadautu.vn HTML crawler for rumor intelligence.
 
-Fetches articles from Nhà Đầu Tư (Investor) news RSS feed.
+Scrapes article listings from Nhà Đầu Tư (Investor) news sections.
 High-quality investment news source with direct ticker references.
 
 Phase 84: Part of multi-source rumor expansion.
 """
+import asyncio
 import hashlib
 import html
 import re
+import warnings
 from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from loguru import logger
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crawlers.types import RumorCrawlResult
 from app.models.rumor import Rumor
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 # Match 2-5 uppercase ASCII letters for ticker extraction
 TICKER_RE = re.compile(r"(?<![A-Za-z])([A-Z]{2,5})(?![A-Za-z])")
@@ -30,26 +33,26 @@ FALSE_POSITIVES = frozenset({
     "HOSE", "HNX", "UPCOM", "VNDS", "TCBS", "FPTS", "BTC",
 })
 
-RSS_URL = "https://nhadautu.vn/rss"
+# Article URL pattern: /{slug}-d{NUMERIC_ID}.html
+ARTICLE_ID_RE = re.compile(r"-d(\d+)\.html")
+
+LISTING_URLS = [
+    "https://nhadautu.vn/chung-khoan/",
+    "https://nhadautu.vn/co-phieu/",
+]
 
 
 def _guid_to_post_id(guid: str) -> int:
-    """Convert RSS GUID to unique BigInteger post_id.
+    """Convert article GUID to unique BigInteger post_id.
 
     Prefix with 7 (7 * 10^9 range) to avoid collision with other sources.
     """
-    h = hashlib.md5(guid.encode()).hexdigest()[:15]
-    return 7_000_000_000 + (int(h, 16) % 1_000_000_000)
-
-
-def _strip_html(text: str) -> str:
-    """Remove HTML tags and decode entities."""
-    soup = BeautifulSoup(text, "html.parser")
-    return html.unescape(soup.get_text(separator=" ", strip=True))
+    h = hashlib.md5(guid.encode()).hexdigest()[:12]
+    return 7_000_000_000 + int(h, 16) % 1_000_000_000
 
 
 class NhaDauTuCrawler:
-    """Crawls nhadautu.vn RSS feed for investment news."""
+    """Crawls nhadautu.vn article listings for investment news."""
 
     MIN_CONTENT_LENGTH = 20
 
@@ -64,76 +67,64 @@ class NhaDauTuCrawler:
         }
 
     async def crawl_rss(self, *, ticker_map: dict[str, int] | None = None) -> RumorCrawlResult:
-        """Fetch RSS feed, extract ticker mentions, store in rumors table."""
+        """Fetch article listings, extract ticker mentions, store in rumors table."""
         if ticker_map is None:
             logger.warning("NhaDauTu crawler: no ticker_map provided")
             return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
 
         watchlist_symbols = set(ticker_map.keys())
-        logger.info(f"Starting NhaDauTu RSS crawl (watchlist: {len(watchlist_symbols)} tickers)")
+        logger.info(f"Starting NhaDauTu HTML crawl (watchlist: {len(watchlist_symbols)} tickers)")
 
-        # Fetch RSS
+        all_articles: list[dict] = []
         try:
             async with httpx.AsyncClient(
-                headers=self.headers, timeout=15, follow_redirects=True
+                headers=self.headers, timeout=15, follow_redirects=True, verify=False
             ) as client:
-                resp = await client.get(RSS_URL)
-                resp.raise_for_status()
-                rss_xml = resp.text
+                for url in LISTING_URLS:
+                    try:
+                        resp = await client.get(url)
+                        resp.raise_for_status()
+                        articles = await asyncio.to_thread(self._parse_listing, resp.text)
+                        all_articles.extend(articles)
+                    except Exception as e:
+                        logger.warning(f"NhaDauTu fetch failed for {url}: {e}")
         except Exception as e:
-            logger.error(f"NhaDauTu RSS fetch failed: {e}")
-            return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["RSS"]}
+            logger.error(f"NhaDauTu client error: {e}")
+            return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["NDT"]}
 
-        # Parse RSS
-        soup = BeautifulSoup(rss_xml, "html.parser")
-        items = soup.find_all("item")
-        logger.debug(f"NhaDauTu: parsed {len(items)} RSS items")
+        if not all_articles:
+            logger.debug("NhaDauTu: no articles found")
+            return {"success": 1, "failed": 0, "total_posts": 0, "failed_symbols": []}
+
+        # Deduplicate by article_id
+        seen_ids: set[str] = set()
+        unique_articles = []
+        for a in all_articles:
+            if a["article_id"] not in seen_ids:
+                seen_ids.add(a["article_id"])
+                unique_articles.append(a)
+
+        logger.debug(f"NhaDauTu: parsed {len(unique_articles)} unique articles")
 
         rows_to_insert: list[dict] = []
-        for item in items:
-            title_el = item.find("title")
-            link_el = item.find("link")
-            desc_el = item.find("description")
-            pub_el = item.find("pubdate")
-
-            if not title_el:
-                continue
-
-            title = html.unescape(title_el.get_text(strip=True))
-            description = _strip_html(desc_el.get_text()) if desc_el else ""
-            link = link_el.get_text(strip=True) if link_el else ""
-            guid = link or title
-
-            # Parse date
-            posted_at = datetime.now(timezone.utc)
-            if pub_el:
-                try:
-                    posted_at = parsedate_to_datetime(pub_el.get_text(strip=True))
-                except Exception:
-                    pass
-
-            # Extract tickers from title + description
-            text_to_search = f"{title} {description}"
-            mentioned = (set(TICKER_RE.findall(text_to_search)) - FALSE_POSITIVES) & watchlist_symbols
+        for article in unique_articles:
+            title = article["title"]
+            mentioned = (set(TICKER_RE.findall(title)) - FALSE_POSITIVES) & watchlist_symbols
             if not mentioned:
                 continue
 
-            content = f"{title}. {description}"[:2000] if description else title[:2000]
-            if len(content) < self.MIN_CONTENT_LENGTH:
-                continue
-
             for symbol in mentioned:
-                post_id = _guid_to_post_id(f"{guid}:{symbol}")
+                post_id = _guid_to_post_id(f"{article['article_id']}:{symbol}")
                 rows_to_insert.append({
                     "ticker_id": ticker_map[symbol],
                     "post_id": post_id,
-                    "content": content,
-                    "author_name": "ndt:nhadautu.vn"[:200],
+                    "content": title[:2000],
+                    "author_name": "ndt:nhadautu.vn",
                     "is_authentic": True,
                     "total_likes": 0,
                     "total_replies": 0,
                     "fireant_sentiment": 0,
-                    "posted_at": posted_at,
+                    "posted_at": datetime.now(timezone.utc),
                 })
 
         if not rows_to_insert:
@@ -147,3 +138,26 @@ class NhaDauTuCrawler:
         stored = result.rowcount or 0
         logger.info(f"NhaDauTu: stored {stored} new articles")
         return {"success": 1, "failed": 0, "total_posts": stored, "failed_symbols": []}
+
+    def _parse_listing(self, html_content: str) -> list[dict]:
+        """Parse article listing page for article links and titles."""
+        soup = BeautifulSoup(html_content, "html.parser")
+        articles = []
+
+        for link in soup.find_all("a", href=True):
+            href = link.get("href", "")
+            match = ARTICLE_ID_RE.search(href)
+            if not match:
+                continue
+
+            title = link.get_text(strip=True)
+            if not title or len(title) < 20:
+                continue
+
+            article_id = match.group(1)
+            articles.append({
+                "article_id": article_id,
+                "title": html.unescape(title),
+            })
+
+        return articles

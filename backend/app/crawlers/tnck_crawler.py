@@ -1,23 +1,28 @@
-"""tinnhanhchungkhoan.vn news crawler for rumor intelligence.
+"""tinnhanhchungkhoan.vn RSS crawler for rumor intelligence.
 
-Scrapes article listings from Ministry of Finance's financial news site.
+Fetches RSS feed from Ministry of Finance's financial news site.
 High-authority source for stock market analysis and recommendations.
 
 Phase 84: Part of multi-source rumor expansion.
 """
+import asyncio
 import hashlib
 import html
 import re
+import warnings
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from loguru import logger
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crawlers.types import RumorCrawlResult
 from app.models.rumor import Rumor
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 # Match 2-5 uppercase ASCII letters for ticker extraction
 TICKER_RE = re.compile(r"(?<![A-Za-z])([A-Z]{2,5})(?![A-Za-z])")
@@ -30,28 +35,20 @@ FALSE_POSITIVES = frozenset({
     "HOSE", "HNX", "UPCOM", "VNDS", "TCBS", "FPTS", "BTC",
 })
 
-# Article URL pattern: /{slug}-post{NUMERIC_ID}.html
-ARTICLE_PATTERN = re.compile(r"href=[\"']([^\"']*-post(\d+)\.html)[\"']")
-
-BASE_URL = "https://www.tinnhanhchungkhoan.vn"
-LISTING_URLS = [
-    f"{BASE_URL}/chung-khoan/co-phieu",
-    f"{BASE_URL}/chung-khoan/phan-tich",
-]
+RSS_URL = "https://www.tinnhanhchungkhoan.vn/rss/home.rss"
 
 
-def _article_to_post_id(article_id: int) -> int:
-    """Convert article numeric ID to a unique post_id.
+def _guid_to_post_id(guid: str) -> int:
+    """Convert RSS GUID to unique BigInteger post_id.
 
-    Prefix with 8 (8 * 10^9 range) to avoid collision with Fireant and Telegram IDs.
+    Prefix with 8 (8 * 10^9 range) to avoid collision with other sources.
     """
-    return 8_000_000_000 + article_id
+    h = hashlib.md5(guid.encode()).hexdigest()[:12]
+    return 8_000_000_000 + int(h, 16) % 1_000_000_000
 
 
 class TNCKCrawler:
-    """Crawls tinnhanhchungkhoan.vn article listings for stock mentions."""
-
-    MIN_CONTENT_LENGTH = 30
+    """Crawls tinnhanhchungkhoan.vn RSS feed for stock mentions."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -64,54 +61,53 @@ class TNCKCrawler:
         }
 
     async def crawl_articles(self, *, ticker_map: dict[str, int] | None = None) -> RumorCrawlResult:
-        """Fetch article listings from TNCK, extract tickers, store in rumors table."""
+        """Fetch RSS feed from TNCK, extract tickers, store in rumors table."""
         if ticker_map is None:
             logger.warning("TNCK crawler: no ticker_map provided")
             return {"success": 0, "failed": 0, "total_posts": 0, "failed_symbols": []}
 
         watchlist_symbols = set(ticker_map.keys())
-        logger.info(f"Starting TNCK crawl (watchlist: {len(watchlist_symbols)} tickers)")
+        logger.info(f"Starting TNCK RSS crawl (watchlist: {len(watchlist_symbols)} tickers)")
 
-        articles: list[dict] = []
         try:
             async with httpx.AsyncClient(
-                headers=self.headers, timeout=15, follow_redirects=True
+                headers=self.headers, timeout=15, follow_redirects=True, verify=False
             ) as client:
-                for url in LISTING_URLS:
-                    try:
-                        resp = await client.get(url)
-                        resp.raise_for_status()
-                        page_articles = self._parse_listing(resp.text, url)
-                        articles.extend(page_articles)
-                    except Exception as e:
-                        logger.warning(f"TNCK fetch failed for {url}: {e}")
+                resp = await client.get(RSS_URL)
+                resp.raise_for_status()
+                rss_xml = resp.text
         except Exception as e:
-            logger.error(f"TNCK client error: {e}")
+            logger.error(f"TNCK RSS fetch failed: {e}")
             return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["TNCK"]}
 
-        if not articles:
-            logger.debug("TNCK: no articles found")
+        items = await asyncio.to_thread(self._parse_rss, rss_xml)
+        if not items:
+            logger.debug("TNCK: no RSS items parsed")
             return {"success": 1, "failed": 0, "total_posts": 0, "failed_symbols": []}
 
-        # Match tickers in article titles
+        logger.debug(f"TNCK: parsed {len(items)} RSS items")
+
+        # Match tickers in article titles and descriptions
         rows_to_insert: list[dict] = []
-        for article in articles:
-            title = article["title"]
-            mentioned = (set(TICKER_RE.findall(title)) - FALSE_POSITIVES) & watchlist_symbols
+        for item in items:
+            title = item["title"]
+            desc = item.get("description", "")
+            text_to_scan = f"{title} {desc}"
+            mentioned = (set(TICKER_RE.findall(text_to_scan)) - FALSE_POSITIVES) & watchlist_symbols
             if not mentioned:
                 continue
 
             for symbol in mentioned:
                 rows_to_insert.append({
                     "ticker_id": ticker_map[symbol],
-                    "post_id": _article_to_post_id(article["article_id"]) + hash(symbol) % 997,
+                    "post_id": _guid_to_post_id(item["guid"] + symbol),
                     "content": title[:2000],
-                    "author_name": "tnck:tinnhanhchungkhoan.vn"[:200],
-                    "is_authentic": True,  # Official news source
+                    "author_name": "tnck:tinnhanhchungkhoan.vn",
+                    "is_authentic": True,
                     "total_likes": 0,
                     "total_replies": 0,
                     "fireant_sentiment": 0,
-                    "posted_at": article.get("posted_at", datetime.now(timezone.utc)),
+                    "posted_at": item.get("pub_date", datetime.now(timezone.utc)),
                 })
 
         if not rows_to_insert:
@@ -123,35 +119,37 @@ class TNCKCrawler:
         result = await self.session.execute(stmt)
         await self.session.commit()
         stored = result.rowcount or 0
-        logger.info(f"TNCK: stored {stored} new articles")
+        logger.info(f"TNCK: stored {stored} new articles from RSS")
         return {"success": 1, "failed": 0, "total_posts": stored, "failed_symbols": []}
 
-    def _parse_listing(self, html_content: str, source_url: str) -> list[dict]:
-        """Parse article listing page for article links and titles."""
-        soup = BeautifulSoup(html_content, "html.parser")
-        articles = []
+    def _parse_rss(self, xml_text: str) -> list[dict]:
+        """Parse RSS XML into list of items with title, guid, pub_date."""
+        soup = BeautifulSoup(xml_text, "html.parser")
+        items = []
+        for item_el in soup.find_all("item"):
+            title_el = item_el.find("title")
+            link_el = item_el.find("link")
+            desc_el = item_el.find("description")
+            pub_el = item_el.find("pubdate")
 
-        # Find article links matching pattern: *-post{ID}.html
-        for link in soup.find_all("a", href=True):
-            href = link.get("href", "")
-            match = re.search(r"-post(\d+)\.html", href)
-            if not match:
-                continue
-
-            article_id = int(match.group(1))
-            title = link.get_text(strip=True)
+            title = html.unescape(title_el.text.strip()) if title_el else ""
             if not title or len(title) < 10:
                 continue
 
-            # Deduplicate by article_id
-            if any(a["article_id"] == article_id for a in articles):
-                continue
+            guid = link_el.text.strip() if link_el else title
+            description = html.unescape(desc_el.text.strip()) if desc_el else ""
 
-            articles.append({
-                "article_id": article_id,
-                "title": html.unescape(title),
-                "url": href if href.startswith("http") else f"{BASE_URL}{href}",
-                "posted_at": datetime.now(timezone.utc),
+            pub_date = datetime.now(timezone.utc)
+            if pub_el and pub_el.text.strip():
+                try:
+                    pub_date = parsedate_to_datetime(pub_el.text.strip())
+                except Exception:
+                    pass
+
+            items.append({
+                "title": title,
+                "guid": guid,
+                "description": description,
+                "pub_date": pub_date,
             })
-
-        return articles
+        return items
