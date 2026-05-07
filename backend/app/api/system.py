@@ -126,17 +126,17 @@ async def trigger_ticker_sync(background_tasks: BackgroundTasks):
 
 @router.post("/crawl/financials", response_model=CrawlResultResponse)
 async def trigger_financial_crawl(background_tasks: BackgroundTasks):
-    """Manually trigger financial data crawl (runs in background)."""
+    """Manually trigger financial data crawl via CafeF scraping (runs in background)."""
     async def _run():
         async with async_session() as session:
-            crawler = VnstockCrawler()
-            service = FinancialService(session, crawler)
-            result = await service.crawl_financials(period="quarter")
+            from app.crawlers.cafef_financial_crawler import CafeFFinancialCrawler
+            crawler = CafeFFinancialCrawler(session)
+            result = await crawler.crawl_financials()
             logger.info(f"Manual financial crawl complete: {result}")
 
     background_tasks.add_task(_run)
     return CrawlResultResponse(
-        message="Financial crawl triggered in background", triggered=True
+        message="Financial crawl triggered in background (CafeF source)", triggered=True
     )
 
 
@@ -170,9 +170,10 @@ async def trigger_backfill(
             )
             logger.info(f"Backfill: Price backfill complete — {price_result}")
 
-            # Step 3: Crawl financials
-            financial_service = FinancialService(session, crawler)
-            financial_result = await financial_service.crawl_financials(period="quarter")
+            # Step 3: Crawl financials via CafeF
+            from app.crawlers.cafef_financial_crawler import CafeFFinancialCrawler
+            cafef_crawler = CafeFFinancialCrawler(session)
+            financial_result = await cafef_crawler.crawl_financials()
             logger.info(f"Backfill: Financial crawl complete — {financial_result}")
 
     background_tasks.add_task(_run)

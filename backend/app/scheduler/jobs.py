@@ -227,9 +227,9 @@ async def weekly_financial_crawl():
         job_svc = JobExecutionService(session)
         execution = await job_svc.start("weekly_financial_crawl")
         try:
-            crawler = VnstockCrawler()
-            service = FinancialService(session, crawler)
-            result = await service.crawl_financials(period="quarter")
+            from app.crawlers.cafef_financial_crawler import CafeFFinancialCrawler
+            cafef_crawler = CafeFFinancialCrawler(session)
+            result = await cafef_crawler.crawl_financials()
 
             final_failed = result.get("failed_symbols", [])
             await _dlq_failures(session, "weekly_financial_crawl", final_failed)
