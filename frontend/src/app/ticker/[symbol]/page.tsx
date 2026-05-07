@@ -147,10 +147,12 @@ export default function TickerDetailPage({
 
   // On-demand AI analysis
   const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState("");
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const handleAnalyzeNow = async () => {
     setAnalyzing(true);
     setAnalyzeError(null);
+    setAnalyzeProgress("Đang khởi tạo phân tích...");
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/analysis/${upperSymbol}/analyze-now`,
@@ -160,15 +162,48 @@ export default function TickerDetailPage({
         const data = await res.json().catch(() => ({}));
         throw new Error(data.detail || `HTTP ${res.status}`);
       }
-      // Wait a bit for background analysis to complete, then refetch
-      setTimeout(() => {
-        refetchAnalysis();
-        refetchTradingSignal();
-        setAnalyzing(false);
-      }, 15000);
+      // Poll every 5s until analysis appears (max 90s)
+      const steps = [
+        "Phân tích kỹ thuật...",
+        "Phân tích sentiment...",
+        "Tổng hợp đa chiều...",
+        "Tạo kế hoạch giao dịch...",
+        "Hoàn tất...",
+      ];
+      let attempt = 0;
+      const maxAttempts = 18; // 18 * 5s = 90s
+      const poll = setInterval(async () => {
+        attempt++;
+        setAnalyzeProgress(steps[Math.min(Math.floor(attempt / 4), steps.length - 1)]);
+        try {
+          const check = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/analysis/${upperSymbol}/summary`
+          );
+          if (check.ok) {
+            const data = await check.json();
+            // Check if combined analysis is fresh (updated in last 2 min)
+            if (data?.combined?.analysis_date === new Date().toISOString().slice(0, 10)) {
+              clearInterval(poll);
+              refetchAnalysis();
+              refetchTradingSignal();
+              setAnalyzing(false);
+              setAnalyzeProgress("");
+              return;
+            }
+          }
+        } catch { /* ignore poll errors */ }
+        if (attempt >= maxAttempts) {
+          clearInterval(poll);
+          refetchAnalysis();
+          refetchTradingSignal();
+          setAnalyzing(false);
+          setAnalyzeProgress("");
+        }
+      }, 5000);
     } catch (e) {
       setAnalyzeError(e instanceof Error ? e.message : "Lỗi không xác định");
       setAnalyzing(false);
+      setAnalyzeProgress("");
     }
   };
 
@@ -229,7 +264,7 @@ export default function TickerDetailPage({
             {analyzing ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                Đang phân tích...
+                {analyzeProgress || "Đang phân tích..."}
               </>
             ) : (
               <>
