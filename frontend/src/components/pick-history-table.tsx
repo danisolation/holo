@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePickHistory } from "@/lib/hooks";
-import { formatVND, formatDateVN } from "@/lib/format";
+import { formatVND, formatPrice, formatDateVN } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,13 +182,13 @@ export function PickHistoryTable() {
                           {pick.rank ?? "—"}
                         </TableCell>
                         <TableCell className="font-mono text-sm font-bold text-right">
-                          {pick.entry_price !== null ? formatVND(pick.entry_price) : "—"}
+                          {pick.entry_price !== null ? formatPrice(pick.entry_price) : "—"}
                         </TableCell>
                         <TableCell className="font-mono text-sm text-[#ef5350] text-right">
-                          {pick.stop_loss !== null ? formatVND(pick.stop_loss) : "—"}
+                          {pick.stop_loss !== null ? formatPrice(pick.stop_loss) : "—"}
                         </TableCell>
                         <TableCell className="font-mono text-sm text-[#26a69a] text-right">
-                          {pick.take_profit_1 !== null ? formatVND(pick.take_profit_1) : "—"}
+                          {pick.take_profit_1 !== null ? formatPrice(pick.take_profit_1) : "—"}
                         </TableCell>
                         <TableCell className="text-center">
                           <OutcomeBadge outcome={pick.pick_outcome} />

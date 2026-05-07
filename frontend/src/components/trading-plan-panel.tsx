@@ -6,7 +6,8 @@ import { ScoreBar } from "@/components/analysis-card";
 import { cn } from "@/lib/utils";
 import type { TickerTradingSignal } from "@/lib/api";
 
-const fmt = (v: number) => Math.round(v).toLocaleString("vi-VN");
+/** Format price: DB stores in nghìn đồng → multiply ×1000 for display as VND */
+const fmt = (v: number) => Math.round(v * 1000).toLocaleString("vi-VN");
 
 const TIMEFRAME_LABELS: Record<string, string> = {
   swing: "Swing (3-15 ngày)",
@@ -88,24 +89,37 @@ export function TradingPlanPanel({ data }: TradingPlanPanelProps) {
             </p>
           ) : (
             <>
+              {!isLong && (
+                <p className="text-xs text-[#ef5350] mb-3 italic">
+                  ⚠ Tín hiệu giảm — khuyến nghị giảm vị thế hoặc tránh mua mới
+                </p>
+              )}
               {/* Price levels */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="text-xs text-muted-foreground">Giá vào</span>
-                  <p className="font-mono text-sm font-semibold">{fmt(plan.entry_price)}</p>
+                  <span className="text-xs text-muted-foreground">
+                    {isLong ? "Giá vào (mua)" : "Giá tham chiếu"}
+                  </span>
+                  <p className="font-mono text-sm font-semibold">{fmt(plan.entry_price)} ₫</p>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Cắt lỗ</span>
-                  <p className="font-mono text-sm font-semibold text-[#ef5350]">{fmt(plan.stop_loss)}</p>
+                  <span className="text-xs text-muted-foreground">
+                    {isLong ? "Cắt lỗ" : "Cắt lỗ (nếu tăng)"}
+                  </span>
+                  <p className="font-mono text-sm font-semibold text-[#ef5350]">{fmt(plan.stop_loss)} ₫</p>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">Chốt lời 1</span>
-                  <p className="font-mono text-sm font-semibold text-[#26a69a]">{fmt(plan.take_profit_1)}</p>
+                  <span className="text-xs text-muted-foreground">
+                    {isLong ? "Chốt lời 1" : "Mục tiêu giảm 1"}
+                  </span>
+                  <p className="font-mono text-sm font-semibold text-[#26a69a]">{fmt(plan.take_profit_1)} ₫</p>
                 </div>
-                {Math.abs(plan.take_profit_2 - plan.take_profit_1) > 1 && (
+                {Math.abs(plan.take_profit_2 - plan.take_profit_1) > 0.5 && (
                   <div>
-                    <span className="text-xs text-muted-foreground">Chốt lời 2</span>
-                    <p className="font-mono text-sm font-semibold text-[#26a69a]">{fmt(plan.take_profit_2)}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {isLong ? "Chốt lời 2" : "Mục tiêu giảm 2"}
+                    </span>
+                    <p className="font-mono text-sm font-semibold text-[#26a69a]">{fmt(plan.take_profit_2)} ₫</p>
                   </div>
                 )}
               </div>

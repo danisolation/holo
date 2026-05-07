@@ -4,7 +4,7 @@ import { CheckCircle2, ArrowRight, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatVND } from "@/lib/format";
+import { formatVND, formatPrice } from "@/lib/format";
 
 export interface PostTradeCardProps {
   tickerSymbol: string;
@@ -59,7 +59,7 @@ export function PostTradeCard({
             <span className="text-sm text-muted-foreground">{tickerName}</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {quantity.toLocaleString()} cổ × {formatVND(price)}đ = {formatVND(totalValue)} VND
+            {quantity.toLocaleString()} cổ × {formatPrice(price)}đ = {formatVND(totalValue)} VND
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export function PostTradeCard({
                 <>
                   <span className="text-xs text-muted-foreground">Cắt lỗ (SL)</span>
                   <span className="font-mono text-sm font-bold text-right text-[#ef5350]">
-                    {formatVND(stopLoss)}
+                    {formatPrice(stopLoss)}
                   </span>
                 </>
               )}
@@ -82,7 +82,7 @@ export function PostTradeCard({
                 <>
                   <span className="text-xs text-muted-foreground">Chốt lời 1 (TP1)</span>
                   <span className="font-mono text-sm font-bold text-right text-[#26a69a]">
-                    {formatVND(takeProfit1)}
+                    {formatPrice(takeProfit1)}
                   </span>
                 </>
               )}
@@ -90,7 +90,7 @@ export function PostTradeCard({
                 <>
                   <span className="text-xs text-muted-foreground">Chốt lời 2 (TP2)</span>
                   <span className="font-mono text-sm font-bold text-right text-[#26a69a]">
-                    {formatVND(takeProfit2)}
+                    {formatPrice(takeProfit2)}
                   </span>
                 </>
               )}
@@ -105,13 +105,13 @@ export function PostTradeCard({
             {stopLoss != null && (
               <li className="flex items-start gap-2">
                 <Badge variant="outline" className="mt-0.5 text-xs shrink-0">1</Badge>
-                <span>Đặt lệnh cắt lỗ tại sàn: <span className="font-mono font-bold text-[#ef5350]">{formatVND(stopLoss)}</span></span>
+                <span>Đặt lệnh cắt lỗ tại sàn: <span className="font-mono font-bold text-[#ef5350]">{formatPrice(stopLoss)}</span></span>
               </li>
             )}
             {takeProfit1 != null && (
               <li className="flex items-start gap-2">
                 <Badge variant="outline" className="mt-0.5 text-xs shrink-0">{stopLoss != null ? "2" : "1"}</Badge>
-                <span>Chốt lời khi đạt mục tiêu: <span className="font-mono font-bold text-[#26a69a]">{formatVND(takeProfit1)}</span></span>
+                <span>Chốt lời khi đạt mục tiêu: <span className="font-mono font-bold text-[#26a69a]">{formatPrice(takeProfit1)}</span></span>
               </li>
             )}
             <li className="flex items-start gap-2">

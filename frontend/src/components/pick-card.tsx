@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreBar } from "@/components/analysis-card";
-import { formatVND } from "@/lib/format";
+import { formatVND, formatPrice } from "@/lib/format";
 import { useRealtimePrices } from "@/lib/use-realtime-prices";
 import { postBehaviorEvent } from "@/lib/api";
 import type { DailyPickResponse } from "@/lib/api";
@@ -78,18 +78,18 @@ export function PickCard({ pick, onRecordTrade }: PickCardProps) {
           <div className="grid grid-cols-2 gap-y-2">
             <span className="text-xs text-muted-foreground">Giá vào</span>
             <span className="font-mono text-sm font-bold text-right">
-              {pick.entry_price != null ? formatVND(pick.entry_price) : "—"}
+              {pick.entry_price != null ? formatPrice(pick.entry_price) : "—"}
             </span>
 
             <span className="text-xs text-muted-foreground">Cắt lỗ</span>
             <span className="font-mono text-sm font-bold text-right text-[#ef5350]">
-              {pick.stop_loss != null ? formatVND(pick.stop_loss) : "—"}
+              {pick.stop_loss != null ? formatPrice(pick.stop_loss) : "—"}
             </span>
 
             <span className="text-xs text-muted-foreground">Chốt lời 1</span>
             <span className="font-mono text-sm font-bold text-right text-[#26a69a]">
               {pick.take_profit_1 != null
-                ? formatVND(pick.take_profit_1)
+                ? formatPrice(pick.take_profit_1)
                 : "—"}
             </span>
 
@@ -99,7 +99,7 @@ export function PickCard({ pick, onRecordTrade }: PickCardProps) {
                   Chốt lời 2
                 </span>
                 <span className="font-mono text-sm font-bold text-right text-[#26a69a]">
-                  {formatVND(pick.take_profit_2)}
+                  {formatPrice(pick.take_profit_2)}
                 </span>
               </>
             )}
@@ -120,7 +120,7 @@ export function PickCard({ pick, onRecordTrade }: PickCardProps) {
             <div className="border-t border-border pt-4 mt-4">
               <div className="bg-muted rounded-lg p-4 text-sm">
                 Mua {pick.position_size_shares} cổ ×{" "}
-                {formatVND(pick.entry_price)}đ ={" "}
+                {formatPrice(pick.entry_price)}đ ={" "}
                 {formatVND(pick.position_size_vnd)} VND (
                 {pick.position_size_pct?.toFixed(1)}% vốn)
               </div>
@@ -137,7 +137,7 @@ export function PickCard({ pick, onRecordTrade }: PickCardProps) {
               {currentPrice != null ? (
                 <>
                   <span className="font-mono text-sm font-bold">
-                    {formatVND(currentPrice)}
+                    {formatPrice(currentPrice)}
                   </span>
                   {pnlPct != null && pnlPct > 0 && (
                     <Badge className="text-[#26a69a] bg-[#26a69a]/10">

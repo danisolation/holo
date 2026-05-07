@@ -1,7 +1,7 @@
 "use client";
 
 import type { TradeResponse } from "@/lib/api";
-import { formatVND, formatDateVN } from "@/lib/format";
+import { formatVND, formatPrice, formatDateVN } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -189,7 +189,7 @@ export function TradesTable({
                   {trade.quantity}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm font-bold">
-                  {formatVND(trade.price)}
+                  {formatPrice(trade.price)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm text-muted-foreground">
                   {formatVND(trade.total_fee)}
