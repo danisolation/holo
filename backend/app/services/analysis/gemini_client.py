@@ -377,6 +377,9 @@ class GeminiClient:
 
         for symbol, data in ticker_data.items():
             lines.append(f"\n--- {symbol} ---")
+            # Anchor AI to actual price to prevent hallucination
+            if data.get('current_price'):
+                lines.append(f"GIÁ HIỆN TẠI: {data['current_price']:,.0f} VND (dùng giá này làm cơ sở cho key_levels)")
             lines.append(f"Kỹ thuật: signal={data.get('tech_signal', 'N/A')}, strength={data.get('tech_score', 'N/A')}")
             if data.get('tech_reasoning'):
                 lines.append(f"  Chi tiết kỹ thuật: {data['tech_reasoning']}")

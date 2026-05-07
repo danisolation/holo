@@ -549,6 +549,17 @@ class ContextBuilder:
             context["sent_score"] = 5
             context["sent_reasoning"] = "Không có tin tức đặc biệt."
 
+        # Include current price to prevent AI hallucination of key_levels
+        price_result = await self.session.execute(
+            select(DailyPrice.close)
+            .where(DailyPrice.ticker_id == ticker_id)
+            .order_by(DailyPrice.date.desc())
+            .limit(1)
+        )
+        latest_price = price_result.scalar_one_or_none()
+        if latest_price is not None:
+            context["current_price"] = float(latest_price)
+
         # Phase 64: Include rumor intelligence in combined analysis (AIUP-01)
         rumor = await self.get_rumor_context(ticker_id, symbol)
         if rumor:
