@@ -379,7 +379,8 @@ class GeminiClient:
             lines.append(f"\n--- {symbol} ---")
             # Anchor AI to actual price to prevent hallucination
             if data.get('current_price'):
-                lines.append(f"GIÁ HIỆN TẠI: {data['current_price']:,.1f} (nghìn VND) — tất cả mức giá key_levels phải cùng đơn vị này")
+                price_vnd = data['current_price'] * 1000
+                lines.append(f"GIÁ HIỆN TẠI: {price_vnd:,.0f} VND — tất cả mức giá key_levels phải dùng đơn vị VND")
             lines.append(f"Kỹ thuật: signal={data.get('tech_signal', 'N/A')}, strength={data.get('tech_score', 'N/A')}")
             if data.get('tech_reasoning'):
                 lines.append(f"  Chi tiết kỹ thuật: {data['tech_reasoning']}")
@@ -422,7 +423,8 @@ class GeminiClient:
         ]
         for symbol, data in ticker_data.items():
             lines.append(f"\n--- {symbol} ---")
-            lines.append(f"Giá hiện tại: {data['current_price']:,.1f} (nghìn VND)")
+            price_vnd = data['current_price'] * 1000
+            lines.append(f"Giá hiện tại: {price_vnd:,.0f} VND")
             lines.append(
                 f"ATR(14): {data.get('atr_14', 'N/A')} | "
                 f"ADX(14): {data.get('adx_14', 'N/A')} | "
@@ -432,28 +434,35 @@ class GeminiClient:
                 f"Stochastic %K: {data.get('stoch_k_14', 'N/A')}, "
                 f"%D: {data.get('stoch_d_14', 'N/A')}"
             )
+            # Convert price-based indicators to VND (stored as nghìn đồng)
+            def _vnd(key: str) -> str:
+                v = data.get(key)
+                if v is None or v == 'N/A':
+                    return 'N/A'
+                return f"{float(v) * 1000:,.0f}"
+
             lines.append(
-                f"Pivot: {data.get('pivot_point', 'N/A')} | "
-                f"S1: {data.get('support_1', 'N/A')} | "
-                f"S2: {data.get('support_2', 'N/A')} | "
-                f"R1: {data.get('resistance_1', 'N/A')} | "
-                f"R2: {data.get('resistance_2', 'N/A')}"
+                f"Pivot: {_vnd('pivot_point')} | "
+                f"S1: {_vnd('support_1')} | "
+                f"S2: {_vnd('support_2')} | "
+                f"R1: {_vnd('resistance_1')} | "
+                f"R2: {_vnd('resistance_2')}"
             )
             lines.append(
-                f"Fib 23.6%: {data.get('fib_236', 'N/A')} | "
-                f"Fib 38.2%: {data.get('fib_382', 'N/A')} | "
-                f"Fib 50%: {data.get('fib_500', 'N/A')} | "
-                f"Fib 61.8%: {data.get('fib_618', 'N/A')}"
+                f"Fib 23.6%: {_vnd('fib_236')} | "
+                f"Fib 38.2%: {_vnd('fib_382')} | "
+                f"Fib 50%: {_vnd('fib_500')} | "
+                f"Fib 61.8%: {_vnd('fib_618')}"
             )
             lines.append(
-                f"BB Upper: {data.get('bb_upper', 'N/A')} | "
-                f"BB Middle: {data.get('bb_middle', 'N/A')} | "
-                f"BB Lower: {data.get('bb_lower', 'N/A')}"
+                f"BB Upper: {_vnd('bb_upper')} | "
+                f"BB Middle: {_vnd('bb_middle')} | "
+                f"BB Lower: {_vnd('bb_lower')}"
             )
             if "week_52_high" in data:
                 lines.append(
-                    f"52-week High: {data['week_52_high']:,.0f} | "
-                    f"52-week Low: {data['week_52_low']:,.0f}"
+                    f"52-week High: {data['week_52_high'] * 1000:,.0f} | "
+                    f"52-week Low: {data['week_52_low'] * 1000:,.0f}"
                 )
                 # Phase 67: Price percentile (CTX-03)
                 if "price_percentile_52w" in data:
