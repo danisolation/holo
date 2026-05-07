@@ -2,36 +2,36 @@
 gsd_state_version: 1.0
 milestone: v18.0
 milestone_name: Multi-Source Community Rumors
-status: active
-stopped_at: Defining requirements
-last_updated: "2026-05-06T09:00:00.000Z"
-last_activity: 2026-05-06 — Milestone v18.0 started
+status: shipped
+stopped_at: Complete
+last_updated: "2026-05-07T08:35:00.000Z"
+last_activity: 2026-05-07 — All crawlers fixed and verified, rumor scoring tested
 progress:
-  total_phases: 0
-  completed_phases: 0
+  total_phases: 4
+  completed_phases: 4
   total_plans: 0
   completed_plans: 0
-  percent: 0
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-06)
+See: .planning/PROJECT.md (updated 2026-05-07)
 
 **Core value:** AI phân tích đa chiều (kỹ thuật + cơ bản + sentiment + tin đồn) trên dữ liệu chứng khoán Việt Nam real-time để gợi ý trading chính xác và kịp thời qua web dashboard.
-**Current focus:** v18.0 Multi-Source Community Rumors — Defining requirements
+**Current focus:** v18.0 Multi-Source Community Rumors — SHIPPED
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: All complete
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-06 — Milestone v18.0 started
+Status: Shipped
+Last activity: 2026-05-07 — All 6 sources crawling, AI scoring verified
 
 ```
-v18.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/? phases (0%)
+v18.0 Progress: [████████████████████] 4/4 phases (100%)
 ```
 
 ## Shipped Milestones

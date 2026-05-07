@@ -24,7 +24,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v15.0 Performance Optimization** — Phases 71-75 (shipped 2026-05-06)
 - ✅ **v16.0 Real-Time Price** — Phases 76-79 (shipped 2026-05-06)
 - ✅ **v17.0 AI Consistency & UX** — Phases 80-82 (shipped)
-- 🔄 **v18.0 Multi-Source Community Rumors** — Phases 83-87 (active)
+- ✅ **v18.0 Multi-Source Community Rumors** — Phases 84-87 (shipped 2026-05-07)
 
 ## Phases
 
