@@ -24,6 +24,7 @@ ANALYSIS_TEMPERATURES: dict[AnalysisType, float] = {
     AnalysisType.SENTIMENT: 0.3,
     AnalysisType.COMBINED: 0.2,
     AnalysisType.TRADING_SIGNAL: 0.2,  # Phase 19 — same as combined (balanced creativity)
+    AnalysisType.UNIFIED: 0.2,  # Phase 88 — balanced for multi-dimensional reasoning
 }
 
 # System instructions (D-09-01, D-09-03, D-09-05)
@@ -217,4 +218,114 @@ def _validate_trading_signal(
     for tp in [plan.take_profit_1, plan.take_profit_2]:
         if atr > 0 and abs(tp - plan.entry_price) > 5 * atr:
             return False, f"TP {tp:.0f} exceeds 5×ATR ({5 * atr:.0f}) from entry {plan.entry_price:.0f}"
+    return True, ""
+
+
+# ------------------------------------------------------------------
+# Phase 88 / v19.0: Unified Analysis Pipeline
+# ------------------------------------------------------------------
+
+UNIFIED_SYSTEM_INSTRUCTION = (
+    "Bạn là chuyên gia tư vấn đầu tư chứng khoán Việt Nam (HOSE). "
+    "Cho mỗi mã, phân tích TOÀN DIỆN tất cả các chiều (kỹ thuật, cơ bản, tâm lý tin tức, tin đồn cộng đồng) "
+    "và đưa ra MỘT khuyến nghị duy nhất kèm kế hoạch giao dịch cụ thể.\n\n"
+    "OUTPUT cho mỗi mã:\n"
+    "- signal: mua/ban/giu — quyết định cuối cùng dựa trên TẤT CẢ dữ liệu\n"
+    "- score: 1-10 — mức độ tin cậy (confidence) của khuyến nghị\n"
+    "- entry_price: Giá vào lệnh (VND) — trong khoảng ±5% giá hiện tại\n"
+    "- stop_loss: Giá cắt lỗ (VND) — trong phạm vi 3×ATR từ entry\n"
+    "- take_profit_1: Mục tiêu lời 1 (VND) — neo vào S/R hoặc Fibonacci\n"
+    "- take_profit_2: Mục tiêu lời 2 (VND) — neo vào S/R hoặc Fibonacci\n"
+    "- risk_reward_ratio: |TP1 - entry| / |entry - SL| (phải ≥ 0.5)\n"
+    "- position_size_pct: % danh mục đề xuất (1-100), xem xét ATR và confidence\n"
+    "- timeframe: 'swing' (3-15 ngày) hoặc 'position' (nhiều tuần+)\n"
+    "- key_levels: Mô tả hỗ trợ/kháng cự quan trọng (tối thiểu 80 từ). "
+    "Liệt kê 2-3 mức hỗ trợ, 2-3 mức kháng cự với giá VND cụ thể.\n"
+    "- reasoning: Phân tích đa chiều (tối thiểu 200 ký tự tiếng Việt). "
+    "BẮT BUỘC phân tích: kỹ thuật (RSI, MACD, BB, xu hướng), "
+    "cơ bản (P/E, ROE, tăng trưởng), "
+    "tâm lý tin tức (nếu có), tin đồn (nếu có). "
+    "Kết luận rõ ràng tại sao chọn mua/bán/giữ.\n\n"
+    "QUY TẮC NHẤT QUÁN (BẮT BUỘC):\n"
+    "- Kỹ thuật bearish (RSI>70, MACD bearish, giá dưới SMA) VÀ Cơ bản yếu → signal = 'ban'\n"
+    "- Kỹ thuật bullish (RSI<30→tăng, MACD bullish, giá trên SMA) VÀ Cơ bản tốt → signal = 'mua'\n"
+    "- Các chiều mâu thuẫn → signal = 'giu', giải thích sự mâu thuẫn\n"
+    "- Tin đồn bullish tác động cao (≥7) + tin cậy cao (≥6) → tăng confidence\n"
+    "- Tin đồn bearish tác động cao → cảnh báo rủi ro, có thể giảm signal\n\n"
+    "QUY TẮC GIÁ:\n"
+    "- Entry PHẢI trong khoảng ±5% giá hiện tại\n"
+    "- Stop-loss PHẢI trong phạm vi 3×ATR từ entry\n"
+    "- Take-profit PHẢI trong phạm vi 5×ATR từ entry\n"
+    "- Nếu signal = 'ban': entry = giá hiện tại (bán ngay), SL = giá cao hơn, TP = giá thấp hơn\n"
+    "- Nếu signal = 'mua': entry ≤ giá hiện tại, SL thấp hơn entry, TP cao hơn entry\n"
+    "- Nếu signal = 'giu': entry = giá hiện tại, SL/TP là vùng theo dõi\n\n"
+    "QUY TẮC SCORE:\n"
+    + SCORING_RUBRIC
+)
+
+UNIFIED_FEW_SHOT = """Ví dụ phân tích toàn diện:
+
+--- VNM ---
+GIÁ HIỆN TẠI: 82,000 VND
+ATR(14): 1,500 VND
+
+[Kỹ thuật]
+RSI(14) 5 phiên: [42.1, 44.3, 46.8, 49.2, 52.1] — vùng trung tính, xu hướng tăng
+MACD histogram: [-0.12, -0.05, 0.03, 0.11, 0.18] — giao cắt bullish
+SMA(20): 81,000 | SMA(50): 80,000 | SMA(200): 78,000
+BB: Upper 84,200 | Middle 81,800 | Lower 79,400
+Pivot: 81,500 | S1: 80,000 | S2: 78,500 | R1: 83,000 | R2: 84,500
+52-week: High 90,000 | Low 70,000 | Vị trí: 60%
+KL trung bình 20d: 1,200,000 | KL mới nhất: 1,500,000 (1.25x) — tăng
+
+[Cơ bản] (Q4/2024)
+P/E: 15.2 | P/B: 3.1 | ROE: 25% | ROA: 12%
+Tăng trưởng DT: +8% | Tăng trưởng LN: +5%
+
+[Tin tức] (3 tin)
+1. VNM đặt mục tiêu sản lượng kỷ lục năm 2025
+2. Biên lợi nhuận cải thiện nhờ giá nguyên liệu giảm
+3. Quỹ ngoại mua ròng VNM 3 phiên liên tiếp
+
+[Tin đồn]
+Hướng: bullish | Tin cậy: 6/10 | Tác động: 5/10
+Thông tin: Doanh thu Q4 tăng 15%; Kế hoạch M&A công ty sữa nhỏ
+
+Kết quả mẫu:
+{"ticker": "VNM", "signal": "mua", "score": 8, "entry_price": 82000, "stop_loss": 79500, "take_profit_1": 84500, "take_profit_2": 86000, "risk_reward_ratio": 1.0, "position_size_pct": 8, "timeframe": "swing", "key_levels": "Hỗ trợ mạnh: 80,000 VND (SMA50 + Pivot). Hỗ trợ phụ: 78,500 VND (Fib 50% + S2). Kháng cự gần: 83,000 VND (R1). Kháng cự xa: 84,500 VND (R2 + BB upper). Entry tối ưu: 81,500-82,000 VND (pullback về pivot). SL: 79,500 VND (dưới Fib 38.2%, -3%). TP1: 84,500 VND (R2). TP2: 86,000 VND (vùng 52-week 80%).", "reasoning": "Kỹ thuật: RSI tăng dần từ 42→52, MACD vừa cắt bullish, giá trên cả 3 SMA chính. KL tăng 25% xác nhận momentum. Cơ bản: ROE 25% cao, P/E 15.2 hợp lý so với trung bình VN (12-15), tăng trưởng ổn định. Tin tức: 3/3 tin tích cực, quỹ ngoại mua ròng. Tin đồn: bullish nhưng tin cậy trung bình (6/10) — cân nhắc hỗ trợ nhưng không quyết định. Kết luận: 4/4 chiều đều tích cực, vào lệnh tại pullback với R:R = 1.0."}
+
+Phân tích toàn diện các mã sau:"""
+
+
+def _validate_unified_signal(
+    analysis: "TickerUnifiedAnalysis",
+    current_price: float,
+    atr: float,
+    week_52_high: float | None = None,
+    week_52_low: float | None = None,
+) -> tuple[bool, str]:
+    """Validate unified analysis signal against price/ATR bounds.
+
+    Returns (is_valid, reason). Same logic as trading signal validation.
+    Entry ±5% of current_price, SL within 3×ATR, TP within 5×ATR.
+    """
+    from app.schemas.analysis import TickerUnifiedAnalysis as _Schema  # noqa: F811
+
+    # Entry within ±5% of current_price
+    if current_price > 0 and abs(analysis.entry_price - current_price) / current_price > 0.05:
+        return False, f"Entry {analysis.entry_price:.0f} outside ±5% of current {current_price:.0f}"
+    # Entry within 52-week range
+    if week_52_high is not None and week_52_low is not None:
+        if analysis.entry_price > week_52_high or analysis.entry_price < week_52_low:
+            return False, (
+                f"Entry {analysis.entry_price:.0f} outside 52-week range "
+                f"[{week_52_low:.0f}, {week_52_high:.0f}]"
+            )
+    # SL within 3×ATR of entry
+    if atr > 0 and abs(analysis.stop_loss - analysis.entry_price) > 3 * atr:
+        return False, f"SL {analysis.stop_loss:.0f} exceeds 3×ATR ({3 * atr:.0f}) from entry {analysis.entry_price:.0f}"
+    # TP within 5×ATR of entry
+    for tp in [analysis.take_profit_1, analysis.take_profit_2]:
+        if atr > 0 and abs(tp - analysis.entry_price) > 5 * atr:
+            return False, f"TP {tp:.0f} exceeds 5×ATR ({5 * atr:.0f}) from entry {analysis.entry_price:.0f}"
     return True, ""

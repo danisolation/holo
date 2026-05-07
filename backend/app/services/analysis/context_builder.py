@@ -737,3 +737,208 @@ class ContextBuilder:
 
         return context
 
+    # ------------------------------------------------------------------
+    # Phase 88 / v19.0: Unified Analysis Context
+    # ------------------------------------------------------------------
+
+    async def get_unified_context(
+        self, ticker_id: int, symbol: str
+    ) -> dict | None:
+        """Get comprehensive context for unified analysis — ALL dimensions in one.
+
+        Combines: technical indicators (5-day window + S/R + BBands),
+        fundamental metrics, recent news titles, rumor scores,
+        current price, 52-week range, volume profile.
+
+        Returns None if no indicator data (minimum requirement).
+        """
+        # --- Technical indicators ---
+        result = await self.session.execute(
+            select(TechnicalIndicator)
+            .where(TechnicalIndicator.ticker_id == ticker_id)
+            .order_by(TechnicalIndicator.date.desc())
+            .limit(5)
+        )
+        rows = result.scalars().all()
+        if not rows:
+            return None
+
+        rows = list(reversed(rows))  # chronological order
+        latest = rows[-1]
+
+        def _f(val) -> float | None:
+            return float(val) if val is not None else None
+
+        context: dict = {
+            # 5-day arrays
+            "rsi_14": [_f(r.rsi_14) for r in rows],
+            "macd_line": [_f(r.macd_line) for r in rows],
+            "macd_signal": [_f(r.macd_signal) for r in rows],
+            "macd_histogram": [_f(r.macd_histogram) for r in rows],
+            # Latest indicator values
+            "sma_20": _f(latest.sma_20),
+            "sma_50": _f(latest.sma_50),
+            "sma_200": _f(latest.sma_200),
+            "ema_12": _f(latest.ema_12),
+            "ema_26": _f(latest.ema_26),
+            "bb_upper": _f(latest.bb_upper),
+            "bb_middle": _f(latest.bb_middle),
+            "bb_lower": _f(latest.bb_lower),
+            "atr_14": _f(latest.atr_14),
+            "adx_14": _f(latest.adx_14),
+            "stoch_k_14": _f(latest.stoch_k_14),
+            "stoch_d_14": _f(latest.stoch_d_14),
+            # S/R levels
+            "pivot_point": _f(latest.pivot_point),
+            "support_1": _f(latest.support_1),
+            "support_2": _f(latest.support_2),
+            "resistance_1": _f(latest.resistance_1),
+            "resistance_2": _f(latest.resistance_2),
+            "fib_236": _f(latest.fib_236),
+            "fib_382": _f(latest.fib_382),
+            "fib_500": _f(latest.fib_500),
+            "fib_618": _f(latest.fib_618),
+        }
+
+        # Skip if no ATR data (needed for post-validation)
+        if context["atr_14"] is None:
+            return None
+
+        # RSI zone
+        latest_rsi = _f(latest.rsi_14)
+        if latest_rsi is not None:
+            if latest_rsi < 30:
+                context["rsi_zone"] = "oversold"
+            elif latest_rsi > 70:
+                context["rsi_zone"] = "overbought"
+            else:
+                context["rsi_zone"] = "neutral"
+        else:
+            context["rsi_zone"] = "unknown"
+
+        # MACD crossover
+        histograms = context["macd_histogram"]
+        if len(histograms) >= 2 and histograms[-1] is not None and histograms[-2] is not None:
+            if histograms[-1] > 0 and histograms[-2] <= 0:
+                context["macd_crossover"] = "bullish"
+            elif histograms[-1] < 0 and histograms[-2] >= 0:
+                context["macd_crossover"] = "bearish"
+            else:
+                context["macd_crossover"] = "none"
+        else:
+            context["macd_crossover"] = "none"
+
+        # --- Current price ---
+        price_result = await self.session.execute(
+            select(DailyPrice.close)
+            .where(DailyPrice.ticker_id == ticker_id)
+            .order_by(DailyPrice.date.desc())
+            .limit(1)
+        )
+        latest_close = price_result.scalar_one_or_none()
+        if latest_close is None:
+            return None
+        context["current_price"] = float(latest_close)
+
+        # SMA distance %
+        close_val = context["current_price"]
+        for sma_key in ("sma_20", "sma_50", "sma_200"):
+            sma_val = context.get(sma_key)
+            if sma_val is not None and sma_val != 0:
+                pct = (close_val - sma_val) / sma_val * 100
+                context[f"price_vs_{sma_key}_pct"] = round(pct, 2)
+
+        # --- 52-week high/low ---
+        week52_result = await self.session.execute(
+            select(
+                sa_func.max(DailyPrice.high),
+                sa_func.min(DailyPrice.low),
+            )
+            .where(
+                DailyPrice.ticker_id == ticker_id,
+                DailyPrice.date >= date.today() - timedelta(days=365),
+            )
+        )
+        row52 = week52_result.one_or_none()
+        if row52 and row52[0] is not None:
+            context["week_52_high"] = float(row52[0])
+            context["week_52_low"] = float(row52[1])
+            high_52 = float(row52[0])
+            low_52 = float(row52[1])
+            if high_52 > low_52:
+                percentile = (context["current_price"] - low_52) / (high_52 - low_52) * 100
+                context["price_percentile_52w"] = round(percentile, 1)
+
+        # --- Volume profile ---
+        vol_result = await self.session.execute(
+            select(DailyPrice.close, DailyPrice.volume)
+            .where(
+                DailyPrice.ticker_id == ticker_id,
+                DailyPrice.date >= date.today() - timedelta(days=20),
+            )
+            .order_by(DailyPrice.date.desc())
+        )
+        vol_rows = vol_result.all()
+        if vol_rows:
+            volumes = [int(r[1]) for r in vol_rows]
+            avg_vol = sum(volumes) / len(volumes)
+            context["avg_volume_20d"] = round(avg_vol)
+            context["latest_volume"] = volumes[0]
+            if avg_vol > 0:
+                context["relative_volume"] = round(volumes[0] / avg_vol, 2)
+            if len(volumes) >= 10:
+                recent_avg = sum(volumes[:10]) / 10
+                older_avg = sum(volumes[10:]) / len(volumes[10:])
+                if older_avg > 0:
+                    vol_change = (recent_avg - older_avg) / older_avg * 100
+                    context["volume_trend"] = "increasing" if vol_change > 10 else (
+                        "decreasing" if vol_change < -10 else "stable"
+                    )
+                    context["volume_change_pct"] = round(vol_change, 1)
+
+        # --- Fundamental metrics ---
+        fin_result = await self.session.execute(
+            select(Financial)
+            .where(Financial.ticker_id == ticker_id)
+            .order_by(Financial.year.desc(), Financial.quarter.desc().nullslast())
+            .limit(1)
+        )
+        fin_row = fin_result.scalar_one_or_none()
+        if fin_row:
+            context["fundamental"] = {
+                "period": fin_row.period,
+                "pe": float(fin_row.pe) if fin_row.pe else None,
+                "pb": float(fin_row.pb) if fin_row.pb else None,
+                "eps": float(fin_row.eps) if fin_row.eps else None,
+                "roe": float(fin_row.roe) if fin_row.roe else None,
+                "roa": float(fin_row.roa) if fin_row.roa else None,
+                "revenue_growth": float(fin_row.revenue_growth) if fin_row.revenue_growth else None,
+                "profit_growth": float(fin_row.profit_growth) if fin_row.profit_growth else None,
+                "current_ratio": float(fin_row.current_ratio) if fin_row.current_ratio else None,
+                "debt_to_equity": float(fin_row.debt_to_equity) if fin_row.debt_to_equity else None,
+            }
+
+        # --- News titles ---
+        cutoff = datetime.now() - timedelta(days=settings.cafef_news_days)
+        news_result = await self.session.execute(
+            select(NewsArticle.title)
+            .where(
+                NewsArticle.ticker_id == ticker_id,
+                NewsArticle.published_at >= cutoff,
+            )
+            .order_by(NewsArticle.published_at.desc())
+        )
+        titles = [_sanitize_title(row[0]) for row in news_result.all()]
+        context["news_titles"] = [t for t in titles if t]
+
+        # --- Rumor intelligence ---
+        rumor = await self.get_rumor_context(ticker_id, symbol)
+        if rumor:
+            context["rumor_direction"] = rumor["direction"]
+            context["rumor_credibility"] = rumor["credibility_score"]
+            context["rumor_impact"] = rumor["impact_score"]
+            context["rumor_key_claims"] = rumor["key_claims"]
+            context["rumor_reasoning"] = rumor["reasoning"]
+
+        return context
+

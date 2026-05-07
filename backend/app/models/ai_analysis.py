@@ -23,6 +23,7 @@ class AnalysisType(str, enum.Enum):
     SENTIMENT = "sentiment"  # Phase 3 — included now for forward compatibility
     COMBINED = "combined"    # Phase 3 — holistic mua/bán/giữ recommendation
     TRADING_SIGNAL = "trading_signal"  # Phase 19 — dual-direction trading plan
+    UNIFIED = "unified"  # Phase 88 / v19.0 — single prompt replaces all above
 
 
 class AIAnalysis(Base):

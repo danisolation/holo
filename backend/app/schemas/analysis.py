@@ -156,6 +156,42 @@ class TradingSignalBatchResponse(BaseModel):
     signals: list[TickerTradingSignal]
 
 
+# --- Unified Analysis Schemas (Phase 88 / v19.0) ---
+
+class UnifiedSignal(str, Enum):
+    """Unified analysis signal (Vietnamese)."""
+    MUA = "mua"    # buy
+    BAN = "ban"    # sell
+    GIU = "giu"    # hold
+
+
+class UnifiedTimeframe(str, Enum):
+    """Trading timeframe for unified analysis."""
+    SWING = "swing"        # 3-15 days
+    POSITION = "position"  # weeks+
+
+
+class TickerUnifiedAnalysis(BaseModel):
+    """Single ticker unified analysis — combines all dimensions into one output."""
+    ticker: str
+    signal: UnifiedSignal
+    score: int = Field(ge=1, le=10, description="Confidence/strength score 1-10")
+    entry_price: float = Field(description="Entry price in VND")
+    stop_loss: float = Field(description="Stop-loss price in VND")
+    take_profit_1: float = Field(description="Take-profit target 1 in VND")
+    take_profit_2: float = Field(description="Take-profit target 2 in VND")
+    risk_reward_ratio: float = Field(ge=0.3, description="Risk/reward ratio")
+    position_size_pct: int = Field(ge=1, le=100, description="% of portfolio suggested")
+    timeframe: UnifiedTimeframe
+    key_levels: str = Field(description="Key support/resistance levels explanation")
+    reasoning: str = Field(description="Multi-dimensional reasoning in Vietnamese (min 200 chars)")
+
+
+class UnifiedBatchResponse(BaseModel):
+    """Batch response for unified analysis (multiple tickers per Gemini call)."""
+    analyses: list[TickerUnifiedAnalysis]
+
+
 # --- API Response Schemas ---
 
 class AnalysisResultResponse(BaseModel):

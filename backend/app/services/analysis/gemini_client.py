@@ -20,6 +20,7 @@ from app.schemas.analysis import (
     SentimentBatchResponse,
     CombinedBatchResponse,
     TradingSignalBatchResponse,
+    UnifiedBatchResponse,
 )
 from app.services.analysis.prompts import (
     ANALYSIS_TEMPERATURES,
@@ -28,11 +29,13 @@ from app.services.analysis.prompts import (
     SENTIMENT_SYSTEM_INSTRUCTION,
     COMBINED_SYSTEM_INSTRUCTION,
     TRADING_SIGNAL_SYSTEM_INSTRUCTION,
+    UNIFIED_SYSTEM_INSTRUCTION,
     TECHNICAL_FEW_SHOT,
     FUNDAMENTAL_FEW_SHOT,
     SENTIMENT_FEW_SHOT,
     COMBINED_FEW_SHOT,
     TRADING_SIGNAL_FEW_SHOT,
+    UNIFIED_FEW_SHOT,
 )
 from app.services.gemini_usage_service import GeminiUsageService
 
@@ -478,4 +481,169 @@ class GeminiClient:
                     f"Tin đồn: {data['rumor_direction']} "
                     f"(tác động={data.get('rumor_impact', 'N/A')}/10) — {claims_str}"
                 )
+        return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Phase 88 / v19.0: Unified Analysis
+    # ------------------------------------------------------------------
+
+    async def analyze_unified_batch(
+        self, ticker_data: dict[str, dict]
+    ) -> UnifiedBatchResponse | None:
+        """Analyze a batch of tickers with the unified prompt (all dimensions → one output).
+
+        Uses increased token budgets similar to trading_signal.
+        """
+        prompt = self.build_unified_prompt(ticker_data)
+        temp = 0.2  # Balanced creativity for multi-dimensional reasoning
+        sys_instr = UNIFIED_SYSTEM_INSTRUCTION
+
+        response = await self._call_gemini(
+            prompt, UnifiedBatchResponse, temp, sys_instr,
+            max_output_tokens=settings.unified_max_tokens,
+            thinking_budget=settings.unified_thinking_budget,
+        )
+        if response.usage_metadata:
+            logger.debug(
+                f"Gemini unified tokens: {response.usage_metadata.total_token_count}"
+            )
+        await self._record_usage("unified", len(ticker_data), response)
+        result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("response.parsed is None, retrying at temperature=0.05")
+            response = await self._call_gemini(
+                prompt, UnifiedBatchResponse, 0.05, sys_instr,
+                max_output_tokens=settings.unified_max_tokens,
+                thinking_budget=settings.unified_thinking_budget,
+            )
+            result = response.parsed
+
+        if result is None and response.text:
+            logger.warning("Low-temp retry also failed, falling back to manual JSON parse")
+            try:
+                data = json.loads(response.text)
+                result = UnifiedBatchResponse.model_validate(data)
+            except Exception as e:
+                logger.error(f"Manual parse also failed: {e}")
+                logger.debug(f"Raw response text: {response.text[:500]}")
+        return result
+
+    def build_unified_prompt(self, ticker_data: dict[str, dict]) -> str:
+        """Build Vietnamese prompt for unified analysis batch.
+
+        Phase 88: Combines ALL data sources into one prompt per ticker:
+        technical indicators, S/R levels, fundamentals, news, rumors.
+        All prices in VND (×1000 from DB values).
+        """
+        lines = [
+            UNIFIED_FEW_SHOT,
+            "",
+        ]
+
+        for symbol, data in ticker_data.items():
+            price_vnd = data['current_price'] * 1000
+            atr_vnd = (data.get('atr_14') or 0) * 1000
+
+            lines.append(f"\n--- {symbol} ---")
+            lines.append(f"GIÁ HIỆN TẠI: {price_vnd:,.0f} VND")
+            lines.append(f"ATR(14): {atr_vnd:,.0f} VND")
+            lines.append("")
+
+            # [Kỹ thuật]
+            lines.append("[Kỹ thuật]")
+            rsi_arr = data.get('rsi_14', [])
+            lines.append(f"RSI(14) 5 phiên: {rsi_arr} — vùng {data.get('rsi_zone', 'N/A')}")
+            macd_hist = data.get('macd_histogram', [])
+            lines.append(f"MACD histogram: {macd_hist} — giao cắt: {data.get('macd_crossover', 'N/A')}")
+            lines.append(
+                f"ADX(14): {data.get('adx_14', 'N/A')} | "
+                f"Stochastic %K: {data.get('stoch_k_14', 'N/A')}, %D: {data.get('stoch_d_14', 'N/A')}"
+            )
+
+            # Convert price-based indicators to VND
+            def _vnd(key: str) -> str:
+                v = data.get(key)
+                if v is None:
+                    return 'N/A'
+                return f"{float(v) * 1000:,.0f}"
+
+            lines.append(
+                f"SMA(20): {_vnd('sma_20')} | SMA(50): {_vnd('sma_50')} | SMA(200): {_vnd('sma_200')}"
+            )
+            lines.append(
+                f"BB: Upper {_vnd('bb_upper')} | Middle {_vnd('bb_middle')} | Lower {_vnd('bb_lower')}"
+            )
+            lines.append(
+                f"Pivot: {_vnd('pivot_point')} | S1: {_vnd('support_1')} | S2: {_vnd('support_2')} | "
+                f"R1: {_vnd('resistance_1')} | R2: {_vnd('resistance_2')}"
+            )
+            lines.append(
+                f"Fib 23.6%: {_vnd('fib_236')} | Fib 38.2%: {_vnd('fib_382')} | "
+                f"Fib 50%: {_vnd('fib_500')} | Fib 61.8%: {_vnd('fib_618')}"
+            )
+            if "week_52_high" in data:
+                lines.append(
+                    f"52-week: High {data['week_52_high'] * 1000:,.0f} | "
+                    f"Low {data['week_52_low'] * 1000:,.0f} | "
+                    f"Vị trí: {data.get('price_percentile_52w', 'N/A')}%"
+                )
+            # Volume
+            if "avg_volume_20d" in data:
+                lines.append(
+                    f"KL trung bình 20d: {data['avg_volume_20d']:,} | "
+                    f"KL mới nhất: {data.get('latest_volume', 'N/A'):,} "
+                    f"({data.get('relative_volume', 'N/A')}x) — "
+                    f"{data.get('volume_trend', 'N/A')}"
+                )
+            # SMA distance
+            sma_parts = []
+            for key in ("price_vs_sma_20_pct", "price_vs_sma_50_pct", "price_vs_sma_200_pct"):
+                if key in data:
+                    label = key.replace("price_vs_", "").replace("_pct", "").upper()
+                    sma_parts.append(f"vs {label}: {data[key]:+.1f}%")
+            if sma_parts:
+                lines.append(f"Giá {', '.join(sma_parts)}")
+
+            # [Cơ bản]
+            fund = data.get("fundamental")
+            if fund:
+                lines.append(f"\n[Cơ bản] ({fund.get('period', 'N/A')})")
+                lines.append(
+                    f"P/E: {fund.get('pe', 'N/A')} | P/B: {fund.get('pb', 'N/A')} | "
+                    f"ROE: {fund.get('roe', 'N/A')} | ROA: {fund.get('roa', 'N/A')}"
+                )
+                lines.append(
+                    f"Tăng trưởng DT: {fund.get('revenue_growth', 'N/A')} | "
+                    f"Tăng trưởng LN: {fund.get('profit_growth', 'N/A')}"
+                )
+                if fund.get('debt_to_equity') is not None:
+                    lines.append(
+                        f"Nợ/Vốn: {fund['debt_to_equity']} | "
+                        f"Hệ số thanh toán: {fund.get('current_ratio', 'N/A')}"
+                    )
+            else:
+                lines.append("\n[Cơ bản] Không có dữ liệu tài chính")
+
+            # [Tin tức]
+            news = data.get("news_titles", [])
+            if news:
+                lines.append(f"\n[Tin tức] ({len(news)} tin)")
+                for i, title in enumerate(news[:5], 1):
+                    lines.append(f"{i}. {title}")
+            else:
+                lines.append("\n[Tin tức] Không có tin tức gần đây")
+
+            # [Tin đồn]
+            if data.get("rumor_direction"):
+                lines.append(f"\n[Tin đồn]")
+                lines.append(
+                    f"Hướng: {data['rumor_direction']} | "
+                    f"Tin cậy: {data.get('rumor_credibility', 'N/A')}/10 | "
+                    f"Tác động: {data.get('rumor_impact', 'N/A')}/10"
+                )
+                claims = data.get("rumor_key_claims", [])[:3]
+                if claims:
+                    lines.append(f"Thông tin: {'; '.join(claims)}")
+
         return "\n".join(lines)

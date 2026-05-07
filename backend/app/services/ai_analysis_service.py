@@ -42,12 +42,15 @@ from app.services.analysis.prompts import (  # noqa: F401
     SENTIMENT_SYSTEM_INSTRUCTION,
     COMBINED_SYSTEM_INSTRUCTION,
     TRADING_SIGNAL_SYSTEM_INSTRUCTION,
+    UNIFIED_SYSTEM_INSTRUCTION,
     TECHNICAL_FEW_SHOT,
     FUNDAMENTAL_FEW_SHOT,
     SENTIMENT_FEW_SHOT,
     COMBINED_FEW_SHOT,
     TRADING_SIGNAL_FEW_SHOT,
+    UNIFIED_FEW_SHOT,
     _validate_trading_signal,
+    _validate_unified_signal,
 )
 
 # Module-level lock: serializes all Gemini API access across concurrent
@@ -122,6 +125,9 @@ class AIAnalysisService:
 
             if analysis_type in ("trading_signal", "all"):
                 results["trading_signal"] = await self.run_trading_signal_analysis(ticker_filter=ticker_filter)
+
+            if analysis_type in ("unified", "all"):
+                results["unified"] = await self.run_unified_analysis(ticker_filter=ticker_filter)
 
             return results
 
@@ -307,6 +313,45 @@ class AIAnalysisService:
             batch_size_override=settings.trading_signal_batch_size,
         )
 
+    async def run_unified_analysis(self, ticker_filter: dict[str, int] | None = None) -> dict:
+        """Unified analysis for all tickers — Phase 88 / v19.0.
+
+        Single Gemini prompt receives ALL data (indicators, financials, news, rumors)
+        and outputs one coherent analysis per ticker with signal + entry/SL/TP.
+        Replaces the 5-type pipeline with one unified call.
+
+        Returns: {success: int, failed: int, failed_symbols: list[str]}
+        """
+        if ticker_filter is not None:
+            ticker_map = ticker_filter
+        else:
+            ticker_svc = TickerService(self.session)
+            ticker_map = await ticker_svc.get_ticker_id_map()
+
+        logger.info(f"Starting unified analysis for {len(ticker_map)} tickers")
+
+        # Gather comprehensive context per ticker
+        ticker_data: dict[str, dict] = {}
+        ticker_ids: dict[str, int] = {}
+
+        for symbol, tid in ticker_map.items():
+            ctx = await self.context_builder.get_unified_context(tid, symbol)
+            if ctx:
+                ticker_data[symbol] = ctx
+                ticker_ids[symbol] = tid
+
+        logger.info(f"Unified context gathered: {len(ticker_data)}/{len(ticker_map)} tickers have data")
+
+        if not ticker_data:
+            return {"success": 0, "failed": 0, "failed_symbols": []}
+
+        # Run batched analysis with unified batch size
+        return await self._run_batched_analysis(
+            ticker_data, ticker_ids, AnalysisType.UNIFIED,
+            self.gemini_client.analyze_unified_batch,
+            batch_size_override=settings.unified_batch_size,
+        )
+
     async def analyze_single_ticker(self, ticker_id: int, symbol: str) -> dict:
         """Run all analysis types for a single ticker (on-demand).
 
@@ -428,6 +473,26 @@ class AIAnalysisService:
                                 logger.warning(f"Trading signal validation failed for {symbol}: {reason}")
                                 signal = "invalid"
                                 score = 0
+                        elif analysis_type == AnalysisType.UNIFIED:
+                            # Post-validate unified analysis against price/ATR bounds
+                            ctx = ticker_data.get(symbol, {})
+                            current_price = ctx.get("current_price", 0) * 1000
+                            atr = ctx.get("atr_14", 0) * 1000
+                            w52_high = ctx.get("week_52_high")
+                            w52_low = ctx.get("week_52_low")
+                            is_valid, reason = _validate_unified_signal(
+                                analysis, current_price, atr,
+                                week_52_high=w52_high * 1000 if w52_high else None,
+                                week_52_low=w52_low * 1000 if w52_low else None,
+                            )
+
+                            if is_valid:
+                                signal = analysis.signal.value
+                                score = analysis.score
+                            else:
+                                logger.warning(f"Unified analysis validation failed for {symbol}: {reason}")
+                                signal = "invalid"
+                                score = 0
                         else:
                             signal = "unknown"
                             score = 5
@@ -445,6 +510,11 @@ class AIAnalysisService:
                                 reasoning = analysis.reasoning
                             else:
                                 reasoning = f"Validation failed: {reason}"
+                        elif analysis_type == AnalysisType.UNIFIED:
+                            if signal != "invalid":
+                                reasoning = analysis.reasoning
+                            else:
+                                reasoning = f"Validation failed: {reason}"
                         else:
                             reasoning = analysis.reasoning
 
@@ -454,6 +524,7 @@ class AIAnalysisService:
                             AnalysisType.FUNDAMENTAL: {"strong", "good"},
                             AnalysisType.SENTIMENT: {"very_positive", "positive"},
                             AnalysisType.COMBINED: {"mua"},
+                            AnalysisType.UNIFIED: {"mua"},
                         }
                         bullish_set = BULLISH_SIGNALS.get(analysis_type, set())
                         if score < 5 and signal in bullish_set:
@@ -462,6 +533,7 @@ class AIAnalysisService:
                                 AnalysisType.FUNDAMENTAL: "neutral",
                                 AnalysisType.SENTIMENT: "neutral",
                                 AnalysisType.COMBINED: "giu",
+                                AnalysisType.UNIFIED: "giu",
                             }.get(analysis_type, "neutral")
                             logger.warning(
                                 f"Score-signal mismatch for {symbol} ({analysis_type.value}): "

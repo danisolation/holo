@@ -106,6 +106,11 @@ class Settings(BaseSettings):
     combined_thinking_budget: int = 2048   # Match trading_signal — complex multi-dimensional reasoning
     combined_max_tokens: int = 32768       # Match trading_signal — 4 structured sections per ticker
 
+    # Unified Analysis Pipeline (Phase 88 / v19.0)
+    unified_batch_size: int = 6            # Fewer tickers per batch — more data per ticker
+    unified_thinking_budget: int = 2048    # Complex multi-dimensional reasoning
+    unified_max_tokens: int = 32768        # ~500 tokens/ticker × 6 tickers + overhead
+
     # Test Mode (Phase 27 — E2E testing)
     holo_test_mode: bool = False  # Set True to skip scheduler in tests
 
