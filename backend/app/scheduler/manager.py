@@ -367,7 +367,7 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_hose → [indicators → discovery_scoring → AI → news → sentiment → combined → trading_signal → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → consecutive_loss_check → accuracy_tracking], "
-        "morning_price_crawl_hose → [indicators → AI → trading_signal]"
+        "daily_price_crawl_hose → [indicators → discovery_scoring → news → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → consecutive_loss_check → accuracy_tracking] (AI analysis: on-demand only), "
+        "morning_price_crawl_hose → [indicators] (AI analysis: on-demand only)"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")
