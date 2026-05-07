@@ -63,7 +63,7 @@ COMBINED_SYSTEM_INSTRUCTION = (
     "Phân tích CHI TIẾT cả 3-4 chiều (kỹ thuật, cơ bản, tâm lý, tin đồn nếu có) — mỗi chiều ít nhất 1-2 câu "
     "với số liệu cụ thể, sau đó kết luận rõ ràng.\n"
     "- key_levels: Mức giá quan trọng (tối thiểu 80 từ) — liệt kê hỗ trợ (2-3 mức), "
-    "kháng cự (2-3 mức), entry point gợi ý, stop-loss, take-profit với giá cụ thể bằng VND. "
+    "kháng cự (2-3 mức), entry point gợi ý, stop-loss, take-profit với giá cụ thể (đơn vị: nghìn VND). "
     "Giải thích lý do chọn từng mức giá. "
     "BẮT BUỘC: Tất cả mức giá PHẢI nằm trong khoảng ±15% so với GIÁ HIỆN TẠI được cung cấp. "
     "KHÔNG ĐƯỢC dùng giá từ kiến thức cũ — chỉ dùng giá hiện tại đã cho.\n"

@@ -379,7 +379,7 @@ class GeminiClient:
             lines.append(f"\n--- {symbol} ---")
             # Anchor AI to actual price to prevent hallucination
             if data.get('current_price'):
-                lines.append(f"GIÁ HIỆN TẠI: {data['current_price']:,.0f} VND (dùng giá này làm cơ sở cho key_levels)")
+                lines.append(f"GIÁ HIỆN TẠI: {data['current_price']:,.1f} (nghìn VND) — tất cả mức giá key_levels phải cùng đơn vị này")
             lines.append(f"Kỹ thuật: signal={data.get('tech_signal', 'N/A')}, strength={data.get('tech_score', 'N/A')}")
             if data.get('tech_reasoning'):
                 lines.append(f"  Chi tiết kỹ thuật: {data['tech_reasoning']}")
@@ -422,7 +422,7 @@ class GeminiClient:
         ]
         for symbol, data in ticker_data.items():
             lines.append(f"\n--- {symbol} ---")
-            lines.append(f"Giá hiện tại: {data['current_price']:,.0f} VND")
+            lines.append(f"Giá hiện tại: {data['current_price']:,.1f} (nghìn VND)")
             lines.append(
                 f"ATR(14): {data.get('atr_14', 'N/A')} | "
                 f"ADX(14): {data.get('adx_14', 'N/A')} | "

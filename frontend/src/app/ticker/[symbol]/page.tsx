@@ -398,7 +398,7 @@ export default function TickerDetailPage({
       <Separator />
 
       {/* Combined Recommendation */}
-      {analysisLoading ? (
+      {analysisLoading || analyzing ? (
         <Skeleton className="h-32 rounded-xl" />
       ) : analysisError ? (
         <SectionError error={analysisError} onRetry={() => refetchAnalysis()} />
@@ -409,7 +409,7 @@ export default function TickerDetailPage({
       ) : null}
 
       {/* Trading Plan Panel — Phase 20 */}
-      {tradingSignalLoading ? (
+      {tradingSignalLoading || analyzing ? (
         <Skeleton className="h-[320px] rounded-xl" />
       ) : tradingSignalError ? (
         <SectionError error={tradingSignalError} onRetry={() => refetchTradingSignal()} />
@@ -424,7 +424,7 @@ export default function TickerDetailPage({
         <h2 className="text-lg font-semibold mb-3">
           Phân tích AI đa chiều
         </h2>
-        {analysisLoading ? (
+        {analysisLoading || analyzing ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <Skeleton key={i} className="h-48 rounded-xl" />
