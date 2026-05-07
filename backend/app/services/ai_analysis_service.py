@@ -409,13 +409,16 @@ class AIAnalysisService:
                             score = analysis.confidence
                         elif analysis_type == AnalysisType.TRADING_SIGNAL:
                             # Post-validate trading signals against price/ATR bounds
+                            # DB stores prices in nghìn đồng (x1000), Gemini outputs in VND
                             ctx = ticker_data.get(symbol, {})
-                            current_price = ctx.get("current_price", 0)
-                            atr = ctx.get("atr_14", 0)
+                            current_price = ctx.get("current_price", 0) * 1000
+                            atr = ctx.get("atr_14", 0) * 1000
+                            w52_high = ctx.get("week_52_high")
+                            w52_low = ctx.get("week_52_low")
                             is_valid, reason = _validate_trading_signal(
                                 analysis, current_price, atr,
-                                week_52_high=ctx.get("week_52_high"),
-                                week_52_low=ctx.get("week_52_low"),
+                                week_52_high=w52_high * 1000 if w52_high else None,
+                                week_52_low=w52_low * 1000 if w52_low else None,
                             )
 
                             if is_valid:
