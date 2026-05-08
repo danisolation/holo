@@ -358,13 +358,20 @@ class AIAnalysisService:
         Used by the 'Analyze now' endpoint for HNX/UPCOM tickers
         not in the daily schedule.
 
-        Acquires the Gemini lock once for all 5 analysis types to avoid
-        starvation — without this, the daily pipeline (400+ tickers) could
-        grab the lock between each type, delaying on-demand results for hours.
+        Pipeline: crawl fresh rumors → score rumors → run all AI analysis types.
+        This ensures unified analysis has the latest rumor intelligence.
         """
         logger.info(f"On-demand analysis for {symbol} (id={ticker_id})")
         ticker_filter = {symbol: ticker_id}
         results = {}
+
+        # Step 1: Crawl fresh rumors for this ticker (best-effort, non-blocking)
+        try:
+            await self._crawl_and_score_rumors(ticker_id, symbol)
+        except Exception as e:
+            logger.warning(f"On-demand rumor crawl/score for {symbol} failed (non-fatal): {e}")
+
+        # Step 2: Run all AI analysis types
         async with _gemini_lock:
             for analysis_type, runner in [
                 ("technical", self.run_technical_analysis),
@@ -380,6 +387,48 @@ class AIAnalysisService:
                     logger.error(f"On-demand {analysis_type} failed for {symbol}: {e}")
                     results[analysis_type] = {"error": str(e)}
         return results
+
+    async def _crawl_and_score_rumors(self, ticker_id: int, symbol: str) -> None:
+        """Crawl latest rumors from all sources and score them for a single ticker.
+
+        Called before on-demand analysis to ensure fresh rumor data.
+        """
+        from app.crawlers.f319_crawler import F319Crawler
+        from app.crawlers.fireant_crawler import FireantCrawler
+        from app.crawlers.vnexpress_crawler import VnExpressCrawler
+        from app.crawlers.vietstock_crawler import VietstockCrawler
+        from app.crawlers.tnck_crawler import TNCKCrawler
+        from app.services.rumor_scoring_service import RumorScoringService
+
+        logger.info(f"On-demand rumor crawl+score for {symbol}")
+
+        # Crawl from all sources (best-effort each)
+        crawlers = [
+            ("F319", F319Crawler(self.session)),
+            ("Fireant", FireantCrawler(self.session)),
+            ("VnExpress", VnExpressCrawler(self.session)),
+            ("Vietstock", VietstockCrawler(self.session)),
+            ("TNCK", TNCKCrawler(self.session)),
+        ]
+        total_new = 0
+        for name, crawler in crawlers:
+            try:
+                result = await crawler.crawl()
+                new_count = result.get("new", result.get("new_posts", 0)) if isinstance(result, dict) else 0
+                total_new += new_count
+            except Exception as e:
+                logger.debug(f"Rumor crawl {name} failed for on-demand: {e}")
+
+        logger.info(f"On-demand rumor crawl: {total_new} new posts from {len(crawlers)} sources")
+
+        # Score rumors for this specific ticker
+        try:
+            scoring_service = RumorScoringService(self.session)
+            score_result = await scoring_service.score_ticker(ticker_id, symbol)
+            logger.info(f"On-demand rumor scoring for {symbol}: {score_result}")
+        except Exception as e:
+            logger.warning(f"On-demand rumor scoring for {symbol} failed: {e}")
+
 
     # ------------------------------------------------------------------
     # Batching & Orchestration
