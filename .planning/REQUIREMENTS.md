@@ -1,32 +1,27 @@
-# Requirements: Holo v19.0 Unified AI Analysis Pipeline
+# Requirements: Holo v20.0 Enhanced Price Pipeline
 
-**Defined:** 2026-05-07
-**Core Value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
+**Defined:** 2026-05-08
+**Core Value:** Giá cổ phiếu luôn cập nhật liên tục, lưu trữ vào DB, tự động aggregate thành OHLCV cuối ngày.
 
 ## Milestone Requirements
 
-### Backend — Unified Pipeline
+### Real-Time Polling
 
-- [ ] **UNIFY-01**: Unified prompt gửi ALL context (indicators, financials, news, rumors) ra 1 JSON response chứa: signal (mua/bán/giữ), score (1-10), entry price, stop-loss, take-profit, reasoning
-- [ ] **UNIFY-02**: Xóa analysis types cũ: technical, fundamental, sentiment, combined, trading_signal — cả model, service code, và scheduled jobs
-- [ ] **UNIFY-03**: Scheduler chạy 1 unified analysis job thay vì 5 jobs riêng lẻ
-- [ ] **UNIFY-04**: API endpoints trả về unified analysis result thay vì multi-type responses
+- [ ] **POLL-01**: VCI price poll interval giảm từ 30s xuống 15s
+- [ ] **POLL-02**: Bỏ giới hạn market hours — poll liên tục 24/7 (ngoài giờ dùng giá cuối phiên)
+- [ ] **POLL-03**: Poll ALL 400 mã HOSE (không giới hạn watchlist subscribed)
 
-### Backend — Data Cleanup
+### Lưu Trữ Intraday
 
-- [ ] **CLEAN-01**: Migration xóa data cũ của 5 analysis types khỏi ai_analyses table
-- [ ] **CLEAN-02**: Simplify ai_analyses schema — bỏ fields thừa, thêm entry_price/stop_loss/take_profit columns
+- [ ] **STORE-01**: Bảng `intraday_prices` lưu snapshot giá mỗi lần poll (symbol, price, volume, high, low, timestamp)
+- [ ] **STORE-02**: Track running high/low trong ngày từ poll data
+- [ ] **STORE-03**: Retention policy — tự động xóa intraday data cũ hơn 7 ngày
 
-### Frontend — Ticker Redesign
+### Auto-Crawl & Aggregate
 
-- [ ] **FE-01**: Redesign ticker detail page: 1 panel AI analysis duy nhất (bỏ tabs Technical/Fundamental/Sentiment/Combined)
-- [ ] **FE-02**: Panel hiển thị: signal badge, score, entry/SL/TP, key levels, full reasoning
-- [ ] **FE-03**: Market overview & watchlist cards show unified signal instead of multi-type
-
-### Prompt Quality
-
-- [ ] **PROMPT-01**: Prompt mới phải include: current price context, all indicators, financials summary, recent news, rumor scores — trong 1 structured input
-- [ ] **PROMPT-02**: Output validation: entry ±5% current price, SL ≤3×ATR, TP ≤5×ATR (keep existing rules)
+- [ ] **AGG-01**: Cuối ngày giao dịch (14:50 UTC+7), aggregate intraday data → daily_prices (OHLCV)
+- [ ] **AGG-02**: Sau aggregate, tự động chạy indicator computation cho ngày hôm đó
+- [ ] **AGG-03**: Giữ batch crawl (vnstock) làm fallback nếu intraday data không đủ (server downtime)
 
 ## Future Requirements
 
@@ -34,22 +29,20 @@ None deferred.
 
 ## Out of Scope
 
-- Auto-trading execution — chỉ gợi ý, không tự giao dịch
-- Multiple AI models comparison — chỉ dùng Gemini
-- Historical analysis replay — focus on current pipeline
+- WebSocket streaming real-time (VNDirect WS domain đã chết)
+- Tick-by-tick data storage (quá nặng cho DB, 15s interval đủ cho phân tích)
+- Real-time indicator computation (chỉ compute indicators cuối ngày)
 
 ## Traceability
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| UNIFY-01 | 88 | Pending |
-| UNIFY-02 | 89 | Pending |
-| UNIFY-03 | 90 | Pending |
-| UNIFY-04 | 90 | Pending |
-| CLEAN-01 | 89 | Pending |
-| CLEAN-02 | 89 | Pending |
-| FE-01 | 91 | Pending |
-| FE-02 | 91 | Pending |
-| FE-03 | 91 | Pending |
-| PROMPT-01 | 88 | Pending |
-| PROMPT-02 | 88 | Pending |
+| POLL-01 | TBD | Pending |
+| POLL-02 | TBD | Pending |
+| POLL-03 | TBD | Pending |
+| STORE-01 | TBD | Pending |
+| STORE-02 | TBD | Pending |
+| STORE-03 | TBD | Pending |
+| AGG-01 | TBD | Pending |
+| AGG-02 | TBD | Pending |
+| AGG-03 | TBD | Pending |
