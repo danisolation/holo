@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
+from app.config import settings
 from app.database import get_db, async_session, engine
 from app.crawlers.vnstock_crawler import VnstockCrawler
 from app.services.price_service import PriceService
@@ -80,6 +81,17 @@ async def health_check():
         scheduler=scheduler_status,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
+
+
+@router.get("/health/config")
+async def health_config():
+    """Debug: show active config (safe subset)."""
+    return {
+        "gemini_model": settings.gemini_model,
+        "gemini_batch_size": settings.gemini_batch_size,
+        "rumor_batch_size": settings.rumor_batch_size,
+        "gemini_api_key_set": bool(settings.gemini_api_key),
+    }
 
 
 @router.get("/scheduler/status", response_model=SchedulerStatusResponse)
