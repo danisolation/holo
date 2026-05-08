@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v19.0
-milestone_name: Unified AI Analysis Pipeline
+milestone: v20.0
+milestone_name: Enhanced Price Pipeline
 status: defining_requirements
 stopped_at: Defining requirements
-last_updated: "2026-05-07T09:15:00.000Z"
-last_activity: 2026-05-07 — Milestone v19.0 started
+last_updated: "2026-05-08T10:00:00.000Z"
+last_activity: 2026-05-08 — Milestone v20.0 started
 progress:
   total_phases: 0
   completed_phases: 0
@@ -18,20 +18,20 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-07)
+See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v19.0 Unified AI Analysis Pipeline — Defining requirements
+**Current focus:** v20.0 Enhanced Price Pipeline — Defining requirements
 
 ## Current Position
 
 Phase: Not started (defining requirements)
 Plan: —
 Status: Defining requirements
-Last activity: 2026-05-07 — Milestone v19.0 started
+Last activity: 2026-05-08 — Milestone v20.0 started
 
 ```
-v18.0 Progress: [████████████████████] 4/4 phases (100%)
+v19.0 Progress: [████████████████████] 4/4 phases (100%)
 ```
 
 ## Shipped Milestones
