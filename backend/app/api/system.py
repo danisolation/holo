@@ -148,6 +148,7 @@ async def trigger_financial_crawl():
 async def trigger_backfill(
     start_date: str | None = None,
     end_date: str | None = None,
+    skip_ticker_sync: bool = True,
 ):
     """Trigger historical data backfill as a streaming response.
 
@@ -157,12 +158,16 @@ async def trigger_backfill(
     async def _stream():
         async with async_session() as session:
             try:
-                # Step 1: Ensure tickers are synced first
-                yield "data: [1/3] Syncing tickers...\n\n"
                 crawler = VnstockCrawler()
-                ticker_service = TickerService(session, crawler)
-                ticker_result = await ticker_service.fetch_and_sync_tickers()
-                yield f"data: [1/3] Ticker sync done: {ticker_result}\n\n"
+
+                # Step 1: Ticker sync (optional, skip if already seeded)
+                if not skip_ticker_sync:
+                    yield "data: [1/3] Syncing tickers...\n\n"
+                    ticker_service = TickerService(session, crawler)
+                    ticker_result = await ticker_service.fetch_and_sync_tickers()
+                    yield f"data: [1/3] Ticker sync done: {ticker_result}\n\n"
+                else:
+                    yield "data: [1/3] Ticker sync skipped (already seeded)\n\n"
 
                 # Step 2: Backfill prices
                 yield "data: [2/3] Starting price backfill...\n\n"
