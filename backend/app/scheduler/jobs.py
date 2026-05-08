@@ -18,6 +18,7 @@ from datetime import date, datetime, timedelta
 from loguru import logger
 from sqlalchemy import select
 
+from app.config import settings
 from app.database import async_session
 from app.crawlers.vnstock_crawler import VnstockCrawler
 from app.services.price_service import PriceService
