@@ -21,11 +21,12 @@ class TestSchedulerManager:
         from app.scheduler.manager import scheduler
         assert str(scheduler.timezone) == "Asia/Ho_Chi_Minh"
 
-    def test_configure_jobs_registers_eleven_jobs(self):
+    def test_configure_jobs_registers_all_jobs(self):
         """configure_jobs must register all expected jobs.
 
         VCI polling always runs (Phase 92). Plus intraday cleanup & aggregate (Phase 93-94).
-        Total: 11 jobs.
+        Plus keep-alive self-ping.
+        Total: 12 jobs.
         """
         from app.scheduler.manager import scheduler, configure_jobs
 
@@ -46,7 +47,8 @@ class TestSchedulerManager:
         assert "realtime_heartbeat" in job_ids
         assert "daily_intraday_cleanup" in job_ids
         assert "daily_intraday_aggregate" in job_ids
-        assert len(job_ids) == 11
+        assert "keep_alive_ping" in job_ids
+        assert len(job_ids) == 12
 
         # Clean up
         scheduler.remove_all_jobs()
