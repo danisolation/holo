@@ -71,56 +71,52 @@ class TestCrawlTriggerEndpoints:
     """
 
     def test_trigger_daily_crawl_returns_200(self, client):
-        """POST /api/crawl/daily must return triggered=true."""
+        """POST /api/crawl/daily must return 200 streaming response."""
         with patch("app.api.system.async_session") as mock_sf:
             mock_session = AsyncMock()
             mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
             with patch("app.api.system.PriceService") as MockPS:
                 MockPS.return_value = AsyncMock()
+                MockPS.return_value.crawl_daily = AsyncMock(return_value={"success": 10})
                 response = client.post("/api/crawl/daily")
                 assert response.status_code == 200
-                assert response.json()["triggered"] is True
 
     def test_trigger_ticker_sync_returns_200(self, client):
-        """POST /api/crawl/tickers must return triggered=true."""
+        """POST /api/crawl/tickers must return 200 streaming response."""
         with patch("app.api.system.async_session") as mock_sf:
             mock_session = AsyncMock()
             mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
             with patch("app.api.system.TickerService") as MockTS:
                 MockTS.return_value = AsyncMock()
+                MockTS.return_value.fetch_and_sync_tickers = AsyncMock(return_value={"synced": 5})
                 response = client.post("/api/crawl/tickers")
                 assert response.status_code == 200
-                assert response.json()["triggered"] is True
 
     def test_trigger_financial_crawl_returns_200(self, client):
-        """POST /api/crawl/financials must return triggered=true."""
+        """POST /api/crawl/financials must return 200 streaming response."""
         with patch("app.api.system.async_session") as mock_sf:
             mock_session = AsyncMock()
             mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
-            with patch("app.api.system.FinancialService") as MockFS:
-                MockFS.return_value = AsyncMock()
-                response = client.post("/api/crawl/financials")
-                assert response.status_code == 200
-                assert response.json()["triggered"] is True
+            response = client.post("/api/crawl/financials")
+            assert response.status_code == 200
 
     def test_trigger_backfill_returns_200(self, client):
-        """POST /api/backfill must return triggered=true."""
+        """POST /api/backfill must return 200 streaming response."""
         with patch("app.api.system.async_session") as mock_sf:
             mock_session = AsyncMock()
             mock_sf.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_sf.return_value.__aexit__ = AsyncMock(return_value=False)
             with patch("app.api.system.TickerService") as MockTS, \
-                 patch("app.api.system.PriceService") as MockPS, \
-                 patch("app.api.system.FinancialService") as MockFS:
+                 patch("app.api.system.PriceService") as MockPS:
                 MockTS.return_value = AsyncMock()
+                MockTS.return_value.fetch_and_sync_tickers = AsyncMock(return_value={"synced": 5})
                 MockPS.return_value = AsyncMock()
-                MockFS.return_value = AsyncMock()
+                MockPS.return_value.backfill = AsyncMock(return_value={"success": 10})
                 response = client.post("/api/backfill")
                 assert response.status_code == 200
-                assert response.json()["triggered"] is True
 
 
 class TestAnalysisEndpoints:

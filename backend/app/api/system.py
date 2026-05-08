@@ -8,6 +8,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,92 +93,95 @@ async def scheduler_status():
     return SchedulerStatusResponse(running=scheduler.running, jobs=jobs)
 
 
-@router.post("/crawl/daily", response_model=CrawlResultResponse)
-async def trigger_daily_crawl(background_tasks: BackgroundTasks):
-    """Manually trigger daily OHLCV crawl (runs in background)."""
-    async def _run():
+@router.post("/crawl/daily")
+async def trigger_daily_crawl():
+    """Manually trigger daily OHLCV crawl (streaming to keep alive)."""
+    async def _stream():
         async with async_session() as session:
-            crawler = VnstockCrawler()
-            service = PriceService(session, crawler)
-            result = await service.crawl_daily()
-            logger.info(f"Manual daily crawl complete: {result}")
+            try:
+                yield "data: Starting daily crawl...\n\n"
+                crawler = VnstockCrawler()
+                service = PriceService(session, crawler)
+                result = await service.crawl_daily()
+                yield f"data: Daily crawl complete: {result}\n\n"
+            except Exception as e:
+                yield f"data: [ERROR] {e}\n\n"
 
-    background_tasks.add_task(_run)
-    return CrawlResultResponse(
-        message="Daily crawl triggered in background", triggered=True
-    )
+    return StreamingResponse(_stream(), media_type="text/event-stream")
 
 
-@router.post("/crawl/tickers", response_model=CrawlResultResponse)
-async def trigger_ticker_sync(background_tasks: BackgroundTasks):
-    """Manually trigger ticker list sync (runs in background)."""
-    async def _run():
+@router.post("/crawl/tickers")
+async def trigger_ticker_sync():
+    """Manually trigger ticker list sync (streaming)."""
+    async def _stream():
         async with async_session() as session:
-            crawler = VnstockCrawler()
-            service = TickerService(session, crawler)
-            result = await service.fetch_and_sync_tickers()
-            logger.info(f"Manual ticker sync complete: {result}")
+            try:
+                yield "data: Starting ticker sync...\n\n"
+                crawler = VnstockCrawler()
+                service = TickerService(session, crawler)
+                result = await service.fetch_and_sync_tickers()
+                yield f"data: Ticker sync complete: {result}\n\n"
+            except Exception as e:
+                yield f"data: [ERROR] {e}\n\n"
 
-    background_tasks.add_task(_run)
-    return CrawlResultResponse(
-        message="Ticker sync triggered in background", triggered=True
-    )
+    return StreamingResponse(_stream(), media_type="text/event-stream")
 
 
-@router.post("/crawl/financials", response_model=CrawlResultResponse)
-async def trigger_financial_crawl(background_tasks: BackgroundTasks):
-    """Manually trigger financial data crawl via CafeF scraping (runs in background)."""
-    async def _run():
+@router.post("/crawl/financials")
+async def trigger_financial_crawl():
+    """Manually trigger financial data crawl via CafeF scraping (streaming)."""
+    async def _stream():
         async with async_session() as session:
-            from app.crawlers.cafef_financial_crawler import CafeFFinancialCrawler
-            crawler = CafeFFinancialCrawler(session)
-            result = await crawler.crawl_financials()
-            logger.info(f"Manual financial crawl complete: {result}")
+            try:
+                yield "data: Starting financial crawl (CafeF)...\n\n"
+                from app.crawlers.cafef_financial_crawler import CafeFFinancialCrawler
+                crawler = CafeFFinancialCrawler(session)
+                result = await crawler.crawl_financials()
+                yield f"data: Financial crawl complete: {result}\n\n"
+            except Exception as e:
+                yield f"data: [ERROR] {e}\n\n"
 
-    background_tasks.add_task(_run)
-    return CrawlResultResponse(
-        message="Financial crawl triggered in background (CafeF source)", triggered=True
-    )
+    return StreamingResponse(_stream(), media_type="text/event-stream")
 
 
-@router.post("/backfill", response_model=BackfillResultResponse)
+@router.post("/backfill")
 async def trigger_backfill(
     start_date: str | None = None,
     end_date: str | None = None,
-    background_tasks: BackgroundTasks = None,
 ):
-    """Trigger historical data backfill (runs in background).
+    """Trigger historical data backfill as a streaming response.
 
-    Args:
-        start_date: ISO date string, defaults to 2023-07-01
-        end_date: ISO date string, defaults to today
-
-    WARNING: This crawls 1-2 years of data for 400 tickers.
-    Takes ~13 minutes. Run once on initial setup.
+    Streams progress line-by-line so the connection stays alive and
+    Render free tier doesn't kill the process.
     """
-    async def _run():
+    async def _stream():
         async with async_session() as session:
-            # Step 1: Ensure tickers are synced first
-            crawler = VnstockCrawler()
-            ticker_service = TickerService(session, crawler)
-            ticker_result = await ticker_service.fetch_and_sync_tickers()
-            logger.info(f"Backfill: Ticker sync first — {ticker_result}")
+            try:
+                # Step 1: Ensure tickers are synced first
+                yield "data: [1/3] Syncing tickers...\n\n"
+                crawler = VnstockCrawler()
+                ticker_service = TickerService(session, crawler)
+                ticker_result = await ticker_service.fetch_and_sync_tickers()
+                yield f"data: [1/3] Ticker sync done: {ticker_result}\n\n"
 
-            # Step 2: Backfill prices
-            price_service = PriceService(session, crawler)
-            price_result = await price_service.backfill(
-                start_date=start_date, end_date=end_date
-            )
-            logger.info(f"Backfill: Price backfill complete — {price_result}")
+                # Step 2: Backfill prices
+                yield "data: [2/3] Starting price backfill...\n\n"
+                price_service = PriceService(session, crawler)
+                price_result = await price_service.backfill(
+                    start_date=start_date, end_date=end_date
+                )
+                yield f"data: [2/3] Price backfill done: {price_result}\n\n"
 
-            # Step 3: Crawl financials via CafeF
-            from app.crawlers.cafef_financial_crawler import CafeFFinancialCrawler
-            cafef_crawler = CafeFFinancialCrawler(session)
-            financial_result = await cafef_crawler.crawl_financials()
-            logger.info(f"Backfill: Financial crawl complete — {financial_result}")
+                # Step 3: Crawl financials via CafeF
+                yield "data: [3/3] Starting financial crawl...\n\n"
+                from app.crawlers.cafef_financial_crawler import CafeFFinancialCrawler
+                cafef_crawler = CafeFFinancialCrawler(session)
+                financial_result = await cafef_crawler.crawl_financials()
+                yield f"data: [3/3] Financial crawl done: {financial_result}\n\n"
 
-    background_tasks.add_task(_run)
-    return BackfillResultResponse(
-        message="Backfill triggered in background (tickers → prices → financials). Check logs for progress.",
-        triggered=True,
-    )
+                yield "data: [COMPLETE] All backfill steps finished successfully.\n\n"
+            except Exception as e:
+                logger.error(f"Backfill failed: {e}")
+                yield f"data: [ERROR] {e}\n\n"
+
+    return StreamingResponse(_stream(), media_type="text/event-stream")
