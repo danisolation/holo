@@ -79,7 +79,7 @@ class RumorScoringService:
                     if success:
                         scored += 1
             except Exception as e:
-                logger.error(f"Rumor scoring batch {batch_idx + 1} failed: {e}")
+                logger.error(f"Rumor scoring batch {batch_idx + 1} failed: {type(e).__name__}: {e}")
                 for row in batch:
                     results[row[1]] = False
 

@@ -94,6 +94,27 @@ async def health_config():
     }
 
 
+@router.get("/health/test-gemini")
+async def test_gemini():
+    """Debug: test a single Gemini call to verify API works."""
+    from google import genai
+    from google.genai import types
+    try:
+        client = genai.Client(api_key=settings.gemini_api_key)
+        response = await client.aio.models.generate_content(
+            model=settings.gemini_model,
+            contents='Return JSON: {"status": "ok", "model": "working"}',
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                thinking_config=types.ThinkingConfig(thinking_budget=256),
+                max_output_tokens=256,
+            ),
+        )
+        return {"success": True, "text": response.text[:200]}
+    except Exception as e:
+        return {"success": False, "error": f"{type(e).__name__}: {str(e)[:500]}"}
+
+
 @router.get("/scheduler/status", response_model=SchedulerStatusResponse)
 async def scheduler_status():
     """Get scheduler status and next run times for all jobs."""
