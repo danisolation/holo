@@ -26,7 +26,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v17.0 AI Consistency & UX** — Phases 80-82 (shipped)
 - ✅ **v18.0 Multi-Source Community Rumors** — Phases 84-87 (shipped 2026-05-07)
 - ✅ **v19.0 Unified AI Analysis Pipeline** — Phases 88-91 (shipped)
-- [ ] **v20.0 Enhanced Price Pipeline** — Phases 92-94
+- ✅ **v20.0 Enhanced Price Pipeline** — Phases 92-94 (shipped)
 
 ## Phases
 
@@ -519,9 +519,9 @@ Plans:
 
 ### v20.0: Enhanced Price Pipeline (Phases 92-94)
 
-- [ ] **Phase 92: Intraday Storage & Enhanced Polling** — intraday_prices table, poll all 400 symbols at 15s, remove market hours restriction, track high/low
-- [ ] **Phase 93: Retention & Cleanup** — Daily scheduled job purges intraday data older than 7 days
-- [ ] **Phase 94: End-of-Day Aggregation** — Aggregate intraday → daily_prices at 14:50, chain indicator computation, vnstock fallback
+- [x] **Phase 92: Intraday Storage & Enhanced Polling** — intraday_prices table, poll all 400 symbols at 15s, remove market hours restriction, track high/low
+- [x] **Phase 93: Retention & Cleanup** — Daily scheduled job purges intraday data older than 7 days
+- [x] **Phase 94: End-of-Day Aggregation** — Aggregate intraday → daily_prices at 14:50, chain indicator computation, vnstock fallback
 
 ## Phase Details — v20.0
 
@@ -562,6 +562,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 92. Intraday Storage & Enhanced Polling | 0/? | Not started | - |
-| 93. Retention & Cleanup | 0/? | Not started | - |
-| 94. End-of-Day Aggregation | 0/? | Not started | - |
+| 92. Intraday Storage & Enhanced Polling | ✅ | Complete | 2026-05-08 |
+| 93. Retention & Cleanup | ✅ | Complete | 2026-05-08 |
+| 94. End-of-Day Aggregation | ✅ | Complete | 2026-05-08 |
