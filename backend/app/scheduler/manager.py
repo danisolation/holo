@@ -56,6 +56,10 @@ _JOB_NAMES = {
     "generate_weekly_review_triggered": "AI Weekly Performance Review",
     "realtime_price_poll": "Real-Time Price Poll",
     "realtime_heartbeat": "Real-Time Heartbeat",
+    # Phase 93-94: Intraday retention & aggregation
+    "daily_intraday_cleanup": "Daily Intraday Cleanup",
+    "daily_intraday_aggregate": "Daily Intraday Aggregate",
+    "daily_intraday_aggregate_triggered": "Daily Intraday Aggregate",
     # Phase 58: Morning AI refresh chain
     "morning_price_crawl_hose": "Morning Price Crawl (HOSE)",
     "morning_indicator_compute_triggered": "Morning Indicator Compute",
@@ -95,6 +99,16 @@ def _on_job_executed(event: events.JobExecutionEvent):
         # Morning AI analysis disabled — on-demand only
         logger.info("Morning chain: morning_indicator_compute completed (AI analysis skipped — on-demand)")
     # morning_trading_signal_triggered ends chain (no pick generation in morning)
+    elif event.job_id in ("daily_intraday_aggregate", "daily_intraday_aggregate_triggered"):
+        # Phase 94: Chain aggregate → indicator compute
+        from app.scheduler.jobs import daily_indicator_compute
+        logger.info("Chaining: daily_intraday_aggregate → daily_indicator_compute")
+        scheduler.add_job(
+            daily_indicator_compute,
+            id="daily_indicator_compute_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
     elif event.job_id == "daily_price_crawl_hose":
         from app.scheduler.jobs import daily_indicator_compute
         logger.info("Chaining: daily_price_crawl_hose → daily_indicator_compute")
@@ -352,6 +366,39 @@ def configure_jobs():
         f"Real-time jobs: realtime_price_poll (every {settings.realtime_poll_interval}s), "
         f"realtime_heartbeat (every 15s)"
     )
+
+    # ── Phase 93: Intraday retention cleanup (01:00 daily) ─────────────
+    from app.scheduler.jobs import daily_intraday_cleanup
+
+    scheduler.add_job(
+        daily_intraday_cleanup,
+        trigger=CronTrigger(
+            hour=1, minute=0,
+            timezone=settings.timezone,
+        ),
+        id="daily_intraday_cleanup",
+        name="Daily Intraday Cleanup",
+        replace_existing=True,
+        misfire_grace_time=7200,
+    )
+
+    # ── Phase 94: End-of-day aggregation (14:50 Mon-Fri) ───────────────
+    from app.scheduler.jobs import daily_intraday_aggregate
+
+    scheduler.add_job(
+        daily_intraday_aggregate,
+        trigger=CronTrigger(
+            hour=14, minute=50,
+            day_of_week="mon-fri",
+            timezone=settings.timezone,
+        ),
+        id="daily_intraday_aggregate",
+        name="Daily Intraday Aggregate",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+
+    logger.info("Intraday jobs: daily_intraday_cleanup (01:00), daily_intraday_aggregate (14:50 Mon-Fri)")
 
     # ── Phase 58: Morning AI refresh (8:30 AM Mon-Fri) ─────────────────
     from app.scheduler.jobs import morning_price_crawl_hose

@@ -13,7 +13,7 @@ Resilience pattern per CONTEXT.md decisions:
   complete failure raises (chain breaks)
 """
 import asyncio
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import select
@@ -722,6 +722,218 @@ async def realtime_heartbeat():
     from app.ws.prices import connection_manager
 
     await connection_manager.send_heartbeat()
+
+
+# ── Phase 93: Intraday retention cleanup ─────────────────────────────────────
+
+
+async def daily_intraday_cleanup():
+    """Delete intraday_prices rows older than 7 days.
+
+    Runs daily at 01:00 UTC+7 to keep table size bounded.
+    Uses batch deletion to avoid long-running locks.
+    """
+    from sqlalchemy import delete, func
+
+    from app.models.intraday_price import IntradayPrice
+
+    logger.info("=== DAILY INTRADAY CLEANUP START ===")
+    cutoff = datetime.now() - timedelta(days=7)
+
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_intraday_cleanup")
+
+        try:
+            result = await session.execute(
+                delete(IntradayPrice).where(IntradayPrice.recorded_at < cutoff)
+            )
+            deleted = result.rowcount
+            await session.commit()
+
+            await job_svc.finish(execution, status="success")
+            logger.info(f"=== DAILY INTRADAY CLEANUP DONE: {deleted} rows deleted (cutoff: {cutoff}) ===")
+        except Exception as e:
+            await job_svc.finish(execution, status="error", error=str(e))
+            logger.error(f"=== DAILY INTRADAY CLEANUP FAILED: {e} ===")
+            raise
+
+
+# ── Phase 94: End-of-day aggregation ────────────────────────────────────────
+
+
+async def daily_intraday_aggregate():
+    """Aggregate intraday_prices → daily_prices at market close.
+
+    For each symbol with intraday data today:
+    - open = first snapshot price
+    - high = max of day_high values
+    - low = min of day_low values
+    - close = last snapshot price
+    - volume = last snapshot volume (total cumulative volume)
+
+    Falls back to vnstock batch crawl if insufficient data (<10 snapshots).
+    """
+    from decimal import Decimal
+
+    from sqlalchemy import func as sa_func, and_, case, literal_column
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    from app.models.intraday_price import IntradayPrice
+    from app.models.daily_price import DailyPrice
+
+    logger.info("=== DAILY INTRADAY AGGREGATE START ===")
+    today = date.today()
+
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_intraday_aggregate")
+
+        try:
+            # Get symbols with intraday data today
+            from sqlalchemy import select, distinct
+
+            symbol_counts = await session.execute(
+                select(
+                    IntradayPrice.symbol,
+                    IntradayPrice.ticker_id,
+                    sa_func.count(IntradayPrice.id).label("cnt"),
+                ).where(
+                    sa_func.date(IntradayPrice.recorded_at) == today
+                ).group_by(
+                    IntradayPrice.symbol, IntradayPrice.ticker_id
+                )
+            )
+            symbol_data = symbol_counts.fetchall()
+
+            if not symbol_data:
+                logger.warning("No intraday data found for today — falling back to batch crawl")
+                await _fallback_batch_crawl(session)
+                await job_svc.finish(execution, status="success")
+                return
+
+            aggregated = 0
+            fallback_symbols = []
+
+            for symbol, ticker_id, count in symbol_data:
+                if count < 10:
+                    fallback_symbols.append(symbol)
+                    continue
+
+                # Get first and last snapshots + aggregates for this symbol today
+                agg_result = await session.execute(
+                    select(
+                        sa_func.min(
+                            case(
+                                (IntradayPrice.recorded_at == select(
+                                    sa_func.min(IntradayPrice.recorded_at)
+                                ).where(
+                                    and_(
+                                        IntradayPrice.symbol == symbol,
+                                        sa_func.date(IntradayPrice.recorded_at) == today
+                                    )
+                                ).correlate(None).scalar_subquery(), IntradayPrice.price)
+                            )
+                        ).label("open_price"),
+                        sa_func.max(IntradayPrice.day_high).label("high"),
+                        sa_func.min(IntradayPrice.day_low).label("low"),
+                    ).where(
+                        and_(
+                            IntradayPrice.symbol == symbol,
+                            sa_func.date(IntradayPrice.recorded_at) == today,
+                        )
+                    )
+                )
+                agg = agg_result.fetchone()
+
+                # Get last snapshot for close price and volume
+                last_result = await session.execute(
+                    select(IntradayPrice.price, IntradayPrice.volume).where(
+                        and_(
+                            IntradayPrice.symbol == symbol,
+                            sa_func.date(IntradayPrice.recorded_at) == today,
+                        )
+                    ).order_by(IntradayPrice.recorded_at.desc()).limit(1)
+                )
+                last = last_result.fetchone()
+
+                # Get first snapshot for open price
+                first_result = await session.execute(
+                    select(IntradayPrice.price).where(
+                        and_(
+                            IntradayPrice.symbol == symbol,
+                            sa_func.date(IntradayPrice.recorded_at) == today,
+                        )
+                    ).order_by(IntradayPrice.recorded_at.asc()).limit(1)
+                )
+                first = first_result.fetchone()
+
+                if not agg or not last or not first:
+                    fallback_symbols.append(symbol)
+                    continue
+
+                # Upsert into daily_prices
+                stmt = pg_insert(DailyPrice).values(
+                    ticker_id=ticker_id,
+                    date=today,
+                    open=first[0],
+                    high=agg.high,
+                    low=agg.low,
+                    close=last[0],
+                    volume=last[1],
+                ).on_conflict_do_update(
+                    constraint="uq_daily_prices_ticker_date",
+                    set_={
+                        "open": first[0],
+                        "high": agg.high,
+                        "low": agg.low,
+                        "close": last[0],
+                        "volume": last[1],
+                    }
+                )
+                await session.execute(stmt)
+                aggregated += 1
+
+            await session.commit()
+
+            # Fallback for symbols with insufficient data
+            if fallback_symbols:
+                logger.warning(
+                    f"{len(fallback_symbols)} symbols had <10 snapshots — using batch crawl fallback: "
+                    f"{fallback_symbols[:10]}{'...' if len(fallback_symbols) > 10 else ''}"
+                )
+                await _fallback_batch_crawl(session, symbols=fallback_symbols)
+
+            await job_svc.finish(execution, status="success")
+            logger.info(
+                f"=== DAILY INTRADAY AGGREGATE DONE: {aggregated} aggregated, "
+                f"{len(fallback_symbols)} fallback ===")
+        except Exception as e:
+            await job_svc.finish(execution, status="error", error=str(e))
+            logger.error(f"=== DAILY INTRADAY AGGREGATE FAILED: {e} ===")
+            raise
+
+
+async def _fallback_batch_crawl(session, *, symbols: list[str] | None = None):
+    """Fallback to vnstock batch crawl for symbols missing intraday data."""
+    today_str = date.today().strftime("%Y-%m-%d")
+
+    ticker_service = TickerService(session)
+    ticker_map = await ticker_service.get_ticker_id_map(exchange="HOSE")
+
+    if symbols:
+        ticker_map = {s: tid for s, tid in ticker_map.items() if s in symbols}
+
+    if not ticker_map:
+        return
+
+    crawler = VnstockCrawler()
+    price_service = PriceService(session)
+    logger.info(f"Fallback batch crawl for {len(ticker_map)} symbols")
+
+    await price_service._crawl_batch(
+        list(ticker_map.keys()), ticker_map, today_str, today_str
+    )
 
 
 # ── Phase 46: Behavior tracking & adaptive strategy ─────────────────────────
