@@ -37,11 +37,13 @@ interface HeatmapProps {
 export function Heatmap({ data }: HeatmapProps) {
   const router = useRouter();
 
-  // Group tickers by sector
+  // Group tickers by sector (deduplicate by symbol within each sector)
   const grouped = data.reduce<Record<string, MarketTicker[]>>((acc, ticker) => {
     const sector = ticker.sector ?? "Khác";
     if (!acc[sector]) acc[sector] = [];
-    acc[sector].push(ticker);
+    if (!acc[sector].some((t) => t.symbol === ticker.symbol)) {
+      acc[sector].push(ticker);
+    }
     return acc;
   }, {});
 
@@ -69,11 +71,9 @@ export function Heatmap({ data }: HeatmapProps) {
 
           {/* Mobile: scrollable list view */}
           <div className="md:hidden overflow-y-auto max-h-[60vh] space-y-0.5">
-            {tickers.map((ticker) => (
+            {tickers.map((ticker, idx) => (
               <button
-                key={ticker.symbol}
-                onClick={() => router.push(`/ticker/${ticker.symbol}`)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                key={`${ticker.symbol}-${idx}`}
                 style={{
                   borderLeft: `3px solid ${getChangeColor(ticker.change_pct)}`,
                 }}
@@ -107,11 +107,9 @@ export function Heatmap({ data }: HeatmapProps) {
 
           {/* Desktop: dense grid heatmap */}
           <div className="hidden md:grid grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-1">
-            {tickers.map((ticker) => (
+            {tickers.map((ticker, idx) => (
               <button
-                key={ticker.symbol}
-                onClick={() => router.push(`/ticker/${ticker.symbol}`)}
-                className="relative flex flex-col items-center justify-center rounded-md px-1 py-2 text-white transition-transform hover:scale-105 hover:z-10 hover:ring-1 hover:ring-white/30 cursor-pointer min-h-[52px]"
+                key={`${ticker.symbol}-${idx}`}
                 style={{ backgroundColor: getChangeColor(ticker.change_pct) }}
                 title={`${ticker.name} — ${ticker.change_pct != null ? (ticker.change_pct >= 0 ? "+" : "") + ticker.change_pct.toFixed(2) + "%" : "N/A"}`}
               >
