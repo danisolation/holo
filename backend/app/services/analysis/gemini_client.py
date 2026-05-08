@@ -6,7 +6,7 @@ _analyze_*_batch, and _build_*_prompt methods.
 import json
 
 from google.genai import types
-from google.genai.errors import ServerError
+from google.genai.errors import ServerError, ClientError
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -53,9 +53,9 @@ class GeminiClient:
     # ------------------------------------------------------------------
 
     @retry(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=2, min=4, max=15),
-        retry=retry_if_exception_type(ServerError),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=4, min=8, max=60),
+        retry=retry_if_exception_type((ServerError, ClientError)),
         reraise=True,
     )
     async def _call_gemini_with_retry(

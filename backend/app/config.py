@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash-lite"
     gemini_batch_size: int = 8  # Reduced from 15 — more tokens per ticker for detailed analysis
     rumor_batch_size: int = 6  # Tickers per Gemini call for rumor scoring (30 tickers / 6 = 5 calls)
-    gemini_delay_seconds: float = 4.0  # Delay between batches for rate-limit safety
+    gemini_delay_seconds: float = 10.0  # Delay between batches — Gemini free tier is 15 RPM
     gemini_max_retries: int = 3
 
     # Indicator computation (Phase 2)
@@ -68,8 +68,8 @@ class Settings(BaseSettings):
     fireant_retention_days: int = 30  # Delete posts older than N days
 
     # Circuit Breaker (Phase 6)
-    circuit_breaker_fail_max: int = 3
-    circuit_breaker_reset_timeout: float = 120.0  # 2 minutes cooldown
+    circuit_breaker_fail_max: int = 5
+    circuit_breaker_reset_timeout: float = 60.0  # 1 minute cooldown
 
     # External API Timeouts (Phase 6)
     vnstock_timeout: float = 30.0
@@ -107,7 +107,7 @@ class Settings(BaseSettings):
     combined_max_tokens: int = 32768       # Match trading_signal — 4 structured sections per ticker
 
     # Unified Analysis Pipeline (Phase 88 / v19.0)
-    unified_batch_size: int = 6            # Fewer tickers per batch — more data per ticker
+    unified_batch_size: int = 4            # Fewer tickers per batch — stay under rate limit
     unified_thinking_budget: int = 2048    # Complex multi-dimensional reasoning
     unified_max_tokens: int = 32768        # ~500 tokens/ticker × 6 tickers + overhead
 
