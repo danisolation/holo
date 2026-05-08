@@ -239,15 +239,25 @@ UNIFIED_SYSTEM_INSTRUCTION = (
     "- risk_reward_ratio: |TP1 - entry| / |entry - SL| (phải ≥ 0.5)\n"
     "- position_size_pct: % danh mục đề xuất (1-100), xem xét ATR và confidence\n"
     "- timeframe: 'swing' (3-15 ngày) hoặc 'position' (nhiều tuần+)\n"
-    "- key_levels: Mô tả hỗ trợ/kháng cự quan trọng (tối thiểu 80 từ). "
-    "Liệt kê 2-3 mức hỗ trợ, 2-3 mức kháng cự với giá VND cụ thể.\n"
-    "- reasoning: Phân tích đa chiều CHI TIẾT (tối thiểu 500 ký tự tiếng Việt, lý tưởng 600-800 ký tự). "
-    "BẮT BUỘC phải có ĐỦ 4 phần riêng biệt:\n"
-    "  1) Kỹ thuật: Nhận định RSI (quá mua/bán/trung tính), MACD (bullish/bearish cross), xu hướng giá vs SMA, "
-    "Bollinger Bands (gần upper/lower/middle), Stochastic, ADX (mạnh/yếu), volume (tăng/giảm vs TB 20d)\n"
-    "  2) Cơ bản: Đánh giá P/E (cao/thấp vs ngành), ROE, biên lợi nhuận, tăng trưởng doanh thu/lợi nhuận\n"
-    "  3) Tin tức & Tin đồn: Tóm tắt nội dung tin đáng chú ý, đánh giá tác động\n"
-    "  4) Kết luận: Tổng hợp cả 3 chiều, giải thích tại sao chọn mua/bán/giữ\n\n"
+    "- key_levels: Mô tả hỗ trợ/kháng cự quan trọng (tối thiểu 150 từ). "
+    "Liệt kê 3-4 mức hỗ trợ, 3-4 mức kháng cự với giá VND cụ thể. "
+    "Giải thích tại sao mỗi mức quan trọng (SMA, Fibonacci, pivot, khối lượng giao dịch lớn, đỉnh/đáy cũ).\n"
+    "- reasoning: Phân tích đa chiều CHUYÊN SÂU (tối thiểu 2000 ký tự tiếng Việt, lý tưởng 2500-3000 ký tự). "
+    "BẮT BUỘC phải có ĐỦ 4 phần riêng biệt, mỗi phần ít nhất 400 ký tự:\n"
+    "  1) Kỹ thuật (≥500 ký tự): Phân tích CHI TIẾT từng chỉ báo — RSI (giá trị cụ thể, xu hướng 5 phiên, quá mua/bán/trung tính), "
+    "MACD (histogram, signal line, divergence nếu có), xu hướng giá so với SMA 20/50/200 (khoảng cách %), "
+    "Bollinger Bands (vị trí giá trong band, squeeze hay expansion), Stochastic (cross up/down), "
+    "ADX (mạnh/yếu, trend hay sideway), volume (so sánh với TB 20d, xác nhận hay phân kỳ). "
+    "Nhận định tổng thể xu hướng ngắn-trung hạn.\n"
+    "  2) Cơ bản (≥400 ký tự): Đánh giá P/E (cao/thấp vs ngành, vs lịch sử), P/B, ROE (so với ngành), "
+    "biên lợi nhuận (xu hướng), tăng trưởng doanh thu/lợi nhuận (bền vững hay đột biến), "
+    "cấu trúc nợ (D/E ratio), khả năng thanh toán. Đánh giá chất lượng doanh nghiệp và triển vọng.\n"
+    "  3) Tin tức & Tin đồn (≥400 ký tự): Tóm tắt nội dung TỪNG tin đáng chú ý (không chỉ liệt kê tiêu đề), "
+    "đánh giá tác động ngắn hạn/dài hạn lên giá. Phân tích tin đồn: nguồn gốc, độ tin cậy, "
+    "kịch bản nếu tin đồn đúng vs sai. Đánh giá sentiment thị trường tổng thể.\n"
+    "  4) Kết luận & Chiến lược (≥400 ký tự): Tổng hợp CẢ 3 chiều, giải thích chi tiết tại sao chọn mua/bán/giữ. "
+    "Mô tả kịch bản tích cực (catalyst, mục tiêu), kịch bản tiêu cực (rủi ro, mức cắt lỗ). "
+    "Đưa ra timeline cụ thể và điều kiện để thay đổi khuyến nghị.\n\n"
     "QUY TẮC NHẤT QUÁN (BẮT BUỘC):\n"
     "- Kỹ thuật bearish (RSI>70, MACD bearish, giá dưới SMA) VÀ Cơ bản yếu → signal = 'ban'\n"
     "- Kỹ thuật bullish (RSI<30→tăng, MACD bullish, giá trên SMA) VÀ Cơ bản tốt → signal = 'mua'\n"
@@ -294,7 +304,7 @@ Hướng: bullish | Tin cậy: 6/10 | Tác động: 5/10
 Thông tin: Doanh thu Q4 tăng 15%; Kế hoạch M&A công ty sữa nhỏ
 
 Kết quả mẫu:
-{"ticker": "VNM", "signal": "mua", "score": 8, "entry_price": 82000, "stop_loss": 79500, "take_profit_1": 84500, "take_profit_2": 86000, "risk_reward_ratio": 1.0, "position_size_pct": 8, "timeframe": "swing", "key_levels": "Hỗ trợ mạnh: 80,000 VND (SMA50 + Pivot). Hỗ trợ phụ: 78,500 VND (Fib 50% + S2). Kháng cự gần: 83,000 VND (R1). Kháng cự xa: 84,500 VND (R2 + BB upper). Entry tối ưu: 81,500-82,000 VND (pullback về pivot). SL: 79,500 VND (dưới Fib 38.2%, -3%). TP1: 84,500 VND (R2). TP2: 86,000 VND (vùng 52-week 80%).", "reasoning": "Kỹ thuật: RSI tăng dần từ 42→52, MACD vừa cắt bullish, giá trên cả 3 SMA chính. KL tăng 25% xác nhận momentum. Cơ bản: ROE 25% cao, P/E 15.2 hợp lý so với trung bình VN (12-15), tăng trưởng ổn định. Tin tức: 3/3 tin tích cực, quỹ ngoại mua ròng. Tin đồn: bullish nhưng tin cậy trung bình (6/10) — cân nhắc hỗ trợ nhưng không quyết định. Kết luận: 4/4 chiều đều tích cực, vào lệnh tại pullback với R:R = 1.0."}
+{"ticker": "VNM", "signal": "mua", "score": 8, "entry_price": 82000, "stop_loss": 79500, "take_profit_1": 84500, "take_profit_2": 86000, "risk_reward_ratio": 1.0, "position_size_pct": 8, "timeframe": "swing", "key_levels": "Hỗ trợ mạnh nhất: 80,000 VND — vùng hội tụ SMA50 + Pivot Point, đây cũng là vùng tích lũy khối lượng lớn trong 2 tuần gần đây. Hỗ trợ phụ: 78,500 VND — trùng với Fibonacci 50% tính từ đáy 70,000 lên đỉnh 90,000 và mức S2. Hỗ trợ xa: 76,000 VND — mức Fibonacci 61.8% + vùng đáy tháng trước. Kháng cự gần: 83,000 VND — R1 + vùng supply zone cũ. Kháng cự quan trọng: 84,500 VND — R2 + BB upper band, cần breakout với volume >1.5x TB20d mới xác nhận. Kháng cự xa: 86,000-87,000 VND — vùng 52-week 80%, đỉnh swing trước đó. Entry tối ưu: pullback về 81,500-82,000 VND (Pivot Point). SL: 79,500 VND (dưới Fib 38.2%, -3% từ entry). TP1: 84,500 VND (R2). TP2: 86,000 VND (vùng 52-week 80%).", "reasoning": "**Kỹ thuật:** RSI(14) đang ở mức 52.1, tăng dần đều từ 42.1 trong 5 phiên gần đây, cho thấy momentum đang cải thiện rõ rệt từ vùng oversold. MACD histogram chuyển từ -0.12 lên +0.18, xác nhận giao cắt bullish mới (signal line cross up). Giá đang giao dịch trên cả 3 đường SMA chính: SMA20 (81,000), SMA50 (80,000) và SMA200 (78,000) — cấu trúc uptrend hoàn chỉnh. Bollinger Bands: giá ở nửa trên band (82,000 vs middle 81,800), band đang mở rộng nhẹ cho thấy volatility tăng — tín hiệu breakout sắp xảy ra. Stochastic %K vượt %D từ dưới lên, xác nhận tín hiệu mua. ADX ở mức trung bình (~22), trend chưa mạnh nhưng đang tăng. Đặc biệt, volume phiên gần nhất 1,500,000 CP = 1.25x TB 20 ngày, cho thấy dòng tiền đang chảy vào xác nhận momentum tăng. Nhìn tổng thể, kỹ thuật bullish trên đa khung thời gian.\n\n**Cơ bản:** P/E 15.2 hơi cao so với TB ngành tiêu dùng (~13-14) nhưng hợp lý cho công ty blue-chip hàng đầu. ROE 25% thuộc top ngành, thể hiện hiệu quả sử dụng vốn xuất sắc. Biên lợi nhuận đang cải thiện nhờ giá nguyên liệu sữa bột giảm 12% so với cùng kỳ. Tăng trưởng doanh thu +8% và lợi nhuận +5% ổn định, không đột biến nhưng bền vững. Cấu trúc nợ lành mạnh, D/E ratio thấp. Doanh nghiệp có moat vững chắc (thương hiệu, hệ thống phân phối 250,000 điểm bán), tạo lợi thế cạnh tranh dài hạn.\n\n**Tin tức & Tin đồn:** 3/3 tin tức đều tích cực: (1) VNM đặt mục tiêu sản lượng kỷ lục 2025, cho thấy ban lãnh đạo tự tin vào triển vọng kinh doanh — đây là catalyst trung hạn nếu đạt được. (2) Biên lợi nhuận cải thiện nhờ giá nguyên liệu giảm, tác động trực tiếp lên EPS quý tới, có thể tạo surprise earnings. (3) Quỹ ngoại mua ròng 3 phiên liên tiếp, cho thấy smart money đang tích lũy — tín hiệu rất tích cực cho xu hướng giá ngắn hạn. Tin đồn bullish (doanh thu Q4 tăng 15%, kế hoạch M&A) có tin cậy trung bình (6/10), nếu đúng sẽ là catalyst mạnh nhưng cần chờ xác nhận từ BCTC chính thức. Sentiment thị trường chung đang positive với VN-Index trên MA20.\n\n**Kết luận & Chiến lược:** Tổng hợp cả 4 chiều đều positive: kỹ thuật bullish (RSI tăng + MACD cross + volume), cơ bản vững (ROE cao, tăng trưởng ổn), tin tức hỗ trợ (quỹ ngoại mua + biên LN cải thiện), tin đồn bullish nhưng cần xác nhận. Khuyến nghị MUA tại vùng pullback 81,500-82,000 VND. Kịch bản tích cực: break 83,000 với volume mạnh → target 84,500-86,000. Kịch bản tiêu cực: nếu giá breakdown dưới 80,000 (SMA50) → chuyển sang GIỮ. Timeline: swing trade 5-10 ngày. Thay đổi khuyến nghị sang BÁN nếu RSI vượt 75 kèm volume giảm hoặc nếu BCTC Q4 dưới kỳ vọng."}
 
 Phân tích toàn diện các mã sau:"""
 

@@ -183,8 +183,8 @@ class TickerUnifiedAnalysis(BaseModel):
     risk_reward_ratio: float = Field(ge=0.3, description="Risk/reward ratio")
     position_size_pct: int = Field(ge=1, le=100, description="% of portfolio suggested")
     timeframe: UnifiedTimeframe
-    key_levels: str = Field(description="Key support/resistance levels explanation")
-    reasoning: str = Field(description="Multi-dimensional reasoning in Vietnamese (min 200 chars)")
+    key_levels: str = Field(description="Key support/resistance levels explanation (min 150 words)")
+    reasoning: str = Field(description="Multi-dimensional reasoning in Vietnamese (min 2000 chars, 4 sections: kỹ thuật, cơ bản, tin tức, kết luận)")
 
 
 class UnifiedBatchResponse(BaseModel):
