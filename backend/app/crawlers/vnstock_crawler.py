@@ -192,19 +192,25 @@ class VnstockCrawler:
                 try:
                     sym = row[("listing", "symbol")]
                     price = row[("match", "match_price")]
-                    change = row[("match", "price_change")]
-                    change_pct = row[("match", "price_change_percent")]
-                    volume = row[("match", "total_volume")]
+                    ref_price = row[("match", "reference_price")]
+                    volume = row[("match", "accumulated_volume")]
 
                     # Skip tickers with NaN/None price data (e.g. suspended tickers)
                     if not pd.notna(price) or not pd.notna(volume):
                         logger.debug(f"Skipping {sym}: NaN price or volume")
                         continue
 
+                    # VCI returns prices in VND; DB convention is nghìn đồng (÷1000)
+                    price_k = float(price) / 1000.0
+                    ref_k = float(ref_price) / 1000.0 if pd.notna(ref_price) and float(ref_price) > 0 else 0.0
+
+                    change = price_k - ref_k if ref_k > 0 else 0.0
+                    change_pct = (change / ref_k * 100) if ref_k > 0 else 0.0
+
                     result[sym] = {
-                        "price": float(price),
-                        "change": float(change) if pd.notna(change) else 0.0,
-                        "change_pct": float(change_pct) if pd.notna(change_pct) else 0.0,
+                        "price": price_k,
+                        "change": round(change, 2),
+                        "change_pct": round(change_pct, 2),
                         "volume": int(volume),
                     }
                 except (ValueError, TypeError, KeyError) as e:

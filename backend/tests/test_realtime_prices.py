@@ -140,9 +140,8 @@ class TestFetchPriceBoard:
         mock_df = pd.DataFrame({
             ("listing", "symbol"): ["VNM", "FPT"],
             ("match", "match_price"): [82500.0, 120000.0],
-            ("match", "price_change"): [1500.0, -2000.0],
-            ("match", "price_change_percent"): [1.85, -1.64],
-            ("match", "total_volume"): [12345678, 9876543],
+            ("match", "reference_price"): [81000.0, 122000.0],
+            ("match", "accumulated_volume"): [12345678, 9876543],
         })
         mock_df.columns = pd.MultiIndex.from_tuples(mock_df.columns)
 
@@ -157,11 +156,12 @@ class TestFetchPriceBoard:
         assert isinstance(result, dict)
         assert "VNM" in result
         assert "FPT" in result
-        assert result["VNM"]["price"] == 82500.0
-        assert result["VNM"]["change"] == 1500.0
-        assert result["VNM"]["change_pct"] == 1.85
+        # VCI returns VND, fetch_price_board converts to nghìn đồng (÷1000)
+        assert result["VNM"]["price"] == 82.5
+        assert result["VNM"]["change"] == 1.5  # (82500 - 81000) / 1000
+        assert abs(result["VNM"]["change_pct"] - 1.85) < 0.1
         assert result["VNM"]["volume"] == 12345678
-        assert result["FPT"]["price"] == 120000.0
+        assert result["FPT"]["price"] == 120.0
 
     @pytest.mark.asyncio
     async def test_fetch_price_board_empty_symbols(self):
