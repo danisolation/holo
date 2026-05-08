@@ -74,6 +74,8 @@ export function Heatmap({ data }: HeatmapProps) {
             {tickers.map((ticker, idx) => (
               <button
                 key={`${ticker.symbol}-${idx}`}
+                onClick={() => router.push(`/ticker/${ticker.symbol}`)}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
                 style={{
                   borderLeft: `3px solid ${getChangeColor(ticker.change_pct)}`,
                 }}
@@ -110,6 +112,8 @@ export function Heatmap({ data }: HeatmapProps) {
             {tickers.map((ticker, idx) => (
               <button
                 key={`${ticker.symbol}-${idx}`}
+                onClick={() => router.push(`/ticker/${ticker.symbol}`)}
+                className="relative flex flex-col items-center justify-center rounded-md px-1 py-2 text-white transition-transform hover:scale-105 hover:z-10 hover:ring-1 hover:ring-white/30 cursor-pointer min-h-[52px]"
                 style={{ backgroundColor: getChangeColor(ticker.change_pct) }}
                 title={`${ticker.name} — ${ticker.change_pct != null ? (ticker.change_pct >= 0 ? "+" : "") + ticker.change_pct.toFixed(2) + "%" : "N/A"}`}
               >
