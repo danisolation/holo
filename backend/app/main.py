@@ -28,6 +28,30 @@ async def lifespan(app: FastAPI):
 
     # Startup
     logger.info("Holo starting up...")
+
+    # Auto-seed tickers if DB is empty (first deploy after reset)
+    try:
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy import text
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async with async_session() as session:
+            result = await session.execute(text("SELECT COUNT(*) FROM tickers"))
+            ticker_count = result.scalar()
+            if ticker_count == 0:
+                logger.info("No tickers found — running initial ticker sync...")
+                from app.crawlers.vnstock_crawler import VnstockCrawler
+                from app.services.ticker_service import TickerService
+                crawler = VnstockCrawler()
+                svc = TickerService(session, crawler)
+                sync_result = await svc.fetch_and_sync_tickers("HOSE")
+                await session.commit()
+                logger.info(f"Initial ticker sync complete: {sync_result}")
+            else:
+                logger.info(f"Found {ticker_count} tickers in DB")
+    except Exception as e:
+        logger.warning(f"Startup ticker check failed (non-fatal): {e}")
+
     if settings.holo_test_mode:
         logger.info("HOLO_TEST_MODE=true — skipping scheduler")
     else:
