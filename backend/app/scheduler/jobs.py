@@ -688,10 +688,11 @@ async def daily_pick_outcome_check():
 
 
 async def realtime_price_poll():
-    """Poll VCI price board and broadcast to WebSocket clients.
+    """Poll VCI price board for ALL HOSE symbols and store intraday snapshots.
 
-    Runs every 30s (configurable). Only polls VCI when market is open
-    AND clients are subscribed. Sends market status to all clients.
+    Runs every 15s (configurable). Always polls all ~400 HOSE symbols
+    regardless of market hours or subscriber count. Stores snapshots
+    in intraday_prices table. Broadcasts changes to subscribed WS clients.
 
     Uses module-level singleton so the in-memory price cache persists.
     """
@@ -708,13 +709,7 @@ async def realtime_price_poll():
     # Always send market status so clients know current state
     await connection_manager.send_market_status(is_open=market_open, session=session)
 
-    if not market_open:
-        return
-
-    # Only poll if there are subscribed symbols
-    if not connection_manager.get_all_subscribed_symbols():
-        return
-
+    # Always poll — no market hours or subscriber gating
     service = get_realtime_price_service()
     await service.poll_and_broadcast()
 

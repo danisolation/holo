@@ -80,8 +80,8 @@ class Settings(BaseSettings):
     vndirect_timeout: float = 15.0
 
     # Real-time WebSocket (Phase 16)
-    realtime_poll_interval: int = 30  # seconds between VCI price polls
-    realtime_max_symbols: int = 50  # max symbols per poll request
+    realtime_poll_interval: int = 15  # seconds between VCI price polls
+    realtime_max_symbols: int = 500  # max symbols per poll request (covers all ~400 HOSE)
     realtime_priority_exchanges: list[str] = ["HOSE", "HNX", "UPCOM"]  # exchange priority for symbol selection
 
     # VNDirect WebSocket (Phase 76) — domain decommissioned, disabled

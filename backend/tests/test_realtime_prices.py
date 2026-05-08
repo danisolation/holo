@@ -206,7 +206,14 @@ class TestRealtimePriceService:
         mock_manager.broadcast = AsyncMock()
 
         service = RealtimePriceService(crawler=mock_crawler, connection_manager=mock_manager)
-        await service.poll_and_broadcast()
+        # Pre-load ticker map to avoid DB call
+        service._ticker_map = {"VNM": 1}
+
+        with patch("app.services.realtime_price_service.async_session") as mock_session_factory:
+            mock_session_ctx = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session_ctx)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+            await service.poll_and_broadcast()
 
         assert service.get_latest_prices(["VNM"]) == {
             "VNM": {"price": 82500, "change": 1500, "change_pct": 1.85, "volume": 123},
@@ -226,26 +233,42 @@ class TestRealtimePriceService:
         mock_manager.broadcast = AsyncMock()
 
         service = RealtimePriceService(crawler=mock_crawler, connection_manager=mock_manager)
-        await service.poll_and_broadcast()
+        service._ticker_map = {"FPT": 2}
+
+        with patch("app.services.realtime_price_service.async_session") as mock_session_factory:
+            mock_session_ctx = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session_ctx)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+            await service.poll_and_broadcast()
 
         mock_manager.broadcast.assert_called_once()
         call_arg = mock_manager.broadcast.call_args[0][0]
         assert "FPT" in call_arg
 
     @pytest.mark.asyncio
-    async def test_poll_skips_when_no_subscribers(self):
-        """Should not call crawler when no symbols subscribed."""
+    async def test_poll_still_works_when_no_subscribers(self):
+        """Should still poll all symbols even when no WS subscribers (intraday storage)."""
         from app.services.realtime_price_service import RealtimePriceService
 
         mock_crawler = AsyncMock()
+        mock_crawler.fetch_price_board.return_value = {
+            "VNM": {"price": 82500, "change": 0, "change_pct": 0, "volume": 100},
+        }
         mock_manager = MagicMock()
         mock_manager.get_all_subscribed_symbols.return_value = set()
         mock_manager.broadcast = AsyncMock()
 
         service = RealtimePriceService(crawler=mock_crawler, connection_manager=mock_manager)
-        await service.poll_and_broadcast()
+        service._ticker_map = {"VNM": 1}
 
-        mock_crawler.fetch_price_board.assert_not_called()
+        with patch("app.services.realtime_price_service.async_session") as mock_session_factory:
+            mock_session_ctx = AsyncMock()
+            mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session_ctx)
+            mock_session_factory.return_value.__aexit__ = AsyncMock(return_value=False)
+            await service.poll_and_broadcast()
+
+        # Should have polled despite no subscribers
+        mock_crawler.fetch_price_board.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_latest_prices_filters(self):
@@ -271,16 +294,18 @@ class TestRealtimePriceService:
         mock_crawler = AsyncMock()
         mock_crawler.fetch_price_board.return_value = {}
         mock_manager = MagicMock()
-        # Return 60 symbols (more than max 50)
-        mock_manager.get_all_subscribed_symbols.return_value = {f"SYM{i}" for i in range(60)}
         mock_manager.broadcast = AsyncMock()
 
         service = RealtimePriceService(crawler=mock_crawler, connection_manager=mock_manager)
-        await service.poll_and_broadcast()
+        # Create 600 symbols in ticker map (more than max 500)
+        service._ticker_map = {f"SYM{i:03d}": i for i in range(600)}
 
-        # Should have been called with at most 50 symbols
+        with patch("app.services.realtime_price_service.async_session"):
+            await service.poll_and_broadcast()
+
+        # Should have been called with at most 500 symbols
         call_args = mock_crawler.fetch_price_board.call_args[0][0]
-        assert len(call_args) <= 50
+        assert len(call_args) <= 500
 
 
 # ── ConnectionManager tests ─────────────────────────────────────────────────
