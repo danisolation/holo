@@ -26,6 +26,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v17.0 AI Consistency & UX** — Phases 80-82 (shipped)
 - ✅ **v18.0 Multi-Source Community Rumors** — Phases 84-87 (shipped 2026-05-07)
 - ✅ **v19.0 Unified AI Analysis Pipeline** — Phases 88-91 (shipped)
+- [ ] **v20.0 Enhanced Price Pipeline** — Phases 92-94
 
 ## Phases
 
@@ -513,3 +514,54 @@ Plans:
   4. Watchlist items show unified signal badge
 **Plans**: TBD
 **UI hint**: yes
+
+---
+
+### v20.0: Enhanced Price Pipeline (Phases 92-94)
+
+- [ ] **Phase 92: Intraday Storage & Enhanced Polling** — intraday_prices table, poll all 400 symbols at 15s, remove market hours restriction, track high/low
+- [ ] **Phase 93: Retention & Cleanup** — Daily scheduled job purges intraday data older than 7 days
+- [ ] **Phase 94: End-of-Day Aggregation** — Aggregate intraday → daily_prices at 14:50, chain indicator computation, vnstock fallback
+
+## Phase Details — v20.0
+
+### Phase 92: Intraday Storage & Enhanced Polling
+**Goal**: Every VCI poll captures price snapshots for all 400 HOSE symbols into the database, running continuously at 15s intervals
+**Depends on**: Phase 91 (v19.0 complete)
+**Requirements**: POLL-01, POLL-02, POLL-03, STORE-01, STORE-02
+**Success Criteria** (what must be TRUE):
+  1. `intraday_prices` table exists with columns: symbol, price, volume, high, low, timestamp — and Alembic migration runs cleanly
+  2. RealtimePriceService polls all ~400 HOSE symbols every 15 seconds (not just watchlist-subscribed tickers)
+  3. Each poll cycle saves price snapshots to `intraday_prices` table (not just RAM cache)
+  4. Running high/low for each symbol is tracked and updated across poll cycles within the trading day
+  5. Polling runs continuously (including outside market hours) — outside hours returns last closing price cached
+**Plans**: TBD
+
+### Phase 93: Retention & Cleanup
+**Goal**: Intraday data is automatically pruned so the database doesn't grow unbounded
+**Depends on**: Phase 92
+**Requirements**: STORE-03
+**Success Criteria** (what must be TRUE):
+  1. A daily scheduled job (APScheduler) deletes all `intraday_prices` rows older than 7 days
+  2. Job runs at a low-traffic time (e.g., 01:00 UTC+7) and completes without locking issues
+  3. After 7+ days of operation, `intraday_prices` table size stays bounded (not monotonically growing)
+**Plans**: TBD
+
+### Phase 94: End-of-Day Aggregation
+**Goal**: Daily OHLCV prices are automatically computed from intraday snapshots at market close, with indicator computation chained afterward
+**Depends on**: Phase 92
+**Requirements**: AGG-01, AGG-02, AGG-03
+**Success Criteria** (what must be TRUE):
+  1. At 14:50 UTC+7, a scheduled job aggregates that day's `intraday_prices` into a single OHLCV row per symbol in `daily_prices`
+  2. After aggregation completes, indicator computation job is automatically triggered (chained via EVENT_JOB_EXECUTED)
+  3. If intraday data is insufficient (e.g., <10 snapshots due to server downtime), the system falls back to vnstock batch crawl to fill the gap
+  4. Aggregated OHLCV values match expected market data (open = first snapshot price, close = last, high/low = max/min across snapshots)
+**Plans**: TBD
+
+## Progress — v20.0
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 92. Intraday Storage & Enhanced Polling | 0/? | Not started | - |
+| 93. Retention & Cleanup | 0/? | Not started | - |
+| 94. End-of-Day Aggregation | 0/? | Not started | - |

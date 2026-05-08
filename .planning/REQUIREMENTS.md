@@ -37,12 +37,12 @@ None deferred.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| POLL-01 | TBD | Pending |
-| POLL-02 | TBD | Pending |
-| POLL-03 | TBD | Pending |
-| STORE-01 | TBD | Pending |
-| STORE-02 | TBD | Pending |
-| STORE-03 | TBD | Pending |
-| AGG-01 | TBD | Pending |
-| AGG-02 | TBD | Pending |
-| AGG-03 | TBD | Pending |
+| POLL-01 | Phase 92 | Pending |
+| POLL-02 | Phase 92 | Pending |
+| POLL-03 | Phase 92 | Pending |
+| STORE-01 | Phase 92 | Pending |
+| STORE-02 | Phase 92 | Pending |
+| STORE-03 | Phase 93 | Pending |
+| AGG-01 | Phase 94 | Pending |
+| AGG-02 | Phase 94 | Pending |
+| AGG-03 | Phase 94 | Pending |
