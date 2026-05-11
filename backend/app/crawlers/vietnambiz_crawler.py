@@ -101,11 +101,10 @@ class VietnamBizCrawler:
             ) as client:
                 resp = await client.get(RSS_URL)
                 resp.raise_for_status()
-                # VietnamBiz RSS is UTF-16 encoded
-                try:
-                    rss_xml = resp.content.decode("utf-16")
-                except (UnicodeDecodeError, UnicodeError):
-                    rss_xml = resp.text
+                # VietnamBiz declares encoding="utf-16" in XML header
+                # but actual bytes are UTF-8. Force UTF-8 and fix the declaration.
+                rss_xml = resp.content.decode("utf-8")
+                rss_xml = rss_xml.replace('encoding="utf-16"', 'encoding="utf-8"')
         except Exception as e:
             logger.error(f"VietnamBiz RSS fetch failed: {e}")
             return {"success": 0, "failed": 1, "total_posts": 0, "failed_symbols": ["RSS"]}
@@ -183,9 +182,10 @@ class VietnamBizCrawler:
             if not (title_tag and guid_tag):
                 continue
 
-            title = title_tag.get_text(strip=True)
+            # Double-unescape: VietnamBiz encodes entities twice (&amp;#243; → &#243; → ó)
+            title = html.unescape(html.unescape(title_tag.get_text(strip=True)))
             desc_raw = desc_tag.get_text(strip=True) if desc_tag else title
-            content = _strip_html(desc_raw)
+            content = html.unescape(_strip_html(desc_raw))
             guid = guid_tag.get_text(strip=True)
 
             pub_date = _parse_gmt7_date(
