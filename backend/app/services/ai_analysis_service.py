@@ -396,6 +396,9 @@ class AIAnalysisService:
         from app.crawlers.vnexpress_crawler import VnExpressCrawler
         from app.crawlers.vietstock_crawler import VietstockCrawler
         from app.crawlers.tnck_crawler import TNCKCrawler
+        from app.crawlers.vietnambiz_crawler import VietnamBizCrawler
+        from app.crawlers.vneconomy_crawler import VnEconomyCrawler
+        from app.crawlers.tuoitre_crawler import TuoiTreCrawler
         from app.services.rumor_scoring_service import RumorScoringService
 
         logger.info(f"On-demand rumor crawl+score for {symbol}")
@@ -408,6 +411,9 @@ class AIAnalysisService:
             ("VnExpress", VnExpressCrawler(self.session), "crawl_rss"),
             ("Vietstock", VietstockCrawler(self.session), "crawl_rss"),
             ("TNCK", TNCKCrawler(self.session), "crawl_articles"),
+            ("VietnamBiz", VietnamBizCrawler(self.session), "crawl_rss"),
+            ("VnEconomy", VnEconomyCrawler(self.session), "crawl_rss"),
+            ("TuoiTre", TuoiTreCrawler(self.session), "crawl_rss"),
         ]
         total_new = 0
         for name, crawler, method in crawlers:
