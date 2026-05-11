@@ -403,18 +403,19 @@ class AIAnalysisService:
         logger.info(f"On-demand rumor crawl+score for {symbol}")
 
         # Crawl from all sources (best-effort each)
+        ticker_map = {symbol: ticker_id}
         crawlers = [
-            ("F319", F319Crawler(self.session)),
-            ("Fireant", FireantCrawler(self.session)),
-            ("VnExpress", VnExpressCrawler(self.session)),
-            ("Vietstock", VietstockCrawler(self.session)),
-            ("TNCK", TNCKCrawler(self.session)),
+            ("F319", F319Crawler(self.session), "crawl_rss"),
+            ("Fireant", FireantCrawler(self.session), "crawl_watchlist_tickers"),
+            ("VnExpress", VnExpressCrawler(self.session), "crawl_rss"),
+            ("Vietstock", VietstockCrawler(self.session), "crawl_rss"),
+            ("TNCK", TNCKCrawler(self.session), "crawl_articles"),
         ]
         total_new = 0
-        for name, crawler in crawlers:
+        for name, crawler, method in crawlers:
             try:
-                result = await crawler.crawl()
-                new_count = result.get("new", result.get("new_posts", 0)) if isinstance(result, dict) else 0
+                result = await getattr(crawler, method)(ticker_map=ticker_map)
+                new_count = result.get("total_posts", 0) if isinstance(result, dict) else 0
                 total_new += new_count
             except Exception as e:
                 logger.debug(f"Rumor crawl {name} failed for on-demand: {e}")
