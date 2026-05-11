@@ -6,44 +6,39 @@ from unittest.mock import AsyncMock, MagicMock, patch
 class TestAnalyzeSingleTicker:
 
     @pytest.mark.asyncio
-    async def test_analyze_single_ticker_calls_all_types(self, mock_db_session):
-        """analyze_single_ticker must call all 4 run_*_analysis methods under the lock."""
+    async def test_analyze_single_ticker_runs_unified_only(self, mock_db_session):
+        """analyze_single_ticker must run only unified analysis (not all 6 types)."""
         from app.services.ai_analysis_service import AIAnalysisService
 
         service = AIAnalysisService.__new__(AIAnalysisService)
         service.session = mock_db_session
 
         with (
+            patch.object(service, "run_unified_analysis", new_callable=AsyncMock) as mock_unified,
             patch.object(service, "run_technical_analysis", new_callable=AsyncMock) as mock_tech,
             patch.object(service, "run_fundamental_analysis", new_callable=AsyncMock) as mock_fund,
             patch.object(service, "run_sentiment_analysis", new_callable=AsyncMock) as mock_sent,
             patch.object(service, "run_combined_analysis", new_callable=AsyncMock) as mock_comb,
+            patch.object(service, "_crawl_and_score_rumors", new_callable=AsyncMock) as mock_crawl,
         ):
-            mock_tech.return_value = {"success": 1, "failed": 0}
-            mock_fund.return_value = {"success": 1, "failed": 0}
-            mock_sent.return_value = {"success": 1, "failed": 0}
-            mock_comb.return_value = {"success": 1, "failed": 0}
+            mock_unified.return_value = {"success": 1, "failed": 0}
+            mock_crawl.return_value = 5
 
             result = await service.analyze_single_ticker(ticker_id=1, symbol="AAA")
 
-            # All 4 methods should be called once each
-            mock_tech.assert_called_once()
-            mock_fund.assert_called_once()
-            mock_sent.assert_called_once()
-            mock_comb.assert_called_once()
+            # Only unified should be called
+            mock_unified.assert_called_once_with(ticker_filter={"AAA": 1})
+            mock_crawl.assert_called_once_with(1, "AAA")
 
-            # Each should receive the ticker_filter
-            expected_filter = {"AAA": 1}
-            mock_tech.assert_called_with(ticker_filter=expected_filter)
-            mock_fund.assert_called_with(ticker_filter=expected_filter)
-            mock_sent.assert_called_with(ticker_filter=expected_filter)
-            mock_comb.assert_called_with(ticker_filter=expected_filter)
+            # Individual analysis types should NOT be called
+            mock_tech.assert_not_called()
+            mock_fund.assert_not_called()
+            mock_sent.assert_not_called()
+            mock_comb.assert_not_called()
 
-            # Result should have all 4 types
-            assert "technical" in result
-            assert "fundamental" in result
-            assert "sentiment" in result
-            assert "combined" in result
+            # Result should have unified + rumors_crawled
+            assert "unified" in result
+            assert result["rumors_crawled"] == 5
 
 
 class TestOnDemandEndpoint:

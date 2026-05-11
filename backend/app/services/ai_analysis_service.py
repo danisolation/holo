@@ -353,45 +353,43 @@ class AIAnalysisService:
         )
 
     async def analyze_single_ticker(self, ticker_id: int, symbol: str) -> dict:
-        """Run all analysis types for a single ticker (on-demand).
+        """Run unified analysis for a single ticker (on-demand).
 
         Used by the 'Analyze now' endpoint for HNX/UPCOM tickers
         not in the daily schedule.
 
-        Pipeline: crawl fresh rumors → score rumors → run all AI analysis types.
-        This ensures unified analysis has the latest rumor intelligence.
+        Pipeline: crawl fresh rumors → score rumors → run unified analysis only.
+        Unified analysis covers all dimensions (technical, fundamental, sentiment,
+        rumors) in one Gemini call, so individual analysis types are skipped.
         """
         logger.info(f"On-demand analysis for {symbol} (id={ticker_id})")
         ticker_filter = {symbol: ticker_id}
-        results = {}
 
         # Step 1: Crawl fresh rumors for this ticker (best-effort, non-blocking)
+        total_rumors = 0
         try:
-            await self._crawl_and_score_rumors(ticker_id, symbol)
+            total_rumors = await self._crawl_and_score_rumors(ticker_id, symbol)
         except Exception as e:
             logger.warning(f"On-demand rumor crawl/score for {symbol} failed (non-fatal): {e}")
 
-        # Step 2: Run all AI analysis types
+        # Step 2: Run unified analysis only (covers technical + fundamental + sentiment + rumors)
         async with _gemini_lock:
-            for analysis_type, runner in [
-                ("technical", self.run_technical_analysis),
-                ("fundamental", self.run_fundamental_analysis),
-                ("sentiment", self.run_sentiment_analysis),
-                ("combined", self.run_combined_analysis),
-                ("trading_signal", self.run_trading_signal_analysis),  # Phase 19
-                ("unified", self.run_unified_analysis),  # Phase 88 / v19.0
-            ]:
-                try:
-                    results[analysis_type] = await runner(ticker_filter=ticker_filter)
-                except Exception as e:
-                    logger.error(f"On-demand {analysis_type} failed for {symbol}: {e}")
-                    results[analysis_type] = {"error": str(e)}
-        return results
+            try:
+                result = await self.run_unified_analysis(ticker_filter=ticker_filter)
+            except Exception as e:
+                logger.error(f"On-demand unified analysis failed for {symbol}: {e}")
+                result = {"error": str(e)}
 
-    async def _crawl_and_score_rumors(self, ticker_id: int, symbol: str) -> None:
+        return {
+            "unified": result,
+            "rumors_crawled": total_rumors,
+        }
+
+    async def _crawl_and_score_rumors(self, ticker_id: int, symbol: str) -> int:
         """Crawl latest rumors from all sources and score them for a single ticker.
 
         Called before on-demand analysis to ensure fresh rumor data.
+        Returns total number of new rumor posts crawled.
         """
         from app.crawlers.f319_crawler import F319Crawler
         from app.crawlers.fireant_crawler import FireantCrawler
@@ -430,6 +428,7 @@ class AIAnalysisService:
         except Exception as e:
             logger.warning(f"On-demand rumor scoring for {symbol} failed: {e}")
 
+        return total_new
 
     # ------------------------------------------------------------------
     # Batching & Orchestration
