@@ -64,10 +64,10 @@ class GeminiClient:
         *, max_output_tokens: int = 16384, thinking_budget: int | None = None,
     ):
         """Internal: Gemini call with tenacity retry. Circuit breaker wraps this."""
-        # For thinking models (2.5-flash), set thinking budget to prevent
+        # For thinking models (2.5+, 3.x), set thinking budget to prevent
         # internal reasoning from consuming the entire output token budget
         thinking_config = None
-        if "2.5" in self.model:
+        if any(v in self.model for v in ("2.5", "3-flash", "3.1")):
             thinking_config = types.ThinkingConfig(thinking_budget=thinking_budget or 1024)
 
         response = await self.client.aio.models.generate_content(

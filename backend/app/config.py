@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     # Gemini AI (Phase 2)
     gemini_api_key: str = ""  # Required — get from https://aistudio.google.com/apikey
-    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_model: str = "gemini-3-flash-preview"
     gemini_batch_size: int = 8  # Reduced from 15 — more tokens per ticker for detailed analysis
     rumor_batch_size: int = 6  # Tickers per Gemini call for rumor scoring (30 tickers / 6 = 5 calls)
     gemini_delay_seconds: float = 10.0  # Delay between batches — Gemini free tier is 15 RPM
