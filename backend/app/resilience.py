@@ -33,10 +33,12 @@ class CircuitOpenError(Exception):
 
 
 class AsyncCircuitBreaker:
-    def __init__(self, name: str, fail_max: int = 3, reset_timeout: float = 120.0):
+    def __init__(self, name: str, fail_max: int = 3, reset_timeout: float = 120.0,
+                 exclude: tuple = ()):
         self.name = name
         self.fail_max = fail_max
         self.reset_timeout = reset_timeout
+        self.exclude = exclude  # Exception types that bypass circuit (e.g. rate limits)
         self._state = CircuitState.CLOSED
         self._fail_count = 0
         self._last_failure_time: float | None = None
@@ -66,7 +68,10 @@ class AsyncCircuitBreaker:
             return result
         except CircuitOpenError:
             raise
-        except Exception:
+        except Exception as e:
+            if self.exclude and isinstance(e, self.exclude):
+                # Rate limits etc. — re-raise without counting as failure
+                raise
             async with self._lock:
                 self._on_failure()
             raise
@@ -85,6 +90,8 @@ class AsyncCircuitBreaker:
             logger.warning(f"Circuit '{self.name}' OPENED after {self._fail_count} consecutive failures")
 
 
+from google.genai.errors import ClientError as GeminiClientError
+
 # Module-level singletons — per-API isolation
 vnstock_breaker = AsyncCircuitBreaker(
     "vnstock",
@@ -100,6 +107,7 @@ gemini_breaker = AsyncCircuitBreaker(
     "gemini",
     fail_max=settings.circuit_breaker_fail_max,
     reset_timeout=settings.circuit_breaker_reset_timeout,
+    exclude=(GeminiClientError,),  # 429 rate limits bypass circuit
 )
 vndirect_breaker = AsyncCircuitBreaker(
     "vndirect",

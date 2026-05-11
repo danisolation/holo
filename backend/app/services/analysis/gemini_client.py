@@ -55,7 +55,7 @@ class GeminiClient:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=4, min=8, max=60),
-        retry=retry_if_exception_type((ServerError, ClientError)),
+        retry=retry_if_exception_type(ServerError),
         reraise=True,
     )
     async def _call_gemini_with_retry(
@@ -87,10 +87,10 @@ class GeminiClient:
     async def _call_gemini(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None, **kwargs):
         """Call Gemini API with circuit breaker protection.
 
-        Circuit breaker wraps OUTSIDE tenacity (Pitfall 1):
-        - tenacity retries 2x on ServerError
-        - If all retries fail, that counts as 1 circuit breaker failure
-        - After 3 such sequences, circuit opens
+        Circuit breaker wraps OUTSIDE tenacity:
+        - tenacity retries 3x on ServerError
+        - ClientError (429 rate limit) bypasses circuit breaker via exclude
+        - Only ServerError sequences trip the circuit
         """
         return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema, temperature, system_instruction, **kwargs)
 
