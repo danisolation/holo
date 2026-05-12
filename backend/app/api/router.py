@@ -11,6 +11,7 @@ from app.api.watchlist import router as watchlist_router
 from app.api.discovery import router as discovery_router
 from app.api.rumors import router as rumors_router
 from app.api.accuracy import router as accuracy_router
+from app.api.simulator import router as simulator_router
 
 api_router = APIRouter()
 api_router.include_router(system_router)
@@ -23,3 +24,4 @@ api_router.include_router(watchlist_router)
 api_router.include_router(discovery_router)
 api_router.include_router(rumors_router)
 api_router.include_router(accuracy_router)
+api_router.include_router(simulator_router)
