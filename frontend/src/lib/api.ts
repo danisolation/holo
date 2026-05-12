@@ -682,3 +682,107 @@ export async function fetchAccuracyStats(days: number = 30): Promise<AccuracySta
 export async function fetchTickerAccuracy(tickerId: number, days: number = 30): Promise<TickerAccuracy> {
   return apiFetch<TickerAccuracy>(`/accuracy/ticker/${tickerId}?days=${days}`);
 }
+
+// ── Simulator types ──────────────────────────────────────────────────────────
+
+export interface SimulatorPositionResponse {
+  ticker_symbol: string;
+  ticker_name: string;
+  quantity: number;
+  avg_price: number;
+  current_price: number | null;
+  market_value: number | null;
+  unrealized_pnl: number | null;
+  unrealized_pnl_pct: number | null;
+}
+
+export interface SimulatorPortfolioResponse {
+  starting_capital: number;
+  current_cash: number;
+  total_market_value: number;
+  total_equity: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  realized_pnl: number;
+  unrealized_pnl: number;
+  positions: SimulatorPositionResponse[];
+}
+
+export interface SimulatorTradeCreate {
+  ticker_symbol: string;
+  side: "BUY" | "SELL";
+  quantity: number;
+  price: number;
+  trade_date: string;
+  source?: "ai_auto" | "manual";
+  daily_pick_id?: number | null;
+  user_notes?: string | null;
+}
+
+export interface SimulatorTradeResponse {
+  id: number;
+  ticker_symbol: string;
+  ticker_name: string;
+  daily_pick_id: number | null;
+  side: string;
+  quantity: number;
+  price: number;
+  broker_fee: number;
+  sell_tax: number;
+  total_fee: number;
+  gross_pnl: number | null;
+  net_pnl: number | null;
+  trade_date: string;
+  source: string;
+  ai_signal_skipped: boolean;
+  user_notes: string | null;
+  created_at: string;
+}
+
+export interface SimulatorTradesListResponse {
+  trades: SimulatorTradeResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface SimulatorStatsResponse {
+  total_trades: number;
+  ai_trades: number;
+  manual_trades: number;
+  ai_win_rate: number;
+  manual_win_rate: number;
+  ai_avg_return_pct: number;
+  manual_avg_return_pct: number;
+  ai_total_pnl: number;
+  manual_total_pnl: number;
+}
+
+// ── Simulator API functions ──────────────────────────────────────────────────
+
+export async function fetchSimulatorPortfolio(): Promise<SimulatorPortfolioResponse> {
+  return apiFetch<SimulatorPortfolioResponse>("/simulator/portfolio");
+}
+
+export async function createSimulatorTrade(data: SimulatorTradeCreate): Promise<SimulatorTradeResponse> {
+  return apiFetch<SimulatorTradeResponse>("/simulator/trades", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchSimulatorTrades(page = 1, pageSize = 20, source?: string): Promise<SimulatorTradesListResponse> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  if (source) params.set("source", source);
+  return apiFetch<SimulatorTradesListResponse>(`/simulator/trades?${params}`);
+}
+
+export async function fetchSimulatorStats(): Promise<SimulatorStatsResponse> {
+  return apiFetch<SimulatorStatsResponse>("/simulator/stats");
+}
+
+export async function resetSimulatorPortfolio(): Promise<{ message: string; starting_capital: number; current_cash: number }> {
+  return apiFetch<{ message: string; starting_capital: number; current_cash: number }>("/simulator/reset", {
+    method: "POST",
+  });
+}

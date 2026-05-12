@@ -30,7 +30,13 @@ import {
   fetchWatchlistRumors,
   fetchAccuracyStats,
   fetchTickerAccuracy,
+  fetchSimulatorPortfolio,
+  createSimulatorTrade,
+  fetchSimulatorTrades,
+  fetchSimulatorStats,
+  resetSimulatorPortfolio,
 } from "@/lib/api";
+import type { SimulatorTradeCreate } from "@/lib/api";
 
 /**
  * Fetch all active tickers, optionally filtered by sector.
@@ -334,5 +340,51 @@ export function useTickerAccuracy(tickerId: number | undefined, days: number = 3
     queryFn: () => fetchTickerAccuracy(tickerId!, days),
     enabled: !!tickerId,
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+// --- Phase 95: Simulator Hooks ---
+
+export function useSimulatorPortfolio() {
+  return useQuery({
+    queryKey: ["simulator", "portfolio"],
+    queryFn: fetchSimulatorPortfolio,
+    staleTime: 30_000,
+  });
+}
+
+export function useSimulatorTrades(page = 1, source?: string) {
+  return useQuery({
+    queryKey: ["simulator", "trades", page, source],
+    queryFn: () => fetchSimulatorTrades(page, 20, source),
+    staleTime: 30_000,
+  });
+}
+
+export function useSimulatorStats() {
+  return useQuery({
+    queryKey: ["simulator", "stats"],
+    queryFn: fetchSimulatorStats,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateSimulatorTrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: SimulatorTradeCreate) => createSimulatorTrade(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["simulator"] });
+    },
+  });
+}
+
+export function useResetSimulator() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: resetSimulatorPortfolio,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["simulator"] });
+    },
   });
 }
