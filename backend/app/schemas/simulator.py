@@ -87,3 +87,22 @@ class PortfolioResetResponse(BaseModel):
     message: str
     starting_capital: float
     current_cash: float
+
+
+class PendingSignalResponse(BaseModel):
+    """A daily pick signal pending execution."""
+    daily_pick_id: int
+    pick_date: str
+    ticker_symbol: str
+    ticker_name: str
+    entry_price: float | None
+    stop_loss: float | None
+    take_profit_1: float | None
+    composite_score: float
+    rank: int | None
+    position_size_shares: int | None
+
+
+class ExecuteSignalsRequest(BaseModel):
+    """Request to execute specific AI signals."""
+    pick_ids: list[int] = Field(..., min_length=1)

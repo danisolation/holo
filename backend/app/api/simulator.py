@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.database import async_session
 from app.services.simulator_service import SimulatorService
+from app.services.auto_trade_service import AutoTradeService
 from app.schemas.simulator import (
     SimulatorTradeCreate,
     SimulatorTradeResponse,
@@ -10,6 +11,8 @@ from app.schemas.simulator import (
     PortfolioResponse,
     SimulatorStatsResponse,
     PortfolioResetResponse,
+    PendingSignalResponse,
+    ExecuteSignalsRequest,
 )
 
 router = APIRouter(tags=["simulator"])
@@ -56,3 +59,32 @@ async def reset_portfolio():
     async with async_session() as session:
         service = SimulatorService(session)
         return await service.reset_portfolio()
+
+
+@router.get("/simulator/signals/pending", response_model=list[PendingSignalResponse])
+async def get_pending_signals(days_back: int = 3):
+    """Get AI signals that haven't been traded yet."""
+    async with async_session() as session:
+        service = AutoTradeService(session)
+        return await service.get_pending_signals(days_back)
+
+
+@router.post("/simulator/signals/execute")
+async def execute_signals(data: ExecuteSignalsRequest):
+    """Execute BUY trades for specified AI signal pick IDs."""
+    async with async_session() as session:
+        service = AutoTradeService(session)
+        try:
+            results = await service.execute_ai_signals(data.pick_ids)
+            return {"executed": len([r for r in results if "error" not in r]), "results": results}
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/simulator/signals/skip")
+async def skip_signals(data: ExecuteSignalsRequest):
+    """Mark AI signals as skipped."""
+    async with async_session() as session:
+        service = AutoTradeService(session)
+        count = await service.skip_signals(data.pick_ids)
+        return {"skipped": count}
