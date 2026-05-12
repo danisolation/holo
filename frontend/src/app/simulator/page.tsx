@@ -25,6 +25,7 @@ import { TradeForm } from "@/components/simulator/trade-form";
 import { TradeHistory } from "@/components/simulator/trade-history";
 import { AiAccuracyPanel } from "@/components/simulator/ai-accuracy-panel";
 import { AutoTradeToggle } from "@/components/simulator/auto-trade-toggle";
+import { PendingSignals } from "@/components/simulator/pending-signals";
 
 export default function SimulatorPage() {
   const { data: portfolio, isLoading } = useSimulatorPortfolio();
@@ -94,20 +95,24 @@ export default function SimulatorPage() {
         </>
       ) : null}
 
-      {/* Tabs: Trade form | History | AI Accuracy */}
+      {/* Tabs: AI Signals | Trade form | History | AI Accuracy */}
       <Tabs defaultValue={0}>
         <TabsList>
-          <TabsTrigger value={0}>Giao dịch mới</TabsTrigger>
-          <TabsTrigger value={1}>Lịch sử</TabsTrigger>
-          <TabsTrigger value={2}>Độ chính xác AI</TabsTrigger>
+          <TabsTrigger value={0}>Tín hiệu AI</TabsTrigger>
+          <TabsTrigger value={1}>Giao dịch mới</TabsTrigger>
+          <TabsTrigger value={2}>Lịch sử</TabsTrigger>
+          <TabsTrigger value={3}>Độ chính xác AI</TabsTrigger>
         </TabsList>
         <TabsContent value={0} className="pt-4">
-          <TradeForm />
+          <PendingSignals />
         </TabsContent>
         <TabsContent value={1} className="pt-4">
-          <TradeHistory />
+          <TradeForm />
         </TabsContent>
         <TabsContent value={2} className="pt-4">
+          <TradeHistory />
+        </TabsContent>
+        <TabsContent value={3} className="pt-4">
           <AiAccuracyPanel />
         </TabsContent>
       </Tabs>

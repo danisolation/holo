@@ -786,3 +786,36 @@ export async function resetSimulatorPortfolio(): Promise<{ message: string; star
     method: "POST",
   });
 }
+
+// ── Simulator signals (auto-trade) ──────────────────────────────────────────
+
+export interface PendingSignalResponse {
+  daily_pick_id: number;
+  pick_date: string;
+  ticker_symbol: string;
+  ticker_name: string;
+  entry_price: number | null;
+  stop_loss: number | null;
+  take_profit_1: number | null;
+  composite_score: number;
+  rank: number | null;
+  position_size_shares: number | null;
+}
+
+export async function fetchPendingSignals(daysBack = 3): Promise<PendingSignalResponse[]> {
+  return apiFetch<PendingSignalResponse[]>(`/simulator/signals/pending?days_back=${daysBack}`);
+}
+
+export async function executeSignals(pickIds: number[]): Promise<{ executed: number; results: unknown[] }> {
+  return apiFetch<{ executed: number; results: unknown[] }>("/simulator/signals/execute", {
+    method: "POST",
+    body: JSON.stringify({ pick_ids: pickIds }),
+  });
+}
+
+export async function skipSignals(pickIds: number[]): Promise<{ skipped: number }> {
+  return apiFetch<{ skipped: number }>("/simulator/signals/skip", {
+    method: "POST",
+    body: JSON.stringify({ pick_ids: pickIds }),
+  });
+}

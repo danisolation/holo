@@ -35,6 +35,9 @@ import {
   fetchSimulatorTrades,
   fetchSimulatorStats,
   resetSimulatorPortfolio,
+  fetchPendingSignals,
+  executeSignals,
+  skipSignals,
 } from "@/lib/api";
 import type { SimulatorTradeCreate } from "@/lib/api";
 
@@ -385,6 +388,36 @@ export function useResetSimulator() {
     mutationFn: resetSimulatorPortfolio,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["simulator"] });
+    },
+  });
+}
+
+// --- Phase 95-04: Auto-trade signal hooks ---
+
+export function usePendingSignals() {
+  return useQuery({
+    queryKey: ["simulator", "signals", "pending"],
+    queryFn: () => fetchPendingSignals(3),
+    staleTime: 60_000,
+  });
+}
+
+export function useExecuteSignals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (pickIds: number[]) => executeSignals(pickIds),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["simulator"] });
+    },
+  });
+}
+
+export function useSkipSignals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (pickIds: number[]) => skipSignals(pickIds),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["simulator", "signals"] });
     },
   });
 }
