@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v20.0
-milestone_name: Enhanced Price Pipeline
+milestone: v21.0
+milestone_name: Stock Trading Simulator
 status: roadmap_complete
 stopped_at: Roadmap created, ready for phase planning
-last_updated: "2026-05-08T11:00:00.000Z"
-last_activity: 2026-05-08 — Roadmap created (3 phases, 92-94)
+last_updated: "2026-05-12T16:24:00.000Z"
+last_activity: 2026-05-12 — v21.0 roadmap created (1 phase, 95)
 progress:
-  total_phases: 3
+  total_phases: 1
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v20.0 Enhanced Price Pipeline — Roadmap complete, ready for phase planning
+**Current focus:** v21.0 Stock Trading Simulator — Roadmap complete, ready for phase planning
 
 ## Current Position
 
-Phase: 92 (Intraday Storage & Enhanced Polling)
+Phase: 95 (Stock Trading Simulator)
 Plan: —
 Status: Roadmap complete, awaiting phase planning
-Last activity: 2026-05-08 — Roadmap created (3 phases, 92-94)
+Last activity: 2026-05-12 — v21.0 roadmap created (1 phase, 95)
 
 ```
-v20.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/3 phases (0%)
+v21.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/1 phases (0%)
 ```
 
 ## Shipped Milestones
@@ -60,6 +60,10 @@ v20.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0
 | v19.0 | Unified AI Analysis Pipeline | 4 | 0 | 2026-05-07 |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- v21.0 created: Stock Trading Simulator — replace coach with paper trading (Phase 95)
 
 ### Decisions
 
