@@ -41,12 +41,20 @@ from app.services.gemini_usage_service import GeminiUsageService
 
 
 class GeminiClient:
-    """Wraps Gemini API calls, batch analyzers, and prompt builders."""
+    """Wraps Gemini API calls, batch analyzers, and prompt builders.
+
+    Supports model rotation: when the primary model hits daily quota
+    (RESOURCE_EXHAUSTED), automatically switches to fallback models.
+    Each Gemini model has a separate free-tier quota.
+    """
 
     def __init__(self, session: AsyncSession, client, model: str):
         self.session = session
         self.client = client
         self.model = model
+        self._active_model = model
+        self._exhausted_models: set[str] = set()
+        self._fallback_models = list(settings.gemini_fallback_models)
 
     # ------------------------------------------------------------------
     # Gemini API Calls
@@ -67,11 +75,11 @@ class GeminiClient:
         # For thinking models (2.5+, 3.x), set thinking budget to prevent
         # internal reasoning from consuming the entire output token budget
         thinking_config = None
-        if any(v in self.model for v in ("2.5", "3-flash", "3.1")):
+        if any(v in self._active_model for v in ("2.5", "3-flash", "3.1")):
             thinking_config = types.ThinkingConfig(thinking_budget=thinking_budget or 1024)
 
         response = await self.client.aio.models.generate_content(
-            model=self.model,
+            model=self._active_model,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -84,15 +92,33 @@ class GeminiClient:
         )
         return response
 
-    async def _call_gemini(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None, **kwargs):
-        """Call Gemini API with circuit breaker protection.
+    def _try_rotate_model(self) -> bool:
+        """Try to rotate to a fallback model. Returns True if rotated."""
+        self._exhausted_models.add(self._active_model)
+        for fallback in self._fallback_models:
+            if fallback not in self._exhausted_models:
+                old = self._active_model
+                self._active_model = fallback
+                logger.info(f"Model rotation: {old} → {fallback} (quota exhausted)")
+                return True
+        return False
 
-        Circuit breaker wraps OUTSIDE tenacity:
-        - tenacity retries 3x on ServerError
-        - ClientError (429 rate limit) bypasses circuit breaker via exclude
-        - Only ServerError sequences trip the circuit
+    async def _call_gemini(self, prompt: str, response_schema, temperature: float = 0.2, system_instruction: str | None = None, **kwargs):
+        """Call Gemini API with circuit breaker and model rotation.
+
+        On daily quota exhaustion (RESOURCE_EXHAUSTED), rotates to fallback
+        models before re-raising. Each model has separate free-tier quota.
         """
-        return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema, temperature, system_instruction, **kwargs)
+        try:
+            return await gemini_breaker.call(self._call_gemini_with_retry, prompt, response_schema, temperature, system_instruction, **kwargs)
+        except ClientError as e:
+            if "RESOURCE_EXHAUSTED" in str(e) and "FreeTier" in str(e):
+                if self._try_rotate_model():
+                    return await gemini_breaker.call(
+                        self._call_gemini_with_retry, prompt, response_schema,
+                        temperature, system_instruction, **kwargs
+                    )
+            raise
 
     async def _record_usage(self, analysis_type: str, batch_size: int, response) -> None:
         """Record Gemini token usage after a successful API call."""
@@ -102,7 +128,7 @@ class GeminiClient:
                 analysis_type=analysis_type,
                 batch_size=batch_size,
                 usage_metadata=getattr(response, "usage_metadata", None),
-                model_name=self.model,
+                model_name=self._active_model,
             )
         except Exception as e:
             # Usage tracking should never break analysis

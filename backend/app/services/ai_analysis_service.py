@@ -625,6 +625,11 @@ class AIAnalysisService:
 
                 except ClientError as e:
                     error_str = str(e)
+                    # Daily quota exhausted — try rotating model before retrying
+                    if "RESOURCE_EXHAUSTED" in error_str and "FreeTier" in error_str:
+                        if self.gemini_client._try_rotate_model():
+                            logger.info(f"Retrying batch {batch_num} with rotated model")
+                            continue
                     if "429" in error_str and attempt < max_retries:
                         # Parse retry delay from error message
                         match = re.search(r'retry in ([\d.]+)s', error_str)
