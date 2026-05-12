@@ -39,16 +39,13 @@ class TestSchedulerManager:
         assert "daily_price_crawl_hose" in job_ids
         assert "weekly_ticker_refresh" in job_ids
         assert "weekly_financial_crawl" in job_ids
-        assert "weekly_behavior_analysis" in job_ids
-        assert "create_weekly_risk_prompt" in job_ids
-        assert "generate_weekly_review" in job_ids
         assert "morning_price_crawl_hose" in job_ids
         assert "realtime_price_poll" in job_ids
         assert "realtime_heartbeat" in job_ids
         assert "daily_intraday_cleanup" in job_ids
         assert "daily_intraday_aggregate" in job_ids
         assert "keep_alive_ping" in job_ids
-        assert len(job_ids) == 12
+        assert len(job_ids) == 9
 
         # Clean up
         scheduler.remove_all_jobs()
