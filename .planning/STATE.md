@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v21.0
 milestone_name: Stock Trading Simulator
-status: roadmap_complete
-stopped_at: Roadmap created, ready for phase planning
-last_updated: "2026-05-12T16:24:00.000Z"
+status: planning
+stopped_at: Completed 95-01-PLAN.md
+last_updated: "2026-05-12T10:01:45.912Z"
 last_activity: 2026-05-12 — v21.0 roadmap created (1 phase, 95)
 progress:
-  total_phases: 1
+  total_phases: 24
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -81,6 +80,7 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 72]: Used ROW_NUMBER window functions for batch per-ticker queries; kept per-ticker methods for on-demand use
 - [Phase 72]: Offset/limit pagination with COUNT totals matching PickHistoryListResponse pattern
 - [Phase 73]: TTLCache pattern: check->work->store with validated cache keys; TTL 60-300s per endpoint
+- [Phase 95]: Keep UserRiskProfile model (used by pick_service/trade_service); keep accuracy-card.tsx (reusable); keep postBehaviorEvent (fire-and-forget)
 
 ### Research Context (v10.0)
 
@@ -141,7 +141,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-06T05:07:18.669Z
-Stopped at: Completed 73-01-PLAN.md
+Last session: 2026-05-12T10:01:45.905Z
+Stopped at: Completed 95-01-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 60`

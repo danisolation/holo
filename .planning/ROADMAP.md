@@ -587,10 +587,10 @@ Plans:
   5. Realistic fees: 0.15% buy commission + 0.15% sell commission + 0.1% sell tax
   6. Portfolio dashboard: shows positions, P&L (realized + unrealized), trade history
   7. AI accuracy tracking: win rate, avg return per signal, comparison of AI vs manual trades
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 95-01-PLAN.md — Remove all coach/training code (backend + frontend cleanup)
+- [x] 95-01-PLAN.md — Remove all coach/training code (backend + frontend cleanup)
 - [ ] 95-02-PLAN.md — Backend simulator foundation (models, migration, service, API)
 - [ ] 95-03-PLAN.md — Frontend simulator page (portfolio, trades, accuracy UI)
 - [ ] 95-04-PLAN.md — Auto-trade engine + pending signals UI
@@ -601,4 +601,4 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 95. Stock Trading Simulator | 0/4 | Planned | — |
+| 95. Stock Trading Simulator | 1/4 | In Progress|  |
