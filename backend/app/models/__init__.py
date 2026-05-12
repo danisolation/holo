@@ -21,17 +21,10 @@ from app.models.user_risk_profile import UserRiskProfile  # noqa: E402
 from app.models.trade import Trade  # noqa: E402
 from app.models.lot import Lot  # noqa: E402
 from app.models.lot_match import LotMatch  # noqa: E402
-from app.models.behavior_event import BehaviorEvent  # noqa: E402
-from app.models.habit_detection import HabitDetection  # noqa: E402
-from app.models.risk_suggestion import RiskSuggestion  # noqa: E402
-from app.models.sector_preference import SectorPreference  # noqa: E402
-from app.models.trading_goal import TradingGoal  # noqa: E402
-from app.models.weekly_prompt import WeeklyPrompt  # noqa: E402
-from app.models.weekly_review import WeeklyReview  # noqa: E402
 from app.models.discovery_result import DiscoveryResult  # noqa: E402
 from app.models.rumor import Rumor  # noqa: E402
 from app.models.rumor_score import RumorScore  # noqa: E402
 from app.models.ai_accuracy import AIAccuracy  # noqa: E402
 from app.models.intraday_price import IntradayPrice  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "BehaviorEvent", "HabitDetection", "RiskSuggestion", "SectorPreference", "TradingGoal", "WeeklyPrompt", "WeeklyReview", "DiscoveryResult", "Rumor", "RumorScore", "AIAccuracy", "IntradayPrice"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "DiscoveryResult", "Rumor", "RumorScore", "AIAccuracy", "IntradayPrice"]

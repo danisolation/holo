@@ -7,8 +7,6 @@ from app.api.tickers import router as tickers_router
 from app.api.health import router as health_router
 from app.api.picks import router as picks_router
 from app.api.trades import router as trades_router
-from app.api.behavior import router as behavior_router
-from app.api.goals import router as goals_router
 from app.api.watchlist import router as watchlist_router
 from app.api.discovery import router as discovery_router
 from app.api.rumors import router as rumors_router
@@ -21,8 +19,6 @@ api_router.include_router(tickers_router)
 api_router.include_router(health_router)
 api_router.include_router(picks_router)
 api_router.include_router(trades_router)
-api_router.include_router(behavior_router)
-api_router.include_router(goals_router)
 api_router.include_router(watchlist_router)
 api_router.include_router(discovery_router)
 api_router.include_router(rumors_router)
