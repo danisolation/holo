@@ -231,7 +231,8 @@ class SimulatorService:
                 .limit(1)
             )
             current_price_row = price_result.scalar_one_or_none()
-            current_price = float(current_price_row) if current_price_row else None
+            # DailyPrice.close is in nghìn đồng (VCI format), simulator uses VND
+            current_price = float(current_price_row) * 1000 if current_price_row else None
 
             market_value = current_price * qty if current_price else None
             unrealized = (current_price * qty - float(row.total_cost)) if current_price else None

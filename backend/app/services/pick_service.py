@@ -6,7 +6,7 @@ generates Vietnamese explanations via Gemini, persists to daily_picks table.
 Pure computation functions are module-level for easy unit testing.
 PickService class handles async DB operations and Gemini calls.
 """
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import google.genai as genai
@@ -151,9 +151,23 @@ def extract_trading_plan(raw_response: dict) -> dict:
     Returns dict with: entry_price, stop_loss, take_profit_1, take_profit_2,
     risk_reward_ratio, position_size_pct, confidence.
 
-    Supports both new single-direction format and legacy dual-direction format.
+    Supports three formats:
+    1. Unified (v19+): entry_price at top level
+    2. Single-direction: trading_plan object at top level
+    3. Legacy dual-direction: long_analysis.trading_plan
     """
-    # New format: trading_plan at top level
+    # Unified format (v19+): fields at top level
+    if "entry_price" in raw_response and "trading_plan" not in raw_response:
+        return {
+            "entry_price": raw_response.get("entry_price"),
+            "stop_loss": raw_response.get("stop_loss"),
+            "take_profit_1": raw_response.get("take_profit_1"),
+            "take_profit_2": raw_response.get("take_profit_2"),
+            "risk_reward_ratio": raw_response.get("risk_reward_ratio"),
+            "position_size_pct": raw_response.get("position_size_pct", 10),
+            "confidence": raw_response.get("score", raw_response.get("confidence", 5)),
+        }
+    # Single-direction format: trading_plan at top level
     plan = raw_response.get("trading_plan", {})
     if plan:
         return {
@@ -313,10 +327,11 @@ class PickService:
         9. Persist to daily_picks table
         """
         today = date.today()
+        yesterday = today - timedelta(days=1)
         profile = await self.get_or_create_profile()
         capital = int(profile.capital)
 
-        # --- Step 1: Get today's LONG trading signals ---
+        # --- Step 1: Get recent LONG trading signals (today or yesterday) ---
         signal_query = (
             select(
                 AIAnalysis.ticker_id,
@@ -328,9 +343,9 @@ class PickService:
             )
             .join(Ticker, Ticker.id == AIAnalysis.ticker_id)
             .where(
-                AIAnalysis.analysis_type == AnalysisType.TRADING_SIGNAL,
-                AIAnalysis.signal == "long",
-                AIAnalysis.analysis_date == today,
+                AIAnalysis.analysis_type.in_([AnalysisType.TRADING_SIGNAL, AnalysisType.UNIFIED]),
+                AIAnalysis.signal.in_(["long", "mua"]),
+                AIAnalysis.analysis_date >= yesterday,
                 AIAnalysis.score > 0,
             )
         )
@@ -477,14 +492,9 @@ class PickService:
         candidates = [c for c in candidates if is_affordable(capital, c["entry_price"])]
 
         # --- Step 6.5: Apply sector bias (ADPT-02) ---
-        # Load sector preferences (min 3 trades per sector per CONTEXT.md)
-        from app.models.sector_preference import SectorPreference
+        # Sector preference model removed in Phase 95 (coach cleanup)
+        # Skip sector bias until re-implemented
         sector_prefs: dict[str, float] = {}
-        pref_result = await self.session.execute(
-            select(SectorPreference).where(SectorPreference.total_trades >= 3)
-        )
-        for pref in pref_result.scalars():
-            sector_prefs[pref.sector] = float(pref.preference_score)
 
         if sector_prefs:
             for c in candidates:
@@ -504,12 +514,12 @@ class PickService:
             rumor_result = await self.session.execute(
                 select(RumorScore)
                 .where(RumorScore.ticker_id.in_(ticker_ids))
-                .where(RumorScore.scored_at >= func.now() - text("INTERVAL '3 days'"))
+                .where(RumorScore.scored_date >= func.now() - text("INTERVAL '3 days'"))
             )
             rumor_map: dict[int, RumorScore] = {}
             for rs in rumor_result.scalars():
                 # Keep the most recent score per ticker
-                if rs.ticker_id not in rumor_map or rs.scored_at > rumor_map[rs.ticker_id].scored_at:
+                if rs.ticker_id not in rumor_map or rs.scored_date > rumor_map[rs.ticker_id].scored_date:
                     rumor_map[rs.ticker_id] = rs
 
             boosted = 0
@@ -609,21 +619,21 @@ class PickService:
                 )
                 if response and response.text:
                     # Split explanation by numbered picks
-                    text = response.text
+                    resp_text = response.text
                     # Store full text - split per symbol later
                     for p in picked:
                         sym = p["symbol"]
                         # Find section for this symbol
-                        idx = text.find(sym)
+                        idx = resp_text.find(sym)
                         if idx >= 0:
                             # Find next symbol or end
-                            next_idx = len(text)
+                            next_idx = len(resp_text)
                             for other in picked:
                                 if other["symbol"] != sym:
-                                    oi = text.find(other["symbol"], idx + len(sym))
+                                    oi = resp_text.find(other["symbol"], idx + len(sym))
                                     if oi > idx and oi < next_idx:
                                         next_idx = oi
-                            explanations[sym] = text[idx:next_idx].strip()
+                            explanations[sym] = resp_text[idx:next_idx].strip()
                     logger.info(f"Gemini explanations generated for {len(explanations)} picks")
             except (ClientError, ServerError, Exception) as e:
                 logger.warning(f"Gemini explanation failed (picks still valid): {e}")
