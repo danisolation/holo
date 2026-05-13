@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { useTickers } from "@/lib/hooks";
-import { postBehaviorEvent } from "@/lib/api";
 import { getRecentSearches, addRecentSearch } from "@/lib/recent-searches";
 
 export function TickerSearch() {
@@ -36,7 +35,6 @@ export function TickerSearch() {
       if (ticker) {
         addRecentSearch({ symbol: ticker.symbol, name: ticker.name });
       }
-      postBehaviorEvent({ event_type: "search_click", ticker_symbol: symbol }).catch(() => {});
       router.push(`/ticker/${symbol}`);
     },
     [router, tickers]

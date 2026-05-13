@@ -539,29 +539,6 @@ export async function fetchPipelineTimeline(days: number = 7): Promise<PipelineT
   return apiFetch<PipelineTimelineResponse>(`/health/pipeline-timeline?days=${days}`);
 }
 
-// --- Phase 43: Daily Picks API ---
-
-export async function fetchDailyPicks(): Promise<DailyPicksResponse> {
-  return apiFetch<DailyPicksResponse>("/picks/today");
-}
-
-// --- Behavior Event (fire-and-forget, used by ticker-search) ---
-
-export interface BehaviorEventCreate {
-  event_type: "ticker_view" | "search_click" | "pick_click";
-  ticker_symbol?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export async function postBehaviorEvent(data: BehaviorEventCreate): Promise<void> {
-  await fetch(`${API_BASE}/behavior/event`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  // Fire-and-forget: don't check res.ok, don't throw
-}
-
 // --- Phase 49: Watchlist API ---
 
 export async function fetchWatchlist(): Promise<WatchlistItem[]> {

@@ -19,7 +19,6 @@ import {
   triggerJob,
   fetchGeminiUsage,
   fetchPipelineTimeline,
-  fetchDailyPicks,
   fetchWatchlist,
   addWatchlistItem,
   removeWatchlistItem,
