@@ -21,12 +21,17 @@ os.environ.setdefault("REQUESTS_CA_BUNDLE", "")
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Monkey-patch requests Session to skip SSL verify for VietCap
+# Monkey-patch requests Session to skip SSL verify for VN stock APIs.
+# VietCap (VCI) and other VN brokers use self-signed certs that fail
+# verification on some networks.
 import requests
 _original_send = requests.Session.send
 
+_SSL_BYPASS_DOMAINS = ("vietcap.com.vn", "kbsec.com.vn", "vnstocks.com")
+
 def _patched_send(self, request, **kwargs):
-    if "vietcap.com.vn" in (request.url or ""):
+    url = request.url or ""
+    if any(domain in url for domain in _SSL_BYPASS_DOMAINS):
         kwargs["verify"] = False
     return _original_send(self, request, **kwargs)
 
