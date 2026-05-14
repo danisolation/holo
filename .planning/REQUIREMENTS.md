@@ -15,8 +15,8 @@
 
 - [ ] **SIM-01**: Auto-sell khi giá hit Stop Loss target (so sánh DailyPrice.close với SL từ trading plan)
 - [ ] **SIM-02**: Auto-sell khi giá hit Take Profit target (so sánh DailyPrice.close với TP từ trading plan)
-- [ ] **SIM-03**: Portfolio history chart (equity curve — tổng giá trị portfolio theo thời gian)
-- [ ] **SIM-04**: P&L timeline (bảng lịch sử giao dịch với running P&L cộng dồn)
+- [x] **SIM-03**: Portfolio history chart (equity curve — tổng giá trị portfolio theo thời gian)
+- [x] **SIM-04**: P&L timeline (bảng lịch sử giao dịch với running P&L cộng dồn)
 - [ ] **SIM-05**: Sell signal integration (AI phát tín hiệu bán/giữ → auto-execute sell cho positions đang mở)
 
 ### Data Quality

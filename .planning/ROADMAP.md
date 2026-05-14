@@ -654,10 +654,10 @@ Plans:
   3. Portfolio history chart shows equity curve (total portfolio value over time) with interactive hover showing date + value
   4. P&L timeline table shows all closed trades in chronological order with running cumulative P&L
   5. When AI generates a sell/bearish signal for a ticker with an open position, the system auto-executes the sell (respecting auto-trade mode toggle)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 98-01-PLAN.md — Auto-sell on SL/TP hit + AI sell signal integration (backend service + scheduler)
-- [ ] 98-02-PLAN.md — Portfolio equity curve chart + P&L timeline table (API + frontend)
+- [x] 98-02-PLAN.md — Portfolio equity curve chart + P&L timeline table (API + frontend)
 **UI hint**: yes
 
 ### Phase 99: Performance & UX Polish
@@ -678,5 +678,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 96. Data Quality & Test Stability | 3/3 | Complete   | 2026-05-14 |
 | 97. AI Analysis Coverage Expansion | 2/2 | Complete   | 2026-05-14 |
-| 98. Simulator Enhancement | 0/? | Not started | - |
+| 98. Simulator Enhancement | 1/2 | In Progress|  |
 | 99. Performance & UX Polish | 0/? | Not started | - |
