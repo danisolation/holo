@@ -608,7 +608,7 @@ Plans:
 
 ### v22.0: Platform Polish & AI Coverage (Phases 96-99)
 
-- [ ] **Phase 96: Data Quality & Test Stability** — Fix broken tests, add simulator test coverage, data integrity checks
+- [x] **Phase 96: Data Quality & Test Stability** — Fix broken tests, add simulator test coverage, data integrity checks (completed 2026-05-14)
 - [ ] **Phase 97: AI Analysis Coverage Expansion** — Auto-analysis for full watchlist, scheduled runs, coverage dashboard
 - [ ] **Phase 98: Simulator Enhancement** — Auto-sell on SL/TP, equity curve, P&L timeline, sell signal integration
 - [ ] **Phase 99: Performance & UX Polish** — Loading skeletons, mobile responsive, page transitions, dashboard redesign
@@ -624,11 +624,11 @@ Plans:
   2. Simulator service has unit tests covering: buy execution, sell execution, SL/TP auto-close, fee calculation (0.15% + 0.1% tax), and FIFO lot matching
   3. Pick generation pipeline has unit tests covering: signal filtering, unified format validation, and date range queries
   4. A data integrity check endpoint or scheduled job reports: gaps in daily_prices (missing trading days), duplicate entries, and stale analysis (>48h old for watchlist tickers)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 96-01-PLAN.md — Fix pre-existing test failures (scheduler test)
 - [x] 96-02-PLAN.md — Simulator service + pick pipeline unit tests
-- [ ] 96-03-PLAN.md — Data integrity check endpoint
+- [x] 96-03-PLAN.md — Data integrity check endpoint
 
 ### Phase 97: AI Analysis Coverage Expansion
 **Goal**: AI analysis runs automatically for all watchlist tickers daily with observable coverage metrics
@@ -670,7 +670,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 96. Data Quality & Test Stability | 2/3 | In Progress|  |
+| 96. Data Quality & Test Stability | 3/3 | Complete   | 2026-05-14 |
 | 97. AI Analysis Coverage Expansion | 0/? | Not started | - |
 | 98. Simulator Enhancement | 0/? | Not started | - |
 | 99. Performance & UX Polish | 0/? | Not started | - |
