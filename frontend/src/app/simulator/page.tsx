@@ -54,7 +54,7 @@ export default function SimulatorPage() {
       </div>
 
       {/* Controls: toggle + reset */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <AutoTradeToggle />
         <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
           <DialogTrigger
@@ -109,13 +109,15 @@ export default function SimulatorPage() {
 
       {/* Tabs: AI Signals | Trade form | History | AI Accuracy */}
       <Tabs defaultValue={0}>
+        <div className="w-full overflow-x-auto">
         <TabsList>
-          <TabsTrigger value={0}>Tín hiệu AI</TabsTrigger>
-          <TabsTrigger value={1}>Giao dịch mới</TabsTrigger>
-          <TabsTrigger value={2}>Lịch sử</TabsTrigger>
-          <TabsTrigger value={3}>Hiệu suất</TabsTrigger>
-          <TabsTrigger value={4}>Độ chính xác AI</TabsTrigger>
+          <TabsTrigger value={0} className="flex-shrink-0">Tín hiệu AI</TabsTrigger>
+          <TabsTrigger value={1} className="flex-shrink-0">Giao dịch mới</TabsTrigger>
+          <TabsTrigger value={2} className="flex-shrink-0">Lịch sử</TabsTrigger>
+          <TabsTrigger value={3} className="flex-shrink-0">Hiệu suất</TabsTrigger>
+          <TabsTrigger value={4} className="flex-shrink-0">Độ chính xác AI</TabsTrigger>
         </TabsList>
+        </div>
         <TabsContent value={0} className="pt-4">
           <PendingSignals />
         </TabsContent>

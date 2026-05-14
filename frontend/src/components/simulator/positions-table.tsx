@@ -25,7 +25,8 @@ export function PositionsTable({ positions }: PositionsTableProps) {
   }
 
   return (
-    <Table>
+    <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+    <Table className="min-w-[650px]">
       <TableHeader>
         <TableRow>
           <TableHead>Mã CK</TableHead>
@@ -77,5 +78,6 @@ export function PositionsTable({ positions }: PositionsTableProps) {
         })}
       </TableBody>
     </Table>
+    </div>
   );
 }
