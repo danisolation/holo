@@ -639,7 +639,10 @@ Plans:
   2. Analysis is scheduled at 8:30 AM UTC+7 on trading days (Monday-Friday, excluding VN market holidays)
   3. Dashboard displays AI coverage stats: number of tickers analyzed today vs total watchlist size (e.g., "45/50 analyzed")
   4. If a ticker fails analysis (Gemini error, missing data), it's logged and retried — not silently skipped
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 97-01-PLAN.md — Re-enable morning unified analysis chain + retry logic + coverage API endpoint
+- [ ] 97-02-PLAN.md — Frontend AI coverage stats card on dashboard
 
 ### Phase 98: Simulator Enhancement
 **Goal**: Simulator automatically manages positions (auto-sell on SL/TP hit), shows portfolio performance visually, and integrates AI sell signals
