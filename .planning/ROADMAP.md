@@ -609,7 +609,7 @@ Plans:
 ### v22.0: Platform Polish & AI Coverage (Phases 96-99)
 
 - [x] **Phase 96: Data Quality & Test Stability** — Fix broken tests, add simulator test coverage, data integrity checks (completed 2026-05-14)
-- [ ] **Phase 97: AI Analysis Coverage Expansion** — Auto-analysis for full watchlist, scheduled runs, coverage dashboard
+- [x] **Phase 97: AI Analysis Coverage Expansion** — Auto-analysis for full watchlist, scheduled runs, coverage dashboard (completed 2026-05-14)
 - [ ] **Phase 98: Simulator Enhancement** — Auto-sell on SL/TP, equity curve, P&L timeline, sell signal integration
 - [ ] **Phase 99: Performance & UX Polish** — Loading skeletons, mobile responsive, page transitions, dashboard redesign
 
@@ -639,10 +639,10 @@ Plans:
   2. Analysis is scheduled at 8:30 AM UTC+7 on trading days (Monday-Friday, excluding VN market holidays)
   3. Dashboard displays AI coverage stats: number of tickers analyzed today vs total watchlist size (e.g., "45/50 analyzed")
   4. If a ticker fails analysis (Gemini error, missing data), it's logged and retried — not silently skipped
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 97-01-PLAN.md — Re-enable morning unified analysis chain + retry logic + coverage API endpoint
-- [ ] 97-02-PLAN.md — Frontend AI coverage stats card on dashboard
+- [x] 97-02-PLAN.md — Frontend AI coverage stats card on dashboard
 
 ### Phase 98: Simulator Enhancement
 **Goal**: Simulator automatically manages positions (auto-sell on SL/TP hit), shows portfolio performance visually, and integrates AI sell signals
@@ -674,6 +674,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 96. Data Quality & Test Stability | 3/3 | Complete   | 2026-05-14 |
-| 97. AI Analysis Coverage Expansion | 1/2 | In Progress|  |
+| 97. AI Analysis Coverage Expansion | 2/2 | Complete   | 2026-05-14 |
 | 98. Simulator Enhancement | 0/? | Not started | - |
 | 99. Performance & UX Polish | 0/? | Not started | - |

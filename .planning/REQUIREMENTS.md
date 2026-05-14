@@ -9,7 +9,7 @@
 
 - [ ] **AICOV-01**: Hệ thống tự động chạy AI analysis cho tất cả ticker trong watchlist hàng ngày
 - [ ] **AICOV-02**: Schedule auto-analysis vào 8:30 sáng mỗi ngày trading (UTC+7)
-- [ ] **AICOV-03**: Dashboard hiển thị AI coverage stats (bao nhiêu ticker đã analyze / tổng watchlist)
+- [x] **AICOV-03**: Dashboard hiển thị AI coverage stats (bao nhiêu ticker đã analyze / tổng watchlist)
 
 ### Simulator Enhancement
 
