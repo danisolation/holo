@@ -37,6 +37,7 @@ import {
   fetchPendingSignals,
   executeSignals,
   skipSignals,
+  fetchAnalysisCoverage,
 } from "@/lib/api";
 import type { SimulatorTradeCreate } from "@/lib/api";
 
@@ -418,5 +419,16 @@ export function useSkipSignals() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["simulator", "signals"] });
     },
+  });
+}
+
+// --- Phase 97: AI Analysis Coverage ---
+
+/** Fetch AI analysis coverage stats for today. staleTime: 60s — matches backend cache TTL. */
+export function useAnalysisCoverage() {
+  return useQuery({
+    queryKey: ["analysis-coverage"],
+    queryFn: fetchAnalysisCoverage,
+    staleTime: 60_000,
   });
 }

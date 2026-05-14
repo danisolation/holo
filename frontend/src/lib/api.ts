@@ -796,3 +796,17 @@ export async function skipSignals(pickIds: number[]): Promise<{ skipped: number 
     body: JSON.stringify({ pick_ids: pickIds }),
   });
 }
+
+// ── Phase 97: AI Analysis Coverage ──────────────────────────────────────────
+
+export interface AnalysisCoverage {
+  analyzed_today: number;
+  total_watchlist: number;
+  coverage_pct: number;
+  last_run_at: string | null;
+  failed_today: string[];
+}
+
+export async function fetchAnalysisCoverage(): Promise<AnalysisCoverage> {
+  return apiFetch<AnalysisCoverage>("/analysis/coverage");
+}

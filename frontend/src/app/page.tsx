@@ -2,16 +2,17 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, BarChart3, RefreshCw, Compass } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, RefreshCw, Compass, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heatmap } from "@/components/heatmap";
-import { useMarketOverview, useWatchlist } from "@/lib/hooks";
+import { useMarketOverview, useWatchlist, useAnalysisCoverage } from "@/lib/hooks";
 
 export default function Home() {
   const { data, isLoading, error, refetch } = useMarketOverview();
   const { data: watchlistData } = useWatchlist();
+  const { data: coverage } = useAnalysisCoverage();
 
   const totalTickers = data?.length ?? 0;
   const gainers = data?.filter((t) => t.change_pct != null && t.change_pct > 0).length ?? 0;
@@ -62,8 +63,8 @@ export default function Home() {
 
       {/* Market Stats */}
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
@@ -80,7 +81,7 @@ export default function Home() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <Card size="sm">
             <CardContent className="flex items-center gap-3">
               <BarChart3 className="size-8 text-muted-foreground" />
@@ -116,6 +117,17 @@ export default function Home() {
               <div>
                 <p className="text-2xl font-bold">{unchanged}</p>
                 <p className="text-xs text-muted-foreground">Đứng giá</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card size="sm">
+            <CardContent className="flex items-center gap-3">
+              <Sparkles className="size-8 text-violet-500" />
+              <div>
+                <p className="text-2xl font-bold">
+                  {coverage ? `${coverage.analyzed_today}/${coverage.total_watchlist}` : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">AI phân tích</p>
               </div>
             </CardContent>
           </Card>
