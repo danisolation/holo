@@ -610,7 +610,7 @@ Plans:
 
 - [x] **Phase 96: Data Quality & Test Stability** — Fix broken tests, add simulator test coverage, data integrity checks (completed 2026-05-14)
 - [x] **Phase 97: AI Analysis Coverage Expansion** — Auto-analysis for full watchlist, scheduled runs, coverage dashboard (completed 2026-05-14)
-- [ ] **Phase 98: Simulator Enhancement** — Auto-sell on SL/TP, equity curve, P&L timeline, sell signal integration
+- [x] **Phase 98: Simulator Enhancement** — Auto-sell on SL/TP, equity curve, P&L timeline, sell signal integration (completed 2026-05-14)
 - [x] **Phase 99: Performance & UX Polish** — Loading skeletons, mobile responsive, page transitions, dashboard redesign (completed 2026-05-14)
 
 ## Phase Details — v22.0
@@ -654,9 +654,9 @@ Plans:
   3. Portfolio history chart shows equity curve (total portfolio value over time) with interactive hover showing date + value
   4. P&L timeline table shows all closed trades in chronological order with running cumulative P&L
   5. When AI generates a sell/bearish signal for a ticker with an open position, the system auto-executes the sell (respecting auto-trade mode toggle)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 98-01-PLAN.md — Auto-sell on SL/TP hit + AI sell signal integration (backend service + scheduler)
+- [x] 98-01-PLAN.md — Auto-sell on SL/TP hit + AI sell signal integration (backend service + scheduler)
 - [x] 98-02-PLAN.md — Portfolio equity curve chart + P&L timeline table (API + frontend)
 **UI hint**: yes
 
@@ -681,5 +681,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 96. Data Quality & Test Stability | 3/3 | Complete   | 2026-05-14 |
 | 97. AI Analysis Coverage Expansion | 2/2 | Complete   | 2026-05-14 |
-| 98. Simulator Enhancement | 1/2 | In Progress|  |
+| 98. Simulator Enhancement | 2/2 | Complete   | 2026-05-14 |
 | 99. Performance & UX Polish | 2/2 | Complete   | 2026-05-14 |
