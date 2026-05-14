@@ -3,18 +3,36 @@
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveryTable } from "@/components/discovery-table";
 import { useDiscovery } from "@/lib/hooks";
 
+function DiscoverySkeleton() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-8 w-48" />
+      <div className="flex gap-3 mb-4">
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-9 w-32" />
+      </div>
+      {Array.from({ length: 10 }).map((_, i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+    </div>
+  );
+}
+
 export default function DiscoveryPage() {
-  const { data } = useDiscovery();
+  const { data, isLoading } = useDiscovery();
 
   return (
     <div data-testid="discovery-page">
       <h2 className="text-2xl font-bold tracking-tight mb-2">
         Khám phá cổ phiếu
       </h2>
-      {data && data.length === 0 ? (
+      {isLoading ? (
+        <DiscoverySkeleton />
+      ) : data && data.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Search className="size-10 text-muted-foreground mb-3" />

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tabs,
   TabsContent,
@@ -87,9 +88,18 @@ export default function SimulatorPage() {
 
       {/* Portfolio Summary */}
       {isLoading ? (
-        <p className="text-sm text-muted-foreground py-6 text-center">
-          Đang tải danh mục...
-        </p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))}
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        </div>
       ) : portfolio ? (
         <>
           <PortfolioSummary data={portfolio} />
