@@ -28,6 +28,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v19.0 Unified AI Analysis Pipeline** — Phases 88-91 (shipped)
 - ✅ **v20.0 Enhanced Price Pipeline** — Phases 92-94 (shipped)
 - ✅ **v21.0 Stock Trading Simulator** — Phase 95 (shipped)
+- [ ] **v22.0 Platform Polish & AI Coverage** — Phases 96-99
 
 ## Phases
 
@@ -602,3 +603,70 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 95. Stock Trading Simulator | 4/4 | ✅ Done | 2026-05-13 |
+
+---
+
+### v22.0: Platform Polish & AI Coverage (Phases 96-99)
+
+- [ ] **Phase 96: Data Quality & Test Stability** — Fix broken tests, add simulator test coverage, data integrity checks
+- [ ] **Phase 97: AI Analysis Coverage Expansion** — Auto-analysis for full watchlist, scheduled runs, coverage dashboard
+- [ ] **Phase 98: Simulator Enhancement** — Auto-sell on SL/TP, equity curve, P&L timeline, sell signal integration
+- [ ] **Phase 99: Performance & UX Polish** — Loading skeletons, mobile responsive, page transitions, dashboard redesign
+
+## Phase Details — v22.0
+
+### Phase 96: Data Quality & Test Stability
+**Goal**: Test suite is green and simulator has comprehensive test coverage; data integrity issues are automatically detected
+**Depends on**: Phase 95 (v21.0 complete)
+**Requirements**: DQ-01, DQ-02, DQ-03, DQ-04
+**Success Criteria** (what must be TRUE):
+  1. All pre-existing test failures pass (specifically test_weekly_financial_crawl_calls_service) — `pytest` runs with 0 failures
+  2. Simulator service has unit tests covering: buy execution, sell execution, SL/TP auto-close, fee calculation (0.15% + 0.1% tax), and FIFO lot matching
+  3. Pick generation pipeline has unit tests covering: signal filtering, unified format validation, and date range queries
+  4. A data integrity check endpoint or scheduled job reports: gaps in daily_prices (missing trading days), duplicate entries, and stale analysis (>48h old for watchlist tickers)
+**Plans**: TBD
+
+### Phase 97: AI Analysis Coverage Expansion
+**Goal**: AI analysis runs automatically for all watchlist tickers daily with observable coverage metrics
+**Depends on**: Phase 96 (stable test foundation)
+**Requirements**: AICOV-01, AICOV-02, AICOV-03
+**Success Criteria** (what must be TRUE):
+  1. AI analysis runs for every ticker in the user's watchlist automatically without manual trigger
+  2. Analysis is scheduled at 8:30 AM UTC+7 on trading days (Monday-Friday, excluding VN market holidays)
+  3. Dashboard displays AI coverage stats: number of tickers analyzed today vs total watchlist size (e.g., "45/50 analyzed")
+  4. If a ticker fails analysis (Gemini error, missing data), it's logged and retried — not silently skipped
+**Plans**: TBD
+
+### Phase 98: Simulator Enhancement
+**Goal**: Simulator automatically manages positions (auto-sell on SL/TP hit), shows portfolio performance visually, and integrates AI sell signals
+**Depends on**: Phase 96 (simulator tests), Phase 97 (AI coverage for sell signals)
+**Requirements**: SIM-01, SIM-02, SIM-03, SIM-04, SIM-05
+**Success Criteria** (what must be TRUE):
+  1. When daily close price hits or crosses below a position's Stop Loss, the position is automatically sold at close price with proper fee calculation
+  2. When daily close price hits or crosses above a position's Take Profit, the position is automatically sold at close price with proper fee calculation
+  3. Portfolio history chart shows equity curve (total portfolio value over time) with interactive hover showing date + value
+  4. P&L timeline table shows all closed trades in chronological order with running cumulative P&L
+  5. When AI generates a sell/bearish signal for a ticker with an open position, the system auto-executes the sell (respecting auto-trade mode toggle)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 99: Performance & UX Polish
+**Goal**: Dashboard feels snappy with proper loading states, works well on mobile, and provides at-a-glance overview on homepage
+**Depends on**: Phase 97 (AI coverage stats for dashboard), Phase 98 (portfolio value for dashboard)
+**Requirements**: UX-01, UX-02, UX-03, UX-04
+**Success Criteria** (what must be TRUE):
+  1. All data-fetching pages (watchlist, ticker detail, simulator, discovery) show skeleton loading states instead of blank/spinner during data fetch
+  2. Simulator page, discovery page, and ticker detail page render correctly on mobile viewport (≤768px) without horizontal overflow or overlapping elements
+  3. Route transitions have smooth fade/slide animation (no jarring flash of blank content between pages)
+  4. Homepage dashboard shows key metrics at a glance: portfolio value, today's P&L, AI coverage ratio, and recent AI picks — all above the fold
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress — v22.0
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 96. Data Quality & Test Stability | 0/? | Not started | - |
+| 97. AI Analysis Coverage Expansion | 0/? | Not started | - |
+| 98. Simulator Enhancement | 0/? | Not started | - |
+| 99. Performance & UX Polish | 0/? | Not started | - |

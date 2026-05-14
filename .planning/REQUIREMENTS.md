@@ -48,19 +48,19 @@ None deferred.
 
 | REQ-ID | Phase | Plan | Status |
 |--------|-------|------|--------|
-| AICOV-01 | — | — | Pending |
-| AICOV-02 | — | — | Pending |
-| AICOV-03 | — | — | Pending |
-| SIM-01 | — | — | Pending |
-| SIM-02 | — | — | Pending |
-| SIM-03 | — | — | Pending |
-| SIM-04 | — | — | Pending |
-| SIM-05 | — | — | Pending |
-| DQ-01 | — | — | Pending |
-| DQ-02 | — | — | Pending |
-| DQ-03 | — | — | Pending |
-| DQ-04 | — | — | Pending |
-| UX-01 | — | — | Pending |
-| UX-02 | — | — | Pending |
-| UX-03 | — | — | Pending |
-| UX-04 | — | — | Pending |
+| DQ-01 | Phase 96 | — | Pending |
+| DQ-02 | Phase 96 | — | Pending |
+| DQ-03 | Phase 96 | — | Pending |
+| DQ-04 | Phase 96 | — | Pending |
+| AICOV-01 | Phase 97 | — | Pending |
+| AICOV-02 | Phase 97 | — | Pending |
+| AICOV-03 | Phase 97 | — | Pending |
+| SIM-01 | Phase 98 | — | Pending |
+| SIM-02 | Phase 98 | — | Pending |
+| SIM-03 | Phase 98 | — | Pending |
+| SIM-04 | Phase 98 | — | Pending |
+| SIM-05 | Phase 98 | — | Pending |
+| UX-01 | Phase 99 | — | Pending |
+| UX-02 | Phase 99 | — | Pending |
+| UX-03 | Phase 99 | — | Pending |
+| UX-04 | Phase 99 | — | Pending |
