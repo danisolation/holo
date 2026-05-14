@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import { RealtimePriceProvider } from "@/lib/use-realtime-prices";
 import { Navbar } from "@/components/navbar";
+import { PageTransition } from "@/components/page-transition";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,7 +38,7 @@ export default function RootLayout({
           <RealtimePriceProvider>
             <Navbar />
             <main className="flex-1 container mx-auto px-4 py-6 max-w-7xl">
-              {children}
+              <PageTransition>{children}</PageTransition>
             </main>
           </RealtimePriceProvider>
         </Providers>
