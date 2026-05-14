@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v21.0
-milestone_name: Stock Trading Simulator
-status: shipped
-stopped_at: v21.0 shipped
+milestone: v22.0
+milestone_name: Platform Polish & AI Coverage
+status: planning
+stopped_at: Defining requirements
 last_updated: "2026-05-13"
-last_activity: 2026-05-13 — v21.0 shipped (Phase 95 complete)
+last_activity: 2026-05-13 — v22.0 milestone started
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v21.0 shipped. Ready for v22.0 milestone.
+**Current focus:** v22.0 Platform Polish & AI Coverage — defining requirements
 
 ## Current Position
 
-Phase: 95 (Stock Trading Simulator)
-Plan: All complete
-Status: v21.0 shipped
-Last activity: 2026-05-13 — v21.0 shipped, simulator deployed + tested E2E
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-13 — Milestone v22.0 started
 
 ```
-v21.0 Progress: [████████████████████] 1/1 phases (100%) — SHIPPED
+v22.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/0 phases (0%)
 ```
 
 ## Shipped Milestones
