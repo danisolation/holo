@@ -2,17 +2,49 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, BarChart3, RefreshCw, Compass, Sparkles } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  RefreshCw,
+  Compass,
+  Sparkles,
+  Wallet,
+  Target,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heatmap } from "@/components/heatmap";
-import { useMarketOverview, useWatchlist, useAnalysisCoverage } from "@/lib/hooks";
+import {
+  useMarketOverview,
+  useWatchlist,
+  useAnalysisCoverage,
+  useSimulatorPortfolio,
+  usePendingSignals,
+} from "@/lib/hooks";
+
+function formatVnd(value: number | undefined | null): string {
+  if (value == null) return "—";
+  const millions = value / 1_000_000;
+  return new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  }).format(millions) + "M ₫";
+}
+
+function formatPnlPct(value: number | undefined | null): string {
+  if (value == null) return "";
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
 
 export default function Home() {
   const { data, isLoading, error, refetch } = useMarketOverview();
   const { data: watchlistData } = useWatchlist();
   const { data: coverage } = useAnalysisCoverage();
+  const { data: portfolio } = useSimulatorPortfolio();
+  const { data: signals } = usePendingSignals();
 
   const totalTickers = data?.length ?? 0;
   const gainers = data?.filter((t) => t.change_pct != null && t.change_pct > 0).length ?? 0;
@@ -49,6 +81,8 @@ export default function Home() {
     ? `Bản đồ nhiệt ${watchlistData.length} mã trong danh mục, phân nhóm theo ngành`
     : "Thêm mã vào danh mục để xem bản đồ nhiệt theo ngành";
 
+  const pnlColor = (portfolio?.total_pnl ?? 0) >= 0 ? "text-[#26a69a]" : "text-[#ef5350]";
+
   return (
     <>
       {/* Page title */}
@@ -61,15 +95,15 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Market Stats */}
+      {/* Row 1 — Key Metrics */}
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
       ) : error ? (
-        <Card className="mb-6">
+        <Card className="mb-4">
           <CardContent className="flex items-center justify-between py-4">
             <p className="text-sm text-destructive">
               Không thể tải dữ liệu thị trường
@@ -81,42 +115,31 @@ export default function Home() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <Card size="sm">
             <CardContent className="flex items-center gap-3">
-              <BarChart3 className="size-8 text-muted-foreground" />
+              <Wallet className="size-8 text-blue-500" />
               <div>
-                <p className="text-2xl font-bold">{totalTickers}</p>
-                <p className="text-xs text-muted-foreground">Tổng mã</p>
+                <p className="text-2xl font-bold">
+                  {portfolio?.total_equity != null ? formatVnd(portfolio.total_equity) : "—"}
+                </p>
+                {portfolio?.total_pnl_pct != null && (
+                  <p className={`text-xs font-medium ${pnlColor}`}>
+                    {formatPnlPct(portfolio.total_pnl_pct)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">Danh mục</p>
               </div>
             </CardContent>
           </Card>
           <Card size="sm">
             <CardContent className="flex items-center gap-3">
-              <TrendingUp className="size-8 text-[#26a69a]" />
+              <Target className={`size-8 ${pnlColor}`} />
               <div>
-                <p className="text-2xl font-bold text-[#26a69a]">{gainers}</p>
-                <p className="text-xs text-muted-foreground">Tăng giá</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card size="sm">
-            <CardContent className="flex items-center gap-3">
-              <TrendingDown className="size-8 text-[#ef5350]" />
-              <div>
-                <p className="text-2xl font-bold text-[#ef5350]">{losers}</p>
-                <p className="text-xs text-muted-foreground">Giảm giá</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card size="sm">
-            <CardContent className="flex items-center gap-3">
-              <div className="size-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground">
-                =
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{unchanged}</p>
-                <p className="text-xs text-muted-foreground">Đứng giá</p>
+                <p className={`text-2xl font-bold ${pnlColor}`}>
+                  {portfolio?.total_pnl != null ? formatVnd(portfolio.total_pnl) : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">Lãi/Lỗ hôm nay</p>
               </div>
             </CardContent>
           </Card>
@@ -131,8 +154,94 @@ export default function Home() {
               </div>
             </CardContent>
           </Card>
+          <Card size="sm">
+            <CardContent className="flex items-center gap-3">
+              <BarChart3 className="size-8 text-muted-foreground" />
+              <div>
+                <p className="text-2xl font-bold">
+                  <span className="text-[#26a69a]">{gainers}</span>
+                  <span className="text-muted-foreground mx-0.5">↑</span>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="text-muted-foreground mx-0.5"> </span>
+                  <span className="text-[#ef5350]">{losers}</span>
+                  <span className="text-muted-foreground mx-0.5">↓</span>
+                </p>
+                <p className="text-xs text-muted-foreground">Thị trường</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
+
+      {/* Row 2 — AI Signals + Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-violet-500">
+              <Sparkles className="size-4" />
+              Tín hiệu AI mới
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {!signals || signals.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Không có tín hiệu mới
+              </p>
+            ) : (
+              signals.slice(0, 3).map((s) => (
+                <div
+                  key={s.daily_pick_id}
+                  className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-sm">
+                      {s.ticker_symbol}
+                    </span>
+                    <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-500">
+                      #{s.rank ?? "—"}
+                    </span>
+                  </div>
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {s.entry_price != null
+                      ? new Intl.NumberFormat("vi-VN").format(s.entry_price) + " ₫"
+                      : "—"}
+                  </span>
+                </div>
+              ))
+            )}
+            <div className="pt-1">
+              <Link
+                href="/simulator"
+                className="text-xs text-violet-500 hover:underline"
+              >
+                Xem tất cả tín hiệu →
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="size-4 text-muted-foreground" />
+              Thống kê nhanh
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Tổng mã</span>
+              <span className="font-mono font-bold text-sm">{totalTickers}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Đứng giá</span>
+              <span className="font-mono font-bold text-sm">{unchanged}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Danh mục theo dõi</span>
+              <span className="font-mono font-bold text-sm">{watchlistData?.length ?? 0} mã</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Heatmap */}
       {isLoading ? (
