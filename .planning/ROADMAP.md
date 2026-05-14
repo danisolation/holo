@@ -624,10 +624,10 @@ Plans:
   2. Simulator service has unit tests covering: buy execution, sell execution, SL/TP auto-close, fee calculation (0.15% + 0.1% tax), and FIFO lot matching
   3. Pick generation pipeline has unit tests covering: signal filtering, unified format validation, and date range queries
   4. A data integrity check endpoint or scheduled job reports: gaps in daily_prices (missing trading days), duplicate entries, and stale analysis (>48h old for watchlist tickers)
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 Plans:
-- [ ] 96-01-PLAN.md — Fix pre-existing test failures (scheduler test)
-- [ ] 96-02-PLAN.md — Simulator service + pick pipeline unit tests
+- [x] 96-01-PLAN.md — Fix pre-existing test failures (scheduler test)
+- [x] 96-02-PLAN.md — Simulator service + pick pipeline unit tests
 - [ ] 96-03-PLAN.md — Data integrity check endpoint
 
 ### Phase 97: AI Analysis Coverage Expansion
@@ -670,7 +670,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 96. Data Quality & Test Stability | 0/? | Not started | - |
+| 96. Data Quality & Test Stability | 2/3 | In Progress|  |
 | 97. AI Analysis Coverage Expansion | 0/? | Not started | - |
 | 98. Simulator Enhancement | 0/? | Not started | - |
 | 99. Performance & UX Polish | 0/? | Not started | - |
