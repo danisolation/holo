@@ -611,7 +611,7 @@ Plans:
 - [x] **Phase 96: Data Quality & Test Stability** — Fix broken tests, add simulator test coverage, data integrity checks (completed 2026-05-14)
 - [x] **Phase 97: AI Analysis Coverage Expansion** — Auto-analysis for full watchlist, scheduled runs, coverage dashboard (completed 2026-05-14)
 - [ ] **Phase 98: Simulator Enhancement** — Auto-sell on SL/TP, equity curve, P&L timeline, sell signal integration
-- [ ] **Phase 99: Performance & UX Polish** — Loading skeletons, mobile responsive, page transitions, dashboard redesign
+- [x] **Phase 99: Performance & UX Polish** — Loading skeletons, mobile responsive, page transitions, dashboard redesign (completed 2026-05-14)
 
 ## Phase Details — v22.0
 
@@ -669,9 +669,9 @@ Plans:
   2. Simulator page, discovery page, and ticker detail page render correctly on mobile viewport (≤768px) without horizontal overflow or overlapping elements
   3. Route transitions have smooth fade/slide animation (no jarring flash of blank content between pages)
   4. Homepage dashboard shows key metrics at a glance: portfolio value, today's P&L, AI coverage ratio, and recent AI picks — all above the fold
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 99-01-PLAN.md — Skeleton loading states + mobile responsive polish
+- [x] 99-01-PLAN.md — Skeleton loading states + mobile responsive polish
 - [x] 99-02-PLAN.md — Page transitions + homepage redesign
 **UI hint**: yes
 
@@ -682,4 +682,4 @@ Plans:
 | 96. Data Quality & Test Stability | 3/3 | Complete   | 2026-05-14 |
 | 97. AI Analysis Coverage Expansion | 2/2 | Complete   | 2026-05-14 |
 | 98. Simulator Enhancement | 1/2 | In Progress|  |
-| 99. Performance & UX Polish | 1/2 | In Progress|  |
+| 99. Performance & UX Polish | 2/2 | Complete   | 2026-05-14 |

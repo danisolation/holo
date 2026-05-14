@@ -28,8 +28,8 @@
 
 ### Performance/UX
 
-- [ ] **UX-01**: Loading skeleton states cho tất cả data-fetching pages (watchlist, ticker, simulator, discovery)
-- [ ] **UX-02**: Mobile responsive polish (simulator page, discovery page, ticker detail)
+- [x] **UX-01**: Loading skeleton states cho tất cả data-fetching pages (watchlist, ticker, simulator, discovery)
+- [x] **UX-02**: Mobile responsive polish (simulator page, discovery page, ticker detail)
 - [x] **UX-03**: Page transition animations (smooth navigation giữa các routes)
 - [x] **UX-04**: Dashboard homepage redesign (key metrics at a glance — portfolio value, AI coverage, recent picks)
 
