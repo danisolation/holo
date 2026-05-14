@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Performance Optimization
 status: Not started
-stopped_at: Completed 98-02-PLAN.md
-last_updated: "2026-05-14T08:33:03.322Z"
+stopped_at: Completed 99-02-PLAN.md
+last_updated: "2026-05-14T08:43:29.005Z"
 last_activity: 2026-05-13 — Roadmap created
 progress:
   total_phases: 5
@@ -91,6 +91,8 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 97]: Used _dlq_failures helper for morning unified analysis DLQ (consistent with morning chain pattern)
 - [Phase 97]: Used Sparkles icon (violet) for AI coverage card, 60s staleTime, 5-col grid layout
 - [Phase 98]: Equity curve computed by trade replay with trade prices for historical market value; today uses DailyPrice×1000
+- [Phase 99]: Pure CSS transitions (150ms fade) instead of framer-motion for page transitions
+- [Phase 99]: Homepage redesigned: 4 key metric cards + AI signals row above existing heatmap
 
 ### Research Context (v10.0)
 
@@ -151,7 +153,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-14T08:33:03.313Z
-Stopped at: Completed 98-02-PLAN.md
+Last session: 2026-05-14T08:43:28.995Z
+Stopped at: Completed 99-02-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 96`

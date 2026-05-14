@@ -669,10 +669,10 @@ Plans:
   2. Simulator page, discovery page, and ticker detail page render correctly on mobile viewport (≤768px) without horizontal overflow or overlapping elements
   3. Route transitions have smooth fade/slide animation (no jarring flash of blank content between pages)
   4. Homepage dashboard shows key metrics at a glance: portfolio value, today's P&L, AI coverage ratio, and recent AI picks — all above the fold
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 99-01-PLAN.md — Skeleton loading states + mobile responsive polish
-- [ ] 99-02-PLAN.md — Page transitions + homepage redesign
+- [x] 99-02-PLAN.md — Page transitions + homepage redesign
 **UI hint**: yes
 
 ## Progress — v22.0
@@ -682,4 +682,4 @@ Plans:
 | 96. Data Quality & Test Stability | 3/3 | Complete   | 2026-05-14 |
 | 97. AI Analysis Coverage Expansion | 2/2 | Complete   | 2026-05-14 |
 | 98. Simulator Enhancement | 1/2 | In Progress|  |
-| 99. Performance & UX Polish | 0/? | Not started | - |
+| 99. Performance & UX Polish | 1/2 | In Progress|  |
