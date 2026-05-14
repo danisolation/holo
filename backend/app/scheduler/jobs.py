@@ -1386,3 +1386,32 @@ async def daily_rumor_scoring():
             logger.error(f"=== DAILY RUMOR SCORING FAILED: {e} ===")
             raise
 
+
+async def daily_simulator_sl_tp_check():
+    """Auto-sell positions hitting SL/TP targets + AI sell signals.
+
+    Chains after daily_accuracy_tracking in the daily pipeline.
+    Phase 98: Simulator auto-sell for capital protection.
+    """
+    logger.info("=== DAILY SIMULATOR AUTO-SELL CHECK START ===")
+    try:
+        from app.services.simulator_service import SimulatorService
+        from app.services.auto_trade_service import AutoTradeService
+
+        async with async_session() as session:
+            sim_service = SimulatorService(session)
+            sl_tp_results = await sim_service.check_sl_tp_hits()
+
+            auto_service = AutoTradeService(session)
+            signal_results = await auto_service.execute_sell_signals()
+
+            total = len(sl_tp_results) + len(signal_results)
+            logger.info(
+                f"=== DAILY SIMULATOR AUTO-SELL CHECK DONE: "
+                f"{len(sl_tp_results)} SL/TP + {len(signal_results)} signal sells "
+                f"({total} total) ==="
+            )
+    except Exception as e:
+        logger.error(f"=== DAILY SIMULATOR AUTO-SELL CHECK FAILED: {e} ===")
+        raise
+

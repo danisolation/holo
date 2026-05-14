@@ -60,6 +60,9 @@ _JOB_NAMES = {
     "morning_ai_analysis_triggered": "Morning AI Analysis",
     "morning_trading_signal_triggered": "Morning Trading Signal",
     "morning_unified_analysis_triggered": "Morning Unified AI Analysis",
+    # Phase 98: Simulator auto-sell
+    "daily_simulator_sl_tp_check": "Daily Simulator Auto-Sell Check",
+    "daily_simulator_sl_tp_check_triggered": "Daily Simulator Auto-Sell Check",
 }
 
 
@@ -197,6 +200,16 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_accuracy_tracking,
             id="daily_accuracy_tracking_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_accuracy_tracking_triggered", "daily_accuracy_tracking"):
+        # Phase 98: Chain to simulator auto-sell check after accuracy tracking
+        from app.scheduler.jobs import daily_simulator_sl_tp_check
+        logger.info("Chaining: daily_accuracy_tracking → daily_simulator_sl_tp_check")
+        scheduler.add_job(
+            daily_simulator_sl_tp_check,
+            id="daily_simulator_sl_tp_check_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
