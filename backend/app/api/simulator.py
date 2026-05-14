@@ -106,3 +106,21 @@ async def skip_signals(data: ExecuteSignalsRequest):
         service = AutoTradeService(session)
         count = await service.skip_signals(data.pick_ids)
         return {"skipped": count}
+
+
+@router.post("/simulator/check-auto-sell")
+async def trigger_auto_sell_check():
+    """Manually trigger SL/TP + AI sell signal check.
+
+    Useful for testing. Runs the same logic as the daily scheduler job.
+    """
+    async with async_session() as session:
+        sim_service = SimulatorService(session)
+        sl_tp = await sim_service.check_sl_tp_hits()
+        auto_service = AutoTradeService(session)
+        signals = await auto_service.execute_sell_signals()
+        return {
+            "sl_tp_sells": len(sl_tp),
+            "signal_sells": len(signals),
+            "results": sl_tp + signals,
+        }

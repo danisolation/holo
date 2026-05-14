@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from loguru import logger
-from sqlalchemy import select, and_
+from sqlalchemy import func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.daily_pick import DailyPick
@@ -120,3 +120,95 @@ class AutoTradeService:
         User can also just ignore them. Returns count of acknowledged skips.
         """
         return len(pick_ids)
+
+    async def execute_sell_signals(self) -> list[dict]:
+        """Auto-sell open positions where latest unified AI signal is 'ban' (sell).
+
+        Checks all tickers with open simulator positions against the latest
+        unified AI analysis. If signal == "ban", sells all remaining shares
+        at the latest daily close price (converted from nghìn đồng to VND).
+
+        Always executes regardless of auto-trade toggle — selling on bearish
+        signals is defensive capital protection for existing positions.
+
+        Returns list of executed sell trade results.
+        """
+        from app.models.ai_analysis import AIAnalysis, AnalysisType
+        from app.models.daily_price import DailyPrice
+
+        service = SimulatorService(self.session)
+        portfolio = await service.get_or_create_portfolio()
+        results: list[dict] = []
+
+        # Get all open lots grouped by ticker
+        from app.models.simulator_lot import SimulatorLot
+        result = await self.session.execute(
+            select(
+                SimulatorLot.ticker_id,
+                func.sum(SimulatorLot.remaining_quantity).label("total_qty"),
+            )
+            .where(SimulatorLot.portfolio_id == portfolio.id)
+            .where(SimulatorLot.remaining_quantity > 0)
+            .group_by(SimulatorLot.ticker_id)
+        )
+        open_positions = result.all()
+
+        for row in open_positions:
+            ticker_id = row.ticker_id
+            total_qty = int(row.total_qty)
+
+            # Get latest unified analysis for this ticker
+            analysis_result = await self.session.execute(
+                select(AIAnalysis)
+                .where(AIAnalysis.ticker_id == ticker_id)
+                .where(AIAnalysis.analysis_type == AnalysisType.UNIFIED)
+                .order_by(AIAnalysis.analysis_date.desc())
+                .limit(1)
+            )
+            analysis = analysis_result.scalar_one_or_none()
+            if not analysis or analysis.signal != "ban":
+                continue
+
+            # Get latest daily price and convert to VND
+            price_result = await self.session.execute(
+                select(DailyPrice.close)
+                .where(DailyPrice.ticker_id == ticker_id)
+                .order_by(DailyPrice.date.desc())
+                .limit(1)
+            )
+            daily_close = price_result.scalar_one_or_none()
+            if daily_close is None:
+                continue
+
+            close_vnd = Decimal(str(float(daily_close))) * Decimal("1000")
+
+            # Resolve ticker symbol
+            ticker_result = await self.session.execute(
+                select(Ticker).where(Ticker.id == ticker_id)
+            )
+            ticker = ticker_result.scalar_one()
+
+            logger.info(
+                f"AI sell signal for {ticker.symbol}: signal='{analysis.signal}' "
+                f"(date={analysis.analysis_date}), selling {total_qty} shares @ {close_vnd} VND"
+            )
+
+            trade_data = SimulatorTradeCreate(
+                ticker_symbol=ticker.symbol,
+                side="SELL",
+                quantity=total_qty,
+                price=float(close_vnd),
+                trade_date=date.today(),
+                source="ai_auto",
+                user_notes="Auto-sell: AI signal bán",
+            )
+
+            try:
+                trade_result = await service.create_trade(trade_data)
+                results.append(trade_result)
+                logger.info(f"AI signal auto-sell executed: {ticker.symbol} x{total_qty} @ {close_vnd}")
+            except ValueError as e:
+                logger.warning(f"AI signal auto-sell failed for {ticker.symbol}: {e}")
+                results.append({"error": str(e), "ticker_symbol": ticker.symbol})
+
+        return results
