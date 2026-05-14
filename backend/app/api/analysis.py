@@ -19,6 +19,7 @@ from app.models.ai_analysis import AIAnalysis, AnalysisType
 from app.schemas.analysis import (
     AnalysisTriggerResponse,
     AnalysisResultResponse,
+    CoverageResponse,
     IndicatorResponse,
     SummaryResponse,
     NewsArticleResponse,
@@ -28,6 +29,59 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 # In-memory cache for analysis summary — 60s TTL, 128 entries (per-symbol)
 _summary_cache: TTLCache = TTLCache(maxsize=128, ttl=60)
+
+
+@router.get("/coverage", response_model=CoverageResponse)
+async def get_analysis_coverage():
+    """Return AI coverage stats: how many watchlist tickers were analyzed today.
+
+    Used by dashboard to show coverage indicator (e.g., "11/11 analyzed").
+    Queries AIAnalysis table for today's UNIFIED type entries vs UserWatchlist count.
+    """
+    from app.models.user_watchlist import UserWatchlist
+    from app.models.failed_job import FailedJob
+
+    today = date.today()
+    async with async_session() as session:
+        # Count watchlist size
+        wl_count = await session.scalar(
+            select(func.count()).select_from(UserWatchlist)
+        )
+
+        # Count unified analyses for today
+        analyzed_count = await session.scalar(
+            select(func.count(AIAnalysis.id))
+            .where(AIAnalysis.analysis_type == AnalysisType.UNIFIED)
+            .where(AIAnalysis.analysis_date == today)
+        )
+
+        # Most recent analysis timestamp
+        last_analysis = await session.scalar(
+            select(func.max(AIAnalysis.created_at))
+            .where(AIAnalysis.analysis_type == AnalysisType.UNIFIED)
+            .where(AIAnalysis.analysis_date == today)
+        )
+
+        # Failed symbols from DLQ for today
+        failed_stmt = select(FailedJob.ticker_symbol).where(
+            FailedJob.job_type == "morning_unified_analysis",
+            func.date(FailedJob.failed_at) == today,
+            FailedJob.resolved_at.is_(None),
+        )
+        failed_result = await session.execute(failed_stmt)
+        failed_symbols = [row[0] for row in failed_result.all() if row[0]]
+
+    total = wl_count or 0
+    analyzed = analyzed_count or 0
+    pct = (analyzed / total * 100) if total > 0 else 0.0
+
+    return CoverageResponse(
+        analyzed_today=analyzed,
+        total_watchlist=total,
+        coverage_pct=round(pct, 1),
+        last_run_at=last_analysis.isoformat() if last_analysis else None,
+        failed_today=failed_symbols,
+    )
 
 
 # --- On-Demand Single-Ticker Analysis ---

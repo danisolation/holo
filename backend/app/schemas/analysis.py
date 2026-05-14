@@ -192,6 +192,17 @@ class UnifiedBatchResponse(BaseModel):
     analyses: list[TickerUnifiedAnalysis]
 
 
+# --- Coverage Stats Schema (Phase 97) ---
+
+class CoverageResponse(BaseModel):
+    """API response for AI analysis coverage stats."""
+    analyzed_today: int
+    total_watchlist: int
+    coverage_pct: float
+    last_run_at: str | None = None
+    failed_today: list[str]
+
+
 # --- API Response Schemas ---
 
 class AnalysisResultResponse(BaseModel):
