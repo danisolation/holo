@@ -174,3 +174,16 @@ async def get_gemini_usage(days: int = Query(default=7, ge=1)):
     daily = [GeminiUsageDaily(**item) for item in daily_data]
 
     return GeminiUsageResponse(today=today, daily=daily)
+
+
+@router.get("/data-integrity")
+async def check_data_integrity():
+    """Check data integrity: price gaps, duplicates, stale analysis.
+
+    Per DQ-04: Automated data quality checks for watchlist tickers.
+    """
+    from app.services.data_integrity_service import DataIntegrityService
+
+    async with async_session() as session:
+        svc = DataIntegrityService(session)
+        return await svc.check_all()
