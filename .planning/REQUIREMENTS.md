@@ -21,7 +21,7 @@
 
 ### Data Quality
 
-- [ ] **DQ-01**: Fix pre-existing test failures (test_weekly_financial_crawl_calls_service scheduler test)
+- [x] **DQ-01**: Fix pre-existing test failures (test_weekly_financial_crawl_calls_service scheduler test)
 - [x] **DQ-02**: Thêm unit tests cho simulator service (buy, sell, SL/TP auto-close, fee calculation, FIFO matching)
 - [x] **DQ-03**: Thêm unit tests cho pick generation pipeline (signal filter, unified format, date range)
 - [ ] **DQ-04**: Data integrity checks (phát hiện gaps trong daily_prices, duplicate entries, stale analysis)
