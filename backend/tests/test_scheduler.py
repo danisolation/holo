@@ -120,7 +120,7 @@ class TestJobFunctions:
 
     @pytest.mark.asyncio
     async def test_weekly_financial_crawl_calls_service(self):
-        """weekly_financial_crawl job must call FinancialService.crawl_financials."""
+        """weekly_financial_crawl job must call CafeFFinancialCrawler.crawl_financials."""
         with patch("app.scheduler.jobs.async_session") as mock_session_factory:
             mock_session = AsyncMock()
             mock_session_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
@@ -129,16 +129,16 @@ class TestJobFunctions:
             with patch("app.scheduler.jobs.JobExecutionService") as MockJobSvc:
                 MockJobSvc.return_value = _mock_job_svc()
 
-                with patch("app.scheduler.jobs.FinancialService") as MockFinancialService:
-                    mock_service = AsyncMock()
-                    mock_service.crawl_financials = AsyncMock(return_value={"success": 10, "failed": 0, "failed_symbols": []})
-                    MockFinancialService.return_value = mock_service
+                with patch("app.crawlers.cafef_financial_crawler.CafeFFinancialCrawler") as MockCrawler:
+                    mock_crawler = AsyncMock()
+                    mock_crawler.crawl_financials = AsyncMock(return_value={"success": 10, "failed": 0, "failed_symbols": []})
+                    MockCrawler.return_value = mock_crawler
 
                     from app.scheduler.jobs import weekly_financial_crawl
                     await weekly_financial_crawl()
 
-                    MockFinancialService.assert_called_once()
-                    mock_service.crawl_financials.assert_called_once_with(period="quarter")
+                    MockCrawler.assert_called_once_with(mock_session)
+                    mock_crawler.crawl_financials.assert_called_once()
 
 
 class TestJobChaining:
