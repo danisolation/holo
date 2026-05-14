@@ -1124,6 +1124,75 @@ async def morning_trading_signal_analysis():
             raise
 
 
+async def morning_unified_analysis():
+    """Morning unified AI analysis — processes ALL watchlist tickers.
+
+    Part of morning chain (8:30 AM Mon-Fri):
+    price → indicators → unified_analysis (this).
+    Retries failed tickers once before DLQ (per D-06).
+    """
+    logger.info("=== MORNING UNIFIED ANALYSIS START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("morning_unified_analysis")
+        try:
+            ticker_filter = await _get_watchlist_ticker_map(session)
+            if not ticker_filter:
+                logger.warning("Watchlist empty — skipping morning unified analysis")
+                await job_svc.complete(
+                    execution, status="skipped",
+                    result_summary={"reason": "empty_watchlist", "tickers": 0},
+                )
+                await session.commit()
+                return
+            logger.info(f"Morning unified analysis: {len(ticker_filter)} watchlist tickers")
+
+            from app.services.ai_analysis_service import AIAnalysisService
+            service = AIAnalysisService(session)
+            results = await service.run_unified_analysis(ticker_filter=ticker_filter)
+
+            result = _sum_ai_results({"unified": results})
+            failed_symbols = result.get("failed_symbols", [])
+
+            # D-06: Retry failed tickers once
+            retried = 0
+            if failed_symbols:
+                retried = len(failed_symbols)
+                logger.info(f"Retrying {retried} failed tickers...")
+                retry_filter = {s: ticker_filter[s] for s in failed_symbols if s in ticker_filter}
+                if retry_filter:
+                    retry_results = await service.run_unified_analysis(ticker_filter=retry_filter)
+                    retry_result = _sum_ai_results({"unified": retry_results})
+                    result["success"] += retry_result.get("success", 0)
+                    result["failed"] = retry_result.get("failed", 0)
+                    result["failed_symbols"] = retry_result.get("failed_symbols", [])
+
+            # DLQ for permanently failed
+            final_failed = result.get("failed_symbols", [])
+            if final_failed:
+                await _dlq_failures(session, "morning_unified_analysis", final_failed, retry_count=1)
+
+            status = _determine_status(result)
+            summary = _build_summary(result, retried=retried, dlq_count=len(final_failed))
+            await job_svc.complete(execution, status=status, result_summary=summary)
+            await session.commit()
+            logger.info(f"=== MORNING UNIFIED ANALYSIS COMPLETE: {summary} ===")
+
+            if status == "failed":
+                raise RuntimeError("Complete morning unified analysis failure: all tickers failed")
+
+        except ValueError as e:
+            await job_svc.complete(execution, status="skipped", result_summary={"reason": str(e)})
+            await session.commit()
+            logger.warning(f"=== MORNING UNIFIED ANALYSIS SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== MORNING UNIFIED ANALYSIS FAILED: {e} ===")
+            raise
+
+
 async def daily_discovery_scoring():
     """Score all HOSE tickers for discovery.
 

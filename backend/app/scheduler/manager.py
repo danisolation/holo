@@ -59,6 +59,7 @@ _JOB_NAMES = {
     "morning_indicator_compute_triggered": "Morning Indicator Compute",
     "morning_ai_analysis_triggered": "Morning AI Analysis",
     "morning_trading_signal_triggered": "Morning Trading Signal",
+    "morning_unified_analysis_triggered": "Morning Unified AI Analysis",
 }
 
 
@@ -90,8 +91,14 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id == "morning_indicator_compute_triggered":
-        # Morning AI analysis disabled — on-demand only
-        logger.info("Morning chain: morning_indicator_compute completed (AI analysis skipped — on-demand)")
+        from app.scheduler.jobs import morning_unified_analysis
+        logger.info("Morning chain: morning_indicator_compute → morning_unified_analysis")
+        scheduler.add_job(
+            morning_unified_analysis,
+            id="morning_unified_analysis_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
     # morning_trading_signal_triggered ends chain (no pick generation in morning)
     elif event.job_id in ("daily_intraday_aggregate", "daily_intraday_aggregate_triggered"):
         # Phase 94: Chain aggregate → indicator compute
@@ -345,7 +352,7 @@ def configure_jobs():
     logger.info(
         "Job chaining registered: "
         "daily_price_crawl_hose → [indicators → discovery_scoring → news → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → accuracy_tracking] (AI analysis: on-demand only), "
-        "morning_price_crawl_hose → [indicators] (AI analysis: on-demand only)"
+        "morning_price_crawl_hose → [indicators → unified_analysis]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")
 
