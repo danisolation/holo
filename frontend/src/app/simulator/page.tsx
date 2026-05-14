@@ -26,6 +26,8 @@ import { TradeHistory } from "@/components/simulator/trade-history";
 import { AiAccuracyPanel } from "@/components/simulator/ai-accuracy-panel";
 import { AutoTradeToggle } from "@/components/simulator/auto-trade-toggle";
 import { PendingSignals } from "@/components/simulator/pending-signals";
+import { EquityChart } from "@/components/simulator/equity-chart";
+import { PnlTimeline } from "@/components/simulator/pnl-timeline";
 
 export default function SimulatorPage() {
   const { data: portfolio, isLoading } = useSimulatorPortfolio();
@@ -101,7 +103,8 @@ export default function SimulatorPage() {
           <TabsTrigger value={0}>Tín hiệu AI</TabsTrigger>
           <TabsTrigger value={1}>Giao dịch mới</TabsTrigger>
           <TabsTrigger value={2}>Lịch sử</TabsTrigger>
-          <TabsTrigger value={3}>Độ chính xác AI</TabsTrigger>
+          <TabsTrigger value={3}>Hiệu suất</TabsTrigger>
+          <TabsTrigger value={4}>Độ chính xác AI</TabsTrigger>
         </TabsList>
         <TabsContent value={0} className="pt-4">
           <PendingSignals />
@@ -113,6 +116,12 @@ export default function SimulatorPage() {
           <TradeHistory />
         </TabsContent>
         <TabsContent value={3} className="pt-4">
+          <div className="space-y-6">
+            <EquityChart />
+            <PnlTimeline />
+          </div>
+        </TabsContent>
+        <TabsContent value={4} className="pt-4">
           <AiAccuracyPanel />
         </TabsContent>
       </Tabs>

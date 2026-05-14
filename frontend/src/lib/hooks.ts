@@ -38,6 +38,8 @@ import {
   executeSignals,
   skipSignals,
   fetchAnalysisCoverage,
+  fetchEquityHistory,
+  fetchPnlTimeline,
 } from "@/lib/api";
 import type { SimulatorTradeCreate } from "@/lib/api";
 
@@ -429,6 +431,24 @@ export function useAnalysisCoverage() {
   return useQuery({
     queryKey: ["analysis-coverage"],
     queryFn: fetchAnalysisCoverage,
+    staleTime: 60_000,
+  });
+}
+
+// --- Phase 98-02: Equity History & P&L Timeline Hooks ---
+
+export function useEquityHistory() {
+  return useQuery({
+    queryKey: ["simulator", "equity-history"],
+    queryFn: fetchEquityHistory,
+    staleTime: 60_000,
+  });
+}
+
+export function usePnlTimeline() {
+  return useQuery({
+    queryKey: ["simulator", "pnl-timeline"],
+    queryFn: fetchPnlTimeline,
     staleTime: 60_000,
   });
 }

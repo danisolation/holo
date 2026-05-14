@@ -810,3 +810,40 @@ export interface AnalysisCoverage {
 export async function fetchAnalysisCoverage(): Promise<AnalysisCoverage> {
   return apiFetch<AnalysisCoverage>("/analysis/coverage");
 }
+
+// ── Phase 98-02: Equity History & P&L Timeline ──────────────────────────────
+
+export interface EquityHistoryPoint {
+  date: string;
+  equity: number;
+}
+
+export interface EquityHistoryResponse {
+  history: EquityHistoryPoint[];
+  starting_capital: number;
+}
+
+export interface PnlTimelineEntry {
+  id: number;
+  trade_date: string;
+  ticker_symbol: string;
+  side: string;
+  quantity: number;
+  price: number;
+  net_pnl: number | null;
+  cumulative_pnl: number;
+  source: string;
+}
+
+export interface PnlTimelineResponse {
+  entries: PnlTimelineEntry[];
+  total_realized_pnl: number;
+}
+
+export async function fetchEquityHistory(): Promise<EquityHistoryResponse> {
+  return apiFetch<EquityHistoryResponse>("/simulator/equity-history");
+}
+
+export async function fetchPnlTimeline(): Promise<PnlTimelineResponse> {
+  return apiFetch<PnlTimelineResponse>("/simulator/pnl-timeline");
+}
