@@ -27,7 +27,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v18.0 Multi-Source Community Rumors** — Phases 84-87 (shipped 2026-05-07)
 - ✅ **v19.0 Unified AI Analysis Pipeline** — Phases 88-91 (shipped)
 - ✅ **v20.0 Enhanced Price Pipeline** — Phases 92-94 (shipped)
-- 🚧 **v21.0 Stock Trading Simulator** — Phase 95
+- ✅ **v21.0 Stock Trading Simulator** — Phase 95 (shipped)
 
 ## Phases
 
@@ -567,33 +567,33 @@ Plans:
 
 ---
 
-### v21.0: Stock Trading Simulator (Phase 95)
+### v21.0: Stock Trading Simulator (Phase 95) — SHIPPED
 
-- [ ] **Phase 95: Stock Trading Simulator** — Replace coach page with paper trading simulator to verify AI signal accuracy
+- [x] **Phase 95: Stock Trading Simulator** — Replace coach page with paper trading simulator to verify AI signal accuracy
 
 ## Phase Details — v21.0
 
-### Phase 95: Stock Trading Simulator
+### Phase 95: Stock Trading Simulator ✅
 
 **Goal:** Replace the existing coach/training page with a paper trading simulator that auto-executes trades based on AI signals, allows manual intervention, and tracks P&L to verify AI recommendation accuracy
 
 **Requirements**: TBD
 **Depends on:** v20.0 complete
 **Success Criteria** (what must be TRUE):
-  1. Old coach page and all related backend APIs (behavior, goals, habits, weekly review) are completely removed
-  2. New simulator page at `/simulator` with virtual portfolio starting at 100M VND
-  3. Auto-trade mode: AI BUY/SELL signals automatically execute paper trades
-  4. Manual override: user can skip signals, manually enter trades, adjust quantities
-  5. Realistic fees: 0.15% buy commission + 0.15% sell commission + 0.1% sell tax
-  6. Portfolio dashboard: shows positions, P&L (realized + unrealized), trade history
-  7. AI accuracy tracking: win rate, avg return per signal, comparison of AI vs manual trades
-**Plans:** 2/4 plans executed
+  1. ✅ Old coach page and all related backend APIs (behavior, goals, habits, weekly review) are completely removed
+  2. ✅ New simulator page at `/simulator` with virtual portfolio starting at 100M VND
+  3. ✅ Auto-trade mode: AI BUY/SELL signals automatically execute paper trades
+  4. ✅ Manual override: user can skip signals, manually enter trades, adjust quantities
+  5. ✅ Realistic fees: 0.15% buy commission + 0.15% sell commission + 0.1% sell tax
+  6. ✅ Portfolio dashboard: shows positions, P&L (realized + unrealized), trade history
+  7. ✅ AI accuracy tracking: win rate, avg return per signal, comparison of AI vs manual trades
+**Plans:** 4/4 plans executed
 
 Plans:
 - [x] 95-01-PLAN.md — Remove all coach/training code (backend + frontend cleanup)
 - [x] 95-02-PLAN.md — Backend simulator foundation (models, migration, service, API)
-- [ ] 95-03-PLAN.md — Frontend simulator page (portfolio, trades, accuracy UI)
-- [ ] 95-04-PLAN.md — Auto-trade engine + pending signals UI
+- [x] 95-03-PLAN.md — Frontend simulator page (portfolio, trades, accuracy UI)
+- [x] 95-04-PLAN.md — Auto-trade engine + pending signals UI
 
 **UI hint**: yes
 
@@ -601,4 +601,4 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 95. Stock Trading Simulator | 2/4 | In Progress|  |
+| 95. Stock Trading Simulator | 4/4 | ✅ Done | 2026-05-13 |

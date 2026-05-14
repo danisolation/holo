@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v21.0
 milestone_name: Stock Trading Simulator
-status: planning
-stopped_at: Completed 95-03-PLAN.md
-last_updated: "2026-05-12T10:15:33.693Z"
-last_activity: 2026-05-12 — v21.0 roadmap created (1 phase, 95)
+status: shipped
+stopped_at: v21.0 shipped
+last_updated: "2026-05-13"
+last_activity: 2026-05-13 — v21.0 shipped (Phase 95 complete)
 progress:
-  total_phases: 24
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-08)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v21.0 Stock Trading Simulator — Roadmap complete, ready for phase planning
+**Current focus:** v21.0 shipped. Ready for v22.0 milestone.
 
 ## Current Position
 
 Phase: 95 (Stock Trading Simulator)
-Plan: —
-Status: Roadmap complete, awaiting phase planning
-Last activity: 2026-05-12 — v21.0 roadmap created (1 phase, 95)
+Plan: All complete
+Status: v21.0 shipped
+Last activity: 2026-05-13 — v21.0 shipped, simulator deployed + tested E2E
 
 ```
-v21.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/1 phases (0%)
+v21.0 Progress: [████████████████████] 1/1 phases (100%) — SHIPPED
 ```
 
 ## Shipped Milestones
@@ -57,6 +57,8 @@ v21.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0
 | v17.0 | AI Consistency & UX | 3 | 0 | 2026-05-06 |
 | v18.0 | Multi-Source Community Rumors | 4 | 0 | 2026-05-07 |
 | v19.0 | Unified AI Analysis Pipeline | 4 | 0 | 2026-05-07 |
+| v20.0 | Enhanced Price Pipeline | 3 | 0 | 2026-05-11 |
+| v21.0 | Stock Trading Simulator | 1 | 4 | 2026-05-13 |
 
 ## Accumulated Context
 
