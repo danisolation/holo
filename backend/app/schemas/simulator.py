@@ -106,3 +106,37 @@ class PendingSignalResponse(BaseModel):
 class ExecuteSignalsRequest(BaseModel):
     """Request to execute specific AI signals."""
     pick_ids: list[int] = Field(..., min_length=1)
+
+
+# ── Phase 98-02: Equity History & P&L Timeline ──────────────────────────────
+
+
+class EquityHistoryPoint(BaseModel):
+    """Single point on the equity curve."""
+    date: str
+    equity: float  # total portfolio value (cash + market value) in VND
+
+
+class EquityHistoryResponse(BaseModel):
+    """Equity curve over time."""
+    history: list[EquityHistoryPoint]
+    starting_capital: float
+
+
+class PnlTimelineEntry(BaseModel):
+    """Single trade entry in P&L timeline."""
+    id: int
+    trade_date: str
+    ticker_symbol: str
+    side: str
+    quantity: int
+    price: float
+    net_pnl: float | None
+    cumulative_pnl: float
+    source: str
+
+
+class PnlTimelineResponse(BaseModel):
+    """All trades with running cumulative P&L."""
+    entries: list[PnlTimelineEntry]
+    total_realized_pnl: float

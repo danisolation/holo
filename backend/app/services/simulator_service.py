@@ -11,6 +11,7 @@ from app.models.simulator_trade import SimulatorTrade
 from app.models.simulator_lot import SimulatorLot
 from app.models.ticker import Ticker
 from app.models.daily_pick import DailyPick
+from app.models.daily_price import DailyPrice
 from app.schemas.simulator import SimulatorTradeCreate
 
 # Fee constants (VN market standard)
@@ -372,6 +373,149 @@ class SimulatorService:
             "manual_total_pnl": round(m_pnl, 2),
         }
 
+    async def get_equity_history(self) -> dict:
+        """Compute equity curve from trade history.
+
+        For each unique trade date (+ today), calculates:
+        equity = running_cash + market_value_of_open_positions
+        Market value at trade dates uses trade prices as approximation.
+        Final point uses latest DailyPrice (×1000 for VND conversion).
+        """
+        portfolio = await self.get_or_create_portfolio()
+
+        # Get all trades ordered by date ASC, id ASC
+        result = await self.session.execute(
+            select(SimulatorTrade)
+            .where(SimulatorTrade.portfolio_id == portfolio.id)
+            .order_by(SimulatorTrade.trade_date.asc(), SimulatorTrade.id.asc())
+        )
+        trades = result.scalars().all()
+
+        if not trades:
+            # No trades yet — return single point at starting capital for today
+            today = str(date.today())
+            return {
+                "history": [{"date": today, "equity": float(portfolio.starting_capital)}],
+                "starting_capital": float(portfolio.starting_capital),
+            }
+
+        # Replay trades to build equity curve
+        running_cash = Decimal(str(portfolio.starting_capital))
+        # positions: ticker_id -> {qty, last_price}
+        positions: dict[int, dict] = {}
+        # Group trades by date
+        from collections import OrderedDict
+        date_trades: OrderedDict[str, list] = OrderedDict()
+        for t in trades:
+            d = str(t.trade_date)
+            if d not in date_trades:
+                date_trades[d] = []
+            date_trades[d].append(t)
+
+        history = []
+        for trade_date_str, day_trades in date_trades.items():
+            for t in day_trades:
+                if t.side == "BUY":
+                    cost = t.price * t.quantity + t.total_fee
+                    running_cash -= cost
+                    if t.ticker_id not in positions:
+                        positions[t.ticker_id] = {"qty": 0, "last_price": t.price}
+                    positions[t.ticker_id]["qty"] += t.quantity
+                    positions[t.ticker_id]["last_price"] = t.price
+                else:  # SELL
+                    proceeds = t.price * t.quantity - t.total_fee
+                    running_cash += proceeds
+                    if t.ticker_id in positions:
+                        positions[t.ticker_id]["qty"] -= t.quantity
+                        positions[t.ticker_id]["last_price"] = t.price
+                        if positions[t.ticker_id]["qty"] <= 0:
+                            del positions[t.ticker_id]
+
+            # Calculate market value at end of this date
+            market_value = Decimal("0")
+            for tid, pos in positions.items():
+                market_value += pos["last_price"] * pos["qty"]
+
+            equity = float(running_cash + market_value)
+            history.append({"date": trade_date_str, "equity": round(equity, 2)})
+
+        # Add today's point with actual latest prices
+        today_str = str(date.today())
+        if history[-1]["date"] != today_str:
+            # Recalculate market value with latest DailyPrice
+            from app.models.daily_price import DailyPrice
+            market_value = Decimal("0")
+            for tid, pos in positions.items():
+                price_result = await self.session.execute(
+                    select(DailyPrice.close)
+                    .where(DailyPrice.ticker_id == tid)
+                    .order_by(DailyPrice.date.desc())
+                    .limit(1)
+                )
+                latest_close = price_result.scalar_one_or_none()
+                if latest_close:
+                    # DailyPrice.close is in nghìn đồng, convert to VND
+                    current_price = Decimal(str(latest_close)) * 1000
+                    market_value += current_price * pos["qty"]
+                else:
+                    # Fallback to last trade price
+                    market_value += pos["last_price"] * pos["qty"]
+
+            equity = float(running_cash + market_value)
+            history.append({"date": today_str, "equity": round(equity, 2)})
+
+        return {
+            "history": history,
+            "starting_capital": float(portfolio.starting_capital),
+        }
+
+    async def get_pnl_timeline(self) -> dict:
+        """Get all trades with running cumulative P&L.
+
+        BUY trades: net_pnl = None, cumulative unchanged.
+        SELL trades: cumulative += net_pnl.
+        """
+        portfolio = await self.get_or_create_portfolio()
+
+        # Get ALL trades ordered by date ASC, id ASC
+        result = await self.session.execute(
+            select(SimulatorTrade)
+            .where(SimulatorTrade.portfolio_id == portfolio.id)
+            .order_by(SimulatorTrade.trade_date.asc(), SimulatorTrade.id.asc())
+        )
+        trades = result.scalars().all()
+
+        entries = []
+        cumulative = 0.0
+        for t in trades:
+            # Resolve ticker symbol
+            ticker_result = await self.session.execute(
+                select(Ticker).where(Ticker.id == t.ticker_id)
+            )
+            ticker = ticker_result.scalar_one()
+
+            net_pnl = None
+            if t.side == "SELL" and t.net_pnl is not None:
+                net_pnl = float(t.net_pnl)
+                cumulative += net_pnl
+
+            entries.append({
+                "id": t.id,
+                "trade_date": str(t.trade_date),
+                "ticker_symbol": ticker.symbol,
+                "side": t.side,
+                "quantity": t.quantity,
+                "price": float(t.price),
+                "net_pnl": round(net_pnl, 2) if net_pnl is not None else None,
+                "cumulative_pnl": round(cumulative, 2),
+                "source": t.source,
+            })
+
+        return {
+            "entries": entries,
+            "total_realized_pnl": round(cumulative, 2),
+        }
+
     async def reset_portfolio(self) -> dict:
         """Reset portfolio to starting state — delete all trades and lots."""
         portfolio = await self.get_or_create_portfolio()
@@ -384,3 +528,101 @@ class SimulatorService:
             "starting_capital": float(portfolio.starting_capital),
             "current_cash": float(portfolio.current_cash),
         }
+
+    async def check_sl_tp_hits(self) -> list[dict]:
+        """Auto-sell positions where latest daily close hits SL or TP.
+
+        CRITICAL: DailyPrice.close is in nghìn đồng (thousands).
+        DailyPick.stop_loss / take_profit_1 are in VND.
+        Must multiply close × 1000 before comparing.
+
+        Returns list of executed sell trade results.
+        """
+        portfolio = await self.get_or_create_portfolio()
+        results: list[dict] = []
+
+        # Get all open lots grouped by ticker
+        result = await self.session.execute(
+            select(
+                SimulatorLot.ticker_id,
+                func.sum(SimulatorLot.remaining_quantity).label("total_qty"),
+            )
+            .where(SimulatorLot.portfolio_id == portfolio.id)
+            .where(SimulatorLot.remaining_quantity > 0)
+            .group_by(SimulatorLot.ticker_id)
+        )
+        open_positions = result.all()
+
+        for row in open_positions:
+            ticker_id = row.ticker_id
+            total_qty = int(row.total_qty)
+
+            # Find the DailyPick linked to the most recent BUY trade for this ticker
+            pick_result = await self.session.execute(
+                select(DailyPick)
+                .join(SimulatorTrade, SimulatorTrade.daily_pick_id == DailyPick.id)
+                .where(SimulatorTrade.ticker_id == ticker_id)
+                .where(SimulatorTrade.side == "BUY")
+                .where(SimulatorTrade.daily_pick_id.isnot(None))
+                .order_by(SimulatorTrade.trade_date.desc())
+                .limit(1)
+            )
+            pick = pick_result.scalar_one_or_none()
+            if not pick or not pick.stop_loss or not pick.take_profit_1:
+                continue
+
+            # Get latest daily price
+            price_result = await self.session.execute(
+                select(DailyPrice.close)
+                .where(DailyPrice.ticker_id == ticker_id)
+                .order_by(DailyPrice.date.desc())
+                .limit(1)
+            )
+            daily_close = price_result.scalar_one_or_none()
+            if daily_close is None:
+                continue
+
+            # Convert nghìn đồng → VND
+            close_vnd = Decimal(str(float(daily_close))) * Decimal("1000")
+
+            # Determine if SL or TP hit
+            sell_reason: str | None = None
+            if close_vnd <= pick.stop_loss:
+                sell_reason = "Auto-sell: SL hit"
+            elif close_vnd >= pick.take_profit_1:
+                sell_reason = "Auto-sell: TP hit"
+
+            if not sell_reason:
+                continue
+
+            # Resolve ticker symbol for create_trade
+            ticker_result = await self.session.execute(
+                select(Ticker).where(Ticker.id == ticker_id)
+            )
+            ticker = ticker_result.scalar_one()
+
+            logger.info(
+                f"SL/TP hit for {ticker.symbol}: close={close_vnd} VND, "
+                f"SL={pick.stop_loss}, TP1={pick.take_profit_1} → {sell_reason}"
+            )
+
+            trade_data = SimulatorTradeCreate(
+                ticker_symbol=ticker.symbol,
+                side="SELL",
+                quantity=total_qty,
+                price=float(close_vnd),
+                trade_date=date.today(),
+                source="ai_auto",
+                daily_pick_id=pick.id,
+                user_notes=sell_reason,
+            )
+
+            try:
+                trade_result = await self.create_trade(trade_data)
+                results.append(trade_result)
+                logger.info(f"SL/TP auto-sell executed: {ticker.symbol} x{total_qty} @ {close_vnd}")
+            except ValueError as e:
+                logger.warning(f"SL/TP auto-sell failed for {ticker.symbol}: {e}")
+                results.append({"error": str(e), "ticker_symbol": ticker.symbol, "reason": sell_reason})
+
+        return results

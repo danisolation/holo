@@ -13,6 +13,8 @@ from app.schemas.simulator import (
     PortfolioResetResponse,
     PendingSignalResponse,
     ExecuteSignalsRequest,
+    EquityHistoryResponse,
+    PnlTimelineResponse,
 )
 
 router = APIRouter(tags=["simulator"])
@@ -51,6 +53,22 @@ async def get_stats():
     async with async_session() as session:
         service = SimulatorService(session)
         return await service.get_stats()
+
+
+@router.get("/simulator/equity-history", response_model=EquityHistoryResponse)
+async def get_equity_history():
+    """Get portfolio equity curve over time."""
+    async with async_session() as session:
+        service = SimulatorService(session)
+        return await service.get_equity_history()
+
+
+@router.get("/simulator/pnl-timeline", response_model=PnlTimelineResponse)
+async def get_pnl_timeline():
+    """Get all trades with running cumulative P&L."""
+    async with async_session() as session:
+        service = SimulatorService(session)
+        return await service.get_pnl_timeline()
 
 
 @router.post("/simulator/reset", response_model=PortfolioResetResponse)
