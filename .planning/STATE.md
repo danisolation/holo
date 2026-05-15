@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v15.0
-milestone_name: Performance Optimization
+milestone: v25.0
+milestone_name: AI Simulator Split
 status: planning
-stopped_at: Completed 106-01-PLAN.md
-last_updated: "2026-05-15T04:22:20.324Z"
-last_activity: 2026-05-15 — v24.0 roadmap created (3 phases)
+stopped_at: Defining requirements
+last_updated: "2026-05-15"
+last_activity: 2026-05-15 — v25.0 milestone started
 progress:
-  total_phases: 5
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,21 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v24.0 Sector Screening & Comparison
+**Current focus:** v25.0 AI Simulator Split
 
 ## Current Position
 
-Phase: 104 (Screening & Comparison APIs)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Roadmap created, ready for planning
-Last activity: 2026-05-15 — v24.0 roadmap created (3 phases)
+Status: Defining requirements
+Last activity: 2026-05-15 — Milestone v25.0 started
 
 ```
-v24.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/3 phases (0%)
+v25.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/0 phases (0%)
 ```
 
 ```
-v23.0 Progress: [████████████████████] 4/4 phases (100%) ✅ SHIPPED
+v24.0 Progress: [████████████████████] 3/3 phases (100%) ✅ SHIPPED
 ```
 
 ## Shipped Milestones
