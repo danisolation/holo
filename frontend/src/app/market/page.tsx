@@ -3,6 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SectorTab } from "@/components/market/sector-tab";
 import { BreadthTab } from "@/components/market/breadth-tab";
+import { FlowTab } from "@/components/market/flow-tab";
 
 export default function MarketPage() {
   return (
@@ -35,9 +36,7 @@ export default function MarketPage() {
           <BreadthTab />
         </TabsContent>
         <TabsContent value={2} className="pt-4">
-          <div className="text-sm text-muted-foreground text-center py-12">
-            Dòng tiền — coming in Plan 02
-          </div>
+          <FlowTab />
         </TabsContent>
       </Tabs>
     </div>
