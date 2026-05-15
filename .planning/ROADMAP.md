@@ -795,7 +795,10 @@ Plans:
   3. Sector detail page displays a performance chart (7D/30D trend line) showing the sector's aggregate price movement over time
   4. Peer comparison table on the sector or ticker page shows key metrics (P/E, volume, % change, market cap) for tickers in the same sector, sorted by selected metric
   5. Radar chart visualizes a selected ticker against sector peer averages across multiple metric dimensions (P/E, volume ratio, % change, etc.)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 105-01-PLAN.md — API types, hooks, and screener page with filters + sortable table
+- [ ] 105-02-PLAN.md — Sector detail page with performance chart + peer comparison radar
 **UI hint**: yes
 
 ### Phase 106: AI Peer Analysis
