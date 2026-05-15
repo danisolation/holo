@@ -40,6 +40,7 @@ import {
 import { TradingPlanPanel } from "@/components/trading-plan-panel";
 import { UnifiedAnalysisPanel } from "@/components/unified-analysis-panel";
 import { RumorScorePanel } from "@/components/rumor-score-panel";
+import { PeerAnalysisPanel } from "@/components/peer-analysis-panel";
 import {
   usePrices,
   useIndicators,
@@ -507,6 +508,11 @@ export default function TickerDetailPage({
             <RumorScorePanel data={rumorData} />
           </div>
         ) : null}
+      </section>
+
+      {/* AI Peer Analysis — Phase 106 */}
+      <section>
+        <PeerAnalysisPanel symbol={upperSymbol} />
       </section>
     </div>
   );

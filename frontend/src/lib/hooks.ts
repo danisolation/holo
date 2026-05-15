@@ -47,6 +47,7 @@ import {
   fetchScreener,
   fetchSectorDetail,
   fetchPeerComparison,
+  fetchPeerAnalysis,
 } from "@/lib/api";
 import type { SimulatorTradeCreate, ScreenerParams } from "@/lib/api";
 
@@ -526,5 +527,21 @@ export function usePeerComparison(symbol: string | undefined) {
     queryFn: () => fetchPeerComparison(symbol!),
     enabled: !!symbol,
     staleTime: 60_000,
+  });
+}
+
+// --- Phase 106: AI Peer Analysis ---
+
+/**
+ * Fetch AI peer analysis for a ticker. On-demand only (enabled: false).
+ * Call refetch() to trigger. staleTime: 10 min (matches backend 600s TTL).
+ */
+export function usePeerAnalysis(symbol: string | undefined) {
+  return useQuery({
+    queryKey: ["peer-analysis-ai", symbol],
+    queryFn: () => fetchPeerAnalysis(symbol!),
+    enabled: false,
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 }

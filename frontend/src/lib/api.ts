@@ -1058,3 +1058,19 @@ export async function fetchSectorDetail(sectorName: string): Promise<SectorDetai
 export async function fetchPeerComparison(symbol: string): Promise<PeerComparisonResponse> {
   return apiFetch<PeerComparisonResponse>(`/market/peers/${encodeURIComponent(symbol)}`);
 }
+
+// ── Phase 106: AI Peer Analysis ─────────────────────────────────────────────
+
+export interface PeerAnalysisData {
+  symbol: string;
+  sector: string;
+  overall_verdict: string;
+  strengths: string[];
+  weaknesses: string[];
+  peer_position: string;
+  recommendation: string;
+}
+
+export async function fetchPeerAnalysis(symbol: string): Promise<PeerAnalysisData> {
+  return apiFetch<PeerAnalysisData>(`/market/peer-analysis/${encodeURIComponent(symbol)}`);
+}
