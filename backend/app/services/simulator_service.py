@@ -303,6 +303,12 @@ class SimulatorService:
         for t in trades:
             ticker_result = await self.session.execute(select(Ticker).where(Ticker.id == t.ticker_id))
             ticker = ticker_result.scalar_one()
+            rationale = None
+            if t.daily_pick_id:
+                pick_result = await self.session.execute(
+                    select(DailyPick.explanation).where(DailyPick.id == t.daily_pick_id)
+                )
+                rationale = pick_result.scalar_one_or_none()
             trade_responses.append({
                 "id": t.id,
                 "ticker_symbol": ticker.symbol,
@@ -321,6 +327,7 @@ class SimulatorService:
                 "ai_signal_skipped": t.ai_signal_skipped,
                 "user_notes": t.user_notes,
                 "created_at": str(t.created_at),
+                "rationale": rationale,
             })
 
         return {"trades": trade_responses, "total": total, "page": page, "page_size": page_size}

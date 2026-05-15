@@ -63,6 +63,7 @@ class AutoTradeService:
                 "composite_score": float(pick.composite_score),
                 "rank": pick.rank,
                 "position_size_shares": pick.position_size_shares,
+                "explanation": pick.explanation,
             })
 
         return pending

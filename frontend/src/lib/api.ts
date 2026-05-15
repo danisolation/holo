@@ -694,6 +694,7 @@ export interface SimulatorTradeCreate {
   source?: "ai_auto" | "manual";
   daily_pick_id?: number | null;
   user_notes?: string | null;
+  portfolio_type?: "ai" | "user";
 }
 
 export interface SimulatorTradeResponse {
@@ -714,6 +715,7 @@ export interface SimulatorTradeResponse {
   ai_signal_skipped: boolean;
   user_notes: string | null;
   created_at: string;
+  rationale: string | null;
 }
 
 export interface SimulatorTradesListResponse {
@@ -737,8 +739,8 @@ export interface SimulatorStatsResponse {
 
 // ── Simulator API functions ──────────────────────────────────────────────────
 
-export async function fetchSimulatorPortfolio(): Promise<SimulatorPortfolioResponse> {
-  return apiFetch<SimulatorPortfolioResponse>("/simulator/portfolio");
+export async function fetchSimulatorPortfolio(portfolioType = "user"): Promise<SimulatorPortfolioResponse> {
+  return apiFetch<SimulatorPortfolioResponse>(`/simulator/portfolio?portfolio_type=${portfolioType}`);
 }
 
 export async function createSimulatorTrade(data: SimulatorTradeCreate): Promise<SimulatorTradeResponse> {
@@ -748,18 +750,18 @@ export async function createSimulatorTrade(data: SimulatorTradeCreate): Promise<
   });
 }
 
-export async function fetchSimulatorTrades(page = 1, pageSize = 20, source?: string): Promise<SimulatorTradesListResponse> {
-  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+export async function fetchSimulatorTrades(page = 1, pageSize = 20, source?: string, portfolioType = "user"): Promise<SimulatorTradesListResponse> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize), portfolio_type: portfolioType });
   if (source) params.set("source", source);
   return apiFetch<SimulatorTradesListResponse>(`/simulator/trades?${params}`);
 }
 
-export async function fetchSimulatorStats(): Promise<SimulatorStatsResponse> {
-  return apiFetch<SimulatorStatsResponse>("/simulator/stats");
+export async function fetchSimulatorStats(portfolioType = "user"): Promise<SimulatorStatsResponse> {
+  return apiFetch<SimulatorStatsResponse>(`/simulator/stats?portfolio_type=${portfolioType}`);
 }
 
-export async function resetSimulatorPortfolio(): Promise<{ message: string; starting_capital: number; current_cash: number }> {
-  return apiFetch<{ message: string; starting_capital: number; current_cash: number }>("/simulator/reset", {
+export async function resetSimulatorPortfolio(portfolioType: string): Promise<{ message: string; starting_capital: number; current_cash: number }> {
+  return apiFetch<{ message: string; starting_capital: number; current_cash: number }>(`/simulator/reset?portfolio_type=${portfolioType}`, {
     method: "POST",
   });
 }
@@ -777,6 +779,7 @@ export interface PendingSignalResponse {
   composite_score: number;
   rank: number | null;
   position_size_shares: number | null;
+  explanation: string | null;
 }
 
 export async function fetchPendingSignals(daysBack = 3): Promise<PendingSignalResponse[]> {
@@ -840,12 +843,32 @@ export interface PnlTimelineResponse {
   total_realized_pnl: number;
 }
 
-export async function fetchEquityHistory(): Promise<EquityHistoryResponse> {
-  return apiFetch<EquityHistoryResponse>("/simulator/equity-history");
+export async function fetchEquityHistory(portfolioType = "user"): Promise<EquityHistoryResponse> {
+  return apiFetch<EquityHistoryResponse>(`/simulator/equity-history?portfolio_type=${portfolioType}`);
 }
 
-export async function fetchPnlTimeline(): Promise<PnlTimelineResponse> {
-  return apiFetch<PnlTimelineResponse>("/simulator/pnl-timeline");
+export async function fetchPnlTimeline(portfolioType = "user"): Promise<PnlTimelineResponse> {
+  return apiFetch<PnlTimelineResponse>(`/simulator/pnl-timeline?portfolio_type=${portfolioType}`);
+}
+
+// ── Phase 108: Dual Portfolio Types ─────────────────────────────────────────
+
+export interface PortfolioSummaryItem {
+  name: string;
+  starting_capital: number;
+  current_cash: number;
+  total_equity: number;
+  total_pnl: number;
+  total_pnl_pct: number;
+  position_count: number;
+}
+
+export interface PortfolioListResponse {
+  portfolios: PortfolioSummaryItem[];
+}
+
+export async function fetchPortfolios(): Promise<PortfolioListResponse> {
+  return apiFetch<PortfolioListResponse>("/simulator/portfolios");
 }
 
 // ── Phase 102: Market Breadth & Sector Types ────────────────────────────────

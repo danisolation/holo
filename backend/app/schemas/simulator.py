@@ -35,6 +35,7 @@ class SimulatorTradeResponse(BaseModel):
     ai_signal_skipped: bool
     user_notes: str | None
     created_at: str
+    rationale: str | None = None
 
 
 class PositionResponse(BaseModel):
@@ -102,6 +103,7 @@ class PendingSignalResponse(BaseModel):
     composite_score: float
     rank: int | None
     position_size_shares: int | None
+    explanation: str | None = None
 
 
 class ExecuteSignalsRequest(BaseModel):

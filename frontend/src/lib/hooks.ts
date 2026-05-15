@@ -40,6 +40,7 @@ import {
   fetchAnalysisCoverage,
   fetchEquityHistory,
   fetchPnlTimeline,
+  fetchPortfolios,
   fetchMarketBreadth,
   fetchSectorPerformance,
   fetchSectorFlow,
@@ -49,7 +50,7 @@ import {
   fetchPeerComparison,
   fetchPeerAnalysis,
 } from "@/lib/api";
-import type { SimulatorTradeCreate, ScreenerParams } from "@/lib/api";
+import type { SimulatorTradeCreate, ScreenerParams, PortfolioListResponse } from "@/lib/api";
 
 /**
  * Fetch all active tickers, optionally filtered by sector.
@@ -358,26 +359,26 @@ export function useTickerAccuracy(tickerId: number | undefined, days: number = 3
 
 // --- Phase 95: Simulator Hooks ---
 
-export function useSimulatorPortfolio() {
+export function useSimulatorPortfolio(portfolioType = "user") {
   return useQuery({
-    queryKey: ["simulator", "portfolio"],
-    queryFn: fetchSimulatorPortfolio,
+    queryKey: ["simulator", "portfolio", portfolioType],
+    queryFn: () => fetchSimulatorPortfolio(portfolioType),
     staleTime: 30_000,
   });
 }
 
-export function useSimulatorTrades(page = 1, source?: string) {
+export function useSimulatorTrades(page = 1, source?: string, portfolioType = "user") {
   return useQuery({
-    queryKey: ["simulator", "trades", page, source],
-    queryFn: () => fetchSimulatorTrades(page, 20, source),
+    queryKey: ["simulator", "trades", page, source, portfolioType],
+    queryFn: () => fetchSimulatorTrades(page, 20, source, portfolioType),
     staleTime: 30_000,
   });
 }
 
-export function useSimulatorStats() {
+export function useSimulatorStats(portfolioType = "user") {
   return useQuery({
-    queryKey: ["simulator", "stats"],
-    queryFn: fetchSimulatorStats,
+    queryKey: ["simulator", "stats", portfolioType],
+    queryFn: () => fetchSimulatorStats(portfolioType),
     staleTime: 60_000,
   });
 }
@@ -395,7 +396,7 @@ export function useCreateSimulatorTrade() {
 export function useResetSimulator() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: resetSimulatorPortfolio,
+    mutationFn: (portfolioType: string) => resetSimulatorPortfolio(portfolioType),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["simulator"] });
     },
@@ -445,19 +446,27 @@ export function useAnalysisCoverage() {
 
 // --- Phase 98-02: Equity History & P&L Timeline Hooks ---
 
-export function useEquityHistory() {
+export function useEquityHistory(portfolioType = "user") {
   return useQuery({
-    queryKey: ["simulator", "equity-history"],
-    queryFn: fetchEquityHistory,
+    queryKey: ["simulator", "equity-history", portfolioType],
+    queryFn: () => fetchEquityHistory(portfolioType),
     staleTime: 60_000,
   });
 }
 
-export function usePnlTimeline() {
+export function usePnlTimeline(portfolioType = "user") {
   return useQuery({
-    queryKey: ["simulator", "pnl-timeline"],
-    queryFn: fetchPnlTimeline,
+    queryKey: ["simulator", "pnl-timeline", portfolioType],
+    queryFn: () => fetchPnlTimeline(portfolioType),
     staleTime: 60_000,
+  });
+}
+
+export function usePortfolios() {
+  return useQuery({
+    queryKey: ["simulator", "portfolios"],
+    queryFn: fetchPortfolios,
+    staleTime: 30_000,
   });
 }
 
