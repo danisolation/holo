@@ -809,7 +809,10 @@ Plans:
   1. Gemini receives a ticker's metrics alongside its sector peer metrics and produces a structured Vietnamese analysis identifying relative strengths and weaknesses
   2. AI analysis explicitly compares the ticker against sector averages on key dimensions (valuation, momentum, volume) and states whether the ticker outperforms or underperforms peers
   3. AI peer analysis is accessible from the ticker detail page as a panel or section, fetched on demand without blocking the rest of the page load
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 106-01-PLAN.md — AI Peer Analysis service + API + frontend panel
 
 ## Progress — v24.0
 
