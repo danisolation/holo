@@ -856,7 +856,9 @@ Plans:
   2. AI Portfolio tab shows pending signals with a rationale text field explaining why Gemini recommended each buy/sell signal
   3. Trade history entries in both tabs display the rationale text (if present) alongside trade details like ticker, side, price, and P&L
   4. User Portfolio tab includes the manual trade form; AI Portfolio tab does not show manual trade form (trades are auto-executed)
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 108-01-PLAN.md — Dual portfolio UI tabs + AI rationale display in signals and trades
 **UI hint**: yes
 
 ### Phase 109: AI Review + Performance Comparison
@@ -876,5 +878,5 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 107. Dual Portfolio Backend | 1/1 | Complete   | 2026-05-15 |
-| 108. Dual Portfolio UI + AI Rationale | 0/? | Not started | - |
+| 108. Dual Portfolio UI + AI Rationale | 0/1 | Not started | - |
 | 109. AI Review + Performance Comparison | 0/? | Not started | - |
