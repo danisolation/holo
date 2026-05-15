@@ -718,7 +718,9 @@ Plans:
   2. API endpoint returns net buying/selling volume per sector per day, computed as sum of (volume × sign of price change) for each ticker grouped by sector
   3. Sector aggregation correctly groups all ~186 HOSE tickers by their Ticker.sector field and handles tickers with null/empty sector gracefully
   4. Both endpoints support date range parameters for historical sector data retrieval
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 101-01-PLAN.md — SectorAnalysisService + schemas + GET /api/market/sectors + GET /api/market/sector-flow + tests
 
 ### Phase 102: Sector & Breadth Frontend
 **Goal**: Users can visually explore sector performance via heatmap, compare sector rotation via radar chart, track market health via breadth charts, and drill into individual sectors
