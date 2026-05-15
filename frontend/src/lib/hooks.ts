@@ -49,6 +49,9 @@ import {
   fetchSectorDetail,
   fetchPeerComparison,
   fetchPeerAnalysis,
+  fetchPortfolioReview,
+  fetchTradeReview,
+  fetchComparison,
 } from "@/lib/api";
 import type { SimulatorTradeCreate, ScreenerParams, PortfolioListResponse } from "@/lib/api";
 
@@ -552,5 +555,28 @@ export function usePeerAnalysis(symbol: string | undefined) {
     enabled: false,
     staleTime: 10 * 60 * 1000,
     retry: 1,
+  });
+}
+
+// --- Phase 109: AI Review + Comparison Hooks ---
+
+export function usePortfolioReview(portfolioType = "user") {
+  return useMutation({
+    mutationFn: () => fetchPortfolioReview(portfolioType),
+  });
+}
+
+export function useTradeReview() {
+  return useMutation({
+    mutationFn: ({ tradeId, portfolioType }: { tradeId: number; portfolioType: string }) =>
+      fetchTradeReview(tradeId, portfolioType),
+  });
+}
+
+export function useComparison() {
+  return useQuery({
+    queryKey: ["simulator", "comparison"],
+    queryFn: fetchComparison,
+    staleTime: 60_000,
   });
 }

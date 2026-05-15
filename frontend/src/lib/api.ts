@@ -1097,3 +1097,48 @@ export interface PeerAnalysisData {
 export async function fetchPeerAnalysis(symbol: string): Promise<PeerAnalysisData> {
   return apiFetch<PeerAnalysisData>(`/market/peer-analysis/${encodeURIComponent(symbol)}`);
 }
+
+// ── Phase 109: AI Review + Performance Comparison ───────────────────────────
+
+export interface PortfolioReviewResponse {
+  overall_assessment: string;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+  risk_assessment: string;
+  score: number;
+}
+
+export interface TradeReviewResponse {
+  entry_analysis: string;
+  exit_analysis: string;
+  what_went_well: string[];
+  what_could_improve: string[];
+  pattern_identified: string;
+  overall_verdict: string;
+}
+
+export interface ComparisonResponse {
+  ai_equity_history: EquityHistoryPoint[];
+  user_equity_history: EquityHistoryPoint[];
+  ai_stats: SimulatorStatsResponse;
+  user_stats: SimulatorStatsResponse;
+  ai_portfolio: PortfolioSummaryItem;
+  user_portfolio: PortfolioSummaryItem;
+}
+
+export async function fetchPortfolioReview(portfolioType = "user"): Promise<PortfolioReviewResponse> {
+  return apiFetch<PortfolioReviewResponse>(`/simulator/review/portfolio?portfolio_type=${portfolioType}`, {
+    method: "POST",
+  });
+}
+
+export async function fetchTradeReview(tradeId: number, portfolioType = "user"): Promise<TradeReviewResponse> {
+  return apiFetch<TradeReviewResponse>(`/simulator/review/trade/${tradeId}?portfolio_type=${portfolioType}`, {
+    method: "POST",
+  });
+}
+
+export async function fetchComparison(): Promise<ComparisonResponse> {
+  return apiFetch<ComparisonResponse>("/simulator/comparison");
+}
