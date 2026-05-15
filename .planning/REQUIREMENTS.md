@@ -34,19 +34,19 @@
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| SHEAT-01 | — | — | Pending |
-| SHEAT-02 | — | — | Pending |
-| SHEAT-03 | — | — | Pending |
-| MBRD-01 | — | — | Pending |
-| MBRD-02 | — | — | Pending |
-| MBRD-03 | — | — | Pending |
-| MBRD-04 | — | — | Pending |
-| SFLOW-01 | — | — | Pending |
-| SFLOW-02 | — | — | Pending |
-| SFLOW-03 | — | — | Pending |
-| AISEC-01 | — | — | Pending |
-| AISEC-02 | — | — | Pending |
-| AISEC-03 | — | — | Pending |
+| SHEAT-01 | Phase 101 (BE), Phase 102 (FE) | — | Pending |
+| SHEAT-02 | Phase 102 | — | Pending |
+| SHEAT-03 | Phase 102 | — | Pending |
+| MBRD-01 | Phase 100 | — | Pending |
+| MBRD-02 | Phase 100 | — | Pending |
+| MBRD-03 | Phase 100 | — | Pending |
+| MBRD-04 | Phase 102 | — | Pending |
+| SFLOW-01 | Phase 101 | — | Pending |
+| SFLOW-02 | Phase 102 | — | Pending |
+| SFLOW-03 | Phase 102 | — | Pending |
+| AISEC-01 | Phase 103 | — | Pending |
+| AISEC-02 | Phase 103 | — | Pending |
+| AISEC-03 | Phase 103 | — | Pending |
 
 ## Future Requirements
 

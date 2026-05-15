@@ -28,7 +28,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v19.0 Unified AI Analysis Pipeline** — Phases 88-91 (shipped)
 - ✅ **v20.0 Enhanced Price Pipeline** — Phases 92-94 (shipped)
 - ✅ **v21.0 Stock Trading Simulator** — Phase 95 (shipped)
-- [ ] **v22.0 Platform Polish & AI Coverage** — Phases 96-99
+- ✅ **v22.0 Platform Polish & AI Coverage** — Phases 96-99 (shipped 2026-05-14)
+- [ ] **v23.0 Sector Rotation & Market Breadth** — Phases 100-103
 
 ## Phases
 
@@ -683,3 +684,70 @@ Plans:
 | 97. AI Analysis Coverage Expansion | 2/2 | Complete   | 2026-05-14 |
 | 98. Simulator Enhancement | 2/2 | Complete   | 2026-05-14 |
 | 99. Performance & UX Polish | 2/2 | Complete   | 2026-05-14 |
+
+---
+
+### v23.0: Sector Rotation & Market Breadth (Phases 100-103)
+
+- [ ] **Phase 100: Market Breadth Backend** — A/D line, MA breadth, 52-week highs/lows computation + API endpoints
+- [ ] **Phase 101: Sector Analysis Backend** — Sector performance aggregation, net flow computation, sector API endpoints
+- [ ] **Phase 102: Sector & Breadth Frontend** — Sector heatmap, breadth charts, rotation radar, sector ranking table
+- [ ] **Phase 103: AI Sector Intelligence** — Gemini sector analysis with breadth + flow context, rotation timing, daily scheduler
+
+## Phase Details — v23.0
+
+### Phase 100: Market Breadth Backend
+**Goal**: Users can query market-wide health indicators (A/D line, MA breadth, new highs/lows) via API to understand overall HOSE market condition
+**Depends on**: Phase 99 (v22.0 complete)
+**Requirements**: MBRD-01, MBRD-02, MBRD-03
+**Success Criteria** (what must be TRUE):
+  1. API endpoint returns daily A/D line data (advancing vs declining tickers count) for a configurable date range, computed from all ~186 HOSE tickers' DailyPrice close-to-close changes
+  2. API endpoint returns daily % of stocks above MA50 and % above MA200, computed from each ticker's moving average vs its closing price
+  3. API endpoint returns daily new 52-week highs count vs new 52-week lows count, derived from rolling 252-trading-day window on DailyPrice
+  4. All breadth computations handle missing data gracefully (tickers with insufficient history are excluded, not erroring)
+**Plans**: TBD
+
+### Phase 101: Sector Analysis Backend
+**Goal**: Users can query sector-level performance and money flow data via API to compare sectors and identify rotation patterns
+**Depends on**: Phase 100 (breadth data available for AI context in Phase 103)
+**Requirements**: SHEAT-01, SFLOW-01
+**Success Criteria** (what must be TRUE):
+  1. API endpoint returns sector performance summary: average % price change per sector for today, 7D, and 30D periods — aggregated from Ticker.sector + DailyPrice
+  2. API endpoint returns net buying/selling volume per sector per day, computed as sum of (volume × sign of price change) for each ticker grouped by sector
+  3. Sector aggregation correctly groups all ~186 HOSE tickers by their Ticker.sector field and handles tickers with null/empty sector gracefully
+  4. Both endpoints support date range parameters for historical sector data retrieval
+**Plans**: TBD
+
+### Phase 102: Sector & Breadth Frontend
+**Goal**: Users can visually explore sector performance via heatmap, compare sector rotation via radar chart, track market health via breadth charts, and drill into individual sectors
+**Depends on**: Phase 100, Phase 101
+**Requirements**: SHEAT-01, SHEAT-02, SHEAT-03, MBRD-04, SFLOW-02, SFLOW-03
+**Success Criteria** (what must be TRUE):
+  1. Sector heatmap page displays all HOSE sectors as colored blocks sized by market cap, with color intensity representing daily % change — clicking a sector shows its constituent tickers with % change, volume, and close price
+  2. Heatmap supports toggle between price change view and volume view (total daily volume per sector)
+  3. Market breadth page displays A/D line, % above MA50/MA200, and new highs vs lows as time-series charts (Recharts) with configurable date range
+  4. Radar chart compares 7D vs 30D performance across all sectors, visually highlighting sectors gaining or losing momentum
+  5. Sector ranking table shows sectors sorted by performance with volume change indicator (arrow up/down + % change vs previous period)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 103: AI Sector Intelligence
+**Goal**: Gemini AI analyzes sector strength, weakness, and rotation timing daily — giving users actionable sector-level insights beyond raw data
+**Depends on**: Phase 100 (breadth data), Phase 101 (flow data)
+**Requirements**: AISEC-01, AISEC-02, AISEC-03
+**Success Criteria** (what must be TRUE):
+  1. Gemini receives structured sector context (breadth metrics + sector flow data) and outputs structured analysis identifying which sectors are strong/weak with Vietnamese explanation
+  2. AI output includes rotation timing recommendation — which sectors are currently attracting money flow and which are losing, with suggested timing for sector rotation
+  3. Sector analysis runs automatically as a scheduled job chained after daily price crawl (APScheduler EVENT_JOB_EXECUTED pattern), producing fresh analysis each trading day
+  4. AI sector analysis is displayed on the sector page alongside the heatmap/charts, giving users AI interpretation of the raw data
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress — v23.0
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 100. Market Breadth Backend | 0/? | Not started | - |
+| 101. Sector Analysis Backend | 0/? | Not started | - |
+| 102. Sector & Breadth Frontend | 0/? | Not started | - |
+| 103. AI Sector Intelligence | 0/? | Not started | - |
