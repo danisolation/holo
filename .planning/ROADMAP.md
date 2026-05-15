@@ -31,6 +31,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v22.0 Platform Polish & AI Coverage** — Phases 96-99 (shipped 2026-05-14)
 - [x] **v23.0 Sector Rotation & Market Breadth** — Phases 100-103 (shipped 2026-05-15)
 - [x] **v24.0 Sector Screening & Comparison** — Phases 104-106 (shipped 2026-05-15)
+- [ ] **v25.0 AI Simulator Split** — Phases 107-109
 
 ## Phases
 
@@ -821,3 +822,57 @@ Plans:
 | 104. Screening & Comparison APIs | 1/1 | Complete   | 2026-05-15 |
 | 105. Sector Screener, Detail & Peer UI | 2/2 | Complete   | 2026-05-15 |
 | 106. AI Peer Analysis | 1/1 | Complete   | 2026-05-15 |
+
+---
+
+### v25.0: AI Simulator Split (Phases 107-109)
+
+- [ ] **Phase 107: Dual Portfolio Backend** — Split single simulator portfolio into 2 independent instances (AI auto-trade + User manual), route trades by source
+- [ ] **Phase 108: Dual Portfolio UI + AI Rationale** — Two-tab portfolio switcher, rationale text from Gemini displayed per signal and trade
+- [ ] **Phase 109: AI Review + Performance Comparison** — Gemini portfolio/trade review on demand, equity chart overlay AI vs User, metrics comparison table
+
+## Phase Details — v25.0
+
+### Phase 107: Dual Portfolio Backend
+**Goal**: Simulator operates two independent portfolios — AI portfolio receives auto-traded signals server-side, User portfolio receives manual trades — each with its own cash balance, positions, and trade history
+**Depends on**: Phase 106 (v24.0 complete)
+**Requirements**: DUAL-02, DUAL-03
+**Success Criteria** (what must be TRUE):
+  1. Two simulator portfolios exist in the database: one named "ai" (auto-trade) and one named "user" (manual) — each with independent starting capital and cash balance
+  2. Auto-trade service (DailyPick execution + AI sell signals) always targets the AI portfolio regardless of any frontend toggle state
+  3. Manual trade creation via POST /api/simulator/trades routes to the User portfolio by default, with portfolio_type parameter to explicitly select target
+  4. GET endpoints (portfolio, trades, stats, equity-history) accept a portfolio_type query param ("ai" or "user") and return data scoped to that portfolio only
+  5. Portfolio reset operates per-portfolio — user can reset AI or User portfolio independently without affecting the other
+**Plans**: TBD
+
+### Phase 108: Dual Portfolio UI + AI Rationale
+**Goal**: Users can switch between AI and User portfolio views via tabs, see each portfolio's positions and trades independently, and read Gemini's rationale for why each signal was recommended
+**Depends on**: Phase 107
+**Requirements**: DUAL-01, RAT-01, RAT-02
+**Success Criteria** (what must be TRUE):
+  1. Simulator page displays two top-level tabs — "AI Portfolio" and "User Portfolio" — each showing its own portfolio summary, positions table, and trade history
+  2. AI Portfolio tab shows pending signals with a rationale text field explaining why Gemini recommended each buy/sell signal
+  3. Trade history entries in both tabs display the rationale text (if present) alongside trade details like ticker, side, price, and P&L
+  4. User Portfolio tab includes the manual trade form; AI Portfolio tab does not show manual trade form (trades are auto-executed)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 109: AI Review + Performance Comparison
+**Goal**: Users can request Gemini to review their portfolio or individual trades for improvement insights, and visually compare AI portfolio performance against User portfolio with overlay charts and metrics tables
+**Depends on**: Phase 107 (dual portfolio data), Phase 108 (UI shell for display)
+**Requirements**: REVIEW-01, REVIEW-02, COMP-01, COMP-02
+**Success Criteria** (what must be TRUE):
+  1. User can click "AI Review" button on a portfolio view and receive a Gemini-generated Vietnamese analysis covering portfolio strengths, weaknesses, and actionable improvement suggestions
+  2. User can click "AI Review" on a specific closed trade and receive Gemini analysis of whether the entry/exit was optimal, what could be improved, and pattern identification
+  3. Performance comparison page shows an equity curve chart with both AI and User portfolio equity lines overlaid on the same time axis, clearly labeled and color-coded
+  4. Metrics comparison table displays side-by-side: win rate, average P&L per trade, total realized P&L, max drawdown, and number of trades — for AI vs User portfolios
+**Plans**: TBD
+**UI hint**: yes
+
+## Progress — v25.0
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 107. Dual Portfolio Backend | 0/? | Not started | - |
+| 108. Dual Portfolio UI + AI Rationale | 0/? | Not started | - |
+| 109. AI Review + Performance Comparison | 0/? | Not started | - |

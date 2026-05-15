@@ -30,15 +30,15 @@
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| DUAL-01 | TBD | - | Pending |
-| DUAL-02 | TBD | - | Pending |
-| DUAL-03 | TBD | - | Pending |
-| RAT-01 | TBD | - | Pending |
-| RAT-02 | TBD | - | Pending |
-| REVIEW-01 | TBD | - | Pending |
-| REVIEW-02 | TBD | - | Pending |
-| COMP-01 | TBD | - | Pending |
-| COMP-02 | TBD | - | Pending |
+| DUAL-01 | Phase 108 | - | Pending |
+| DUAL-02 | Phase 107 | - | Pending |
+| DUAL-03 | Phase 107 | - | Pending |
+| RAT-01 | Phase 108 | - | Pending |
+| RAT-02 | Phase 108 | - | Pending |
+| REVIEW-01 | Phase 109 | - | Pending |
+| REVIEW-02 | Phase 109 | - | Pending |
+| COMP-01 | Phase 109 | - | Pending |
+| COMP-02 | Phase 109 | - | Pending |
 
 ## Future Requirements
 

@@ -7,7 +7,7 @@ stopped_at: Defining requirements
 last_updated: "2026-05-15"
 last_activity: 2026-05-15 — v25.0 milestone started
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-05-15)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 107 — Dual Portfolio Backend
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-15 — Milestone v25.0 started
+Status: Not started (roadmap created)
+Last activity: 2026-05-15 — v25.0 roadmap created (3 phases, 9 requirements)
 
 ```
-v25.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/0 phases (0%)
+v25.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/3 phases (0%)
 ```
 
 ```
@@ -64,6 +64,7 @@ v24.0 Progress: [████████████████████] 3
 | v20.0 | Enhanced Price Pipeline | 3 | 0 | 2026-05-11 |
 | v21.0 | Stock Trading Simulator | 1 | 4 | 2026-05-13 |
 | v22.0 | Platform Polish & AI Coverage | 4 | 9 | 2026-05-14 |
+| v24.0 | Sector Screening & Comparison | 3 | 4 | 2026-05-15 |
 | v23.0 | Sector Rotation & Market Breadth | 4 | 5 | 2026-05-15 |
 
 ## Accumulated Context
