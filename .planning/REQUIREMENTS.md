@@ -36,14 +36,14 @@
 
 | REQ | Phase | Status |
 |-----|-------|--------|
-| UX-01 | — | Pending |
-| UX-02 | — | Pending |
-| UX-03 | — | Pending |
-| UX-04 | — | Pending |
-| DEVOPS-01 | — | Pending |
-| DEVOPS-02 | — | Pending |
-| DEVOPS-03 | — | Pending |
-| DEVOPS-04 | — | Pending |
+| UX-01 | Phase 110 | Pending |
+| UX-02 | Phase 111 | Pending |
+| UX-03 | Phase 112 | Pending |
+| UX-04 | Phase 111 | Pending |
+| DEVOPS-01 | Phase 113 | Pending |
+| DEVOPS-02 | Phase 114 | Pending |
+| DEVOPS-03 | Phase 114 | Pending |
+| DEVOPS-04 | Phase 114 | Pending |
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|

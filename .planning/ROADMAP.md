@@ -32,6 +32,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - [x] **v23.0 Sector Rotation & Market Breadth** — Phases 100-103 (shipped 2026-05-15)
 - [x] **v24.0 Sector Screening & Comparison** — Phases 104-106 (shipped 2026-05-15)
 - [x] **v25.0 AI Simulator Split** — Phases 107-109 (shipped 2026-05-15)
+- [ ] **v26.0 Dashboard UX & DevOps** — Phases 110-114
 
 ## Phases
 
@@ -883,3 +884,85 @@ Plans:
 | 107. Dual Portfolio Backend | 1/1 | Complete   | 2026-05-15 |
 | 108. Dual Portfolio UI + AI Rationale | 1/1 | Complete   | 2026-05-15 |
 | 109. AI Review + Performance Comparison | 2/2 | Complete   | 2026-05-15 |
+
+---
+
+### v26.0: Dashboard UX & DevOps (Phases 110-114)
+
+- [ ] **Phase 110: Dark Mode & Theme System** — Theme toggle with persistent preference, full component theming (UX-01)
+- [ ] **Phase 111: Mobile Responsive & Loading States** — Mobile layout optimization, skeleton loading, smooth route transitions (UX-02, UX-04)
+- [ ] **Phase 112: Chart Annotations** — Entry/SL/TP price lines drawn directly on candlestick chart from trading plan data (UX-03)
+- [ ] **Phase 113: CI/CD Pipeline** — GitHub Actions workflow: test → build → deploy on push (DEVOPS-01)
+- [ ] **Phase 114: Health Monitoring & Alerts** — Uptime ping, response time tracking, Telegram down alerts, structured error logging (DEVOPS-02, DEVOPS-03, DEVOPS-04)
+
+## Phase Details — v26.0
+
+### Phase 110: Dark Mode & Theme System
+**Goal**: Users can switch between dark and light mode with the system remembering their preference across sessions
+**Depends on**: Phase 109 (v25.0 complete)
+**Requirements**: UX-01
+**Success Criteria** (what must be TRUE):
+  1. User can click a theme toggle button (visible on all pages) to switch between dark and light mode instantly without page reload
+  2. Selected theme persists across browser sessions — reopening the app days later still shows the last chosen theme
+  3. All dashboard pages (watchlist, ticker detail, discovery, simulator, sector, market breadth) render correctly in both themes with readable contrast and no broken colors
+  4. Default theme respects system preference (prefers-color-scheme) on first visit before user makes explicit choice
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 111: Mobile Responsive & Loading States
+**Goal**: Dashboard works well on mobile devices with touch-friendly navigation and provides visual feedback during data loading and route changes
+**Depends on**: Phase 110 (theme system applied — loading skeletons must respect current theme)
+**Requirements**: UX-02, UX-04
+**Success Criteria** (what must be TRUE):
+  1. All primary pages (watchlist, ticker detail, discovery, simulator, sectors) render without horizontal overflow on mobile viewport (≤768px) with touch-friendly tap targets (≥44px)
+  2. Navigation is accessible on mobile — hamburger menu or bottom nav that doesn't obscure content
+  3. Data-fetching pages show skeleton placeholders (matching current theme) instead of blank/spinner while loading
+  4. Route transitions have smooth fade animation (no flash of blank content between pages)
+  5. Charts and tables on mobile use appropriate mobile layouts (horizontal scroll for wide tables, full-width charts)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 112: Chart Annotations
+**Goal**: Users can see their trading plan's entry, stop loss, and take profit levels drawn directly on the candlestick chart as visual price lines
+**Depends on**: Phase 110 (annotations must render in correct theme colors)
+**Requirements**: UX-03
+**Success Criteria** (what must be TRUE):
+  1. When a ticker has an active trading plan, entry/SL/TP price levels appear as horizontal price lines on the candlestick chart with distinct colors (e.g., blue entry, red SL, green TP)
+  2. Price lines include labels showing the level name and price value, readable without hovering
+  3. Annotations update automatically when a new trading plan is generated (no manual refresh needed)
+  4. When no trading plan exists for a ticker, the chart renders cleanly without any orphaned annotation artifacts
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 113: CI/CD Pipeline
+**Goal**: Code pushed to the repository automatically runs tests, builds, and deploys to production without manual intervention
+**Depends on**: Phase 109 (v25.0 complete — no dependency on UX phases)
+**Requirements**: DEVOPS-01
+**Success Criteria** (what must be TRUE):
+  1. Pushing to main branch triggers a GitHub Actions workflow that runs the full backend test suite (530+ tests)
+  2. If tests pass, workflow builds backend and frontend artifacts and deploys to Render/Vercel automatically
+  3. If tests fail, deployment is blocked and the push author sees a clear failure notification with test output
+  4. Workflow completes (test + build + deploy) within 10 minutes for a typical push
+**Plans**: TBD
+
+### Phase 114: Health Monitoring & Alerts
+**Goal**: System continuously monitors its own health, tracks uptime/response times, alerts via Telegram when services are down, and logs errors in a structured queryable format
+**Depends on**: Phase 113 (CI/CD deployed — monitoring validates deployment health)
+**Requirements**: DEVOPS-02, DEVOPS-03, DEVOPS-04
+**Success Criteria** (what must be TRUE):
+  1. System pings its own health endpoint at regular intervals (≤5 min) and records response time + up/down status with historical data accessible via API
+  2. When health check fails consecutively (≥2 failures), user receives a Telegram alert with service name, failure reason, and timestamp
+  3. When service recovers after downtime, user receives a recovery Telegram notification with total downtime duration
+  4. Application errors are logged in structured JSON format (timestamp, level, service, error type, stack trace) queryable by time range and severity
+  5. Uptime percentage and average response time are viewable on the existing health dashboard page
+**Plans**: TBD
+
+## Progress — v26.0
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 110. Dark Mode & Theme System | 0/0 | Not started | - |
+| 111. Mobile Responsive & Loading States | 0/0 | Not started | - |
+| 112. Chart Annotations | 0/0 | Not started | - |
+| 113. CI/CD Pipeline | 0/0 | Not started | - |
+| 114. Health Monitoring & Alerts | 0/0 | Not started | - |
