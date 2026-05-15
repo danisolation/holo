@@ -13,15 +13,15 @@
 
 ### Peer Comparison
 
-- [ ] **PEER-01**: User can view a peer comparison table for tickers in the same sector
-- [ ] **PEER-02**: User can see a radar chart comparing a ticker against sector peers on key metrics
+- [x] **PEER-01**: User can view a peer comparison table for tickers in the same sector
+- [x] **PEER-02**: User can see a radar chart comparing a ticker against sector peers on key metrics
 - [x] **PEER-03**: Backend provides peer comparison data endpoint with ranked metrics
 
 ### Sector Detail
 
-- [ ] **SDET-01**: User can navigate to a sector detail page showing all tickers in that sector
-- [ ] **SDET-02**: User can see sector performance chart (7D/30D trend) on the detail page
-- [ ] **SDET-03**: Sector detail page links to individual ticker pages
+- [x] **SDET-01**: User can navigate to a sector detail page showing all tickers in that sector
+- [x] **SDET-02**: User can see sector performance chart (7D/30D trend) on the detail page
+- [x] **SDET-03**: Sector detail page links to individual ticker pages
 
 ### AI Peer Analysis
 

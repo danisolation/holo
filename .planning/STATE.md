@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Performance Optimization
 status: planning
-stopped_at: Completed 104-01-PLAN.md
-last_updated: "2026-05-15T03:57:10.128Z"
+stopped_at: Completed 105-02-PLAN.md
+last_updated: "2026-05-15T04:11:25.668Z"
 last_activity: 2026-05-15 — v24.0 roadmap created (3 phases)
 progress:
   total_phases: 5
@@ -107,6 +107,7 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 102]: Breadth tab uses BarChart for highs/lows, div-based bars for flow summary
 - [Phase 104]: Python-side % change computation instead of heavy LAG CTEs for screener
 - [Phase 104]: Selective TTLCache: screener NOT cached, sector-detail and peers cached at 300s
+- [Phase 105]: Replaced SectorDrilldown with Link navigation to full sector detail page
 
 ### Research Context (v10.0)
 
@@ -167,7 +168,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T03:57:10.120Z
-Stopped at: Completed 104-01-PLAN.md
+Last session: 2026-05-15T04:11:25.661Z
+Stopped at: Completed 105-02-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 100`
