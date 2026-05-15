@@ -285,7 +285,8 @@ class PickService:
     def __init__(self, session: AsyncSession, api_key: str | None = None):
         self.session = session
         key = api_key or settings.gemini_api_key
-        self.client = genai.Client(api_key=key) if key else None
+        from app.services.gemini_factory import create_gemini_client
+        self.client = create_gemini_client(api_key=key) if key else None
         self.model = settings.gemini_model
 
     async def get_or_create_profile(self) -> UserRiskProfile:

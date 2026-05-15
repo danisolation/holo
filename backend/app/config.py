@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     # Gemini AI (Phase 2)
     gemini_api_key: str = ""  # Required — get from https://aistudio.google.com/apikey
     gemini_model: str = "gemini-3-flash-preview"
+    gemini_proxy_url: str = ""  # Optional — CF Worker proxy URL for geo-restricted regions
     # Fallback models when primary hits daily quota (each model has separate quota)
     gemini_fallback_models: list[str] = [
         "gemini-2.5-flash",   # 1,500 RPD free tier

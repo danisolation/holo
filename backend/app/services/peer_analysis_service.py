@@ -120,7 +120,8 @@ class PeerAnalysisService:
         prompt = self._build_prompt(symbol, sector, target, peers_list)
 
         async with _gemini_lock:
-            client = genai.Client(api_key=settings.gemini_api_key)
+            from app.services.gemini_factory import create_gemini_client
+            client = create_gemini_client()
             model = settings.gemini_model
             gemini = GeminiClient(self.session, client, model)
 

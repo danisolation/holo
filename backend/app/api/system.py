@@ -97,10 +97,10 @@ async def health_config():
 @router.get("/health/test-gemini")
 async def test_gemini():
     """Debug: test a single Gemini call to verify API works."""
-    from google import genai
     from google.genai import types
+    from app.services.gemini_factory import create_gemini_client
     try:
-        client = genai.Client(api_key=settings.gemini_api_key)
+        client = create_gemini_client()
         response = await client.aio.models.generate_content(
             model=settings.gemini_model,
             contents='Return JSON: {"status": "ok", "model": "working"}',

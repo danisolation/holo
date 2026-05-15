@@ -1,0 +1,6 @@
+name = "gemini-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Worker auto-deploys to all CF edge locations (US, EU, Asia)
+# Gemini API calls route through nearest non-restricted edge

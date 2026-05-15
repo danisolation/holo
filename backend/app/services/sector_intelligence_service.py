@@ -94,14 +94,14 @@ class SectorIntelligenceService:
         Returns the parsed SectorIntelligenceResponse as dict, or raises on failure.
         """
         import json as json_module
-        from google import genai
+        from app.services.gemini_factory import create_gemini_client
         from app.services.analysis.gemini_client import GeminiClient
         from app.services.analysis.prompts import SECTOR_INTELLIGENCE_SYSTEM_INSTRUCTION
 
         context_data = await self._gather_context()
         prompt = self._build_prompt(context_data)
 
-        client = genai.Client(api_key=settings.gemini_api_key)
+        client = create_gemini_client()
         model = settings.gemini_model
         gemini = GeminiClient(self.session, client, model)
 

@@ -55,7 +55,8 @@ class SimulatorReviewService:
         prompt = self._build_portfolio_prompt(portfolio, stats, recent_trades)
 
         async with _gemini_lock:
-            client = genai.Client(api_key=settings.gemini_api_key)
+            from app.services.gemini_factory import create_gemini_client
+            client = create_gemini_client()
             model = settings.gemini_model
             gemini = GeminiClient(self.session, client, model)
 
@@ -132,7 +133,8 @@ class SimulatorReviewService:
         prompt = self._build_trade_prompt(trade_data)
 
         async with _gemini_lock:
-            client = genai.Client(api_key=settings.gemini_api_key)
+            from app.services.gemini_factory import create_gemini_client
+            client = create_gemini_client()
             model = settings.gemini_model
             gemini = GeminiClient(self.session, client, model)
 

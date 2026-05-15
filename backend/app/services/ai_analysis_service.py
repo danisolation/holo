@@ -73,7 +73,8 @@ class AIAnalysisService:
             raise ValueError(
                 "GEMINI_API_KEY is required. Set in .env or pass api_key parameter."
             )
-        self.client = genai.Client(api_key=key)
+        from app.services.gemini_factory import create_gemini_client
+        self.client = create_gemini_client(api_key=key)
         self.model = settings.gemini_model
         self.batch_size = settings.gemini_batch_size
         self.delay = settings.gemini_delay_seconds

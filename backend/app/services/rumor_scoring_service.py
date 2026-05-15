@@ -35,7 +35,8 @@ class RumorScoringService:
         key = api_key or settings.gemini_api_key
         if not key:
             raise ValueError("GEMINI_API_KEY is required")
-        self.client = genai.Client(api_key=key)
+        from app.services.gemini_factory import create_gemini_client
+        self.client = create_gemini_client(api_key=key)
         self.model = settings.gemini_model
         self.gemini_client = GeminiClient(session, self.client, self.model)
 
