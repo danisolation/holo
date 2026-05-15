@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from app.database import async_session
 from app.services.simulator_service import SimulatorService
 from app.services.auto_trade_service import AutoTradeService
+from app.services.simulator_review_service import SimulatorReviewService
 from app.schemas.simulator import (
     SimulatorTradeCreate,
     SimulatorTradeResponse,
@@ -16,7 +17,9 @@ from app.schemas.simulator import (
     EquityHistoryResponse,
     PnlTimelineResponse,
     PortfolioListResponse,
+    ComparisonResponse,
 )
+from app.schemas.simulator_review import PortfolioReviewResponse, TradeReviewResponse
 
 router = APIRouter(tags=["simulator"])
 
@@ -145,4 +148,53 @@ async def trigger_auto_sell_check():
             "sl_tp_sells": len(sl_tp),
             "signal_sells": len(signals),
             "results": sl_tp + signals,
+        }
+
+
+# ── Phase 109: AI Review + Performance Comparison ───────────────────────────
+
+
+@router.post("/simulator/review/portfolio", response_model=PortfolioReviewResponse)
+async def review_portfolio(portfolio_type: str = "user"):
+    """Request AI review of entire portfolio."""
+    _validate_portfolio_type(portfolio_type)
+    async with async_session() as session:
+        service = SimulatorReviewService(session)
+        try:
+            return await service.review_portfolio(portfolio_name=portfolio_type)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/simulator/review/trade/{trade_id}", response_model=TradeReviewResponse)
+async def review_trade(trade_id: int, portfolio_type: str = "user"):
+    """Request AI review of a specific closed trade."""
+    _validate_portfolio_type(portfolio_type)
+    async with async_session() as session:
+        service = SimulatorReviewService(session)
+        try:
+            return await service.review_trade(trade_id, portfolio_name=portfolio_type)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/simulator/comparison", response_model=ComparisonResponse)
+async def get_comparison():
+    """Get side-by-side AI vs User portfolio comparison."""
+    async with async_session() as session:
+        service = SimulatorService(session)
+        ai_equity = await service.get_equity_history(portfolio_name="ai")
+        user_equity = await service.get_equity_history(portfolio_name="user")
+        ai_stats = await service.get_stats(portfolio_name="ai")
+        user_stats = await service.get_stats(portfolio_name="user")
+        summaries = await service.get_all_portfolios_summary()
+        ai_summary = next((p for p in summaries["portfolios"] if p["name"] == "ai"), None)
+        user_summary = next((p for p in summaries["portfolios"] if p["name"] == "user"), None)
+        return {
+            "ai_equity_history": ai_equity["history"],
+            "user_equity_history": user_equity["history"],
+            "ai_stats": ai_stats,
+            "user_stats": user_stats,
+            "ai_portfolio": ai_summary,
+            "user_portfolio": user_summary,
         }

@@ -162,3 +162,16 @@ class PortfolioSummaryItem(BaseModel):
 class PortfolioListResponse(BaseModel):
     """List of all portfolios."""
     portfolios: list[PortfolioSummaryItem]
+
+
+# ── Phase 109: Performance Comparison ────────────────────────────────────────
+
+
+class ComparisonResponse(BaseModel):
+    """Side-by-side AI vs User portfolio comparison."""
+    ai_equity_history: list[EquityHistoryPoint]
+    user_equity_history: list[EquityHistoryPoint]
+    ai_stats: SimulatorStatsResponse
+    user_stats: SimulatorStatsResponse
+    ai_portfolio: PortfolioSummaryItem
+    user_portfolio: PortfolioSummaryItem
