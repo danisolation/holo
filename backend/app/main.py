@@ -160,16 +160,22 @@ app.websocket("/ws/prices")(websocket_prices)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     """Catch unhandled exceptions so they return JSON (not plain text 500).
 
-    Logs full traceback for debugging. Without this, FastAPI/uvicorn returns
+    Logs structured error context for debugging. Without this, FastAPI/uvicorn returns
     bare 'Internal Server Error' text with no traceback in the response.
+    Phase 114 (DEVOPS-04): Enhanced structured error logging.
     """
     tb = traceback.format_exc()
-    logger.error(f"Unhandled exception on {request.method} {request.url}:\n{tb}")
+    logger.error(
+        f"Unhandled exception | method={request.method} path={request.url.path} "
+        f"client={request.client.host if request.client else 'unknown'} "
+        f"error={type(exc).__name__}: {str(exc)[:200]}\n{tb}"
+    )
     return JSONResponse(
         status_code=500,
         content={
             "detail": "Internal server error",
-            "error": str(exc),
+            "error": type(exc).__name__,
+            "message": str(exc)[:200],
             "path": str(request.url.path),
         },
     )

@@ -123,5 +123,11 @@ class Settings(BaseSettings):
     # CORS — additional allowed origins (comma-separated URLs)
     cors_origins: str = ""
 
+    # Health Monitoring & Telegram Alerts (Phase 114)
+    telegram_bot_token: str = ""
+    telegram_alert_chat_id: str = ""
+    health_ping_interval_minutes: int = 5
+    health_ping_enabled: bool = True
+
 
 settings = Settings()

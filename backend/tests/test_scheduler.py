@@ -44,7 +44,7 @@ class TestSchedulerManager:
         assert "realtime_heartbeat" in job_ids
         assert "daily_intraday_cleanup" in job_ids
         assert "daily_intraday_aggregate" in job_ids
-        assert "keep_alive_ping" in job_ids
+        assert "health_monitor_ping" in job_ids
         assert len(job_ids) == 9
 
         # Clean up

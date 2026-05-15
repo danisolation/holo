@@ -187,3 +187,14 @@ async def check_data_integrity():
     async with async_session() as session:
         svc = DataIntegrityService(session)
         return await svc.check_all()
+
+
+@router.get("/uptime")
+async def get_uptime_stats():
+    """Uptime statistics from health monitor self-ping history.
+
+    Returns uptime percentage, average response time, and recent ping results.
+    Phase 114: DEVOPS-03.
+    """
+    from app.services.health_monitor_service import get_uptime_stats as _get_stats
+    return _get_stats()

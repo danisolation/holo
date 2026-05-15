@@ -393,23 +393,15 @@ def configure_jobs():
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")
 
-    # ── Keep-alive self-ping (prevent Render free tier sleep) ──────────
-    async def _self_ping():
-        """Ping own health endpoint to prevent Render free tier from sleeping."""
-        import httpx
-        try:
-            async with httpx.AsyncClient(verify=False, timeout=10) as client:
-                resp = await client.get("https://holo-api-1wj4.onrender.com/api/health/summary")
-                logger.debug(f"Self-ping: {resp.status_code}")
-        except Exception as e:
-            logger.debug(f"Self-ping failed (non-fatal): {e}")
+    # ── Phase 114: Health monitoring with Telegram alerts ────────────────
+    from app.services.health_monitor_service import ping_health
 
     scheduler.add_job(
-        _self_ping,
-        trigger=IntervalTrigger(minutes=10),
-        id="keep_alive_ping",
-        name="Keep-Alive Self-Ping",
+        ping_health,
+        trigger=IntervalTrigger(minutes=settings.health_ping_interval_minutes),
+        id="health_monitor_ping",
+        name="Health Monitor Self-Ping",
         replace_existing=True,
         misfire_grace_time=120,
     )
-    logger.info("Keep-alive: self-ping every 10 minutes")
+    logger.info(f"Health monitor: self-ping every {settings.health_ping_interval_minutes} minutes with Telegram alerts")
