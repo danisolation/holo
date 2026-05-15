@@ -1,5 +1,6 @@
 """Simulator API endpoints."""
 from fastapi import APIRouter, HTTPException
+from loguru import logger
 
 from app.database import async_session
 from app.services.simulator_service import SimulatorService
@@ -164,6 +165,12 @@ async def review_portfolio(portfolio_type: str = "user"):
             return await service.review_portfolio(portfolio_name=portfolio_type)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Portfolio review failed: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="AI review không khả dụng từ server hiện tại (Gemini geo-restricted). Vui lòng thử lại từ local."
+            )
 
 
 @router.post("/simulator/review/trade/{trade_id}", response_model=TradeReviewResponse)
@@ -176,6 +183,12 @@ async def review_trade(trade_id: int, portfolio_type: str = "user"):
             return await service.review_trade(trade_id, portfolio_name=portfolio_type)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"Trade review failed: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="AI review không khả dụng từ server hiện tại (Gemini geo-restricted). Vui lòng thử lại từ local."
+            )
 
 
 @router.get("/simulator/comparison", response_model=ComparisonResponse)
