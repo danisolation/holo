@@ -50,6 +50,10 @@
   --color-event-stock-dividend: var(--event-stock-dividend);
   --color-event-bonus-shares: var(--event-bonus-shares);
   --color-event-rights-issue: var(--event-rights-issue);
+  --color-trading-bull: var(--trading-bull);
+  --color-trading-bear: var(--trading-bear);
+  --color-trading-bull-bg: var(--trading-bull-bg);
+  --color-trading-bear-bg: var(--trading-bear-bg);
 }
 
 :root {
@@ -95,6 +99,19 @@
   --event-stock-dividend: #2563eb;
   --event-bonus-shares: #9333ea;
   --event-rights-issue: #d97706;
+  --trading-bull: #26a69a;
+  --trading-bear: #ef5350;
+  --trading-bull-bg: rgba(38, 166, 154, 0.1);
+  --trading-bear-bg: rgba(239, 83, 80, 0.1);
+  --chart-bg: #ffffff;
+  --chart-text: #191919;
+  --chart-grid: #e2e8f0;
+  --chart-border: #cbd5e1;
+  --chart-sma20: #2196F3;
+  --chart-sma50: #FF9800;
+  --chart-sma200: #9C27B0;
+  --chart-volume-up: rgba(38, 166, 154, 0.5);
+  --chart-volume-down: rgba(239, 83, 80, 0.5);
 }
 
 .dark {
@@ -136,6 +153,19 @@
   --event-stock-dividend: #60a5fa;
   --event-bonus-shares: #c084fc;
   --event-rights-issue: #fbbf24;
+  --trading-bull: #26a69a;
+  --trading-bear: #ef5350;
+  --trading-bull-bg: rgba(38, 166, 154, 0.1);
+  --trading-bear-bg: rgba(239, 83, 80, 0.1);
+  --chart-bg: #0f172a;
+  --chart-text: #cbd5e1;
+  --chart-grid: #1e293b;
+  --chart-border: #334155;
+  --chart-sma20: #2196F3;
+  --chart-sma50: #FF9800;
+  --chart-sma200: #9C27B0;
+  --chart-volume-up: rgba(38, 166, 154, 0.5);
+  --chart-volume-down: rgba(239, 83, 80, 0.5);
 }
 
 @layer base {

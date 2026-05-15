@@ -9,6 +9,7 @@ import {
   LineStyle,
   type IChartApi,
 } from "lightweight-charts";
+import { useTheme } from "next-themes";
 import type { PriceData, IndicatorData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -45,6 +46,7 @@ export function CandlestickChart({
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ReturnType<typeof Object> | null>(null);
   const [selectedRange, setSelectedRange] = useState(365);
+  const { resolvedTheme } = useTheme();
 
   // Filter data by selected time range and ensure ascending sort by date
   const filteredPrices = useMemo(() => {
@@ -71,14 +73,22 @@ export function CandlestickChart({
     const container = containerRef.current;
     if (!container || filteredPrices.length === 0) return;
 
+    const isDark = resolvedTheme === "dark";
+    const chartColors = {
+      bg: isDark ? "#0f172a" : "#ffffff",
+      text: isDark ? "#cbd5e1" : "#191919",
+      grid: isDark ? "#1e293b" : "#e2e8f0",
+      border: isDark ? "#334155" : "#cbd5e1",
+    };
+
     const chart = createChart(container, {
       layout: {
-        background: { color: "#0f172a" },
-        textColor: "#cbd5e1",
+        background: { color: chartColors.bg },
+        textColor: chartColors.text,
       },
       grid: {
-        vertLines: { color: "#1e293b" },
-        horzLines: { color: "#1e293b" },
+        vertLines: { color: chartColors.grid },
+        horzLines: { color: chartColors.grid },
       },
       width: container.clientWidth,
       height: 420,
@@ -86,10 +96,10 @@ export function CandlestickChart({
         mode: 0, // Normal
       },
       rightPriceScale: {
-        borderColor: "#334155",
+        borderColor: chartColors.border,
       },
       timeScale: {
-        borderColor: "#334155",
+        borderColor: chartColors.border,
         timeVisible: false,
       },
     });
@@ -278,7 +288,7 @@ export function CandlestickChart({
       chartRef.current = null;
       candleSeriesRef.current = null;
     };
-  }, [filteredPrices, filteredIndicators, tradingPlan]);
+  }, [filteredPrices, filteredIndicators, tradingPlan, resolvedTheme]);
 
   // Real-time: update last candle bar when realtimePrice changes
   useEffect(() => {
@@ -316,7 +326,7 @@ export function CandlestickChart({
 
   if (priceData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[420px] bg-[#0f172a] rounded-xl text-muted-foreground">
+      <div className="flex items-center justify-center h-[420px] bg-card rounded-xl text-muted-foreground">
         Không có dữ liệu giá
       </div>
     );
