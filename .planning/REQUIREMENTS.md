@@ -25,9 +25,9 @@
 
 ### AI Peer Analysis
 
-- [ ] **AIPEER-01**: Gemini generates peer comparison analysis for a ticker vs its sector peers
-- [ ] **AIPEER-02**: AI peer analysis shows relative strengths/weaknesses vs sector average
-- [ ] **AIPEER-03**: AI peer analysis is accessible from the ticker detail page
+- [x] **AIPEER-01**: Gemini generates peer comparison analysis for a ticker vs its sector peers
+- [x] **AIPEER-02**: AI peer analysis shows relative strengths/weaknesses vs sector average
+- [x] **AIPEER-03**: AI peer analysis is accessible from the ticker detail page
 
 ## Traceability
 
