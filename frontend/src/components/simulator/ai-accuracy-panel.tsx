@@ -47,8 +47,8 @@ function StatCol({
   );
 }
 
-export function AiAccuracyPanel() {
-  const { data, isLoading } = useSimulatorStats();
+export function AiAccuracyPanel({ portfolioType = "user" }: { portfolioType?: string }) {
+  const { data, isLoading } = useSimulatorStats(portfolioType);
 
   if (isLoading) {
     return (

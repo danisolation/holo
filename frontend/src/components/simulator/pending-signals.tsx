@@ -1,13 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePendingSignals, useExecuteSignals, useSkipSignals } from "@/lib/hooks";
 import type { PendingSignalResponse } from "@/lib/api";
-
-const STORAGE_KEY = "simulator_auto_trade";
 
 function formatPrice(v: number | null): string {
   if (v == null) return "—";
@@ -18,12 +15,6 @@ export function PendingSignals() {
   const { data: signals, isLoading } = usePendingSignals();
   const executeMutation = useExecuteSignals();
   const skipMutation = useSkipSignals();
-  const [autoMode, setAutoMode] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") setAutoMode(true);
-  }, []);
 
   function handleExecute(pickId: number) {
     executeMutation.mutate([pickId]);
@@ -49,12 +40,6 @@ export function PendingSignals() {
 
   return (
     <div className="space-y-4">
-      {autoMode && (
-        <div className="rounded-md border border-[#26a69a]/30 bg-[#26a69a]/10 px-4 py-2 text-sm text-[#26a69a]">
-          Chế độ tự động đang bật — tín hiệu AI sẽ được thực hiện tự động
-        </div>
-      )}
-
       {!signals || signals.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
@@ -110,6 +95,11 @@ export function PendingSignals() {
                       <span>SL cổ: {signal.position_size_shares}</span>
                     )}
                   </div>
+                  {signal.explanation && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2 hover:line-clamp-none cursor-pointer transition-all">
+                      💡 {signal.explanation}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <Button

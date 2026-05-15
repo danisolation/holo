@@ -20,10 +20,10 @@ const SOURCE_FILTERS = [
   { label: "Thủ công", value: "manual" },
 ] as const;
 
-export function TradeHistory() {
+export function TradeHistory({ portfolioType = "user" }: { portfolioType?: string }) {
   const [page, setPage] = useState(1);
   const [source, setSource] = useState<string | undefined>(undefined);
-  const { data, isLoading } = useSimulatorTrades(page, source);
+  const { data, isLoading } = useSimulatorTrades(page, source, portfolioType);
 
   const totalPages = data ? Math.ceil(data.total / data.page_size) : 1;
 
@@ -68,6 +68,7 @@ export function TradeHistory() {
                 <TableHead className="text-right">Thuế</TableHead>
                 <TableHead className="text-right">Lãi/Lỗ</TableHead>
                 <TableHead>Nguồn</TableHead>
+                <TableHead>Lý do</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -120,6 +121,15 @@ export function TradeHistory() {
                       <Badge variant="outline" className="text-xs">
                         {t.source === "ai_auto" ? "AI" : "Thủ công"}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[200px]">
+                      {t.rationale ? (
+                        <span className="text-xs text-muted-foreground line-clamp-2" title={t.rationale}>
+                          {t.rationale}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

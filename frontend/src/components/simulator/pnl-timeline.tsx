@@ -59,8 +59,8 @@ function SideBadge({ side }: { side: string }) {
   );
 }
 
-export function PnlTimeline() {
-  const { data, isLoading } = usePnlTimeline();
+export function PnlTimeline({ portfolioType = "user" }: { portfolioType?: string }) {
+  const { data, isLoading } = usePnlTimeline(portfolioType);
 
   if (isLoading) {
     return (

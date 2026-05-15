@@ -53,8 +53,8 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   );
 }
 
-export function EquityChart() {
-  const { data, isLoading } = useEquityHistory();
+export function EquityChart({ portfolioType = "user" }: { portfolioType?: string }) {
+  const { data, isLoading } = useEquityHistory(portfolioType);
 
   const lineColor = useMemo(() => {
     if (!data?.history || data.history.length === 0) return "#26a69a";
