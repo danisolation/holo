@@ -7,7 +7,7 @@
 
 ### Sector Heatmap
 
-- [ ] **SHEAT-01**: Dashboard hiển thị heatmap theo sector với % thay đổi giá trung bình ngày (sử dụng Ticker.sector + DailyPrice)
+- [x] **SHEAT-01**: Dashboard hiển thị heatmap theo sector với % thay đổi giá trung bình ngày (sử dụng Ticker.sector + DailyPrice)
 - [ ] **SHEAT-02**: Heatmap hỗ trợ chuyển đổi view theo volume (tổng volume ngày theo sector)
 - [ ] **SHEAT-03**: Click vào sector hiển thị danh sách tickers thuộc sector đó với % change, volume, close price
 
@@ -20,7 +20,7 @@
 
 ### Sector Flow
 
-- [ ] **SFLOW-01**: Backend tính net buying/selling volume theo sector hàng ngày (volume × price change direction)
+- [x] **SFLOW-01**: Backend tính net buying/selling volume theo sector hàng ngày (volume × price change direction)
 - [ ] **SFLOW-02**: Dashboard hiển thị radar chart so sánh performance 7D vs 30D giữa các sectors
 - [ ] **SFLOW-03**: Sector ranking table sorted by performance với volume change indicator (tăng/giảm)
 
