@@ -1,52 +1,50 @@
-# Requirements: Holo v23.0 Sector Rotation & Market Breadth
+# Requirements: Holo v24.0 Sector Screening & Comparison
 
-**Defined:** 2026-05-14
-**Core Value:** Phân tích dòng tiền ngành và sức khỏe thị trường HOSE — sector heatmap, market breadth, rotation radar, AI sector analysis.
+**Defined:** 2026-05-15
+**Core Value:** Nâng cao tính năng sector — phân loại chi tiết, screener theo ngành, so sánh cổ phiếu cùng ngành, AI peer analysis.
 
 ## Milestone Requirements
 
-### Sector Heatmap
+### Sector Screening
 
-- [x] **SHEAT-01**: Dashboard hiển thị heatmap theo sector với % thay đổi giá trung bình ngày (sử dụng Ticker.sector + DailyPrice)
-- [x] **SHEAT-02**: Heatmap hỗ trợ chuyển đổi view theo volume (tổng volume ngày theo sector)
-- [x] **SHEAT-03**: Click vào sector hiển thị danh sách tickers thuộc sector đó với % change, volume, close price
+- [ ] **SCRN-01**: User can filter tickers by sector and industry on a dedicated screener page
+- [ ] **SCRN-02**: User can apply multi-criteria filters (volume, % change, P/E) within a sector
+- [ ] **SCRN-03**: User can sort screener results by any metric column
 
-### Market Breadth
+### Peer Comparison
 
-- [x] **MBRD-01**: Backend tính A/D line (Advance/Decline) hàng ngày cho toàn bộ HOSE tickers
-- [x] **MBRD-02**: Backend tính % stocks above MA50 và % stocks above MA200 hàng ngày
-- [x] **MBRD-03**: Backend tính new 52-week highs vs new 52-week lows hàng ngày
-- [x] **MBRD-04**: Dashboard page hiển thị market breadth charts (A/D line, MA breadth, highs/lows theo thời gian)
+- [ ] **PEER-01**: User can view a peer comparison table for tickers in the same sector
+- [ ] **PEER-02**: User can see a radar chart comparing a ticker against sector peers on key metrics
+- [ ] **PEER-03**: Backend provides peer comparison data endpoint with ranked metrics
 
-### Sector Flow
+### Sector Detail
 
-- [x] **SFLOW-01**: Backend tính net buying/selling volume theo sector hàng ngày (volume × price change direction)
-- [x] **SFLOW-02**: Dashboard hiển thị radar chart so sánh performance 7D vs 30D giữa các sectors
-- [x] **SFLOW-03**: Sector ranking table sorted by performance với volume change indicator (tăng/giảm)
+- [ ] **SDET-01**: User can navigate to a sector detail page showing all tickers in that sector
+- [ ] **SDET-02**: User can see sector performance chart (7D/30D trend) on the detail page
+- [ ] **SDET-03**: Sector detail page links to individual ticker pages
 
-### AI Sector Analysis
+### AI Peer Analysis
 
-- [ ] **AISEC-01**: Gemini phân tích sector strong/weak dựa trên breadth data + flow data (structured output)
-- [ ] **AISEC-02**: AI đề xuất sector rotation timing — sector nào đang attract/lose money flow
-- [ ] **AISEC-03**: Scheduled daily sector analysis chạy sau price crawl (chained trong scheduler)
+- [ ] **AIPEER-01**: Gemini generates peer comparison analysis for a ticker vs its sector peers
+- [ ] **AIPEER-02**: AI peer analysis shows relative strengths/weaknesses vs sector average
+- [ ] **AIPEER-03**: AI peer analysis is accessible from the ticker detail page
 
 ## Traceability
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| SHEAT-01 | Phase 101 (BE), Phase 102 (FE) | — | Pending |
-| SHEAT-02 | Phase 102 | — | Pending |
-| SHEAT-03 | Phase 102 | — | Pending |
-| MBRD-01 | Phase 100 | — | Pending |
-| MBRD-02 | Phase 100 | — | Pending |
-| MBRD-03 | Phase 100 | — | Pending |
-| MBRD-04 | Phase 102 | — | Pending |
-| SFLOW-01 | Phase 101 | — | Pending |
-| SFLOW-02 | Phase 102 | — | Pending |
-| SFLOW-03 | Phase 102 | — | Pending |
-| AISEC-01 | Phase 103 | — | Pending |
-| AISEC-02 | Phase 103 | — | Pending |
-| AISEC-03 | Phase 103 | — | Pending |
+| SCRN-01 | — | — | Pending |
+| SCRN-02 | — | — | Pending |
+| SCRN-03 | — | — | Pending |
+| PEER-01 | — | — | Pending |
+| PEER-02 | — | — | Pending |
+| PEER-03 | — | — | Pending |
+| SDET-01 | — | — | Pending |
+| SDET-02 | — | — | Pending |
+| SDET-03 | — | — | Pending |
+| AIPEER-01 | — | — | Pending |
+| AIPEER-02 | — | — | Pending |
+| AIPEER-03 | — | — | Pending |
 
 ## Future Requirements
 
