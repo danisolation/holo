@@ -829,7 +829,7 @@ Plans:
 
 - [x] **Phase 107: Dual Portfolio Backend** — Split single simulator portfolio into 2 independent instances (AI auto-trade + User manual), route trades by source (completed 2026-05-15)
 - [x] **Phase 108: Dual Portfolio UI + AI Rationale** — Two-tab portfolio switcher, rationale text from Gemini displayed per signal and trade (completed 2026-05-15)
-- [ ] **Phase 109: AI Review + Performance Comparison** — Gemini portfolio/trade review on demand, equity chart overlay AI vs User, metrics comparison table
+- [x] **Phase 109: AI Review + Performance Comparison** — Gemini portfolio/trade review on demand, equity chart overlay AI vs User, metrics comparison table (completed 2026-05-15)
 
 ## Phase Details — v25.0
 
@@ -870,10 +870,10 @@ Plans:
   2. User can click "AI Review" on a specific closed trade and receive Gemini analysis of whether the entry/exit was optimal, what could be improved, and pattern identification
   3. Performance comparison page shows an equity curve chart with both AI and User portfolio equity lines overlaid on the same time axis, clearly labeled and color-coded
   4. Metrics comparison table displays side-by-side: win rate, average P&L per trade, total realized P&L, max drawdown, and number of trades — for AI vs User portfolios
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 109-01-PLAN.md — Backend: SimulatorReviewService + comparison endpoint + tests
-- [ ] 109-02-PLAN.md — Frontend: AI review panels + comparison UI + 3rd tab
+- [x] 109-02-PLAN.md — Frontend: AI review panels + comparison UI + 3rd tab
 **UI hint**: yes
 
 ## Progress — v25.0
@@ -882,4 +882,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 107. Dual Portfolio Backend | 1/1 | Complete   | 2026-05-15 |
 | 108. Dual Portfolio UI + AI Rationale | 1/1 | Complete   | 2026-05-15 |
-| 109. AI Review + Performance Comparison | 1/2 | In Progress|  |
+| 109. AI Review + Performance Comparison | 2/2 | Complete   | 2026-05-15 |

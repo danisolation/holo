@@ -18,13 +18,13 @@
 
 ### AI Review
 
-- [ ] **REVIEW-01**: User co the yeu cau AI review toan bo portfolio (diem manh/yeu, goi y)
-- [ ] **REVIEW-02**: User co the yeu cau AI review mot lenh cu the (phan tich dung/sai)
+- [x] **REVIEW-01**: User co the yeu cau AI review toan bo portfolio (diem manh/yeu, goi y)
+- [x] **REVIEW-02**: User co the yeu cau AI review mot lenh cu the (phan tich dung/sai)
 
 ### Performance Comparison
 
-- [ ] **COMP-01**: User thay bieu do equity AI vs User chong len nhau
-- [ ] **COMP-02**: User thay bang so sanh metrics (win rate, avg P&L, max drawdown) giua AI va User
+- [x] **COMP-01**: User thay bieu do equity AI vs User chong len nhau
+- [x] **COMP-02**: User thay bang so sanh metrics (win rate, avg P&L, max drawdown) giua AI va User
 
 ## Traceability
 

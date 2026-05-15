@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Performance Optimization
 status: Not started (roadmap created)
-stopped_at: Completed 109-01-PLAN.md
-last_updated: "2026-05-15T05:25:17.226Z"
+stopped_at: Completed 109-02-PLAN.md
+last_updated: "2026-05-15T05:31:50.441Z"
 last_activity: 2026-05-15 — v25.0 roadmap created (3 phases, 9 requirements)
 progress:
   total_phases: 5
@@ -115,6 +115,8 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 108]: Removed AutoTradeToggle entirely, server-side auto-trade since Phase 107
 - [Phase 108]: Rationale displayed inline with line-clamp-2 hover expand pattern
 - [Phase 109]: Followed peer_analysis_service pattern for Gemini integration with TTLCache 300s
+- [Phase 109]: useMutation for review hooks (Gemini calls are expensive/on-demand)
+- [Phase 109]: Trade review only on SELL rows (BUY trades have no P&L data)
 
 ### Research Context (v10.0)
 
@@ -175,7 +177,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T05:25:17.219Z
-Stopped at: Completed 109-01-PLAN.md
+Last session: 2026-05-15T05:31:50.420Z
+Stopped at: Completed 109-02-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 100`
