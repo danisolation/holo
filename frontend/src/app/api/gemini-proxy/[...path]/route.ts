@@ -35,14 +35,21 @@ async function proxyToGemini(
   const url = new URL(request.url);
   const targetUrl = `${GEMINI_ORIGIN}/${targetPath}${url.search}`;
 
-  // Forward headers, skip host-specific ones
+  // Only forward essential headers — strip all proxy/location headers
+  // so Google sees Vercel's US IP, not the original caller's IP
   const headers = new Headers();
-  for (const [key, value] of request.headers.entries()) {
-    if (
-      !["host", "x-proxy-secret", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto"].includes(
-        key.toLowerCase()
-      )
-    ) {
+  const ALLOWED_HEADERS = [
+    "content-type",
+    "x-goog-api-key",
+    "x-goog-api-client",
+    "authorization",
+    "accept",
+    "accept-encoding",
+    "user-agent",
+  ];
+  for (const key of ALLOWED_HEADERS) {
+    const value = request.headers.get(key);
+    if (value) {
       headers.set(key, value);
     }
   }
