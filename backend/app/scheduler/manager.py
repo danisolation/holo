@@ -208,9 +208,19 @@ def _on_job_executed(event: events.JobExecutionEvent):
             misfire_grace_time=3600,
         )
     elif event.job_id in ("daily_accuracy_tracking_triggered", "daily_accuracy_tracking"):
-        # Phase 98: Chain to simulator auto-sell check after accuracy tracking
+        # Phase 107: Chain to simulator auto-buy after accuracy tracking
+        from app.scheduler.jobs import daily_simulator_auto_buy
+        logger.info("Chaining: daily_accuracy_tracking → daily_simulator_auto_buy")
+        scheduler.add_job(
+            daily_simulator_auto_buy,
+            id="daily_simulator_auto_buy_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_simulator_auto_buy_triggered", "daily_simulator_auto_buy"):
+        # Phase 98→107: Chain to simulator auto-sell check after auto-buy
         from app.scheduler.jobs import daily_simulator_sl_tp_check
-        logger.info("Chaining: daily_accuracy_tracking → daily_simulator_sl_tp_check")
+        logger.info("Chaining: daily_simulator_auto_buy → daily_simulator_sl_tp_check")
         scheduler.add_job(
             daily_simulator_sl_tp_check,
             id="daily_simulator_sl_tp_check_triggered",

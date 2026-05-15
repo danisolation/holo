@@ -1387,6 +1387,35 @@ async def daily_rumor_scoring():
             raise
 
 
+async def daily_simulator_auto_buy():
+    """Auto-execute pending DailyPick buy signals into AI portfolio.
+
+    Phase 107: DUAL-02 — AI portfolio auto-executes signals server-side.
+    Chains after daily_pick_outcome_check (picks must exist before auto-buying).
+    """
+    logger.info("=== DAILY SIMULATOR AUTO-BUY START ===")
+    try:
+        from app.services.auto_trade_service import AutoTradeService
+
+        async with async_session() as session:
+            auto_service = AutoTradeService(session)
+            pending = await auto_service.get_pending_signals()
+            if not pending:
+                logger.info("=== DAILY SIMULATOR AUTO-BUY: No pending signals ===")
+                return
+
+            pick_ids = [s["daily_pick_id"] for s in pending]
+            results = await auto_service.execute_ai_signals(pick_ids)
+            executed = len([r for r in results if "error" not in r])
+            logger.info(
+                f"=== DAILY SIMULATOR AUTO-BUY DONE: "
+                f"{executed}/{len(pick_ids)} signals executed ==="
+            )
+    except Exception as e:
+        logger.error(f"=== DAILY SIMULATOR AUTO-BUY FAILED: {e} ===")
+        raise
+
+
 async def daily_simulator_sl_tp_check():
     """Auto-sell positions hitting SL/TP targets + AI sell signals.
 
@@ -1400,7 +1429,7 @@ async def daily_simulator_sl_tp_check():
 
         async with async_session() as session:
             sim_service = SimulatorService(session)
-            sl_tp_results = await sim_service.check_sl_tp_hits()
+            sl_tp_results = await sim_service.check_sl_tp_hits(portfolio_name="ai")
 
             auto_service = AutoTradeService(session)
             signal_results = await auto_service.execute_sell_signals()

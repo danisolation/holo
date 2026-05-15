@@ -104,7 +104,7 @@ class AutoTradeService:
             )
 
             try:
-                trade_result = await service.create_trade(trade_data)
+                trade_result = await service.create_trade(trade_data, portfolio_name="ai")
                 results.append(trade_result)
                 logger.info(f"Auto-traded {ticker.symbol} from pick {pick_id}")
             except ValueError as e:
@@ -137,7 +137,7 @@ class AutoTradeService:
         from app.models.daily_price import DailyPrice
 
         service = SimulatorService(self.session)
-        portfolio = await service.get_or_create_portfolio()
+        portfolio = await service.get_or_create_portfolio("ai")
         results: list[dict] = []
 
         # Get all open lots grouped by ticker
@@ -204,7 +204,7 @@ class AutoTradeService:
             )
 
             try:
-                trade_result = await service.create_trade(trade_data)
+                trade_result = await service.create_trade(trade_data, portfolio_name="ai")
                 results.append(trade_result)
                 logger.info(f"AI signal auto-sell executed: {ticker.symbol} x{total_qty} @ {close_vnd}")
             except ValueError as e:
