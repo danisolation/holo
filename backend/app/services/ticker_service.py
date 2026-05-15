@@ -4,14 +4,17 @@ Decision: Per-exchange ticker limits — HOSE=400, HNX=200, UPCOM=200.
 Suspended/halted tickers excluded. List refreshed weekly.
 Deactivation is scoped per-exchange to prevent cross-exchange data corruption.
 """
+import asyncio
 from datetime import datetime, timezone
-from sqlalchemy import select, update
+from sqlalchemy import select, update, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
+import httpx
 
 from app.crawlers.vnstock_crawler import VnstockCrawler
 from app.models.ticker import Ticker
+from app.config import settings
 
 # Per-exchange maximum ticker limits
 EXCHANGE_MAX_TICKERS: dict[str, int] = {
@@ -19,6 +22,60 @@ EXCHANGE_MAX_TICKERS: dict[str, int] = {
     "HNX": 200,
     "UPCOM": 200,
 }
+
+# ICB classification mapping (Vietnam/HOSE numbering via Fireant)
+# First 2 digits → Sector (Level 1)
+ICB_SECTORS: dict[str, str] = {
+    "10": "Công nghệ",
+    "15": "Viễn thông",
+    "20": "Y tế",
+    "25": "Hàng & Dịch vụ CN",
+    "30": "Tài chính",
+    "35": "Bất động sản",
+    "40": "Hàng tiêu dùng",
+    "45": "Thực phẩm & Đồ uống",
+    "50": "Xây dựng & Vật liệu",
+    "55": "Nguyên vật liệu",
+    "60": "Dầu khí",
+    "65": "Tiện ích",
+}
+
+# First 4 digits → Industry (Level 2)
+ICB_INDUSTRIES: dict[str, str] = {
+    "1010": "Công nghệ thông tin",
+    "1510": "Viễn thông",
+    "2010": "Dược phẩm & Y tế",
+    "2510": "Hàng & Dịch vụ CN",
+    "3010": "Ngân hàng",
+    "3020": "Chứng khoán",
+    "3030": "Bảo hiểm",
+    "3510": "Bất động sản",
+    "4010": "Ô tô & Phụ tùng",
+    "4020": "Hàng cá nhân & Gia dụng",
+    "4030": "Truyền thông & Giải trí",
+    "4040": "Bán lẻ",
+    "4050": "Vận tải & Du lịch",
+    "4510": "Thực phẩm & Đồ uống",
+    "5010": "Xây dựng & Vật liệu",
+    "5510": "Thép & Kim loại",
+    "5520": "Hóa chất",
+    "6010": "Dầu khí",
+    "6510": "Điện, Nước & Khí đốt",
+}
+
+
+def icb_to_sector(icb_code: str) -> str:
+    """Map ICB code (first 2 digits) to Vietnamese sector name."""
+    if not icb_code or len(icb_code) < 2:
+        return "Khác"
+    return ICB_SECTORS.get(icb_code[:2], "Khác")
+
+
+def icb_to_industry(icb_code: str) -> str:
+    """Map ICB code (first 4 digits) to Vietnamese industry name."""
+    if not icb_code or len(icb_code) < 4:
+        return icb_to_sector(icb_code)
+    return ICB_INDUSTRIES.get(icb_code[:4], icb_to_sector(icb_code))
 
 
 class TickerService:
@@ -58,7 +115,7 @@ class TickerService:
         try:
             industry_df = await self.crawler.fetch_industry_classification()
         except Exception as e:
-            logger.warning(f"Failed to fetch industry data: {e}. Proceeding without sectors.")
+            logger.warning(f"Failed to fetch industry data from vnstock: {e}. Will try Fireant fallback.")
             industry_df = None
 
         # Select top N tickers for this exchange
@@ -119,6 +176,15 @@ class TickerService:
 
         await self.session.commit()
         logger.info(f"Ticker sync complete ({exchange}): {synced} synced, {deactivated} deactivated")
+
+        # If vnstock industry data was unavailable, enrich from Fireant
+        if industry_df is None or industry_df.empty:
+            try:
+                enrich_result = await self.enrich_sectors_from_fireant()
+                logger.info(f"Fireant sector fallback: {enrich_result['updated']} tickers enriched")
+            except Exception as e:
+                logger.warning(f"Fireant sector enrichment failed: {e}")
+
         return {"synced": synced, "deactivated": deactivated, "total": synced}
 
     async def get_active_symbols(self, exchange: str | None = None) -> list[str]:
@@ -136,3 +202,72 @@ class TickerService:
             stmt = stmt.where(Ticker.exchange == exchange)
         result = await self.session.execute(stmt)
         return {row[0]: row[1] for row in result.fetchall()}
+
+    async def enrich_sectors_from_fireant(self) -> dict:
+        """Fetch ICB sector/industry from Fireant API and update tickers.
+
+        Fireant provides icbCode (8-digit ICB) per symbol. We map first 2 digits
+        to sector and first 4 digits to industry using Vietnamese ICB naming.
+
+        Returns: {updated: int, failed: list[str], sectors: dict[str, int]}
+        """
+        token = settings.fireant_token
+        if not token:
+            logger.warning("Sector enrichment skipped: fireant_token not configured")
+            return {"updated": 0, "failed": [], "sectors": {}}
+
+        # Get all active tickers
+        result = await self.session.execute(
+            select(Ticker.id, Ticker.symbol).where(Ticker.is_active == True).order_by(Ticker.symbol)
+        )
+        tickers = [(row[0], row[1]) for row in result.fetchall()]
+        logger.info(f"Enriching sectors for {len(tickers)} tickers from Fireant...")
+
+        headers = {"Authorization": f"Bearer {token}", "User-Agent": "Mozilla/5.0"}
+        updates = {}
+        failed = []
+
+        async with httpx.AsyncClient(verify=False, timeout=15, headers=headers) as client:
+            for i, (tid, symbol) in enumerate(tickers):
+                try:
+                    r = await client.get(f"https://restv2.fireant.vn/symbols/{symbol}")
+                    if r.status_code == 200:
+                        data = r.json()
+                        icb = data.get("icbCode", "") or ""
+                        updates[symbol] = {
+                            "id": tid,
+                            "sector": icb_to_sector(icb),
+                            "industry": icb_to_industry(icb),
+                        }
+                    elif r.status_code == 401:
+                        logger.error("Fireant token expired during sector enrichment")
+                        break
+                    else:
+                        failed.append(symbol)
+                except Exception:
+                    failed.append(symbol)
+
+                if (i + 1) % 50 == 0:
+                    logger.info(f"  Sector enrichment: {i+1}/{len(tickers)}...")
+                await asyncio.sleep(0.2)
+
+        # Apply updates
+        for info in updates.values():
+            await self.session.execute(
+                update(Ticker)
+                .where(Ticker.id == info["id"])
+                .values(sector=info["sector"], industry=info["industry"])
+            )
+        await self.session.commit()
+
+        # Count by sector
+        sectors: dict[str, int] = {}
+        for info in updates.values():
+            s = info["sector"]
+            sectors[s] = sectors.get(s, 0) + 1
+
+        logger.info(
+            f"Sector enrichment complete: {len(updates)} updated, "
+            f"{len(failed)} failed, {len(sectors)} sectors"
+        )
+        return {"updated": len(updates), "failed": failed, "sectors": sectors}

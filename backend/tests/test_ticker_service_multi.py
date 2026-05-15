@@ -53,15 +53,20 @@ class TestDeactivationScoping:
 
         # Verify the deactivation SQL includes exchange filter
         calls = mock_db_session.execute.call_args_list
-        # The last execute call before commit is the deactivation statement
-        # We check that the compiled SQL contains 'exchange' in the WHERE clause
-        deactivate_call = calls[-1]
-        stmt = deactivate_call[0][0]
-        compiled = str(stmt.compile(compile_kwargs={"literal_binds": False}))
-        assert "exchange" in compiled.lower(), (
-            "Deactivation query MUST include exchange filter to prevent "
-            "cross-exchange deactivation"
-        )
+        # Find the UPDATE (deactivation) statement among all execute calls
+        # It's the one that compiles to an UPDATE with exchange in WHERE
+        found_deactivation = False
+        for call in calls:
+            stmt = call[0][0]
+            compiled = str(stmt.compile(compile_kwargs={"literal_binds": False}))
+            if "update" in compiled.lower() and "is_active" in compiled.lower():
+                assert "exchange" in compiled.lower(), (
+                    "Deactivation query MUST include exchange filter to prevent "
+                    "cross-exchange deactivation"
+                )
+                found_deactivation = True
+                break
+        assert found_deactivation, "Deactivation UPDATE statement not found in execute calls"
 
 
 class TestExchangeFilteredQueries:

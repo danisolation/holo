@@ -146,3 +146,19 @@ async def get_sector_analysis() -> SectorAnalysisAPIResponse:
     response = SectorAnalysisAPIResponse(**result)
     _sector_analysis_cache["latest"] = response
     return response
+
+
+# --- Sector Enrichment ---
+
+@router.post("/enrich-sectors")
+async def enrich_sectors():
+    """Manually trigger sector/industry enrichment from Fireant ICB data.
+
+    Fetches ICB codes for all active tickers and maps to Vietnamese
+    sector/industry names. Use when sector data is stale or missing.
+    """
+    async with async_session() as session:
+        from app.services.ticker_service import TickerService
+        service = TickerService(session)
+        result = await service.enrich_sectors_from_fireant()
+    return result
