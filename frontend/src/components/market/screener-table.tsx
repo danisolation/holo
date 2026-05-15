@@ -67,13 +67,16 @@ export function ScreenerTable({
   }
 
   return (
-    <Table>
+    <div className="overflow-x-auto">
+    <Table className="min-w-[700px]">
       <TableHeader>
         <TableRow>
           {COLUMNS.map((col) => (
             <TableHead
               key={col.key}
-              className="cursor-pointer select-none hover:text-primary"
+              className={`cursor-pointer select-none hover:text-primary${
+                ["sector", "change_7d", "change_30d", "pe"].includes(col.key) ? " hidden md:table-cell" : ""
+              }`}
               onClick={() => onSort(col.key)}
             >
               {col.label}
@@ -96,7 +99,7 @@ export function ScreenerTable({
             <TableCell className="max-w-[200px] truncate">
               {item.name}
             </TableCell>
-            <TableCell className="text-xs">{item.sector ?? "—"}</TableCell>
+            <TableCell className="text-xs hidden md:table-cell">{item.sector ?? "—"}</TableCell>
             <TableCell>
               {item.close != null ? item.close.toLocaleString() : "—"}
             </TableCell>
@@ -104,9 +107,9 @@ export function ScreenerTable({
               {item.volume != null ? item.volume.toLocaleString() : "—"}
             </TableCell>
             <TableCell>{formatChange(item.change_1d)}</TableCell>
-            <TableCell>{formatChange(item.change_7d)}</TableCell>
-            <TableCell>{formatChange(item.change_30d)}</TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">{formatChange(item.change_7d)}</TableCell>
+            <TableCell className="hidden md:table-cell">{formatChange(item.change_30d)}</TableCell>
+            <TableCell className="hidden md:table-cell">
               {item.pe != null ? item.pe.toFixed(1) : "—"}
             </TableCell>
             <TableCell>{formatMarketCap(item.market_cap)}</TableCell>
@@ -114,5 +117,6 @@ export function ScreenerTable({
         ))}
       </TableBody>
     </Table>
+    </div>
   );
 }

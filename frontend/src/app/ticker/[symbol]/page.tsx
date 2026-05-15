@@ -224,7 +224,7 @@ export default function TickerDetailPage({
   return (
     <div data-testid="ticker-page" className="space-y-6">
       {/* Ticker header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 md:gap-4">
         <Button
           variant="ghost"
           size="icon-sm"
@@ -232,13 +232,13 @@ export default function TickerDetailPage({
         >
           <ArrowLeft className="size-4" />
         </Button>
-        <div className="flex items-center gap-2">
-          <BarChart3 className="size-5 text-primary" />
+        <div className="flex items-center gap-2 min-w-0">
+          <BarChart3 className="size-5 text-primary shrink-0" />
           <h1 className="text-lg font-semibold tracking-tight font-mono">
             {upperSymbol}
           </h1>
           {ticker && (
-            <span className="text-sm text-muted-foreground hidden sm:inline">
+            <span className="text-sm text-muted-foreground hidden sm:inline truncate max-w-[200px]">
               {ticker.name}
             </span>
           )}
