@@ -40,6 +40,9 @@ import {
   fetchAnalysisCoverage,
   fetchEquityHistory,
   fetchPnlTimeline,
+  fetchMarketBreadth,
+  fetchSectorPerformance,
+  fetchSectorFlow,
 } from "@/lib/api";
 import type { SimulatorTradeCreate } from "@/lib/api";
 
@@ -449,6 +452,35 @@ export function usePnlTimeline() {
   return useQuery({
     queryKey: ["simulator", "pnl-timeline"],
     queryFn: fetchPnlTimeline,
+    staleTime: 60_000,
+  });
+}
+
+// --- Phase 102: Market Breadth & Sector Hooks ---
+
+/** Market breadth indicators (A/D, MA breadth, highs/lows). staleTime: 60s — intraday data. */
+export function useMarketBreadth(startDate?: string, endDate?: string) {
+  return useQuery({
+    queryKey: ["market-breadth", startDate ?? "default", endDate ?? "default"],
+    queryFn: () => fetchMarketBreadth(startDate, endDate),
+    staleTime: 60_000,
+  });
+}
+
+/** Sector performance (avg change today/7D/30D). staleTime: 60s. */
+export function useSectorPerformance(startDate?: string, endDate?: string) {
+  return useQuery({
+    queryKey: ["sector-performance", startDate ?? "default", endDate ?? "default"],
+    queryFn: () => fetchSectorPerformance(startDate, endDate),
+    staleTime: 60_000,
+  });
+}
+
+/** Sector flow (net volume per sector per day). staleTime: 60s. */
+export function useSectorFlow(startDate?: string, endDate?: string) {
+  return useQuery({
+    queryKey: ["sector-flow", startDate ?? "default", endDate ?? "default"],
+    queryFn: () => fetchSectorFlow(startDate, endDate),
     staleTime: 60_000,
   });
 }

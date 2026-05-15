@@ -24,6 +24,7 @@ const NAV_LINKS = [
   { href: "/discovery", label: "Khám phá", description: "Gợi ý cổ phiếu từ AI, cập nhật hàng ngày" },
   { href: "/watchlist", label: "Danh mục", description: "Danh mục theo dõi & phân tích AI" },
   { href: "/simulator", label: "Mô phỏng", description: "Mô phỏng giao dịch & kiểm chứng AI" },
+  { href: "/market", label: "Thị trường", description: "Phân tích ngành & sức khỏe thị trường" },
   { href: "/dashboard/health", label: "Hệ thống", description: "Trạng thái hệ thống & API" },
 ];
 

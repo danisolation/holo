@@ -847,3 +847,78 @@ export async function fetchEquityHistory(): Promise<EquityHistoryResponse> {
 export async function fetchPnlTimeline(): Promise<PnlTimelineResponse> {
   return apiFetch<PnlTimelineResponse>("/simulator/pnl-timeline");
 }
+
+// ── Phase 102: Market Breadth & Sector Types ────────────────────────────────
+
+export interface ADLineItem {
+  date: string;
+  advancing: number;
+  declining: number;
+  unchanged: number;
+  net: number;
+}
+
+export interface MABreadthItem {
+  date: string;
+  total_tickers: number;
+  above_ma50: number;
+  above_ma200: number;
+  pct_above_ma50: number;
+  pct_above_ma200: number;
+}
+
+export interface HighsLowsItem {
+  date: string;
+  new_highs: number;
+  new_lows: number;
+}
+
+export interface MarketBreadthResponse {
+  ad_line: ADLineItem[];
+  ma_breadth: MABreadthItem[];
+  highs_lows: HighsLowsItem[];
+  start_date: string;
+  end_date: string;
+}
+
+export interface SectorPerformanceItem {
+  sector: string;
+  ticker_count: number;
+  avg_change_today: number | null;
+  avg_change_7d: number | null;
+  avg_change_30d: number | null;
+}
+
+export interface SectorFlowItem {
+  sector: string;
+  date: string;
+  net_volume: number;
+  buy_volume: number;
+  sell_volume: number;
+}
+
+// ── Phase 102: Market Breadth & Sector Fetch Functions ──────────────────────
+
+export async function fetchMarketBreadth(startDate?: string, endDate?: string): Promise<MarketBreadthResponse> {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return apiFetch<MarketBreadthResponse>(`/market/breadth${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchSectorPerformance(startDate?: string, endDate?: string): Promise<SectorPerformanceItem[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return apiFetch<SectorPerformanceItem[]>(`/market/sectors${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchSectorFlow(startDate?: string, endDate?: string): Promise<SectorFlowItem[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  const qs = params.toString();
+  return apiFetch<SectorFlowItem[]>(`/market/sector-flow${qs ? `?${qs}` : ""}`);
+}
