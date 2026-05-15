@@ -922,3 +922,37 @@ export async function fetchSectorFlow(startDate?: string, endDate?: string): Pro
   const qs = params.toString();
   return apiFetch<SectorFlowItem[]>(`/market/sector-flow${qs ? `?${qs}` : ""}`);
 }
+
+// ── Phase 103: AI Sector Intelligence ───────────────────────────────────────
+
+export interface SectorStrengthItem {
+  sector: string;
+  strength: "strong" | "neutral" | "weak";
+  trend: "improving" | "stable" | "declining";
+  money_flow: "inflow" | "neutral" | "outflow";
+  reasoning: string;
+}
+
+export interface SectorRotationTiming {
+  attracting: string[];
+  losing: string[];
+  recommendation: string;
+}
+
+export interface SectorIntelligenceAnalysis {
+  market_sentiment: string;
+  sectors: SectorStrengthItem[];
+  rotation: SectorRotationTiming;
+  top_strong: string[];
+  top_weak: string[];
+}
+
+export interface SectorAnalysisResponse {
+  analysis_date: string;
+  model_version: string;
+  analysis: SectorIntelligenceAnalysis;
+}
+
+export async function fetchSectorAnalysis(): Promise<SectorAnalysisResponse> {
+  return apiFetch<SectorAnalysisResponse>("/market/sector-analysis");
+}

@@ -43,6 +43,7 @@ import {
   fetchMarketBreadth,
   fetchSectorPerformance,
   fetchSectorFlow,
+  fetchSectorAnalysis,
 } from "@/lib/api";
 import type { SimulatorTradeCreate } from "@/lib/api";
 
@@ -482,5 +483,17 @@ export function useSectorFlow(startDate?: string, endDate?: string) {
     queryKey: ["sector-flow", startDate ?? "default", endDate ?? "default"],
     queryFn: () => fetchSectorFlow(startDate, endDate),
     staleTime: 60_000,
+  });
+}
+
+// --- Phase 103: AI Sector Intelligence ---
+
+/** Fetch latest AI sector intelligence analysis. staleTime: 10 min. */
+export function useSectorAnalysis() {
+  return useQuery({
+    queryKey: ["sector-analysis"],
+    queryFn: fetchSectorAnalysis,
+    staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 }

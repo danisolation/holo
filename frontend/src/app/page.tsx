@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heatmap } from "@/components/heatmap";
+import { SectorAIPanel } from "@/components/sector-ai-panel";
 import {
   useMarketOverview,
   useWatchlist,
@@ -379,6 +380,9 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* AI Sector Intelligence */}
+      <SectorAIPanel />
     </>
   );
 }
