@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SectorDrilldown } from "./sector-drilldown";
 import type { SectorPerformanceItem } from "@/lib/api";
 
 /**
@@ -55,7 +55,6 @@ interface SectorHeatmapProps {
 
 export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
   const [viewMode, setViewMode] = useState<"price" | "volume">("price");
-  const [selectedSector, setSelectedSector] = useState<string | null>(null);
 
   const maxTickerCount = Math.max(...sectors.map((s) => s.ticker_count), 1);
 
@@ -101,13 +100,9 @@ export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
               : `${sector.ticker_count} mã`;
 
           return (
-            <button
+            <Link
               key={sector.sector}
-              onClick={() =>
-                setSelectedSector(
-                  selectedSector === sector.sector ? null : sector.sector
-                )
-              }
+              href={`/market/sector/${encodeURIComponent(sector.sector)}`}
               className="relative flex flex-col items-center justify-center rounded-md px-2 py-3 text-white transition-transform hover:scale-[1.03] hover:z-10 hover:ring-1 hover:ring-white/30 cursor-pointer min-h-[72px]"
               style={{
                 backgroundColor: bgColor,
@@ -124,18 +119,10 @@ export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
               <span className="text-[10px] leading-tight opacity-60 mt-0.5">
                 {sector.ticker_count} mã
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>
-
-      {/* Drilldown panel */}
-      {selectedSector && (
-        <SectorDrilldown
-          sectorName={selectedSector}
-          onClose={() => setSelectedSector(null)}
-        />
-      )}
     </div>
   );
 }
