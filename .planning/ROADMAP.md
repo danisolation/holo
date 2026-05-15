@@ -766,7 +766,7 @@ Plans:
 
 ### v24.0: Sector Screening & Comparison (Phases 104-106)
 
-- [ ] **Phase 104: Screening & Comparison APIs** — Sector screener endpoint with multi-criteria filtering/sorting, peer comparison ranked metrics endpoint, sector detail data endpoint
+- [x] **Phase 104: Screening & Comparison APIs** — Sector screener endpoint with multi-criteria filtering/sorting, peer comparison ranked metrics endpoint, sector detail data endpoint (completed 2026-05-15)
 - [ ] **Phase 105: Sector Screener, Detail & Peer UI** — Dedicated screener page with sector/industry filters, sector detail page with ticker list and performance chart, peer comparison table and radar chart
 - [ ] **Phase 106: AI Peer Analysis** — Gemini peer comparison analysis showing relative strengths/weaknesses vs sector average, integrated into ticker detail page
 
@@ -783,7 +783,7 @@ Plans:
   4. Sector detail API endpoint returns all tickers belonging to a sector with their latest price data and 7D/30D performance values
 **Plans**: 1 plan
 Plans:
-- [ ] 104-01-PLAN.md — ScreenerService + 3 API endpoints (screener, sector-detail, peers) + schemas + tests
+- [x] 104-01-PLAN.md — ScreenerService + 3 API endpoints (screener, sector-detail, peers) + schemas + tests
 
 ### Phase 105: Sector Screener, Detail & Peer UI
 **Goal**: Users can explore sectors through a dedicated screener page with filters, drill into sector detail pages with performance charts, and compare peer tickers side-by-side with radar visualization
@@ -812,6 +812,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 104. Screening & Comparison APIs | 0/1 | In progress | - |
+| 104. Screening & Comparison APIs | 1/1 | Complete   | 2026-05-15 |
 | 105. Sector Screener, Detail & Peer UI | 0/0 | Not started | - |
 | 106. AI Peer Analysis | 0/0 | Not started | - |

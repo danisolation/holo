@@ -8,14 +8,14 @@
 ### Sector Screening
 
 - [ ] **SCRN-01**: User can filter tickers by sector and industry on a dedicated screener page
-- [ ] **SCRN-02**: User can apply multi-criteria filters (volume, % change, P/E) within a sector
-- [ ] **SCRN-03**: User can sort screener results by any metric column
+- [x] **SCRN-02**: User can apply multi-criteria filters (volume, % change, P/E) within a sector
+- [x] **SCRN-03**: User can sort screener results by any metric column
 
 ### Peer Comparison
 
 - [ ] **PEER-01**: User can view a peer comparison table for tickers in the same sector
 - [ ] **PEER-02**: User can see a radar chart comparing a ticker against sector peers on key metrics
-- [ ] **PEER-03**: Backend provides peer comparison data endpoint with ranked metrics
+- [x] **PEER-03**: Backend provides peer comparison data endpoint with ranked metrics
 
 ### Sector Detail
 

@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v24.0
-milestone_name: Sector Screening & Comparison
-status: Roadmap created
-stopped_at: Roadmap complete, ready for Phase 104 planning
-last_updated: "2026-05-15T11:00:00.000Z"
+milestone: v15.0
+milestone_name: Performance Optimization
+status: planning
+stopped_at: Completed 104-01-PLAN.md
+last_updated: "2026-05-15T03:57:10.128Z"
 last_activity: 2026-05-15 — v24.0 roadmap created (3 phases)
 progress:
-  total_phases: 3
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -105,6 +105,8 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 102]: Used CSS grid heatmap instead of Recharts Treemap for lighter sector visualization
 - [Phase 103]: Sector intelligence stored as JSONB with upsert, 10-min API cache, chained after simulator
 - [Phase 102]: Breadth tab uses BarChart for highs/lows, div-based bars for flow summary
+- [Phase 104]: Python-side % change computation instead of heavy LAG CTEs for screener
+- [Phase 104]: Selective TTLCache: screener NOT cached, sector-detail and peers cached at 300s
 
 ### Research Context (v10.0)
 
@@ -165,7 +167,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T02:52:03.683Z
-Stopped at: Completed 102-02-PLAN.md
+Last session: 2026-05-15T03:57:10.120Z
+Stopped at: Completed 104-01-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 100`
