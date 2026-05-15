@@ -10,12 +10,14 @@ All endpoints use TTLCache (300s) to avoid repeated heavy computation.
 from datetime import date, timedelta
 
 from cachetools import TTLCache
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.database import async_session
 from app.schemas.market_breadth import MarketBreadthResponse
+from app.schemas.screener import ScreenerResponse, PeerComparisonResponse, SectorDetailResponse
 from app.schemas.sector import SectorPerformanceItem, SectorFlowItem, SectorAnalysisAPIResponse
 from app.services.market_breadth_service import MarketBreadthService
+from app.services.screener_service import ScreenerService
 from app.services.sector_analysis_service import SectorAnalysisService
 
 router = APIRouter(prefix="/market", tags=["market"])
@@ -24,6 +26,8 @@ router = APIRouter(prefix="/market", tags=["market"])
 _breadth_cache: TTLCache = TTLCache(maxsize=16, ttl=300)
 _sector_perf_cache: TTLCache = TTLCache(maxsize=8, ttl=300)
 _sector_flow_cache: TTLCache = TTLCache(maxsize=16, ttl=300)
+_sector_detail_cache: TTLCache = TTLCache(maxsize=16, ttl=300)
+_peers_cache: TTLCache = TTLCache(maxsize=32, ttl=300)
 
 
 @router.get("/breadth", response_model=MarketBreadthResponse)
@@ -162,3 +166,89 @@ async def enrich_sectors():
         service = TickerService(session)
         result = await service.enrich_sectors_from_fireant()
     return result
+
+
+# --- Phase 104: Screening & Comparison APIs ---
+
+
+@router.get("/screener", response_model=ScreenerResponse)
+async def screen_tickers(
+    sector: str | None = Query(None),
+    industry: str | None = Query(None),
+    min_volume: int | None = Query(None, ge=0),
+    max_volume: int | None = Query(None, ge=0),
+    min_change: float | None = Query(None, description="Min 1D % change"),
+    max_change: float | None = Query(None, description="Max 1D % change"),
+    min_pe: float | None = Query(None, ge=0),
+    max_pe: float | None = Query(None, ge=0),
+    sort_by: str = Query("volume", description="Sort column: volume, change_1d, change_7d, change_30d, pe, close, market_cap"),
+    sort_order: str = Query("desc", description="asc or desc"),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+) -> ScreenerResponse:
+    """Screen tickers by sector, industry, volume, % change, and P/E filters.
+
+    Returns paginated results sorted by the specified metric.
+    NOT cached — filter params vary too much.
+    """
+    async with async_session() as session:
+        service = ScreenerService(session)
+        result = await service.screen_tickers(
+            sector=sector,
+            industry=industry,
+            min_volume=min_volume,
+            max_volume=max_volume,
+            min_change=min_change,
+            max_change=max_change,
+            min_pe=min_pe,
+            max_pe=max_pe,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+        )
+    return ScreenerResponse(**result)
+
+
+@router.get("/sector/{sector_name}", response_model=SectorDetailResponse)
+async def get_sector_detail(sector_name: str) -> SectorDetailResponse:
+    """Get all tickers in a sector with latest price and 7D/30D performance.
+
+    Cached for 300 seconds per sector name.
+    """
+    cache_key = sector_name
+    cached = _sector_detail_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    async with async_session() as session:
+        service = ScreenerService(session)
+        result = await service.get_sector_detail(sector_name)
+
+    response = SectorDetailResponse(**result)
+    _sector_detail_cache[cache_key] = response
+    return response
+
+
+@router.get("/peers/{symbol}", response_model=PeerComparisonResponse)
+async def get_peer_comparison(symbol: str) -> PeerComparisonResponse:
+    """Get peer comparison for a ticker — ranked metrics among sector peers.
+
+    Cached for 300 seconds per symbol.
+    Returns 404 if ticker not found or has no sector.
+    """
+    cache_key = symbol.upper()
+    cached = _peers_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    async with async_session() as session:
+        service = ScreenerService(session)
+        try:
+            result = await service.get_peer_comparison(symbol)
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+
+    response = PeerComparisonResponse(**result)
+    _peers_cache[cache_key] = response
+    return response
