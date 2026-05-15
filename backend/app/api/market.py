@@ -4,6 +4,7 @@ Endpoints:
 - GET /breadth — A/D line, MA breadth, 52-week highs/lows (Phase 100)
 - GET /sectors — avg % price change per sector for today/7D/30D (Phase 101)
 - GET /sector-flow — net volume per sector per day (Phase 101)
+- GET /peer-analysis/{symbol} — AI peer analysis via Gemini (Phase 106)
 
 All endpoints use TTLCache (300s) to avoid repeated heavy computation.
 """
@@ -11,6 +12,7 @@ from datetime import date, timedelta
 
 from cachetools import TTLCache
 from fastapi import APIRouter, HTTPException, Query
+from loguru import logger
 
 from app.database import async_session
 from app.schemas.market_breadth import MarketBreadthResponse
@@ -228,6 +230,40 @@ async def get_sector_detail(sector_name: str) -> SectorDetailResponse:
     response = SectorDetailResponse(**result)
     _sector_detail_cache[cache_key] = response
     return response
+
+
+
+# --- Phase 106: AI Peer Analysis ---
+
+_peer_analysis_cache: TTLCache = TTLCache(maxsize=64, ttl=600)
+
+
+@router.get("/peer-analysis/{symbol}")
+async def get_peer_analysis(symbol: str):
+    """Get AI-powered peer analysis comparing a ticker to its sector peers.
+
+    Returns structured Vietnamese analysis with strengths, weaknesses,
+    overall verdict, peer position, and recommendation.
+    Cached for 600 seconds to avoid repeated Gemini calls.
+    """
+    upper = symbol.upper()
+    cached = _peer_analysis_cache.get(upper)
+    if cached is not None:
+        return cached
+
+    async with async_session() as session:
+        from app.services.peer_analysis_service import PeerAnalysisService
+        service = PeerAnalysisService(session)
+        try:
+            result = await service.analyze(upper)
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except Exception as e:
+            logger.error(f"Peer analysis failed for {upper}: {e}")
+            raise HTTPException(status_code=502, detail="AI analysis temporarily unavailable")
+
+    _peer_analysis_cache[upper] = result
+    return result
 
 
 @router.get("/peers/{symbol}", response_model=PeerComparisonResponse)
