@@ -26,8 +26,8 @@ function formatPct(value: number | null): string {
 
 function pctColorClass(value: number | null): string {
   if (value == null) return "text-muted-foreground";
-  if (value > 0) return "text-[#26a69a]";
-  if (value < 0) return "text-[#ef5350]";
+  if (value > 0) return "text-trading-bull";
+  if (value < 0) return "text-trading-bear";
   return "text-muted-foreground";
 }
 
@@ -38,8 +38,8 @@ function getTrend(sector: SectorPerformanceItem): {
 } {
   const d7 = sector.avg_change_7d ?? 0;
   const d30 = sector.avg_change_30d ?? 0;
-  if (d7 > d30) return { arrow: "▲", color: "text-[#26a69a]" };
-  if (d7 < d30) return { arrow: "▼", color: "text-[#ef5350]" };
+  if (d7 > d30) return { arrow: "▲", color: "text-trading-bull" };
+  if (d7 < d30) return { arrow: "▼", color: "text-trading-bear" };
   return { arrow: "—", color: "text-muted-foreground" };
 }
 

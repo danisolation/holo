@@ -103,7 +103,7 @@ export function FlowTab() {
                             className="h-5 rounded-sm"
                             style={{
                               width: `${widthPct}%`,
-                              backgroundColor: "#26a69a",
+                              backgroundColor: "var(--trading-bull)",
                               minWidth: "4px",
                             }}
                           />
@@ -114,7 +114,7 @@ export function FlowTab() {
                             className="h-5 rounded-sm"
                             style={{
                               width: `${widthPct}%`,
-                              backgroundColor: "#ef5350",
+                              backgroundColor: "var(--trading-bear)",
                               minWidth: "4px",
                             }}
                           />
@@ -123,7 +123,7 @@ export function FlowTab() {
                     </div>
                     <span
                       className="text-sm font-medium w-16 text-right flex-shrink-0"
-                      style={{ color: isPositive ? "#26a69a" : "#ef5350" }}
+                      style={{ color: isPositive ? "var(--trading-bull)" : "var(--trading-bear)" }}
                     >
                       {isPositive ? "+" : ""}
                       {formatVolume(item.net_volume)}
@@ -133,8 +133,8 @@ export function FlowTab() {
               })}
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              <span style={{ color: "#26a69a" }}>■</span> Mua ròng &nbsp;
-              <span style={{ color: "#ef5350" }}>■</span> Bán ròng
+              <span style={{ color: "var(--trading-bull)" }}>■</span> Mua ròng &nbsp;
+              <span style={{ color: "var(--trading-bear)" }}>■</span> Bán ròng
             </p>
           </CardContent>
         </Card>

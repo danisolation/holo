@@ -33,38 +33,38 @@ const SIGNAL_CONFIG: Record<
   { color: string; bgColor: string; icon: React.ReactNode; label: string }
 > = {
   strong_buy: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "MUA MẠNH",
   },
   buy: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "MUA",
   },
   bullish: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "TÍCH CỰC",
   },
   strong_sell: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "BÁN MẠNH",
   },
   sell: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "BÁN",
   },
   bearish: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "TIÊU CỰC",
   },
@@ -82,14 +82,14 @@ const SIGNAL_CONFIG: Record<
   },
   // Combined recommendation (Vietnamese)
   mua: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "MUA",
   },
   ban: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "BÁN",
   },
@@ -101,51 +101,51 @@ const SIGNAL_CONFIG: Record<
   },
   // Fundamental health signals
   strong: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "MẠNH",
   },
   good: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "TỐT",
   },
   weak: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "YẾU",
   },
   critical: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "NGUY HIỂM",
   },
   // Sentiment signals
   very_positive: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "RẤT TÍCH CỰC",
   },
   positive: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-4" />,
     label: "TÍCH CỰC",
   },
   negative: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "TIÊU CỰC",
   },
   very_negative: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-4" />,
     label: "RẤT TIÊU CỰC",
   },
@@ -167,7 +167,7 @@ function getSignalConfig(signal: string) {
 export function ScoreBar({ score }: { score: number }) {
   const pct = Math.min(100, Math.max(0, (score / 10) * 100));
   const color =
-    score >= 7 ? "bg-[#26a69a]" : score >= 4 ? "bg-yellow-500" : "bg-[#ef5350]";
+    score >= 7 ? "bg-trading-bull" : score >= 4 ? "bg-yellow-500" : "bg-trading-bear";
 
   return (
     <div className="flex items-center gap-2">

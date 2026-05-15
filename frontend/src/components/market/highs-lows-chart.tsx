@@ -33,8 +33,8 @@ function HLTooltip({ active, payload, label }: HLTooltipProps) {
   return (
     <div className="rounded-md border bg-background px-3 py-2 shadow-md text-sm">
       <p className="text-muted-foreground mb-1">{formattedDate}</p>
-      <p style={{ color: "#26a69a" }}>High 52W: {highs?.value ?? 0}</p>
-      <p style={{ color: "#ef5350" }}>Low 52W: {lows?.value ?? 0}</p>
+      <p style={{ color: "var(--trading-bull)" }}>High 52W: {highs?.value ?? 0}</p>
+      <p style={{ color: "var(--trading-bear)" }}>Low 52W: {lows?.value ?? 0}</p>
     </div>
   );
 }

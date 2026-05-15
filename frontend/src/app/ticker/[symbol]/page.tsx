@@ -251,9 +251,9 @@ export default function TickerDetailPage({
               <span
                 className={`font-mono text-xs ml-1 ${
                   rtPrice.change_pct > 0
-                    ? "text-[#26a69a]"
+                    ? "text-trading-bull"
                     : rtPrice.change_pct < 0
-                      ? "text-[#ef5350]"
+                      ? "text-trading-bear"
                       : "text-muted-foreground"
                 }`}
               >

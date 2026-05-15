@@ -44,8 +44,8 @@ export function PositionsTable({ positions }: PositionsTableProps) {
           const pnlColor =
             p.unrealized_pnl !== null
               ? p.unrealized_pnl >= 0
-                ? "#26a69a"
-                : "#ef5350"
+                ? "var(--trading-bull)"
+                : "var(--trading-bear)"
               : undefined;
           return (
             <TableRow key={p.ticker_symbol}>

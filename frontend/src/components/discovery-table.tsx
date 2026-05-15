@@ -39,10 +39,10 @@ function ScoreCell({ value }: { value: number | null }) {
   const pct = (value / 10) * 100;
   const color =
     value >= 7
-      ? "bg-[#26a69a]"
+      ? "bg-trading-bull"
       : value >= 4
         ? "bg-amber-500"
-        : "bg-[#ef5350]";
+        : "bg-trading-bear";
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-full bg-muted rounded-full">
@@ -227,10 +227,10 @@ export function DiscoveryTable() {
           const score = row.getValue("total_score") as number;
           const color =
             score >= 7
-              ? "text-[#26a69a]"
+              ? "text-trading-bull"
               : score >= 4
                 ? "text-amber-500"
-                : "text-[#ef5350]";
+                : "text-trading-bear";
           return (
             <span className={`font-mono font-bold text-sm ${color}`}>
               {score.toFixed(1)}

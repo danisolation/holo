@@ -23,7 +23,7 @@ interface PeerComparisonSectionProps {
 
 function formatChange(val: number | null) {
   if (val == null) return "—";
-  const color = val > 0 ? "#26a69a" : val < 0 ? "#ef5350" : undefined;
+  const color = val > 0 ? "var(--trading-bull)" : val < 0 ? "var(--trading-bear)" : undefined;
   return (
     <span style={{ color }}>
       {val > 0 ? "+" : ""}

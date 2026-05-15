@@ -58,7 +58,7 @@ export function PendingSignals() {
               size="sm"
               onClick={handleExecuteAll}
               disabled={executeMutation.isPending}
-              className="bg-[#26a69a] hover:bg-[#26a69a]/90 text-white"
+              className="bg-trading-bull hover:bg-trading-bull/90 text-white"
             >
               {executeMutation.isPending
                 ? "Đang thực hiện..."
@@ -108,7 +108,7 @@ export function PendingSignals() {
                     disabled={
                       executeMutation.isPending || skipMutation.isPending
                     }
-                    className="bg-[#26a69a] hover:bg-[#26a69a]/90 text-white"
+                    className="bg-trading-bull hover:bg-trading-bull/90 text-white"
                   >
                     Thực hiện
                   </Button>

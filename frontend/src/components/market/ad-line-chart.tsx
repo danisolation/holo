@@ -34,8 +34,8 @@ function ADLineTooltip({ active, payload, label }: ADLineTooltipProps) {
   return (
     <div className="rounded-md border bg-background px-3 py-2 shadow-md text-sm">
       <p className="text-muted-foreground mb-1">{formattedDate}</p>
-      <p style={{ color: "#26a69a" }}>Tăng: {adv?.value ?? 0}</p>
-      <p style={{ color: "#ef5350" }}>Giảm: {dec?.value ?? 0}</p>
+      <p style={{ color: "var(--trading-bull)" }}>Tăng: {adv?.value ?? 0}</p>
+      <p style={{ color: "var(--trading-bear)" }}>Giảm: {dec?.value ?? 0}</p>
       <p className="font-semibold mt-1">Net: {net > 0 ? "+" : ""}{net}</p>
     </div>
   );

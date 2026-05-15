@@ -10,14 +10,14 @@ const DIRECTION_CONFIG: Record<
   { color: string; bgColor: string; icon: React.ReactNode; label: string }
 > = {
   bullish: {
-    color: "text-[#26a69a]",
-    bgColor: "bg-[#26a69a]/10",
+    color: "text-trading-bull",
+    bgColor: "bg-trading-bull/10",
     icon: <TrendingUp className="size-3" />,
     label: "TÍCH CỰC",
   },
   bearish: {
-    color: "text-[#ef5350]",
-    bgColor: "bg-[#ef5350]/10",
+    color: "text-trading-bear",
+    bgColor: "bg-trading-bear/10",
     icon: <TrendingDown className="size-3" />,
     label: "TIÊU CỰC",
   },

@@ -48,7 +48,7 @@ export function BidAskPanel({ data, refPrice }: BidAskPanelProps) {
             </span>
           </div>
           <div className="w-20 text-center">
-            <span className="text-xs font-mono text-[#ef5350] font-medium">
+            <span className="text-xs font-mono text-trading-bear font-medium">
               {ask.price > 0 ? (ask.price / 1000).toFixed(1) : "—"}
             </span>
           </div>
@@ -72,7 +72,7 @@ export function BidAskPanel({ data, refPrice }: BidAskPanelProps) {
           <div className="w-20" />
           <div className="flex-1" />
           <div className="w-20 text-center">
-            <span className="text-xs font-mono text-[#26a69a] font-medium">
+            <span className="text-xs font-mono text-trading-bull font-medium">
               {bid.price > 0 ? (bid.price / 1000).toFixed(1) : "—"}
             </span>
           </div>
@@ -93,13 +93,13 @@ export function BidAskPanel({ data, refPrice }: BidAskPanelProps) {
       <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t border-border/50 pt-1 mt-2">
         <span>
           Tổng mua:{" "}
-          <span className="text-[#26a69a] font-mono">
+          <span className="text-trading-bull font-mono">
             {data.total_bid_volume ? (data.total_bid_volume / 10).toLocaleString("vi-VN") : "—"}
           </span>
         </span>
         <span>
           Tổng bán:{" "}
-          <span className="text-[#ef5350] font-mono">
+          <span className="text-trading-bear font-mono">
             {data.total_ask_volume ? (data.total_ask_volume / 10).toLocaleString("vi-VN") : "—"}
           </span>
         </span>

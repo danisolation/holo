@@ -87,9 +87,9 @@ export function SectorDrilldown({ sectorName, onClose }: SectorDrilldownProps) {
                     <td
                       className={`py-2 pr-3 text-right font-mono font-medium ${
                         ticker.change_pct != null && ticker.change_pct > 0
-                          ? "text-[#26a69a]"
+                          ? "text-trading-bull"
                           : ticker.change_pct != null && ticker.change_pct < 0
-                            ? "text-[#ef5350]"
+                            ? "text-trading-bear"
                             : "text-muted-foreground"
                       }`}
                     >

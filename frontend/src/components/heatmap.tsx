@@ -91,9 +91,9 @@ export function Heatmap({ data }: HeatmapProps) {
                 <span
                   className={`font-mono text-sm ${
                     ticker.change_pct != null && ticker.change_pct > 0
-                      ? "text-[#26a69a]"
+                      ? "text-trading-bull"
                       : ticker.change_pct != null && ticker.change_pct < 0
-                        ? "text-[#ef5350]"
+                        ? "text-trading-bear"
                         : "text-muted-foreground"
                   }`}
                 >

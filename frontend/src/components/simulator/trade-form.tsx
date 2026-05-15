@@ -71,7 +71,7 @@ export function TradeForm() {
             type="button"
             variant={side === "BUY" ? "default" : "outline"}
             onClick={() => setSide("BUY")}
-            className={side === "BUY" ? "bg-[#26a69a] hover:bg-[#26a69a]/80 text-white" : ""}
+            className={side === "BUY" ? "bg-trading-bull hover:bg-trading-bull/80 text-white" : ""}
           >
             MUA
           </Button>
@@ -79,7 +79,7 @@ export function TradeForm() {
             type="button"
             variant={side === "SELL" ? "default" : "outline"}
             onClick={() => setSide("SELL")}
-            className={side === "SELL" ? "bg-[#ef5350] hover:bg-[#ef5350]/80 text-white" : ""}
+            className={side === "SELL" ? "bg-trading-bear hover:bg-trading-bear/80 text-white" : ""}
           >
             BÁN
           </Button>
@@ -137,14 +137,14 @@ export function TradeForm() {
 
       {/* Error */}
       {mutation.error && (
-        <p className="text-sm" style={{ color: "#ef5350" }}>
+        <p className="text-sm" style={{ color: "var(--trading-bear)" }}>
           {mutation.error.message}
         </p>
       )}
 
       {/* Success */}
       {successMsg && (
-        <p className="text-sm" style={{ color: "#26a69a" }}>
+        <p className="text-sm" style={{ color: "var(--trading-bull)" }}>
           {successMsg}
         </p>
       )}

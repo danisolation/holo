@@ -78,8 +78,8 @@ export function TradeHistory({ portfolioType = "user" }: { portfolioType?: strin
                 const pnlColor =
                   t.net_pnl !== null
                     ? t.net_pnl >= 0
-                      ? "#26a69a"
-                      : "#ef5350"
+                      ? "var(--trading-bull)"
+                      : "var(--trading-bear)"
                     : undefined;
                 return (
                   <TableRow key={t.id}>
@@ -92,8 +92,8 @@ export function TradeHistory({ portfolioType = "user" }: { portfolioType?: strin
                         variant="secondary"
                         className={
                           t.side === "BUY"
-                            ? "bg-[#26a69a]/20 text-[#26a69a]"
-                            : "bg-[#ef5350]/20 text-[#ef5350]"
+                            ? "bg-trading-bull/20 text-trading-bull"
+                            : "bg-trading-bear/20 text-trading-bear"
                         }
                       >
                         {t.side === "BUY" ? "MUA" : "BÁN"}

@@ -191,9 +191,9 @@ export function WatchlistTable() {
             return <span className="text-muted-foreground">—</span>;
           const color =
             pct > 0
-              ? "text-[#26a69a]"
+              ? "text-trading-bull"
               : pct < 0
-                ? "text-[#ef5350]"
+                ? "text-trading-bear"
                 : "text-muted-foreground";
           return (
             <PriceFlashCell value={pct} previousValue={rtPrice ? (row.getValue("change_pct") as number | null) ?? undefined : undefined}>
@@ -226,9 +226,9 @@ export function WatchlistTable() {
                 variant="secondary"
                 className={
                   isBuy
-                    ? "text-[#26a69a] bg-[#26a69a]/10 gap-1"
+                    ? "text-trading-bull bg-trading-bull/10 gap-1"
                     : isSell
-                      ? "text-[#ef5350] bg-[#ef5350]/10 gap-1"
+                      ? "text-trading-bear bg-trading-bear/10 gap-1"
                       : "gap-1"
                 }
               >
@@ -259,9 +259,9 @@ export function WatchlistTable() {
           }
           const dir = rumor.dominant_direction;
           const dotColor = dir === "bullish"
-            ? "bg-[#26a69a]"
+            ? "bg-trading-bull"
             : dir === "bearish"
-              ? "bg-[#ef5350]"
+              ? "bg-trading-bear"
               : "bg-amber-500";
           return (
             <div className="flex items-center gap-1.5">

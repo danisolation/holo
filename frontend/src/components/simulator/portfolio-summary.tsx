@@ -5,7 +5,7 @@ import { formatVND } from "@/lib/format";
 import type { SimulatorPortfolioResponse } from "@/lib/api";
 
 function PnlValue({ value, pct }: { value: number; pct?: number }) {
-  const color = value >= 0 ? "#26a69a" : "#ef5350";
+  const color = value >= 0 ? "var(--trading-bull)" : "var(--trading-bear)";
   const sign = value >= 0 ? "+" : "";
   return (
     <span style={{ color }}>

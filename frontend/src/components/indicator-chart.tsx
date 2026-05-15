@@ -499,9 +499,9 @@ export function IndicatorChart({ indicatorData }: IndicatorChartProps) {
         <AccordionTrigger className="text-xs font-medium text-muted-foreground px-1 py-2">
           RSI (14)
           <span className="ml-2 text-[10px]">
-            <span className="text-[#ef5350]">70 quá mua</span>
+            <span className="text-trading-bear">70 quá mua</span>
             {" · "}
-            <span className="text-[#26a69a]">30 quá bán</span>
+            <span className="text-trading-bull">30 quá bán</span>
           </span>
         </AccordionTrigger>
         <AccordionContent>

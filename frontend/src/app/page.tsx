@@ -82,7 +82,7 @@ export default function Home() {
     ? `Bản đồ nhiệt ${watchlistData.length} mã trong danh mục, phân nhóm theo ngành`
     : "Thêm mã vào danh mục để xem bản đồ nhiệt theo ngành";
 
-  const pnlColor = (portfolio?.total_pnl ?? 0) >= 0 ? "text-[#26a69a]" : "text-[#ef5350]";
+  const pnlColor = (portfolio?.total_pnl ?? 0) >= 0 ? "text-trading-bull" : "text-trading-bear";
 
   return (
     <>
@@ -160,11 +160,11 @@ export default function Home() {
               <BarChart3 className="size-8 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-bold">
-                  <span className="text-[#26a69a]">{gainers}</span>
+                  <span className="text-trading-bull">{gainers}</span>
                   <span className="text-muted-foreground mx-0.5">↑</span>
                   <span className="text-muted-foreground">/</span>
                   <span className="text-muted-foreground mx-0.5"> </span>
-                  <span className="text-[#ef5350]">{losers}</span>
+                  <span className="text-trading-bear">{losers}</span>
                   <span className="text-muted-foreground mx-0.5">↓</span>
                 </p>
                 <p className="text-xs text-muted-foreground">Thị trường</p>
@@ -307,7 +307,7 @@ export default function Home() {
             {/* Top Gainers */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[#26a69a]">
+                <CardTitle className="flex items-center gap-2 text-trading-bull">
                   <TrendingUp className="size-4" />
                   Top tăng
                 </CardTitle>
@@ -332,7 +332,7 @@ export default function Home() {
                           {t.name}
                         </span>
                       </div>
-                      <span className="font-mono text-sm text-[#26a69a]">
+                      <span className="font-mono text-sm text-trading-bull">
                         +{(t.change_pct ?? 0).toFixed(2)}%
                       </span>
                     </Link>
@@ -344,7 +344,7 @@ export default function Home() {
             {/* Top Losers */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[#ef5350]">
+                <CardTitle className="flex items-center gap-2 text-trading-bear">
                   <TrendingDown className="size-4" />
                   Top giảm
                 </CardTitle>
@@ -369,7 +369,7 @@ export default function Home() {
                           {t.name}
                         </span>
                       </div>
-                      <span className="font-mono text-sm text-[#ef5350]">
+                      <span className="font-mono text-sm text-trading-bear">
                         {(t.change_pct ?? 0).toFixed(2)}%
                       </span>
                     </Link>

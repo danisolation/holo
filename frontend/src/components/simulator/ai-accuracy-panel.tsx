@@ -17,10 +17,10 @@ function StatCol({
   totalPnl: number;
   highlight: boolean;
 }) {
-  const pnlColor = totalPnl >= 0 ? "#26a69a" : "#ef5350";
+  const pnlColor = totalPnl >= 0 ? "var(--trading-bull)" : "var(--trading-bear)";
   return (
     <div
-      className={`rounded-lg p-4 ${highlight ? "ring-2 ring-[#26a69a]/50 bg-[#26a69a]/5" : "bg-muted/30"}`}
+      className={`rounded-lg p-4 ${highlight ? "ring-2 ring-trading-bull/50 bg-trading-bull/5" : "bg-muted/30"}`}
     >
       <h4 className="text-sm font-semibold mb-3">{label}</h4>
       <div className="space-y-2">

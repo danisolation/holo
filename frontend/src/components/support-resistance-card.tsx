@@ -64,12 +64,12 @@ export function SupportResistanceCard({
     {
       label: "Kháng cự 2",
       value: latest.resistance_2,
-      colorClass: "text-[#ef5350] bg-[#ef5350]/10",
+      colorClass: "text-trading-bear bg-trading-bear/10",
     },
     {
       label: "Kháng cự 1",
       value: latest.resistance_1,
-      colorClass: "text-[#ef5350] bg-[#ef5350]/10",
+      colorClass: "text-trading-bear bg-trading-bear/10",
     },
     {
       label: "Điểm xoay",
@@ -79,12 +79,12 @@ export function SupportResistanceCard({
     {
       label: "Hỗ trợ 1",
       value: latest.support_1,
-      colorClass: "text-[#26a69a] bg-[#26a69a]/10",
+      colorClass: "text-trading-bull bg-trading-bull/10",
     },
     {
       label: "Hỗ trợ 2",
       value: latest.support_2,
-      colorClass: "text-[#26a69a] bg-[#26a69a]/10",
+      colorClass: "text-trading-bull bg-trading-bull/10",
     },
   ];
 
@@ -97,7 +97,7 @@ export function SupportResistanceCard({
     {
       label: "Đỉnh gần nhất",
       value: swingHigh,
-      colorClass: "text-[#ef5350]",
+      colorClass: "text-trading-bear",
     },
     {
       label: "Fib 61.8%",
@@ -122,7 +122,7 @@ export function SupportResistanceCard({
     {
       label: "Đáy gần nhất",
       value: swingLow,
-      colorClass: "text-[#26a69a]",
+      colorClass: "text-trading-bull",
     },
   ];
 
