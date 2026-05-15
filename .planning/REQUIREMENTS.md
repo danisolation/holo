@@ -7,14 +7,14 @@
 
 ### Dual Portfolio
 
-- [ ] **DUAL-01**: User can switch giua 2 tab "AI Portfolio" va "User Portfolio" tren trang simulator
+- [x] **DUAL-01**: User can switch giua 2 tab "AI Portfolio" va "User Portfolio" tren trang simulator
 - [x] **DUAL-02**: AI Portfolio tu dong execute DailyPick signals server-side (khong phu thuoc frontend toggle)
 - [x] **DUAL-03**: User Portfolio cho phep mua/ban thu cong voi form giao dich rieng
 
 ### AI Rationale
 
-- [ ] **RAT-01**: User thay ly do Gemini de xuat mua/ban cho moi signal (rationale text)
-- [ ] **RAT-02**: Rationale hien thi trong pending signals panel va trade history
+- [x] **RAT-01**: User thay ly do Gemini de xuat mua/ban cho moi signal (rationale text)
+- [x] **RAT-02**: Rationale hien thi trong pending signals panel va trade history
 
 ### AI Review
 

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Performance Optimization
 status: Not started (roadmap created)
-stopped_at: Completed 107-01-PLAN.md
-last_updated: "2026-05-15T05:01:25.891Z"
+stopped_at: Completed 108-01-PLAN.md
+last_updated: "2026-05-15T05:13:38.803Z"
 last_activity: 2026-05-15 — v25.0 roadmap created (3 phases, 9 requirements)
 progress:
   total_phases: 5
@@ -112,6 +112,8 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 106]: Used _gemini_lock for RPM serialization, temperature 0.3, direct import for lightweight panel
 - [Phase 107]: Existing 'default' portfolio renamed to 'user' via migration, AI portfolio created fresh
 - [Phase 107]: Auto-buy job chains after accuracy_tracking, before sl_tp_check in scheduler pipeline
+- [Phase 108]: Removed AutoTradeToggle entirely, server-side auto-trade since Phase 107
+- [Phase 108]: Rationale displayed inline with line-clamp-2 hover expand pattern
 
 ### Research Context (v10.0)
 
@@ -172,7 +174,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T05:01:25.882Z
-Stopped at: Completed 107-01-PLAN.md
+Last session: 2026-05-15T05:13:38.795Z
+Stopped at: Completed 108-01-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 100`
