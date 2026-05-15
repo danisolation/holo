@@ -2,11 +2,12 @@ services:
   - type: web
     name: holo-api
     runtime: python
-    region: oregon
+    region: singapore
     plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt && alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.7"
