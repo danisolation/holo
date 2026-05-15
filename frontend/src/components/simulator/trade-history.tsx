@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { formatVND, formatDateVN } from "@/lib/format";
 import { useSimulatorTrades } from "@/lib/hooks";
+import { TradeReviewPanel } from "./trade-review-panel";
 
 const SOURCE_FILTERS = [
   { label: "Tất cả", value: undefined },
@@ -69,6 +70,7 @@ export function TradeHistory({ portfolioType = "user" }: { portfolioType?: strin
                 <TableHead className="text-right">Lãi/Lỗ</TableHead>
                 <TableHead>Nguồn</TableHead>
                 <TableHead>Lý do</TableHead>
+                <TableHead>Review</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,6 +132,11 @@ export function TradeHistory({ portfolioType = "user" }: { portfolioType?: strin
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {t.side === "SELL" ? (
+                        <TradeReviewPanel tradeId={t.id} portfolioType={portfolioType} />
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 );
