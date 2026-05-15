@@ -1,32 +1,49 @@
-# Requirements: Holo v25.0 AI Simulator Split
+# Requirements: Holo v26.0 Dashboard UX & DevOps
 
-**Defined:** 2026-05-15
-**Core Value:** Tach simulator thanh 2 portfolio rieng biet (AI tu dong + User thu cong), them AI rationale/review, va so sanh hieu suat.
+**Defined:** 2026-05-16
+**Core Value:** Nâng cấp trải nghiệm frontend và thiết lập hệ thống CI/CD + monitoring cho production stability.
 
 ## Milestone Requirements
 
-### Dual Portfolio
+### Dashboard UX
 
-- [x] **DUAL-01**: User can switch giua 2 tab "AI Portfolio" va "User Portfolio" tren trang simulator
-- [x] **DUAL-02**: AI Portfolio tu dong execute DailyPick signals server-side (khong phu thuoc frontend toggle)
-- [x] **DUAL-03**: User Portfolio cho phep mua/ban thu cong voi form giao dich rieng
+- [ ] **UX-01**: User can toggle dark/light mode và hệ thống nhớ preference across sessions
+- [ ] **UX-02**: Dashboard hiển thị đúng trên mobile (responsive layout, touch-friendly navigation)
+- [ ] **UX-03**: User thấy trading plan (entry/SL/TP) được vẽ trực tiếp trên candlestick chart dưới dạng price lines
+- [ ] **UX-04**: Các trang có loading skeleton và smooth transition khi chuyển route
 
-### AI Rationale
+### DevOps
 
-- [x] **RAT-01**: User thay ly do Gemini de xuat mua/ban cho moi signal (rationale text)
-- [x] **RAT-02**: Rationale hien thi trong pending signals panel va trade history
+- [ ] **DEVOPS-01**: Push code trigger tự động: run tests → build → deploy (GitHub Actions)
+- [ ] **DEVOPS-02**: User nhận Telegram alert khi backend service down hoặc health check fail
+- [ ] **DEVOPS-03**: Hệ thống tự ping và track response time, uptime percentage
+- [ ] **DEVOPS-04**: Errors được log tập trung với structured format, dễ query và debug
 
-### AI Review
+## Future Requirements
 
-- [x] **REVIEW-01**: User co the yeu cau AI review toan bo portfolio (diem manh/yeu, goi y)
-- [x] **REVIEW-02**: User co the yeu cau AI review mot lenh cu the (phan tich dung/sai)
+(deferred to future milestones)
+- Telegram Bot comeback — trading signal alerts
+- AI Portfolio Optimization — auto-rebalance, position sizing
+- Backtesting Engine v2
 
-### Performance Comparison
+## Out of Scope
 
-- [x] **COMP-01**: User thay bieu do equity AI vs User chong len nhau
-- [x] **COMP-02**: User thay bang so sanh metrics (win rate, avg P&L, max drawdown) giua AI va User
+- Complex animation library (framer-motion) — use CSS transitions only
+- Self-hosted monitoring (Grafana/Prometheus) — overkill for personal use
+- Multi-user auth — single user app
 
 ## Traceability
+
+| REQ | Phase | Status |
+|-----|-------|--------|
+| UX-01 | — | Pending |
+| UX-02 | — | Pending |
+| UX-03 | — | Pending |
+| UX-04 | — | Pending |
+| DEVOPS-01 | — | Pending |
+| DEVOPS-02 | — | Pending |
+| DEVOPS-03 | — | Pending |
+| DEVOPS-04 | — | Pending |
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
