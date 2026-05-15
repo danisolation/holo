@@ -734,7 +734,7 @@ Plans:
   5. Sector ranking table shows sectors sorted by performance with volume change indicator (arrow up/down + % change vs previous period)
 **Plans**: 2 plans
 Plans:
-- [ ] 102-01-PLAN.md — API types, hooks, navbar, /market page skeleton + Sector tab (heatmap, ranking, drilldown)
+- [x] 102-01-PLAN.md — API types, hooks, navbar, /market page skeleton + Sector tab (heatmap, ranking, drilldown)
 - [ ] 102-02-PLAN.md — Breadth tab (A/D, MA breadth, highs/lows charts) + Dòng tiền tab (radar, flow summary)
 **UI hint**: yes
 
@@ -758,5 +758,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 100. Market Breadth Backend | 1/1 | Complete   | 2026-05-15 |
 | 101. Sector Analysis Backend | 1/1 | Complete   | 2026-05-15 |
-| 102. Sector & Breadth Frontend | 0/? | Not started | - |
+| 102. Sector & Breadth Frontend | 1/2 | In Progress|  |
 | 103. AI Sector Intelligence | 0/? | Not started | - |
