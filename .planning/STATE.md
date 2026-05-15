@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v15.0
-milestone_name: Performance Optimization
-status: Not started (roadmap created)
-stopped_at: Completed 109-02-PLAN.md
-last_updated: "2026-05-15T05:31:50.441Z"
-last_activity: 2026-05-15 — v25.0 roadmap created (3 phases, 9 requirements)
+milestone: v26.0
+milestone_name: Dashboard UX & DevOps
+status: Not started (defining requirements)
+stopped_at: —
+last_updated: "2026-05-16"
+last_activity: 2026-05-16 — Milestone v26.0 started
 progress:
-  total_phases: 5
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-15)
+See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v25.0 AI Simulator Split
+**Current focus:** v26.0 Dashboard UX & DevOps
 
 ## Current Position
 
-Phase: 107 — Dual Portfolio Backend
+Phase: Not started (defining requirements)
 Plan: —
-Status: Not started (roadmap created)
-Last activity: 2026-05-15 — v25.0 roadmap created (3 phases, 9 requirements)
+Status: Defining requirements
+Last activity: 2026-05-16 — Milestone v26.0 started
 
 ```
 v25.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/3 phases (0%)
