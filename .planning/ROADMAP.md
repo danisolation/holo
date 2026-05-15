@@ -29,7 +29,8 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v20.0 Enhanced Price Pipeline** — Phases 92-94 (shipped)
 - ✅ **v21.0 Stock Trading Simulator** — Phase 95 (shipped)
 - ✅ **v22.0 Platform Polish & AI Coverage** — Phases 96-99 (shipped 2026-05-14)
-- [ ] **v23.0 Sector Rotation & Market Breadth** — Phases 100-103
+- [x] **v23.0 Sector Rotation & Market Breadth** — Phases 100-103 (shipped 2026-05-15)
+- [ ] **v24.0 Sector Screening & Comparison** — Phases 104-106
 
 ## Phases
 
@@ -760,3 +761,55 @@ Plans:
 | 101. Sector Analysis Backend | 1/1 | Complete   | 2026-05-15 |
 | 102. Sector & Breadth Frontend | 2/2 | Complete   | 2026-05-15 |
 | 103. AI Sector Intelligence | 1/1 | Complete   | 2026-05-15 |
+
+---
+
+### v24.0: Sector Screening & Comparison (Phases 104-106)
+
+- [ ] **Phase 104: Screening & Comparison APIs** — Sector screener endpoint with multi-criteria filtering/sorting, peer comparison ranked metrics endpoint, sector detail data endpoint
+- [ ] **Phase 105: Sector Screener, Detail & Peer UI** — Dedicated screener page with sector/industry filters, sector detail page with ticker list and performance chart, peer comparison table and radar chart
+- [ ] **Phase 106: AI Peer Analysis** — Gemini peer comparison analysis showing relative strengths/weaknesses vs sector average, integrated into ticker detail page
+
+## Phase Details — v24.0
+
+### Phase 104: Screening & Comparison APIs
+**Goal**: Backend provides endpoints for filtering tickers by sector with multi-criteria sorting, peer comparison with ranked metrics, and sector detail with constituent ticker data
+**Depends on**: Phase 103 (v23.0 complete — sector data, SectorAnalysisService, and ticker sector enrichment already exist)
+**Requirements**: PEER-03, SCRN-02, SCRN-03
+**Success Criteria** (what must be TRUE):
+  1. API endpoint accepts sector/industry filter plus optional criteria (min/max volume, % change range, P/E range) and returns matching tickers with their metric values
+  2. API endpoint supports sort-by on any returned metric column (volume, % change, P/E, close price) with ascending/descending order
+  3. Peer comparison API endpoint returns ranked metrics (P/E, volume, % change, market cap) for all tickers in a given sector, with the queried ticker highlighted
+  4. Sector detail API endpoint returns all tickers belonging to a sector with their latest price data and 7D/30D performance values
+**Plans**: TBD
+
+### Phase 105: Sector Screener, Detail & Peer UI
+**Goal**: Users can explore sectors through a dedicated screener page with filters, drill into sector detail pages with performance charts, and compare peer tickers side-by-side with radar visualization
+**Depends on**: Phase 104
+**Requirements**: SCRN-01, SDET-01, SDET-02, SDET-03, PEER-01, PEER-02
+**Success Criteria** (what must be TRUE):
+  1. Screener page at a dedicated route lets user select a sector/industry, apply volume/% change/P/E filters, and see a sortable results table of matching tickers
+  2. Sector detail page shows all tickers in the selected sector as a table with close price, % change, and volume — each ticker row links to the ticker detail page
+  3. Sector detail page displays a performance chart (7D/30D trend line) showing the sector's aggregate price movement over time
+  4. Peer comparison table on the sector or ticker page shows key metrics (P/E, volume, % change, market cap) for tickers in the same sector, sorted by selected metric
+  5. Radar chart visualizes a selected ticker against sector peer averages across multiple metric dimensions (P/E, volume ratio, % change, etc.)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 106: AI Peer Analysis
+**Goal**: Gemini AI generates contextual peer comparison analysis for any ticker, showing how it stacks up against sector peers with actionable Vietnamese insights
+**Depends on**: Phase 104 (peer data endpoint), Phase 105 (UI integration point on ticker page)
+**Requirements**: AIPEER-01, AIPEER-02, AIPEER-03
+**Success Criteria** (what must be TRUE):
+  1. Gemini receives a ticker's metrics alongside its sector peer metrics and produces a structured Vietnamese analysis identifying relative strengths and weaknesses
+  2. AI analysis explicitly compares the ticker against sector averages on key dimensions (valuation, momentum, volume) and states whether the ticker outperforms or underperforms peers
+  3. AI peer analysis is accessible from the ticker detail page as a panel or section, fetched on demand without blocking the rest of the page load
+**Plans**: TBD
+
+## Progress — v24.0
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 104. Screening & Comparison APIs | 0/0 | Not started | - |
+| 105. Sector Screener, Detail & Peer UI | 0/0 | Not started | - |
+| 106. AI Peer Analysis | 0/0 | Not started | - |

@@ -33,18 +33,18 @@
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| SCRN-01 | — | — | Pending |
-| SCRN-02 | — | — | Pending |
-| SCRN-03 | — | — | Pending |
-| PEER-01 | — | — | Pending |
-| PEER-02 | — | — | Pending |
-| PEER-03 | — | — | Pending |
-| SDET-01 | — | — | Pending |
-| SDET-02 | — | — | Pending |
-| SDET-03 | — | — | Pending |
-| AIPEER-01 | — | — | Pending |
-| AIPEER-02 | — | — | Pending |
-| AIPEER-03 | — | — | Pending |
+| SCRN-01 | Phase 105 | — | Pending |
+| SCRN-02 | Phase 104 | — | Pending |
+| SCRN-03 | Phase 104 | — | Pending |
+| PEER-01 | Phase 105 | — | Pending |
+| PEER-02 | Phase 105 | — | Pending |
+| PEER-03 | Phase 104 | — | Pending |
+| SDET-01 | Phase 105 | — | Pending |
+| SDET-02 | Phase 105 | — | Pending |
+| SDET-03 | Phase 105 | — | Pending |
+| AIPEER-01 | Phase 106 | — | Pending |
+| AIPEER-02 | Phase 106 | — | Pending |
+| AIPEER-03 | Phase 106 | — | Pending |
 
 ## Future Requirements
 
