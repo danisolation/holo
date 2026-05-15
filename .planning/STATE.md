@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v22.0
-milestone_name: Platform Polish & AI Coverage
-status: Shipped
-stopped_at: All phases complete
-last_updated: "2026-05-14T12:00:00.000Z"
-last_activity: 2026-05-14 — v22.0 shipped (4 phases, 9 plans)
+milestone: v23.0
+milestone_name: Sector Rotation & Market Breadth
+status: Defining requirements
+stopped_at: —
+last_updated: "2026-05-14T12:30:00.000Z"
+last_activity: 2026-05-14 — Milestone v23.0 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-13)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v22.0 shipped — preparing v23.0
+**Current focus:** v23.0 Sector Rotation & Market Breadth — defining requirements
 
 ## Current Position
 
-Phase: —
+Phase: Not started (defining requirements)
 Plan: —
-Status: v22.0 shipped, ready for v23.0
-Last activity: 2026-05-14 — v22.0 shipped
+Status: Defining requirements
+Last activity: 2026-05-14 — Milestone v23.0 started
 
 ```
-v22.0 Progress: [████████████████████] 4/4 phases (100%) ✅ SHIPPED
+v23.0 Progress: [░░░░░░░░░░░░░░░░░░░░] 0/0 phases (defining)
 ```
 
 ## Shipped Milestones
