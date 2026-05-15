@@ -1,58 +1,49 @@
-# Requirements: Holo v24.0 Sector Screening & Comparison
+# Requirements: Holo v25.0 AI Simulator Split
 
 **Defined:** 2026-05-15
-**Core Value:** Nâng cao tính năng sector — phân loại chi tiết, screener theo ngành, so sánh cổ phiếu cùng ngành, AI peer analysis.
+**Core Value:** Tach simulator thanh 2 portfolio rieng biet (AI tu dong + User thu cong), them AI rationale/review, va so sanh hieu suat.
 
 ## Milestone Requirements
 
-### Sector Screening
+### Dual Portfolio
 
-- [ ] **SCRN-01**: User can filter tickers by sector and industry on a dedicated screener page
-- [x] **SCRN-02**: User can apply multi-criteria filters (volume, % change, P/E) within a sector
-- [x] **SCRN-03**: User can sort screener results by any metric column
+- [ ] **DUAL-01**: User can switch giua 2 tab "AI Portfolio" va "User Portfolio" tren trang simulator
+- [ ] **DUAL-02**: AI Portfolio tu dong execute DailyPick signals server-side (khong phu thuoc frontend toggle)
+- [ ] **DUAL-03**: User Portfolio cho phep mua/ban thu cong voi form giao dich rieng
 
-### Peer Comparison
+### AI Rationale
 
-- [x] **PEER-01**: User can view a peer comparison table for tickers in the same sector
-- [x] **PEER-02**: User can see a radar chart comparing a ticker against sector peers on key metrics
-- [x] **PEER-03**: Backend provides peer comparison data endpoint with ranked metrics
+- [ ] **RAT-01**: User thay ly do Gemini de xuat mua/ban cho moi signal (rationale text)
+- [ ] **RAT-02**: Rationale hien thi trong pending signals panel va trade history
 
-### Sector Detail
+### AI Review
 
-- [x] **SDET-01**: User can navigate to a sector detail page showing all tickers in that sector
-- [x] **SDET-02**: User can see sector performance chart (7D/30D trend) on the detail page
-- [x] **SDET-03**: Sector detail page links to individual ticker pages
+- [ ] **REVIEW-01**: User co the yeu cau AI review toan bo portfolio (diem manh/yeu, goi y)
+- [ ] **REVIEW-02**: User co the yeu cau AI review mot lenh cu the (phan tich dung/sai)
 
-### AI Peer Analysis
+### Performance Comparison
 
-- [x] **AIPEER-01**: Gemini generates peer comparison analysis for a ticker vs its sector peers
-- [x] **AIPEER-02**: AI peer analysis shows relative strengths/weaknesses vs sector average
-- [x] **AIPEER-03**: AI peer analysis is accessible from the ticker detail page
+- [ ] **COMP-01**: User thay bieu do equity AI vs User chong len nhau
+- [ ] **COMP-02**: User thay bang so sanh metrics (win rate, avg P&L, max drawdown) giua AI va User
 
 ## Traceability
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| SCRN-01 | Phase 105 | — | Pending |
-| SCRN-02 | Phase 104 | — | Pending |
-| SCRN-03 | Phase 104 | — | Pending |
-| PEER-01 | Phase 105 | — | Pending |
-| PEER-02 | Phase 105 | — | Pending |
-| PEER-03 | Phase 104 | — | Pending |
-| SDET-01 | Phase 105 | — | Pending |
-| SDET-02 | Phase 105 | — | Pending |
-| SDET-03 | Phase 105 | — | Pending |
-| AIPEER-01 | Phase 106 | — | Pending |
-| AIPEER-02 | Phase 106 | — | Pending |
-| AIPEER-03 | Phase 106 | — | Pending |
+| DUAL-01 | TBD | - | Pending |
+| DUAL-02 | TBD | - | Pending |
+| DUAL-03 | TBD | - | Pending |
+| RAT-01 | TBD | - | Pending |
+| RAT-02 | TBD | - | Pending |
+| REVIEW-01 | TBD | - | Pending |
+| REVIEW-02 | TBD | - | Pending |
+| COMP-01 | TBD | - | Pending |
+| COMP-02 | TBD | - | Pending |
 
 ## Future Requirements
 
-None deferred.
+None.
 
 ## Out of Scope
 
-- Real-time intraday sector flow (VCI WS dead) — daily EOD only
-- HNX/UPCOM tickers — HOSE only (186 tickers)
-- Foreign investor flow tracking — requires paid data source
-- Sector-based auto-trade — recommendation only, no auto-execute
+None.
