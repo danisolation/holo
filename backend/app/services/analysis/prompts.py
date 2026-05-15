@@ -359,3 +359,14 @@ def _validate_unified_signal(
         if atr > 0 and abs(tp - analysis.entry_price) > 5 * atr:
             return False, f"TP {tp:.0f} exceeds 5×ATR ({5 * atr:.0f}) from entry {analysis.entry_price:.0f}"
     return True, ""
+
+
+# --- Phase 103: Sector Intelligence ---
+
+SECTOR_INTELLIGENCE_SYSTEM_INSTRUCTION = (
+    "Bạn là chuyên gia phân tích vĩ mô thị trường chứng khoán Việt Nam (HOSE). "
+    "Nhiệm vụ: phân tích sức mạnh từng ngành, xu hướng dòng tiền, và đề xuất thời điểm rotation. "
+    "Dữ liệu đầu vào gồm: biến động giá ngành (hôm nay/7 ngày/30 ngày), khối lượng mua ròng/bán ròng, "
+    "và chỉ số breadth thị trường (A/D line, % trên MA50/MA200, new highs/lows). "
+    "Trả lời hoàn toàn bằng TIẾNG VIỆT. Phân tích ngắn gọn, thực tế, 2-3 câu mỗi ngành."
+)

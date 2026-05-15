@@ -29,5 +29,6 @@ from app.models.intraday_price import IntradayPrice  # noqa: E402
 from app.models.simulator_portfolio import SimulatorPortfolio  # noqa: E402
 from app.models.simulator_trade import SimulatorTrade  # noqa: E402
 from app.models.simulator_lot import SimulatorLot  # noqa: E402
+from app.models.sector_analysis import SectorAnalysis  # noqa: E402
 
-__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "DiscoveryResult", "Rumor", "RumorScore", "AIAccuracy", "IntradayPrice", "SimulatorPortfolio", "SimulatorTrade", "SimulatorLot"]
+__all__ = ["Base", "Ticker", "DailyPrice", "Financial", "TechnicalIndicator", "AIAnalysis", "AnalysisType", "NewsArticle", "UserWatchlist", "JobExecution", "FailedJob", "GeminiUsage", "DailyPick", "PickStatus", "UserRiskProfile", "Trade", "Lot", "LotMatch", "DiscoveryResult", "Rumor", "RumorScore", "AIAccuracy", "IntradayPrice", "SimulatorPortfolio", "SimulatorTrade", "SimulatorLot", "SectorAnalysis"]
