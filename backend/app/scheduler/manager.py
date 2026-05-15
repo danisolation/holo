@@ -63,6 +63,10 @@ _JOB_NAMES = {
     # Phase 98: Simulator auto-sell
     "daily_simulator_sl_tp_check": "Daily Simulator Auto-Sell Check",
     "daily_simulator_sl_tp_check_triggered": "Daily Simulator Auto-Sell Check",
+    # Phase 103: Sector intelligence
+    "daily_sector_intelligence": "Daily Sector Intelligence",
+    "daily_sector_intelligence_triggered": "Daily Sector Intelligence",
+    "daily_sector_intelligence_manual": "Daily Sector Intelligence",
 }
 
 
@@ -210,6 +214,16 @@ def _on_job_executed(event: events.JobExecutionEvent):
         scheduler.add_job(
             daily_simulator_sl_tp_check,
             id="daily_simulator_sl_tp_check_triggered",
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
+    elif event.job_id in ("daily_simulator_sl_tp_check_triggered", "daily_simulator_sl_tp_check"):
+        # Phase 103: Chain to sector intelligence after simulator check
+        from app.scheduler.jobs import daily_sector_intelligence
+        logger.info("Chaining: daily_simulator_sl_tp_check → daily_sector_intelligence")
+        scheduler.add_job(
+            daily_sector_intelligence,
+            id="daily_sector_intelligence_triggered",
             replace_existing=True,
             misfire_grace_time=3600,
         )
@@ -364,7 +378,7 @@ def configure_jobs():
     scheduler.add_listener(_on_job_error, events.EVENT_JOB_ERROR)
     logger.info(
         "Job chaining registered: "
-        "daily_price_crawl_hose → [indicators → discovery_scoring → news → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → accuracy_tracking] (AI analysis: on-demand only), "
+        "daily_price_crawl_hose → [indicators → discovery_scoring → news → rumor_crawl → rumor_scoring → pick_generation → pick_outcome_check → accuracy_tracking → simulator_sl_tp → sector_intelligence] (AI analysis: on-demand only), "
         "morning_price_crawl_hose → [indicators → unified_analysis]"
     )
     logger.info("Failure notification listener registered for EVENT_JOB_ERROR")

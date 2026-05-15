@@ -14,7 +14,7 @@ from fastapi import APIRouter, Query
 
 from app.database import async_session
 from app.schemas.market_breadth import MarketBreadthResponse
-from app.schemas.sector import SectorPerformanceItem, SectorFlowItem
+from app.schemas.sector import SectorPerformanceItem, SectorFlowItem, SectorAnalysisAPIResponse
 from app.services.market_breadth_service import MarketBreadthService
 from app.services.sector_analysis_service import SectorAnalysisService
 
@@ -115,4 +115,34 @@ async def get_sector_flow(
 
     response = [SectorFlowItem(**item) for item in result]
     _sector_flow_cache[cache_key] = response
+    return response
+
+
+# --- Phase 103: AI Sector Intelligence ---
+
+_sector_analysis_cache: TTLCache = TTLCache(maxsize=1, ttl=600)
+
+
+@router.get("/sector-analysis", response_model=SectorAnalysisAPIResponse)
+async def get_sector_analysis() -> SectorAnalysisAPIResponse:
+    """Get latest AI sector intelligence analysis.
+
+    Returns Gemini's sector strength/weakness analysis and rotation timing.
+    Updated daily after the price crawl pipeline completes.
+    """
+    cached = _sector_analysis_cache.get("latest")
+    if cached is not None:
+        return cached
+
+    async with async_session() as session:
+        from app.services.sector_intelligence_service import SectorIntelligenceService
+        service = SectorIntelligenceService(session)
+        result = await service.get_latest()
+
+    if result is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="No sector analysis available yet")
+
+    response = SectorAnalysisAPIResponse(**result)
+    _sector_analysis_cache["latest"] = response
     return response

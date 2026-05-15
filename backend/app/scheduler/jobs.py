@@ -1415,3 +1415,46 @@ async def daily_simulator_sl_tp_check():
         logger.error(f"=== DAILY SIMULATOR AUTO-SELL CHECK FAILED: {e} ===")
         raise
 
+
+async def daily_sector_intelligence():
+    """Run Gemini sector intelligence analysis.
+
+    Phase 103: Analyzes sector strength/weakness and rotation timing.
+    Chained after daily_simulator_sl_tp_check in the daily pipeline.
+    Requires GEMINI_API_KEY to be set.
+    """
+    logger.info("=== DAILY SECTOR INTELLIGENCE START ===")
+    async with async_session() as session:
+        job_svc = JobExecutionService(session)
+        execution = await job_svc.start("daily_sector_intelligence")
+        try:
+            from app.services.sector_intelligence_service import SectorIntelligenceService
+            service = SectorIntelligenceService(session)
+            result = await service.run_and_store()
+
+            sector_count = len(result.get("sectors", []))
+            await job_svc.complete(
+                execution, status="success",
+                result_summary={
+                    "sectors_analyzed": sector_count,
+                    "top_strong": result.get("top_strong", []),
+                    "top_weak": result.get("top_weak", []),
+                },
+            )
+            await session.commit()
+            logger.info(f"=== DAILY SECTOR INTELLIGENCE DONE: {sector_count} sectors analyzed ===")
+
+        except ValueError as e:
+            await job_svc.complete(
+                execution, status="skipped",
+                result_summary={"reason": str(e)},
+            )
+            await session.commit()
+            logger.warning(f"=== DAILY SECTOR INTELLIGENCE SKIPPED: {e} ===")
+        except Exception as e:
+            if execution.status == "running":
+                await job_svc.fail(execution, error=str(e))
+                await session.commit()
+            logger.error(f"=== DAILY SECTOR INTELLIGENCE FAILED: {e} ===")
+            raise
+
