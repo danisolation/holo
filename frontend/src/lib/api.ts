@@ -956,3 +956,105 @@ export interface SectorAnalysisResponse {
 export async function fetchSectorAnalysis(): Promise<SectorAnalysisResponse> {
   return apiFetch<SectorAnalysisResponse>("/market/sector-analysis");
 }
+
+// ── Phase 105: Screener, Sector Detail & Peer Comparison ────────────────────
+
+export interface ScreenerTickerItem {
+  symbol: string;
+  name: string;
+  sector: string | null;
+  industry: string | null;
+  close: number | null;
+  volume: number | null;
+  change_1d: number | null;
+  change_7d: number | null;
+  change_30d: number | null;
+  pe: number | null;
+  market_cap: number | null;
+}
+
+export interface ScreenerResponse {
+  items: ScreenerTickerItem[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface ScreenerParams {
+  sector?: string;
+  industry?: string;
+  min_volume?: number;
+  max_volume?: number;
+  min_change?: number;
+  max_change?: number;
+  min_pe?: number;
+  max_pe?: number;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}
+
+export interface PeerComparisonItem {
+  symbol: string;
+  name: string;
+  close: number | null;
+  volume: number | null;
+  change_1d: number | null;
+  pe: number | null;
+  market_cap: number | null;
+  rank_pe: number | null;
+  rank_volume: number | null;
+  rank_change: number | null;
+  rank_market_cap: number | null;
+  is_target: boolean;
+}
+
+export interface PeerComparisonResponse {
+  symbol: string;
+  sector: string;
+  peers: PeerComparisonItem[];
+}
+
+export interface SectorDetailTickerItem {
+  symbol: string;
+  name: string;
+  industry: string | null;
+  close: number | null;
+  volume: number | null;
+  change_7d: number | null;
+  change_30d: number | null;
+  market_cap: number | null;
+}
+
+export interface SectorDetailResponse {
+  sector: string;
+  ticker_count: number;
+  tickers: SectorDetailTickerItem[];
+}
+
+export async function fetchScreener(params?: ScreenerParams): Promise<ScreenerResponse> {
+  const sp = new URLSearchParams();
+  if (params?.sector) sp.set("sector", params.sector);
+  if (params?.industry) sp.set("industry", params.industry);
+  if (params?.min_volume !== undefined) sp.set("min_volume", String(params.min_volume));
+  if (params?.max_volume !== undefined) sp.set("max_volume", String(params.max_volume));
+  if (params?.min_change !== undefined) sp.set("min_change", String(params.min_change));
+  if (params?.max_change !== undefined) sp.set("max_change", String(params.max_change));
+  if (params?.min_pe !== undefined) sp.set("min_pe", String(params.min_pe));
+  if (params?.max_pe !== undefined) sp.set("max_pe", String(params.max_pe));
+  if (params?.sort_by) sp.set("sort_by", params.sort_by);
+  if (params?.sort_order) sp.set("sort_order", params.sort_order);
+  if (params?.limit !== undefined) sp.set("limit", String(params.limit));
+  if (params?.offset !== undefined) sp.set("offset", String(params.offset));
+  const qs = sp.toString();
+  return apiFetch<ScreenerResponse>(`/market/screener${qs ? `?${qs}` : ""}`);
+}
+
+export async function fetchSectorDetail(sectorName: string): Promise<SectorDetailResponse> {
+  return apiFetch<SectorDetailResponse>(`/market/sector/${encodeURIComponent(sectorName)}`);
+}
+
+export async function fetchPeerComparison(symbol: string): Promise<PeerComparisonResponse> {
+  return apiFetch<PeerComparisonResponse>(`/market/peers/${encodeURIComponent(symbol)}`);
+}

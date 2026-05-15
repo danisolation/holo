@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { SectorTab } from "@/components/market/sector-tab";
 import { BreadthTab } from "@/components/market/breadth-tab";
 import { FlowTab } from "@/components/market/flow-tab";
@@ -13,6 +15,12 @@ export default function MarketPage() {
         <p className="text-sm text-muted-foreground">
           Phân tích ngành &amp; sức khỏe thị trường HOSE
         </p>
+      </div>
+
+      <div className="flex gap-2">
+        <Link href="/market/screener">
+          <Button variant="outline" size="sm">Bộ lọc cổ phiếu</Button>
+        </Link>
       </div>
 
       <Tabs defaultValue={0}>

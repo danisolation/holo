@@ -44,8 +44,11 @@ import {
   fetchSectorPerformance,
   fetchSectorFlow,
   fetchSectorAnalysis,
+  fetchScreener,
+  fetchSectorDetail,
+  fetchPeerComparison,
 } from "@/lib/api";
-import type { SimulatorTradeCreate } from "@/lib/api";
+import type { SimulatorTradeCreate, ScreenerParams } from "@/lib/api";
 
 /**
  * Fetch all active tickers, optionally filtered by sector.
@@ -495,5 +498,33 @@ export function useSectorAnalysis() {
     queryFn: fetchSectorAnalysis,
     staleTime: 10 * 60 * 1000,
     retry: 1,
+  });
+}
+
+// --- Phase 105: Screener, Sector Detail & Peer Comparison ---
+
+export function useScreener(params?: ScreenerParams) {
+  return useQuery({
+    queryKey: ["screener", params ?? {}],
+    queryFn: () => fetchScreener(params),
+    staleTime: 60_000,
+  });
+}
+
+export function useSectorDetail(sectorName: string | undefined) {
+  return useQuery({
+    queryKey: ["sector-detail", sectorName],
+    queryFn: () => fetchSectorDetail(sectorName!),
+    enabled: !!sectorName,
+    staleTime: 60_000,
+  });
+}
+
+export function usePeerComparison(symbol: string | undefined) {
+  return useQuery({
+    queryKey: ["peer-comparison", symbol],
+    queryFn: () => fetchPeerComparison(symbol!),
+    enabled: !!symbol,
+    staleTime: 60_000,
   });
 }
