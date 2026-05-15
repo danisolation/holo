@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v25.0
-milestone_name: AI Simulator Split
-status: planning
-stopped_at: Defining requirements
-last_updated: "2026-05-15"
-last_activity: 2026-05-15 — v25.0 milestone started
+milestone: v15.0
+milestone_name: Performance Optimization
+status: Not started (roadmap created)
+stopped_at: Completed 107-01-PLAN.md
+last_updated: "2026-05-15T05:01:25.891Z"
+last_activity: 2026-05-15 — v25.0 roadmap created (3 phases, 9 requirements)
 progress:
-  total_phases: 3
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -110,6 +110,8 @@ All v1.0–v9.0 decisions archived in PROJECT.md Key Decisions table.
 - [Phase 104]: Selective TTLCache: screener NOT cached, sector-detail and peers cached at 300s
 - [Phase 105]: Replaced SectorDrilldown with Link navigation to full sector detail page
 - [Phase 106]: Used _gemini_lock for RPM serialization, temperature 0.3, direct import for lightweight panel
+- [Phase 107]: Existing 'default' portfolio renamed to 'user' via migration, AI portfolio created fresh
+- [Phase 107]: Auto-buy job chains after accuracy_tracking, before sl_tp_check in scheduler pipeline
 
 ### Research Context (v10.0)
 
@@ -170,7 +172,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-15T04:22:20.316Z
-Stopped at: Completed 106-01-PLAN.md
+Last session: 2026-05-15T05:01:25.882Z
+Stopped at: Completed 107-01-PLAN.md
 Resume file: None
 Next action: `/gsd-plan-phase 100`

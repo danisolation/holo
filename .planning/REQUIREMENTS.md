@@ -8,8 +8,8 @@
 ### Dual Portfolio
 
 - [ ] **DUAL-01**: User can switch giua 2 tab "AI Portfolio" va "User Portfolio" tren trang simulator
-- [ ] **DUAL-02**: AI Portfolio tu dong execute DailyPick signals server-side (khong phu thuoc frontend toggle)
-- [ ] **DUAL-03**: User Portfolio cho phep mua/ban thu cong voi form giao dich rieng
+- [x] **DUAL-02**: AI Portfolio tu dong execute DailyPick signals server-side (khong phu thuoc frontend toggle)
+- [x] **DUAL-03**: User Portfolio cho phep mua/ban thu cong voi form giao dich rieng
 
 ### AI Rationale
 

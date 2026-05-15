@@ -827,7 +827,7 @@ Plans:
 
 ### v25.0: AI Simulator Split (Phases 107-109)
 
-- [ ] **Phase 107: Dual Portfolio Backend** — Split single simulator portfolio into 2 independent instances (AI auto-trade + User manual), route trades by source
+- [x] **Phase 107: Dual Portfolio Backend** — Split single simulator portfolio into 2 independent instances (AI auto-trade + User manual), route trades by source (completed 2026-05-15)
 - [ ] **Phase 108: Dual Portfolio UI + AI Rationale** — Two-tab portfolio switcher, rationale text from Gemini displayed per signal and trade
 - [ ] **Phase 109: AI Review + Performance Comparison** — Gemini portfolio/trade review on demand, equity chart overlay AI vs User, metrics comparison table
 
@@ -843,9 +843,9 @@ Plans:
   3. Manual trade creation via POST /api/simulator/trades routes to the User portfolio by default, with portfolio_type parameter to explicitly select target
   4. GET endpoints (portfolio, trades, stats, equity-history) accept a portfolio_type query param ("ai" or "user") and return data scoped to that portfolio only
   5. Portfolio reset operates per-portfolio — user can reset AI or User portfolio independently without affecting the other
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 107-01-PLAN.md — Dual portfolio backend (migration, services, API endpoints, tests)
+- [x] 107-01-PLAN.md — Dual portfolio backend (migration, services, API endpoints, tests)
 
 ### Phase 108: Dual Portfolio UI + AI Rationale
 **Goal**: Users can switch between AI and User portfolio views via tabs, see each portfolio's positions and trades independently, and read Gemini's rationale for why each signal was recommended
@@ -875,6 +875,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 107. Dual Portfolio Backend | 0/? | Not started | - |
+| 107. Dual Portfolio Backend | 1/1 | Complete   | 2026-05-15 |
 | 108. Dual Portfolio UI + AI Rationale | 0/? | Not started | - |
 | 109. AI Review + Performance Comparison | 0/? | Not started | - |
