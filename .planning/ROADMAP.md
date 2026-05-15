@@ -906,7 +906,12 @@ Plans:
   2. Selected theme persists across browser sessions — reopening the app days later still shows the last chosen theme
   3. All dashboard pages (watchlist, ticker detail, discovery, simulator, sector, market breadth) render correctly in both themes with readable contrast and no broken colors
   4. Default theme respects system preference (prefers-color-scheme) on first visit before user makes explicit choice
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 110-01-PLAN.md — Fix ThemeProvider system preference + candlestick chart dark mode
+- [ ] 110-02-PLAN.md — Replace hardcoded hex colors across all components with CSS vars
+
 **UI hint**: yes
 
 ### Phase 111: Mobile Responsive & Loading States
