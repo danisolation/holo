@@ -30,7 +30,7 @@ Holo delivers AI-powered multi-dimensional stock analysis for Vietnamese stock e
 - ✅ **v21.0 Stock Trading Simulator** — Phase 95 (shipped)
 - ✅ **v22.0 Platform Polish & AI Coverage** — Phases 96-99 (shipped 2026-05-14)
 - [x] **v23.0 Sector Rotation & Market Breadth** — Phases 100-103 (shipped 2026-05-15)
-- [ ] **v24.0 Sector Screening & Comparison** — Phases 104-106
+- [x] **v24.0 Sector Screening & Comparison** — Phases 104-106 (shipped 2026-05-15)
 
 ## Phases
 
