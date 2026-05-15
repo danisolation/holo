@@ -1,37 +1,52 @@
-# Requirements: Holo v22.0 Platform Polish & AI Coverage
+# Requirements: Holo v23.0 Sector Rotation & Market Breadth
 
-**Defined:** 2026-05-13
-**Core Value:** Nâng cấp toàn diện — mở rộng AI analysis, tăng cường simulator, cải thiện chất lượng code và UX.
+**Defined:** 2026-05-14
+**Core Value:** Phân tích dòng tiền ngành và sức khỏe thị trường HOSE — sector heatmap, market breadth, rotation radar, AI sector analysis.
 
 ## Milestone Requirements
 
-### AI Analysis Coverage
+### Sector Heatmap
 
-- [ ] **AICOV-01**: Hệ thống tự động chạy AI analysis cho tất cả ticker trong watchlist hàng ngày
-- [ ] **AICOV-02**: Schedule auto-analysis vào 8:30 sáng mỗi ngày trading (UTC+7)
-- [x] **AICOV-03**: Dashboard hiển thị AI coverage stats (bao nhiêu ticker đã analyze / tổng watchlist)
+- [ ] **SHEAT-01**: Dashboard hiển thị heatmap theo sector với % thay đổi giá trung bình ngày (sử dụng Ticker.sector + DailyPrice)
+- [ ] **SHEAT-02**: Heatmap hỗ trợ chuyển đổi view theo volume (tổng volume ngày theo sector)
+- [ ] **SHEAT-03**: Click vào sector hiển thị danh sách tickers thuộc sector đó với % change, volume, close price
 
-### Simulator Enhancement
+### Market Breadth
 
-- [ ] **SIM-01**: Auto-sell khi giá hit Stop Loss target (so sánh DailyPrice.close với SL từ trading plan)
-- [ ] **SIM-02**: Auto-sell khi giá hit Take Profit target (so sánh DailyPrice.close với TP từ trading plan)
-- [x] **SIM-03**: Portfolio history chart (equity curve — tổng giá trị portfolio theo thời gian)
-- [x] **SIM-04**: P&L timeline (bảng lịch sử giao dịch với running P&L cộng dồn)
-- [ ] **SIM-05**: Sell signal integration (AI phát tín hiệu bán/giữ → auto-execute sell cho positions đang mở)
+- [ ] **MBRD-01**: Backend tính A/D line (Advance/Decline) hàng ngày cho toàn bộ HOSE tickers
+- [ ] **MBRD-02**: Backend tính % stocks above MA50 và % stocks above MA200 hàng ngày
+- [ ] **MBRD-03**: Backend tính new 52-week highs vs new 52-week lows hàng ngày
+- [ ] **MBRD-04**: Dashboard page hiển thị market breadth charts (A/D line, MA breadth, highs/lows theo thời gian)
 
-### Data Quality
+### Sector Flow
 
-- [x] **DQ-01**: Fix pre-existing test failures (test_weekly_financial_crawl_calls_service scheduler test)
-- [x] **DQ-02**: Thêm unit tests cho simulator service (buy, sell, SL/TP auto-close, fee calculation, FIFO matching)
-- [x] **DQ-03**: Thêm unit tests cho pick generation pipeline (signal filter, unified format, date range)
-- [x] **DQ-04**: Data integrity checks (phát hiện gaps trong daily_prices, duplicate entries, stale analysis)
+- [ ] **SFLOW-01**: Backend tính net buying/selling volume theo sector hàng ngày (volume × price change direction)
+- [ ] **SFLOW-02**: Dashboard hiển thị radar chart so sánh performance 7D vs 30D giữa các sectors
+- [ ] **SFLOW-03**: Sector ranking table sorted by performance với volume change indicator (tăng/giảm)
 
-### Performance/UX
+### AI Sector Analysis
 
-- [x] **UX-01**: Loading skeleton states cho tất cả data-fetching pages (watchlist, ticker, simulator, discovery)
-- [x] **UX-02**: Mobile responsive polish (simulator page, discovery page, ticker detail)
-- [x] **UX-03**: Page transition animations (smooth navigation giữa các routes)
-- [x] **UX-04**: Dashboard homepage redesign (key metrics at a glance — portfolio value, AI coverage, recent picks)
+- [ ] **AISEC-01**: Gemini phân tích sector strong/weak dựa trên breadth data + flow data (structured output)
+- [ ] **AISEC-02**: AI đề xuất sector rotation timing — sector nào đang attract/lose money flow
+- [ ] **AISEC-03**: Scheduled daily sector analysis chạy sau price crawl (chained trong scheduler)
+
+## Traceability
+
+| Requirement | Phase | Plan | Status |
+|-------------|-------|------|--------|
+| SHEAT-01 | — | — | Pending |
+| SHEAT-02 | — | — | Pending |
+| SHEAT-03 | — | — | Pending |
+| MBRD-01 | — | — | Pending |
+| MBRD-02 | — | — | Pending |
+| MBRD-03 | — | — | Pending |
+| MBRD-04 | — | — | Pending |
+| SFLOW-01 | — | — | Pending |
+| SFLOW-02 | — | — | Pending |
+| SFLOW-03 | — | — | Pending |
+| AISEC-01 | — | — | Pending |
+| AISEC-02 | — | — | Pending |
+| AISEC-03 | — | — | Pending |
 
 ## Future Requirements
 
@@ -39,28 +54,7 @@ None deferred.
 
 ## Out of Scope
 
-- Real-time intraday trading (chỉ EOD simulator)
-- Multi-user authentication
-- Telegram bot (web dashboard is primary)
-- ML price prediction
-
-## Traceability
-
-| REQ-ID | Phase | Plan | Status |
-|--------|-------|------|--------|
-| DQ-01 | Phase 96 | — | Pending |
-| DQ-02 | Phase 96 | — | Pending |
-| DQ-03 | Phase 96 | — | Pending |
-| DQ-04 | Phase 96 | — | Pending |
-| AICOV-01 | Phase 97 | — | Pending |
-| AICOV-02 | Phase 97 | — | Pending |
-| AICOV-03 | Phase 97 | — | Pending |
-| SIM-01 | Phase 98 | — | Pending |
-| SIM-02 | Phase 98 | — | Pending |
-| SIM-03 | Phase 98 | — | Pending |
-| SIM-04 | Phase 98 | — | Pending |
-| SIM-05 | Phase 98 | — | Pending |
-| UX-01 | Phase 99 | — | Pending |
-| UX-02 | Phase 99 | — | Pending |
-| UX-03 | Phase 99 | — | Pending |
-| UX-04 | Phase 99 | — | Pending |
+- Real-time intraday sector flow (VCI WS dead) — daily EOD only
+- HNX/UPCOM tickers — HOSE only (186 tickers)
+- Foreign investor flow tracking — requires paid data source
+- Sector-based auto-trade — recommendation only, no auto-execute
