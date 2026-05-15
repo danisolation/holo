@@ -13,9 +13,9 @@
 
 ### Market Breadth
 
-- [ ] **MBRD-01**: Backend tính A/D line (Advance/Decline) hàng ngày cho toàn bộ HOSE tickers
-- [ ] **MBRD-02**: Backend tính % stocks above MA50 và % stocks above MA200 hàng ngày
-- [ ] **MBRD-03**: Backend tính new 52-week highs vs new 52-week lows hàng ngày
+- [x] **MBRD-01**: Backend tính A/D line (Advance/Decline) hàng ngày cho toàn bộ HOSE tickers
+- [x] **MBRD-02**: Backend tính % stocks above MA50 và % stocks above MA200 hàng ngày
+- [x] **MBRD-03**: Backend tính new 52-week highs vs new 52-week lows hàng ngày
 - [ ] **MBRD-04**: Dashboard page hiển thị market breadth charts (A/D line, MA breadth, highs/lows theo thời gian)
 
 ### Sector Flow

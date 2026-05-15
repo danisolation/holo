@@ -689,7 +689,7 @@ Plans:
 
 ### v23.0: Sector Rotation & Market Breadth (Phases 100-103)
 
-- [ ] **Phase 100: Market Breadth Backend** — A/D line, MA breadth, 52-week highs/lows computation + API endpoints
+- [x] **Phase 100: Market Breadth Backend** — A/D line, MA breadth, 52-week highs/lows computation + API endpoints (completed 2026-05-15)
 - [ ] **Phase 101: Sector Analysis Backend** — Sector performance aggregation, net flow computation, sector API endpoints
 - [ ] **Phase 102: Sector & Breadth Frontend** — Sector heatmap, breadth charts, rotation radar, sector ranking table
 - [ ] **Phase 103: AI Sector Intelligence** — Gemini sector analysis with breadth + flow context, rotation timing, daily scheduler
@@ -707,7 +707,7 @@ Plans:
   4. All breadth computations handle missing data gracefully (tickers with insufficient history are excluded, not erroring)
 **Plans**: 1 plan
 Plans:
-- [ ] 100-01-PLAN.md — MarketBreadthService + schemas + GET /api/market/breadth + tests
+- [x] 100-01-PLAN.md — MarketBreadthService + schemas + GET /api/market/breadth + tests
 
 ### Phase 101: Sector Analysis Backend
 **Goal**: Users can query sector-level performance and money flow data via API to compare sectors and identify rotation patterns
@@ -751,7 +751,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 100. Market Breadth Backend | 0/? | Not started | - |
+| 100. Market Breadth Backend | 1/1 | Complete   | 2026-05-15 |
 | 101. Sector Analysis Backend | 0/? | Not started | - |
 | 102. Sector & Breadth Frontend | 0/? | Not started | - |
 | 103. AI Sector Intelligence | 0/? | Not started | - |
