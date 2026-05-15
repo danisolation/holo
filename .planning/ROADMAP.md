@@ -691,7 +691,7 @@ Plans:
 
 - [x] **Phase 100: Market Breadth Backend** — A/D line, MA breadth, 52-week highs/lows computation + API endpoints (completed 2026-05-15)
 - [x] **Phase 101: Sector Analysis Backend** — Sector performance aggregation, net flow computation, sector API endpoints (completed 2026-05-15)
-- [ ] **Phase 102: Sector & Breadth Frontend** — Sector heatmap, breadth charts, rotation radar, sector ranking table
+- [x] **Phase 102: Sector & Breadth Frontend** — Sector heatmap, breadth charts, rotation radar, sector ranking table (completed 2026-05-15)
 - [ ] **Phase 103: AI Sector Intelligence** — Gemini sector analysis with breadth + flow context, rotation timing, daily scheduler
 
 ## Phase Details — v23.0
@@ -735,7 +735,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 102-01-PLAN.md — API types, hooks, navbar, /market page skeleton + Sector tab (heatmap, ranking, drilldown)
-- [ ] 102-02-PLAN.md — Breadth tab (A/D, MA breadth, highs/lows charts) + Dòng tiền tab (radar, flow summary)
+- [x] 102-02-PLAN.md — Breadth tab (A/D, MA breadth, highs/lows charts) + Dòng tiền tab (radar, flow summary)
 **UI hint**: yes
 
 ### Phase 103: AI Sector Intelligence
@@ -758,5 +758,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 100. Market Breadth Backend | 1/1 | Complete   | 2026-05-15 |
 | 101. Sector Analysis Backend | 1/1 | Complete   | 2026-05-15 |
-| 102. Sector & Breadth Frontend | 1/2 | In Progress|  |
+| 102. Sector & Breadth Frontend | 2/2 | Complete   | 2026-05-15 |
 | 103. AI Sector Intelligence | 0/? | Not started | - |

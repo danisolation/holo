@@ -16,12 +16,12 @@
 - [x] **MBRD-01**: Backend tính A/D line (Advance/Decline) hàng ngày cho toàn bộ HOSE tickers
 - [x] **MBRD-02**: Backend tính % stocks above MA50 và % stocks above MA200 hàng ngày
 - [x] **MBRD-03**: Backend tính new 52-week highs vs new 52-week lows hàng ngày
-- [ ] **MBRD-04**: Dashboard page hiển thị market breadth charts (A/D line, MA breadth, highs/lows theo thời gian)
+- [x] **MBRD-04**: Dashboard page hiển thị market breadth charts (A/D line, MA breadth, highs/lows theo thời gian)
 
 ### Sector Flow
 
 - [x] **SFLOW-01**: Backend tính net buying/selling volume theo sector hàng ngày (volume × price change direction)
-- [ ] **SFLOW-02**: Dashboard hiển thị radar chart so sánh performance 7D vs 30D giữa các sectors
+- [x] **SFLOW-02**: Dashboard hiển thị radar chart so sánh performance 7D vs 30D giữa các sectors
 - [x] **SFLOW-03**: Sector ranking table sorted by performance với volume change indicator (tăng/giảm)
 
 ### AI Sector Analysis
