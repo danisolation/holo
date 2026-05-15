@@ -747,7 +747,9 @@ Plans:
   2. AI output includes rotation timing recommendation — which sectors are currently attracting money flow and which are losing, with suggested timing for sector rotation
   3. Sector analysis runs automatically as a scheduled job chained after daily price crawl (APScheduler EVENT_JOB_EXECUTED pattern), producing fresh analysis each trading day
   4. AI sector analysis is displayed on the sector page alongside the heatmap/charts, giving users AI interpretation of the raw data
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 103-01-PLAN.md — SectorAnalysis model + SectorIntelligenceService + Gemini prompt + scheduler chain + API endpoint + frontend panel
 **UI hint**: yes
 
 ## Progress — v23.0
