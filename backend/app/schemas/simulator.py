@@ -13,6 +13,7 @@ class SimulatorTradeCreate(BaseModel):
     source: str = Field(default="manual", pattern=r"^(ai_auto|manual)$")
     daily_pick_id: int | None = None
     user_notes: str | None = Field(None, max_length=500)
+    portfolio_type: str = Field(default="user", pattern=r"^(ai|user)$")
 
 
 class SimulatorTradeResponse(BaseModel):
@@ -140,3 +141,22 @@ class PnlTimelineResponse(BaseModel):
     """All trades with running cumulative P&L."""
     entries: list[PnlTimelineEntry]
     total_realized_pnl: float
+
+
+# ── Phase 107: Dual Portfolio Schemas ────────────────────────────────────────
+
+
+class PortfolioSummaryItem(BaseModel):
+    """Summary of a single portfolio."""
+    name: str
+    starting_capital: float
+    current_cash: float
+    total_equity: float
+    total_pnl: float
+    total_pnl_pct: float
+    position_count: int
+
+
+class PortfolioListResponse(BaseModel):
+    """List of all portfolios."""
+    portfolios: list[PortfolioSummaryItem]

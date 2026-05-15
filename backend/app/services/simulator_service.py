@@ -55,15 +55,19 @@ class SimulatorService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_or_create_portfolio(self) -> SimulatorPortfolio:
-        """Get default portfolio or create one with 100M VND."""
+    async def get_or_create_portfolio(self, name: str = "user") -> SimulatorPortfolio:
+        """Get portfolio by name or create one with 100M VND.
+
+        Args:
+            name: Portfolio name — "user" (default, backward compat) or "ai".
+        """
         result = await self.session.execute(
-            select(SimulatorPortfolio).where(SimulatorPortfolio.name == "default")
+            select(SimulatorPortfolio).where(SimulatorPortfolio.name == name)
         )
         portfolio = result.scalar_one_or_none()
         if not portfolio:
             portfolio = SimulatorPortfolio(
-                name="default",
+                name=name,
                 starting_capital=Decimal("100000000"),
                 current_cash=Decimal("100000000"),
             )
@@ -71,9 +75,9 @@ class SimulatorService:
             await self.session.flush()
         return portfolio
 
-    async def create_trade(self, data: SimulatorTradeCreate) -> dict:
+    async def create_trade(self, data: SimulatorTradeCreate, portfolio_name: str = "user") -> dict:
         """Create a paper trade with auto-calculated fees and FIFO matching."""
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
 
         # Resolve ticker
         result = await self.session.execute(
@@ -194,9 +198,9 @@ class SimulatorService:
             "created_at": str(trade.created_at),
         }
 
-    async def get_portfolio(self) -> dict:
+    async def get_portfolio(self, portfolio_name: str = "user") -> dict:
         """Get portfolio state with positions and unrealized P&L."""
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
 
         # Get open lots grouped by ticker
         result = await self.session.execute(
@@ -277,9 +281,9 @@ class SimulatorService:
             "positions": positions,
         }
 
-    async def list_trades(self, page: int = 1, page_size: int = 20, source: str | None = None) -> dict:
+    async def list_trades(self, page: int = 1, page_size: int = 20, source: str | None = None, portfolio_name: str = "user") -> dict:
         """Get paginated trade history."""
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
         query = select(SimulatorTrade).where(SimulatorTrade.portfolio_id == portfolio.id)
         count_query = select(func.count(SimulatorTrade.id)).where(SimulatorTrade.portfolio_id == portfolio.id)
 
@@ -321,9 +325,9 @@ class SimulatorService:
 
         return {"trades": trade_responses, "total": total, "page": page, "page_size": page_size}
 
-    async def get_stats(self) -> dict:
+    async def get_stats(self, portfolio_name: str = "user") -> dict:
         """Get AI vs manual performance stats."""
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
 
         # All sell trades (have realized P&L)
         result = await self.session.execute(
@@ -373,7 +377,7 @@ class SimulatorService:
             "manual_total_pnl": round(m_pnl, 2),
         }
 
-    async def get_equity_history(self) -> dict:
+    async def get_equity_history(self, portfolio_name: str = "user") -> dict:
         """Compute equity curve from trade history.
 
         For each unique trade date (+ today), calculates:
@@ -381,7 +385,7 @@ class SimulatorService:
         Market value at trade dates uses trade prices as approximation.
         Final point uses latest DailyPrice (×1000 for VND conversion).
         """
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
 
         # Get all trades ordered by date ASC, id ASC
         result = await self.session.execute(
@@ -469,13 +473,13 @@ class SimulatorService:
             "starting_capital": float(portfolio.starting_capital),
         }
 
-    async def get_pnl_timeline(self) -> dict:
+    async def get_pnl_timeline(self, portfolio_name: str = "user") -> dict:
         """Get all trades with running cumulative P&L.
 
         BUY trades: net_pnl = None, cumulative unchanged.
         SELL trades: cumulative += net_pnl.
         """
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
 
         # Get ALL trades ordered by date ASC, id ASC
         result = await self.session.execute(
@@ -516,9 +520,9 @@ class SimulatorService:
             "total_realized_pnl": round(cumulative, 2),
         }
 
-    async def reset_portfolio(self) -> dict:
+    async def reset_portfolio(self, portfolio_name: str = "user") -> dict:
         """Reset portfolio to starting state — delete all trades and lots."""
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
         await self.session.execute(delete(SimulatorLot).where(SimulatorLot.portfolio_id == portfolio.id))
         await self.session.execute(delete(SimulatorTrade).where(SimulatorTrade.portfolio_id == portfolio.id))
         portfolio.current_cash = portfolio.starting_capital
@@ -529,7 +533,7 @@ class SimulatorService:
             "current_cash": float(portfolio.current_cash),
         }
 
-    async def check_sl_tp_hits(self) -> list[dict]:
+    async def check_sl_tp_hits(self, portfolio_name: str = "user") -> list[dict]:
         """Auto-sell positions where latest daily close hits SL or TP.
 
         CRITICAL: DailyPrice.close is in nghìn đồng (thousands).
@@ -538,7 +542,7 @@ class SimulatorService:
 
         Returns list of executed sell trade results.
         """
-        portfolio = await self.get_or_create_portfolio()
+        portfolio = await self.get_or_create_portfolio(portfolio_name)
         results: list[dict] = []
 
         # Get all open lots grouped by ticker
@@ -618,7 +622,7 @@ class SimulatorService:
             )
 
             try:
-                trade_result = await self.create_trade(trade_data)
+                trade_result = await self.create_trade(trade_data, portfolio_name=portfolio_name)
                 results.append(trade_result)
                 logger.info(f"SL/TP auto-sell executed: {ticker.symbol} x{total_qty} @ {close_vnd}")
             except ValueError as e:
@@ -626,3 +630,59 @@ class SimulatorService:
                 results.append({"error": str(e), "ticker_symbol": ticker.symbol, "reason": sell_reason})
 
         return results
+
+    async def get_all_portfolios_summary(self) -> dict:
+        """Get summary of all portfolios (ai + user) for comparison view."""
+        portfolios = []
+        for name in ("ai", "user"):
+            portfolio = await self.get_or_create_portfolio(name)
+
+            # Count open positions
+            result = await self.session.execute(
+                select(func.count(func.distinct(SimulatorLot.ticker_id)))
+                .where(SimulatorLot.portfolio_id == portfolio.id)
+                .where(SimulatorLot.remaining_quantity > 0)
+            )
+            position_count = result.scalar_one()
+
+            # Market value of open positions
+            lot_result = await self.session.execute(
+                select(
+                    SimulatorLot.ticker_id,
+                    func.sum(SimulatorLot.remaining_quantity).label("total_qty"),
+                    func.sum(SimulatorLot.buy_price * SimulatorLot.remaining_quantity).label("total_cost"),
+                )
+                .where(SimulatorLot.portfolio_id == portfolio.id)
+                .where(SimulatorLot.remaining_quantity > 0)
+                .group_by(SimulatorLot.ticker_id)
+            )
+            positions_raw = lot_result.all()
+
+            total_market_value = Decimal("0")
+            from app.models.daily_price import DailyPrice
+            for row in positions_raw:
+                price_result = await self.session.execute(
+                    select(DailyPrice.close)
+                    .where(DailyPrice.ticker_id == row.ticker_id)
+                    .order_by(DailyPrice.date.desc())
+                    .limit(1)
+                )
+                current_price_row = price_result.scalar_one_or_none()
+                if current_price_row:
+                    current_price = Decimal(str(float(current_price_row))) * Decimal("1000")
+                    total_market_value += current_price * int(row.total_qty)
+
+            total_equity = float(portfolio.current_cash) + float(total_market_value)
+            total_pnl = total_equity - float(portfolio.starting_capital)
+
+            portfolios.append({
+                "name": name,
+                "starting_capital": float(portfolio.starting_capital),
+                "current_cash": float(portfolio.current_cash),
+                "total_equity": round(total_equity, 2),
+                "total_pnl": round(total_pnl, 2),
+                "total_pnl_pct": round(total_pnl / float(portfolio.starting_capital) * 100, 2),
+                "position_count": position_count,
+            })
+
+        return {"portfolios": portfolios}
