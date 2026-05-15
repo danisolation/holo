@@ -705,7 +705,9 @@ Plans:
   2. API endpoint returns daily % of stocks above MA50 and % above MA200, computed from each ticker's moving average vs its closing price
   3. API endpoint returns daily new 52-week highs count vs new 52-week lows count, derived from rolling 252-trading-day window on DailyPrice
   4. All breadth computations handle missing data gracefully (tickers with insufficient history are excluded, not erroring)
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 100-01-PLAN.md — MarketBreadthService + schemas + GET /api/market/breadth + tests
 
 ### Phase 101: Sector Analysis Backend
 **Goal**: Users can query sector-level performance and money flow data via API to compare sectors and identify rotation patterns
