@@ -732,7 +732,10 @@ Plans:
   3. Market breadth page displays A/D line, % above MA50/MA200, and new highs vs lows as time-series charts (Recharts) with configurable date range
   4. Radar chart compares 7D vs 30D performance across all sectors, visually highlighting sectors gaining or losing momentum
   5. Sector ranking table shows sectors sorted by performance with volume change indicator (arrow up/down + % change vs previous period)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 102-01-PLAN.md — API types, hooks, navbar, /market page skeleton + Sector tab (heatmap, ranking, drilldown)
+- [ ] 102-02-PLAN.md — Breadth tab (A/D, MA breadth, highs/lows charts) + Dòng tiền tab (radar, flow summary)
 **UI hint**: yes
 
 ### Phase 103: AI Sector Intelligence
