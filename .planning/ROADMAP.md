@@ -781,7 +781,9 @@ Plans:
   2. API endpoint supports sort-by on any returned metric column (volume, % change, P/E, close price) with ascending/descending order
   3. Peer comparison API endpoint returns ranked metrics (P/E, volume, % change, market cap) for all tickers in a given sector, with the queried ticker highlighted
   4. Sector detail API endpoint returns all tickers belonging to a sector with their latest price data and 7D/30D performance values
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 104-01-PLAN.md — ScreenerService + 3 API endpoints (screener, sector-detail, peers) + schemas + tests
 
 ### Phase 105: Sector Screener, Detail & Peer UI
 **Goal**: Users can explore sectors through a dedicated screener page with filters, drill into sector detail pages with performance charts, and compare peer tickers side-by-side with radar visualization
@@ -810,6 +812,6 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 104. Screening & Comparison APIs | 0/0 | Not started | - |
+| 104. Screening & Comparison APIs | 0/1 | In progress | - |
 | 105. Sector Screener, Detail & Peer UI | 0/0 | Not started | - |
 | 106. AI Peer Analysis | 0/0 | Not started | - |
