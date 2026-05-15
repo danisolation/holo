@@ -1,33 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v23.0
-milestone_name: Sector Rotation & Market Breadth
-status: Shipped
-stopped_at: All phases complete
-last_updated: "2026-05-15T03:00:00.000Z"
-last_activity: 2026-05-15 — v23.0 shipped (4 phases, 5 plans)
+milestone: v24.0
+milestone_name: Sector Screening & Comparison
+status: Defining requirements
+stopped_at: Not started
+last_updated: "2026-05-15T10:30:00.000Z"
+last_activity: 2026-05-15 — Milestone v24.0 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-13)
+See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** AI phân tích đa chiều trên dữ liệu chứng khoán Việt Nam — unified pipeline cho ra 1 kết quả đồng nhất, không mâu thuẫn.
-**Current focus:** v23.0 shipped
+**Current focus:** v24.0 Sector Screening & Comparison
 
 ## Current Position
 
-Phase: —
+Phase: Not started (defining requirements)
 Plan: —
-Status: v23.0 shipped
-Last activity: 2026-05-15 — v23.0 shipped
+Status: Defining requirements
+Last activity: 2026-05-15 — Milestone v24.0 started
 
 ```
 v23.0 Progress: [████████████████████] 4/4 phases (100%) ✅ SHIPPED
